@@ -1,46 +1,34 @@
-Introduction of the Atoms to Entrelacs equivalency
+Atoms to Entrelacs equivalency page
 
 = Introduction =
 
-This page explains how binary atoms storage don't deny the credo "everything is an arrow".
+This page explains how atoms (binary sequences) can be handled by the system without breaking the "everything is an arrow" paradigm.
 
 = Details =
 
-According to _Entrelacs_ system, "everything is an arrow". It means that any piece of information can be expressed in the form of an "entrelacs", that is a closed and connected set of arrows linked to each others. //entrelacs// doesn't relay on "nodes" to be built. There is only one building block: *arrows*.
+According to _Entrelacs_ system, "everything is an arrow". In other means, any piece of information can be expressed in the form of _entrelacs_, that is closed and connected sets of arrows linked to each others. Entrelacs don't relay on "nodes" to be built. There is only one building block: *arrows*.
 
-However, an average //entrelacs// can be decomposed up to structures of arrows which are so interlaced that it's impossible to identify smaller closed graphs in them.  Such a non-decomposable entrelacs is called a "prim entrelacs".
+However, one may define //entrelacs// which are so interlaced it's impossible to find smaller closed graphs in them.  Such a non-decomposable entrelacs is called a "prim entrelacs".
 
 == What a "prim entrelacs" looks like ? ==
 
-Please look at these few symbols on Wikipedia:
+Please look at these few signs on Wikipedia:
   * http://en.wikipedia.org/wiki/Ouroboros
   * http://en.wikipedia.org/wiki/Taijitu
   * http://en.wikipedia.org/wiki/Triquetra
   * http://en.wikipedia.org/wiki/Celtic_knot
 
-These signs are famous as neat tribal tattoos or rock band logos even if most of them are actually older than writing.
+Entrelacs theory helping us to understand why these ancestral signs look so much important. It gives them a new meaning: they are "Prim Entrelacs".
 
-Entrelacs theory helping us to understand why these signs look so much important by  giving them a new meaning: they are "Prim Entrelacs".
+==Prim entrelacs are atoms==
 
-==Entrelacs are atoms==
+A "prim entrelacs" doesn't contain any smaller entrelacs. That's why we can say a "prim entrelacs" is equivalent to an atom. it is full-defined and can't be divided.
 
-A "prim entrelacs" doesn't contain any smaller entrelacs. In fact, we may reasonably say such a "prim entrelacs" is equivalent to an atom. it's full-defined and  can't be divided.
+And even more important: it's possible to identify each "prim entrelacs". For example, the arrow whose both ends links to itself is usually named "Ouroboros". Next time you'll see it, you'll be able to put a name on it. Considering two drawings of "Ouroboros", we may say that the second drawing is "isomorphic" to the first one.
 
-And even more important: it's possible to identify one "prim entrelacs". For example, the arrow whose both ends links to itself is usually named "Ouroboros". Next time you'll see it, you'll be able to put a name on it. Considering two drawings of "Ouroboros", we may say that the second arrow is "isomorphic" to the first.
+Consequently, even in a pure space of relations, it's possible to build prim entrelacs and use them as the symbols of a dictionnary.
 
-Consequently, even in a pure space of relations, it's possible to build prim entrelacs as a a dictionary of symbols.
+==Scalars are prim entrelacs==
+Moreover, by defining a bijection between the corresponding sets, one can even postulate that any binary sequence is equivalent to a particular "prim entrelacs". We may say the binary sequence is a condensed form of its corresponding entrelacs.
 
-As it's possible to define a bijection between the infinite set of binary strings and the set of prim entrelacs, I can even postulate that any binary strings is equivalent to a particular set of arrows.
-
-You may wonder why I'm so worried by "prim entrelacs" equivalence. Because it allows me to build a computing system which relays on arrows and which can handle arbitrary binary strings at the same time. If I want to classify and manipulate heavy bitmap pictures through this system, It will be OK to import those pictures in the system without violating the "All is arrow" paradigm.
-
-Now, I wont bother any potential readers any more about "prim entrelacs" / atoms equivalence. Sorry for the annoyance.
-
-
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+The conclusion is that using natively such binary sequences doesn't deny the fundamentals of Entrelacs.
