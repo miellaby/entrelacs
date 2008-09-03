@@ -1,9 +1,8 @@
 #summary Entrelacs relays on the "arrow" paradigm.
 
-
 = Introduction =
 
-Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". This is the *"Arrow paradigm"*.
+Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". This is the *"Arrow Paradigm"*.
 
 ==regular arrows==
 An arrow is an unique immutable oriented pair of arrows.
@@ -12,7 +11,7 @@ An arrow is an unique immutable oriented pair of arrows.
   * "unique" means each identifiable arrow is stored only once in the whole storage space.
   * "immutable" means an arrow can't be modified once stored.
 
-=="entrelacs"==
+==_entrelacs_==
 Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
 
 Moreover, some of these entrelacs are so reentrant they can't be divided into smaller ones. They are called "prim entrelacs" and may be seen as atomistic pieces of data.
@@ -29,5 +28,5 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
   * an arrow "goes out" its tail arrow and "comes into" its head arrow.
   * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow. Note an arrow may have many incoming/outgoing arrows.
 
-====Rooted arrows===
+===Rooted arrows===
 All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
