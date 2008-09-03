@@ -1,21 +1,17 @@
 #summary Entrelacs Arrow Space is a persistent storage for "arrows".
 
-= Introduction =
-
-This page gathers information about the way _Entrelacs_ works.
-
 =The "Arrow paradigm"=
-Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". Please see the ArrowParadigm to understand the basics.
+Entrelacs System deals with "arrows". Please see the ArrowParadigm to understand the basics.
 
-==The Arrows Space==
-The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge. This storage space is called the "Arrows Space" hereafter.
+=The Arrows Space=
+The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge as arrows. This storage space is called the "Arrows Space" hereafter.
 
-===Orthogonal persistence===
+==Orthogonal persistence==
 Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device.
 
 System dynamics occur inside successive short "micro-transactions" so that arrows changes are "atomically" saved on a regular basis.
 
-===Disk usage===
+==Disk usage==
 The level 0 memory is operated as a single memory bank of cells 
 
 Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
@@ -38,7 +34,7 @@ Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we pu
 
 As different kinds of reference may be put in one cell, the cell content is categorized by few bits called "the cell flag".
 
-====Flags list====
+===Flags list===
   * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
   * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
   * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
@@ -48,7 +44,7 @@ As different kinds of reference may be put in one cell, the cell content is cate
   * 0 1 1 0 = TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
   * 0 1 1 1 = ROOTED_PAIR = a PAIR which belongs to a top-level root context.
 
-===Arrow footprint===
+==Arrow footprint==
 
 Finally, here is the typical footprint of an arrow _i_ linking an arrow _tail_ to an arrow _head_ and pointed by few incoming/outgoing arrows.
 {{{
@@ -71,7 +67,7 @@ Finally, here is the typical footprint of an arrow _i_ linking an arrow _tail_ t
 }}}
 
 
-===Open Addressing===
+==Open Addressing==
 
 When storing a new arrow, the cell pointed by 'h' (identifiers hash) may be already used. In such a case, one makes use of the "open addressing" trick.
 
@@ -79,7 +75,7 @@ This trick consists in managing conflicts by putting conflicting elements one af
 
 So when the cell default location is already used, the definition data are shifted up to the next free cells.
 
-===Arrows Sweeper===
+==Arrows Sweeper==
 
 The "Arrows Sweeper" is a kind of _garbage collector_ working in the Arrows Space. The "arrows sweeper" spares rooted arrows and all their "ancestors", while no more rooted nor referred arrows are threaten to deletion.
 
@@ -93,7 +89,7 @@ Note the reference counter definition range is quite short. When it reaches its 
 
 Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
-===To Be Studied===
+==To Be Studied==
 
 We study the possibility to:
   * insert an increasing stride between IN/OUT (incoming/outgoing) cells to avoid search long gap.
@@ -101,7 +97,7 @@ We study the possibility to:
   * use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.
   * combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.
 
-===RAM cache===
+==RAM cache==
 
 When needed, arrows climb up to a level 1 (RAM) memory device. This device is used as a fine-grained cache of level 0 cells. So it's an array of cell-containers (also called level 1 cells).
 
@@ -114,11 +110,11 @@ When climbing up to level 1, a cell is preferably put to its level 0 address mod
 
 Furthermore, all changes in level 1 cell contents are logged to prepare the saving process into level 0.
 
-==Entrelacs Prim Language==
+=Entrelacs Prim Language=
 
 To do:
 
-==Misc==
+=Misc=
 To do: dispatch in other wiki pages
 
 Default hash functions
