@@ -9,7 +9,7 @@ Entrelacs System deals only with "arrows". Its credo might be "Everything is an 
 
 ==regular arrows==
 An arrow is an unique immutable oriented pair of arrows.
-  * "pair of arrows" means both ends of each arrow are two other arrows. ^An arrow graph doesn't contain any node.^
+  * "pair of arrows" means both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
   * "oriented" means the pair (A,B) is different from (B,A).
   * "unique" means each identifiable arrow is stored only once in the whole storage space.
   * "immutable" means an arrow can't be modified once stored.
@@ -17,14 +17,14 @@ An arrow is an unique immutable oriented pair of arrows.
 =="entrelacs"==
 Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
 
-Moreover, some of these entrelacs are so reentrant they can't be divided into smaller ones. They are called "primary entrelacs" and may be seen as atomistic pieces of data.
+Moreover, some of these entrelacs are so reentrant they can't be divided into smaller ones. They are called "prim entrelacs" and may be seen as atomistic pieces of data.
 
 Note that an arrow is equivalent in every aspect to the entrelacs formed by all its ancestors. We may substitute indifferently one to the other.
 
 ==atomistic arrows==
 Entrelacs allows to store "unique" and "immutable" flat data as BLOB or TAG (C-String) scalars in addition to regular arrows.
 
-Entrelacs underlying theory demonstrates such atomistic data are equivalent to primary entrelacs. In other mean, they are arrows as well. See AtomEntrelacEquivalency for further reading.
+Entrelacs underlying theory demonstrates such atomistic data are equivalent to prim entrelacs. In other mean, they are arrows as well. See AtomEntrelacEquivalency for further reading.
 
 ===vocabulary===
   * the first arrow in the pair (resp. the second) is named the "tail" (resp. the "head").
@@ -32,35 +32,38 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
   * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow. Note an arrow may have many incoming/outgoing arrows.
 
 ====Rooted arrows===
-All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it has been chosen for convenience to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged with a "root" mark.
+All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
 
 ==The Arrows Space==
 The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge. This storage space is called the "Arrows Space" hereafter.
 
-===Orthogonal persistency===
+===Orthogonal persistence===
 Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device on a regular basis.
 
 System dynamics occur inside successive short micro-transactions so that changes are "atomically" saved at each micro-transaction end.
 
 ===Disk usage===
-The level 0 memory is designed as a single memory bank of cells which stores both definitions and connectivity data of all known arrows. Each individual "cell" can store one "reference", that is an other cell address.
+The level 0 memory is designed as a single memory bank of cells to store both definitions and connectivity data of all known arrows.
 
-The way to store arrows consists in placing data into location deduced from 2 hash codes:
-  * the _arrow identifiers hash code_ (noted 'h') combines both the arrow head and tail identifiers.
-    * _h_ is the default location where to store the arrow definition. This location may be shifted to subsequent cells when a conflict occurs. The actual arrow location becomes the arrow identifier, noted 'i' hereafter.
-  * the _arrow constructive hash code_ (noted 'H') combines recursively both head and tail H.
-    * _H_ is the default location to put an additional reference back to the arrow. These _H_ located references form an index which allows to reach an arrow from its embedded atoms without fetching every ancestors of its entrelacs.
+Each individual "cell" can store one "reference", that is an other cell address.
+
+The location where an arrow data are stored is deduced from 2 hash codes: _h_ and _H_
+  * _h_ is the _arrow identifiers hash code_.
+    * _h_ combines both the arrow head and tail identifiers.
+    * _h_ is the default location where to store the arrow definition. This location may be shifted to subsequent cells when a conflict occurs. The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
+  * _H_ is the _arrow constructive hash code_. It combines recursively both head and tail H.
+    * _H_ is the default location to put an additional reference back to the arrow. These _H_ located references form an index which can find an arrow from its embedded atoms without fetching every ancestors of its entrelacs. On this purpose the H function *must* be a commutative operation.
 
 A given arrow 'i' will be stored as is:
-  * tail @ cell # i,
-  * head @ cell # i+1,
-  * _H_ @ cell # i+3 (combined with a reference counter).
+  * tail @ i,
+  * head @ i+1,
+  * _H_ @ i+3 (combined with a reference counter).
 And in addition
-  * arrow back reference _i_ at cell # H (+ an offset depending on conflict).
+  * _i_ (arrow back reference)@ H (shifted on conflict).
 
-Moreover, each time there is a new incoming (resp. outgoing) arrow 'j', we index 'j' identifier in the first free cell before (resp. after) the existing arrow definition at 'i'.
+Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index which can find arrows from their head or their queue.
 
-As different kind of references are present in cells, each reference has to be typed by a word of few bits (named the cell "flag" hereafter).
+As different kind of references are present in cells, each reference is categorized by few bits called "the cell flag".
   * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
   * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
   * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
@@ -70,27 +73,26 @@ As different kind of references are present in cells, each reference has to be t
   * 0 1 1 0 = TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
   * 0 1 1 1 = ROOTED_PAIR = a PAIR which belongs to a top-level root context.
 
-Finally, here is the typical footprint of an arrow _i_ (i = h(tail, head)) pointed by few incoming/outgoing arrows.
+Finally, here is the typical footprint of an arrow _i_ linking an arrow _tail_ to an arrow _head_ and pointed by few incoming/outgoing arrows.
 {{{
 //  Cell# Flag   Content
 // [...]
 //  i-4   0      0
-//  i-3   IN     Reference to a third incoming arrow (ie. whose head is arrow x)
-//  i-2   IN     Reference to a second incoming arrow
-//  i-1   IN     Reference to a first incoming arrow
-//  i     PAIR   tail identifier; 
-//  i+1   REMAIN head identifier
-//  i+2   REMAIN H (constructive hash) | reference counter
-//  i+3   OUT    Reference to a first outgoing arrow (i.e. whose queue is arrow x)
-//  i+4   OUT    Reference to a second outgoing arrow
-//  i+5   OUT    Reference to a third outgoing arrow
+//  i-3   IN     third incoming arrow id
+//  i-2   IN     second incoming arrow id
+//  i-1   IN     first incoming arrow id
+//  i     PAIR   tail id
+//  i+1   REMAIN head id
+//  i+2   REMAIN H | reference counter
+//  i+3   OUT    first outgoing arrow id
+//  i+4   OUT    second outgoing arrow id
+//  i+5   OUT    third outgoing arrow id
 //  i+6   0      0
 // [...]
-//   H    IDX    i (arrow reference)
+//   H    IDX    arrow self id, that is 'i'
 // [...]
 }}}
 
-Note: We study the possibility to insert an increasing stride between indexed incoming/outgoing arrows to avoid arrows bloat.
 
 ===Open Addressing===
 
@@ -112,9 +114,16 @@ Since arrows are not deleted immediately, they may be saved from deletion by bei
 
 Note the reference counter definition range is quite short. When it reaches its maximal value, it can't change anymore. It means the corresponding arrow will never be deleted. (TBC)
 
-Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. It might be possible to move IN/OUT cells to stuff such an hole as well (TBC).
+Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
-===RAM usage===
+===To Be Studied===
+We study the possibility to:
+  * insert an increasing stride between IN/OUT (incoming/outgoing) cells to avoid search long gap.
+  * move IN/OUT cells to stuff holes due to cells deletion.
+  * use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.
+  * combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.
+
+===RAM cache===
 
 When needed, arrows climb up to a level 1 (RAM) memory device. This device is used as a fine-grained cache of level 0 cells. So it's an array of cell-containers (also called level 1 cells).
 
