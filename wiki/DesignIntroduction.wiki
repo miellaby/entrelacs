@@ -5,34 +5,7 @@
 This page gathers information about the way _Entrelacs_ works.
 
 =The "Arrow paradigm"=
-Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow".
-
-==regular arrows==
-An arrow is an unique immutable oriented pair of arrows.
-  * "pair of arrows" means both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
-  * "oriented" means the pair (A,B) is different from (B,A).
-  * "unique" means each identifiable arrow is stored only once in the whole storage space.
-  * "immutable" means an arrow can't be modified once stored.
-
-=="entrelacs"==
-Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
-
-Moreover, some of these entrelacs are so reentrant they can't be divided into smaller ones. They are called "prim entrelacs" and may be seen as atomistic pieces of data.
-
-Note that an arrow is equivalent in every aspect to the entrelacs formed by all its ancestors. We may substitute indifferently one to the other.
-
-==atomistic arrows==
-Entrelacs allows to store "unique" and "immutable" flat data as BLOB or TAG (C-String) scalars in addition to regular arrows.
-
-Entrelacs underlying theory demonstrates such atomistic data are equivalent to prim entrelacs. In other mean, they are arrows as well. See AtomEntrelacEquivalency for further reading.
-
-===vocabulary===
-  * the first arrow in the pair (resp. the second) is named the "tail" (resp. the "head").
-  * an arrow "goes out" its tail arrow and "comes into" its head arrow.
-  * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow. Note an arrow may have many incoming/outgoing arrows.
-
-====Rooted arrows===
-All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
+Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". Please see the ArrowParadigm to understand the basic.
 
 ==The Arrows Space==
 The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge. This storage space is called the "Arrows Space" hereafter.
