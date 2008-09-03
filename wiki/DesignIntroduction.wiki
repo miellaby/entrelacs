@@ -35,17 +35,20 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
 All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it has been chosen for convenience to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged with a "root" mark.
 
 ==The Arrows Space==
+The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge. This storage space is called the "Arrows Space" hereafter.
 
-Entrelacs System is "orthogonally persistent" regarding arrows storage. Its so called "Arrows Space" ensures arrows are transparently stored into a persistent memory (disk-like) device on a regular basis.
+===Orthogonal persistency===
+Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device on a regular basis.
 
 System dynamics occur inside successive short micro-transactions so that changes are "atomically" saved at each micro-transaction end.
 
+===Disk usage===
 The level 0 memory is designed as a single memory bank of cells which stores both definitions and connectivity data of all known arrows. Each individual "cell" can store one "reference", that is an other cell address.
 
-The way to store arrows consists in placing information into location deduced from 2 hash codes:
-  * the _arrow identifiers hash code_ (noted 'h') which combines both the arrow head and tail identifiers.
-    * _h_ is the default location in the arrows space where to store the arrow definition. This location may be shifted to subsequent cells when a conflict occurs. The actual arrow location becomes the arrow identifier, noted 'i' hereafter.
-  * the _arrow constructive hash code_ (noted 'H') which combines recursively both head and tail H.
+The way to store arrows consists in placing data into location deduced from 2 hash codes:
+  * the _arrow identifiers hash code_ (noted 'h') combines both the arrow head and tail identifiers.
+    * _h_ is the default location where to store the arrow definition. This location may be shifted to subsequent cells when a conflict occurs. The actual arrow location becomes the arrow identifier, noted 'i' hereafter.
+  * the _arrow constructive hash code_ (noted 'H') combines recursively both head and tail H.
     * _H_ is the default location to put an additional reference back to the arrow. These _H_ located references form an index which allows to reach an arrow from its embedded atoms without fetching every ancestors of its entrelacs.
 
 A given arrow 'i' will be stored as is:
@@ -57,7 +60,7 @@ And in addition
 
 Moreover, each time there is a new incoming (resp. outgoing) arrow 'j', we index 'j' identifier in the first free cell before (resp. after) the existing arrow definition at 'i'.
 
-As different kind of references are present in cells, each reference has to be typed by a word of few bits (named its "flag" hereafter).
+As different kind of references are present in cells, each reference has to be typed by a word of few bits (named the cell "flag" hereafter).
   * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
   * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
   * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
@@ -67,7 +70,7 @@ As different kind of references are present in cells, each reference has to be t
   * 0 1 1 0 = TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
   * 0 1 1 1 = ROOTED_PAIR = a PAIR which belongs to a top-level root context.
 
-Finally, here is the typical (no conflict) footprint of an arrow _i_ (where _i_ = h(tail,head)) with 3 incoming/outgoing arrows.
+Finally, here is the typical footprint of an arrow _i_ (i = h(tail, head)) pointed by few incoming/outgoing arrows.
 {{{
 //  Cell# Flag   Content
 // [...]
@@ -75,7 +78,7 @@ Finally, here is the typical (no conflict) footprint of an arrow _i_ (where _i_ 
 //  i-3   IN     Reference to a third incoming arrow (ie. whose head is arrow x)
 //  i-2   IN     Reference to a second incoming arrow
 //  i-1   IN     Reference to a first incoming arrow
-//  i     PAIR   tail identifier
+//  i     PAIR   tail identifier; 
 //  i+1   REMAIN head identifier
 //  i+2   REMAIN H (constructive hash) | reference counter
 //  i+3   OUT    Reference to a first outgoing arrow (i.e. whose queue is arrow x)
@@ -89,7 +92,7 @@ Finally, here is the typical (no conflict) footprint of an arrow _i_ (where _i_ 
 
 Note: We study the possibility to insert an increasing stride between indexed incoming/outgoing arrows to avoid arrows bloat.
 
-==Open Addressing==
+===Open Addressing===
 
 When storing a new arrow, the cell pointed by 'h' (identifiers hash) may be already used. In such a case, one makes use of the "open addressing" trick.
 
@@ -97,7 +100,7 @@ This trick consists in managing conflicts by putting conflicting elements one af
 
 So when the cell default location is already used, the definition data are shifted up to the next free cells.
 
-==Arrows Sweeper==
+===Arrows Sweeper===
 
 The "Arrows Sweeper" is a kind of _garbage collector_ working in the Arrows Space. The "arrows sweeper" spares rooted arrows and all their "ancestors", while no more rooted nor referred arrows are threaten to deletion.
 
@@ -105,13 +108,13 @@ On this purpose, a reference counter is attached in cell # i+3 for every arrow _
 
 The Arrows Sweeper is an incremental GC which proceeds a FIFO of to-be-deleted arrows. This job is scheduled on many transactions to avoid CPU overhead. Arrows are added to this FIFO when unrooted or when their reference-counter go back to zero.
 
-Since arrows are not deleted immediately, they may be saved from deletion by being rooted or refered back. An additional check is performed just before the actual deletion.
+Since arrows are not deleted immediately, they may be saved from deletion by being rooted or refered back. An additional check of deletion criteria is performed just before the actual deletion.
 
 Note the reference counter definition range is quite short. When it reaches its maximal value, it can't change anymore. It means the corresponding arrow will never be deleted. (TBC)
 
-Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts in the Arrows Space. When deleted, a cell is loaded with a "stuffing" value which avoids an "open block" to be cut. It might be possible to move IN/OUT cells to stuff such an hole as well (TBC).
+Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. It might be possible to move IN/OUT cells to stuff such an hole as well (TBC).
 
-==RAM usage==
+===RAM usage===
 
 When needed, arrows climb up to a level 1 (RAM) memory device. This device is used as a fine-grained cache of level 0 cells. So it's an array of cell-containers (also called level 1 cells).
 
@@ -120,14 +123,16 @@ Each level 1 container stores:
   * its level 0 address,
   * its last usage transaction number. It is set when the cell is loaded and it is updated at each access. Level 1 cells are implicitly disposable when their related transaction numbers are old enough.
 
-When climbing up to level 1, a cell is put preferably to level 0 address modulo cache size (yet an other hash). Conflicts management makes use of the "open addressing" trick as well. It means conflicting cells are putted one after an other.
+When climbing up to level 1, a cell is preferably put to its level 0 address modulo cache size (yet an other hash). Conflicts management makes use of the "open addressing" trick as well. It means conflicting cells are putted one after an other.
 
 Furthermore, all changes in level 1 cell contents are logged to prepare the saving process into level 0.
 
 ==Entrelacs Prim Language==
 
+To do:
+
 ==Misc==
-This section has to be dispatched in other wiki pages
+To do: dispatch in other wiki pages
 
 Default hash functions
 {{{
