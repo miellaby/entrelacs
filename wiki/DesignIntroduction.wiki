@@ -1,31 +1,31 @@
-#summary Introduction to Entrelacs design.
+#summary Entrelacs Arrow Space is a persistent storage for "arrows".
 
 = Introduction =
 
 This page gathers information about the way _Entrelacs_ works.
 
 =The "Arrow paradigm"=
-Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". Please see the ArrowParadigm to understand the basic.
+Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". Please see the ArrowParadigm to understand the basics.
 
 ==The Arrows Space==
 The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge. This storage space is called the "Arrows Space" hereafter.
 
 ===Orthogonal persistence===
-Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device on a regular basis.
+Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device.
 
-System dynamics occur inside successive short micro-transactions so that changes are "atomically" saved at each micro-transaction end.
+System dynamics occur inside successive short "micro-transactions" so that arrows changes are "atomically" saved on a regular basis.
 
 ===Disk usage===
-The level 0 memory is designed as a single memory bank of cells to store both definitions and connectivity data of all known arrows.
+The level 0 memory is operated as a single memory bank of cells 
 
-Each individual "cell" can store one "reference", that is an other cell address.
+Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
 
-The location where an arrow data are stored is deduced from 2 hash codes: _h_ and _H_
+The cells where a given arrow data are stored are chosen by computing 2 hash codes: _h_ and _H_.
   * _h_ is the _arrow identifiers hash code_.
     * _h_ combines both the arrow head and tail identifiers.
     * _h_ is the default location where to store the arrow definition. This location may be shifted to subsequent cells when a conflict occurs. The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
   * _H_ is the _arrow constructive hash code_. It combines recursively both head and tail H.
-    * _H_ is the default location to put an additional reference back to the arrow. These _H_ located references form an index which can find an arrow from its embedded atoms without fetching every ancestors of its entrelacs. On this purpose the H function *must* be a commutative operation.
+    * _H_ is the default location to put an additional reference back to the arrow. These _H_ located references form an index which can find an arrow from its embedded atoms without fetching every intermediate ancestors. On this purpose the H function *must* be a commutative operation.
 
 A given arrow 'i' will be stored as is:
   * tail @ i,
@@ -34,9 +34,11 @@ A given arrow 'i' will be stored as is:
 And in addition
   * _i_ (arrow back reference)@ H (shifted on conflict).
 
-Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index which can find arrows from their head or their queue.
+Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index which can find arrows from its head or its queue.
 
-As different kind of references are present in cells, each reference is categorized by few bits called "the cell flag".
+As different kinds of reference may be put in one cell, the cell content is categorized by few bits called "the cell flag".
+
+====Flags list====
   * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
   * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
   * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
@@ -45,6 +47,8 @@ As different kind of references are present in cells, each reference is categori
   * 0 1 0 1 = BLOB = reference a BLOB (atomistish raw data) whose content-hash hits the preceding part of the block.
   * 0 1 1 0 = TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
   * 0 1 1 1 = ROOTED_PAIR = a PAIR which belongs to a top-level root context.
+
+===Arrow footprint===
 
 Finally, here is the typical footprint of an arrow _i_ linking an arrow _tail_ to an arrow _head_ and pointed by few incoming/outgoing arrows.
 {{{
@@ -90,6 +94,7 @@ Note the reference counter definition range is quite short. When it reaches its 
 Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
 ===To Be Studied===
+
 We study the possibility to:
   * insert an increasing stride between IN/OUT (incoming/outgoing) cells to avoid search long gap.
   * move IN/OUT cells to stuff holes due to cells deletion.
