@@ -1,0 +1,114 @@
+#summary The _Arrows Space_ is the orthogonally persistent storage space for arrows inside the _Entrelacs_ system.
+
+=The Arrows Space=
+The main characteristic of the _Entrelacs_ system is to provide a single matrix to store any form of knowledge as arrows (ParadigmArrow). This storage space is called the "Arrows Space" hereafter.
+
+==Orthogonal persistence==
+Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device.
+
+System dynamics occur inside successive short "micro-transactions" so that changes are "atomically" saved on a regular basis.
+
+==Disk usage==
+The level 0 (persistent) memory is operated as a single memory bank of cells 
+
+Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
+
+The cells where a given arrow data are stored are chosen by computing 2 hash codes: _h_ and _H_.
+  * _h_ is the _arrow identifiers hash code_.
+    * _h_ combines both the arrow head and tail identifiers.
+    * _h_ is the default location where to store the arrow definition.
+    * This location may be shifted to subsequent cells when a conflict occurs (open addressing).
+    * The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
+  * _H_ is the _arrow constructive hash code_.
+    * _H_ combines recursively the _H_ of the arrow head and tail. For atomistic arrow, _H_ is computed as a CheckSum (_Tag_) or a Cryptographic hash function (_BLOB_).
+    * _H_ is the default location where to put an additional reference back to the arrow.
+    * This location may be shifted to subsequent cells when a conflict occurs (open addressing).
+    * _H_ located references form an index to find arrows from their embedded atoms without fetching every intermediate ancestors.
+    * On this purpose the H combinator *must* be a commutative operation.
+
+A given arrow 'i' will be stored as is:
+  * tail @ i,
+  * head @ i+1,
+  * _H_ @ i+3 (combined with a reference counter).
+And in addition
+  * _i_ (arrow back reference)@ H (shifted on conflict).
+
+Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index to find arrows from their head or their queue.
+
+As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flag".
+
+===Cell flags list===
+  * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
+  * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
+  * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
+  * 0 0 1 1 = OUTGOING = reference an arrow whose tail is an arrow defined in the preceding part of the block.
+  * 0 1 0 0 = INDEX = reference an arrow whose content-hash hits the preceding part of the block
+  * 0 1 0 1 = BLOB = reference a BLOB (atomistish raw data) whose content-hash hits the preceding part of the block.
+  * 0 1 1 0 = TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
+  * 0 1 1 1 = ROOTED_PAIR = a PAIR which belongs to a top-level root context.
+
+==Arrow footprint==
+
+Finally, here is the typical footprint of an arrow _i_ going out of a _tail_ arrow and incoming to an _head_ arrow. _i_ is also pointed by few incoming/outgoing arrows.
+{{{
+//  Cell# Flag   Content
+// [...]
+//  i-4   0      0
+//  i-3   IN     third incoming arrow id
+//  i-2   IN     second incoming arrow id
+//  i-1   IN     first incoming arrow id
+//  i     PAIR   tail id
+//  i+1   REMAIN head id
+//  i+2   REMAIN H | reference counter
+//  i+3   OUT    first outgoing arrow id
+//  i+4   OUT    second outgoing arrow id
+//  i+5   OUT    third outgoing arrow id
+//  i+6   0      0
+// [...]
+//   H    IDX    arrow self id, that is 'i'
+// [...]
+}}}
+
+
+==Open Addressing==
+
+The cell pointed by 'h' (identifiers hash) is supposed to receive the corresponding arrow definition. However, it may be already used. In such a case, one makes use of the "open addressing" trick.
+
+This trick consists in managing conflicts by putting conflicting elements one after another, forming a contiguous memory block from the conflicting address up to the first free cell. Such a memory block will be called an "open block" hereafter.
+
+So when the cell default location is already used, the definition data are shifted up to the next free cells.
+
+==Arrows Sweeper==
+
+The "Arrows Sweeper" is a kind of _garbage collector_ working in the Arrows Space. The "arrows sweeper" spares rooted arrows and all their "ancestors", while no more rooted nor referred arrows are threaten to deletion.
+
+On this purpose, a reference counter is attached in cell # i+3 for every arrow _i_. This counter is incremented each time a new arrow is incoming/outgoing  from/to _i_. It is decremented when such an arrow is deleted by the "arrow sweeper" itself.
+
+The Arrows Sweeper is an incremental GC which proceeds a FIFO of to-be-deleted arrows. This job is scheduled on many transactions to avoid CPU overhead. Arrows are added to this FIFO when unrooted or when their reference-counter go back to zero.
+
+Since arrows are not deleted immediately, they may be saved from deletion by being rooted or refered back. An additional check of deletion criteria is performed just before the actual deletion.
+
+Note the reference counter definition range is quite short. When it reaches its maximal value, it can't change anymore. It means the corresponding arrow will never be deleted. (TBC)
+
+Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
+
+==To Be Studied==
+
+We study the possibility to:
+  * insert an increasing stride between IN/OUT (incoming/outgoing) cells to avoid search long gap.
+  * move IN/OUT cells to stuff holes due to cells deletion.
+  * use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.
+  * combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.
+
+==RAM cache==
+
+When needed, arrows climb up to a level 1 (RAM) memory device. This device is used as a fine-grained cache of level 0 cells. So it's an array of cell-containers (also called level 1 cells).
+
+Each level 1 container stores:
+  * one full level 0 cell,
+  * its level 0 address,
+  * its last usage transaction number. It is set when the cell is loaded and it is updated at each access. Level 1 cells are implicitly disposable when their related transaction numbers are old enough.
+
+When climbing up to level 1, a cell is preferably put to its level 0 address modulo cache size (yet an other hash). Conflicts management makes use of the "open addressing" trick as well. It means conflicting cells are putted one after an other.
+
+Furthermore, all changes in level 1 cell contents are logged to prepare the saving process into level 0.
