@@ -1,0 +1,18 @@
+#summary The Entrelacs Virtual Machine.
+
+The prim engine which powers an _Entrelacs_ system looks like a Lisp machine. This engine handles the overall system interaction loop, like :
+{{{
+   repeat forever:
+     read one input arrow
+     compute {behavior := behavior(input)}
+}}}
+
+This interaction loop handles newly received arrows one by one and applies the system behavior function to it. This evaluation process is called a "system iteration". Note each iteration is confined into a "arrows space transaction" so that Entrelacs iterates between stable persistent states.
+
+This system behavior function is actually defined by a root context formed by flagged arrows among the arrows space, namely the "rooted arrows".
+
+Rooted arrows may be seen as pattern based rewriting rules. They defines how arrows may lead to some other generated arrows.
+
+Actually, these rewriting rules are recombination rules. They are based upon combinators, that is operators which don't relay on "variables". As is, "Lambda barre" language is nearest from "combinatory logic" theoretical language (see wikipedia:CombinatoryLogic) than "lambda calculus". See EntrelacsLanguage for details.
+
+Entrelacs Virtual Machine operates the ArrowsSpace as an universal cache. In other means, incoming arrows or arrows produced while computing may be cached in the ArrowSpace. Cache recovery may dramatically improve communication and computing. This mechanism works both as a data cache (see http://en.wikipedia.org/wiki/Cache) and a computation cache (see http://en.wikipedia.org/wiki/Memoization). Work in progress.
