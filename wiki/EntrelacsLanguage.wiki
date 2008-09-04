@@ -1,0 +1,8 @@
+#summary The EL is yet an other language
+
+= Introduction =
+
+EL (_Entrelacs Language_) is a mix of:
+1) Lambda Calculus, Lisp.
+2) Combinatory Logic, Rewriting rules based languages.
+3) Inference engine languages (Prolog), Query language (SQL).
