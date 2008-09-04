@@ -1,4 +1,4 @@
-#summary The _Arrows Space_ is the orthogonally persistent storage space for arrows inside the _Entrelacs_ system.
+#summary The "Arrows Space" is the orthogonally persistent storage space for arrows inside the "Entrelacs" system.
 
 =The Arrows Space=
 The main characteristic of the _Entrelacs_ system is to provide a single matrix to store any form of knowledge as arrows (ParadigmArrow). This storage space is called the "Arrows Space" hereafter.
