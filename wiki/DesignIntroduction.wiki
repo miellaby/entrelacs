@@ -4,11 +4,20 @@
 Entrelacs System deals with "arrows". Please see the ArrowParadigm page to understand the basics.
 
 =The Arrows Space=
-The main characteristic of the Entrelacs system is to provide a single matrix to store any form of knowledge as arrows. This storage space is called the "Arrows Space". Please see the ArrowsSpace page for further readings.
+The main characteristic of the _Entrelacs_ system is to provide an homogeneous matrix to store knowledge as arrows. This storage space is called the "Arrows Space". Please see the ArrowsSpace page for further readings.
 
 =Entrelacs Prim Language=
 
-To do:
+To make a full use of the ArrowParadigm and the unique features of the ArrowsSpace, Entrelacs provides a virtual machine animated by a "prim language" on top of the ArrowsSpace. Please see the EntrelacsLanguage page for further readings.
+
+=Entrelacs Virtual Machine=
+
+The Entrelacs Virtual Machine is a computing environment on top of the Arrows Space. It looks like a minimalistic Lisp machine with unique features provided by the ArrowParadygm. Please see the EntrelacsVirtualMachine page for further readings.
+
+=Network and C API of the Entrelacs prototype==
+
+The first Entrelacs prototype stands as a client/server software on top of a GNU/Linux platform. An HTTP/AJAX/COMET/REST based protocol allows "arrows publishers" and "arrows subscribers" typed applications and MMI to communicate with a running Entrelacs system. Moreover, a C API allows to plugs VM extensions as special effect arrows. Please  see the EntrelacsPrototypeArchitecture page for further readings.
+
 
 =Misc=
 To do: dispatch in other wiki pages
