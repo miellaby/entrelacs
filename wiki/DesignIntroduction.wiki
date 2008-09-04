@@ -9,19 +9,25 @@ The main characteristic of the Entrelacs system is to provide a single matrix to
 ==Orthogonal persistence==
 Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device.
 
-System dynamics occur inside successive short "micro-transactions" so that arrows changes are "atomically" saved on a regular basis.
+System dynamics occur inside successive short "micro-transactions" so that changes are "atomically" saved on a regular basis.
 
 ==Disk usage==
-The level 0 memory is operated as a single memory bank of cells 
+The level 0 (persistent) memory is operated as a single memory bank of cells 
 
 Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
 
 The cells where a given arrow data are stored are chosen by computing 2 hash codes: _h_ and _H_.
   * _h_ is the _arrow identifiers hash code_.
     * _h_ combines both the arrow head and tail identifiers.
-    * _h_ is the default location where to store the arrow definition. This location may be shifted to subsequent cells when a conflict occurs. The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
-  * _H_ is the _arrow constructive hash code_. It combines recursively both head and tail H.
-    * _H_ is the default location to put an additional reference back to the arrow. These _H_ located references form an index which can find an arrow from its embedded atoms without fetching every intermediate ancestors. On this purpose the H function *must* be a commutative operation.
+    * _h_ is the default location where to store the arrow definition.
+    * This location may be shifted to subsequent cells when a conflict occurs (open addressing).
+    * The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
+  * _H_ is the _arrow constructive hash code_.
+    * _H_ combines recursively the _H_ of the arrow head and tail. For atomistic arrow, _H_ is computed as a CheckSum (_Tag_) or a Cryptographic hash function (_BLOB_).
+    * _H_ is the default location where to put an additional reference back to the arrow.
+    * This location may be shifted to subsequent cells when a conflict occurs (open addressing).
+    * _H_ located references form an index to find arrows from their embedded atoms without fetching every intermediate ancestors.
+    * On this purpose the H combinator *must* be a commutative operation.
 
 A given arrow 'i' will be stored as is:
   * tail @ i,
@@ -30,11 +36,11 @@ A given arrow 'i' will be stored as is:
 And in addition
   * _i_ (arrow back reference)@ H (shifted on conflict).
 
-Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index which can find arrows from its head or its queue.
+Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index to find arrows from their head or their queue.
 
-As different kinds of reference may be put in one cell, the cell content is categorized by few bits called "the cell flag".
+As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flag".
 
-===Flags list===
+===Cell flags list===
   * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
   * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
   * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
@@ -46,7 +52,7 @@ As different kinds of reference may be put in one cell, the cell content is cate
 
 ==Arrow footprint==
 
-Finally, here is the typical footprint of an arrow _i_ linking an arrow _tail_ to an arrow _head_ and pointed by few incoming/outgoing arrows.
+Finally, here is the typical footprint of an arrow _i_ going out of a _tail_ arrow and incoming to an _head_ arrow. _i_ is also pointed by few incoming/outgoing arrows.
 {{{
 //  Cell# Flag   Content
 // [...]
@@ -69,7 +75,7 @@ Finally, here is the typical footprint of an arrow _i_ linking an arrow _tail_ t
 
 ==Open Addressing==
 
-When storing a new arrow, the cell pointed by 'h' (identifiers hash) may be already used. In such a case, one makes use of the "open addressing" trick.
+The cell pointed by 'h' (identifiers hash) is supposed to receive the corresponding arrow definition. However, it may be already used. In such a case, one makes use of the "open addressing" trick.
 
 This trick consists in managing conflicts by putting conflicting elements one after another, forming a contiguous memory block from the conflicting address up to the first free cell. Such a memory block will be called an "open block" hereafter.
 
