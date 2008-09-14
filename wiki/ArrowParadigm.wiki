@@ -7,8 +7,6 @@ Entrelacs System deals only with "arrows". Its credo might be "Everything is an 
 ==regular arrows==
 An arrow is an unique immutable oriented pair of arrows.
 
-http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png
-
   * "pair of arrows" means both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
   * "oriented" means the pair (A,B) is different from (B,A).
   * "unique" means each identifiable arrow is stored only once in the whole storage space.
@@ -27,6 +25,7 @@ Entrelacs allows to store "unique" and "immutable" flat data as BLOB or TAG (C-S
 Entrelacs underlying theory demonstrates such atomistic data are equivalent to prim entrelacs. In other mean, they are arrows as well. See AtomEntrelacEquivalency for further reading.
 
 ===vocabulary===
+http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png
   * the first arrow in the pair (resp. the second) is named the "tail" (resp. the "head").
   * an arrow "goes out" its tail arrow and "comes into" its head arrow.
   * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow. Note an arrow may have many incoming/outgoing arrows.
