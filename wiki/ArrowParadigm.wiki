@@ -6,6 +6,9 @@ Entrelacs System deals only with "arrows". Its credo might be "Everything is an 
 
 ==regular arrows==
 An arrow is an unique immutable oriented pair of arrows.
+
+http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png
+
   * "pair of arrows" means both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
   * "oriented" means the pair (A,B) is different from (B,A).
   * "unique" means each identifiable arrow is stored only once in the whole storage space.
