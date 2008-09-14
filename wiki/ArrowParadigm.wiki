@@ -17,6 +17,8 @@ Each arrow definition embeds (leads to) a set of ancestor arrows forming a close
 
 Moreover, some of these entrelacs are so reentrant they can't be divided into smaller ones. They are called "prim entrelacs" and may be seen as atomistic pieces of data.
 
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   || this arrow is also a "prim entrelacs" I named _eve_ (sorry for that!) ||
+
 Note that an arrow is equivalent in every aspect to the entrelacs formed by all its ancestors. We may substitute indifferently one to the other.
 
 ==atomistic arrows==
@@ -25,10 +27,12 @@ Entrelacs allows to store "unique" and "immutable" flat data as BLOB or TAG (C-S
 Entrelacs underlying theory demonstrates such atomistic data are equivalent to prim entrelacs. In other mean, they are arrows as well. See AtomEntrelacEquivalency for further reading.
 
 ===vocabulary===
-http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png || an _arrow_, its _head_, its _tail_, its _incoming children_ arrows, its _outgoing children_ ||
   * the first arrow in the pair (resp. the second) is named the "tail" (resp. the "head").
   * an arrow "goes out" its tail arrow and "comes into" its head arrow.
-  * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow. Note an arrow may have many incoming/outgoing arrows.
+  * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow.
+  * An arrow may have many incoming/outgoing arrows, sometimes called "children" arrows.
+  * Arrows reached by recursively following head/tail definitions are called the considered arrow ancestors. As a whole, these ancesters form an _entrelacs_.
 
 ===Rooted arrows===
 All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
