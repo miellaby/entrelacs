@@ -2,7 +2,7 @@
 
 = Introduction =
 
-Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". This is the *"Arrow Paradigm"*.
+Entrelacs System deals only with "arrows". Its credo could be "Everything is an arrow". This is the *"Arrow Paradigm"*.
 
 ==regular arrows==
 An arrow is an unique immutable oriented pair of arrows.
@@ -15,9 +15,12 @@ An arrow is an unique immutable oriented pair of arrows.
 ==_entrelacs_==
 Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
 
-Moreover, some of these entrelacs are so reentrant they can't be divided into smaller ones. They are called "prim entrelacs" and may be seen as atomistic pieces of data.
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png   ||Here is a introduction of few entrelacs (and one counter-example)||
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   || this arrow is also a "prim entrelacs" I named _eve_ (sorry for that!) ||
+
+Some of these entrelacs are so reentrant they can't be divided into smaller ones. They are "prim entrelacs". They may be seen as atomistic pieces of data.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   || this arrow is also a "prim entrelacs". It is named _eve_ (certainly because it has no parent) ||
 
 Note that an arrow is equivalent in every aspect to the entrelacs formed by all its ancestors. We may substitute indifferently one to the other.
 
