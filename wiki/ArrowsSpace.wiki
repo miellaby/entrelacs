@@ -97,10 +97,9 @@ Actually, there may be a difference between a deleted cell and an empty cell, be
 ==To Be Studied==
 
 We study the possibility to:
-  * insert an increasing stride between IN/OUT (incoming/outgoing) cells to avoid search long gap.
   * move IN/OUT cells to stuff holes due to cells deletion.
-  * use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.
-  * combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.
+  ~~* use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.~~
+  ~~* combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.~~
 
 ==RAM cache==
 
