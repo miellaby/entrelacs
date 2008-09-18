@@ -17,19 +17,19 @@ The cells where a given arrow data are stored are chosen by computing 2 hash cod
   * _h_ is the _arrow identifiers hash code_.
     * _h_ combines both the arrow head and tail identifiers.
     * _h_ is the default location where to store the arrow definition.
-    * This location may be shifted to subsequent cells when a conflict occurs (open addressing).
+    * This location may be shifted when a conflict occurs (open addressing).
     * The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
   * _H_ is the _arrow constructive hash code_.
     * _H_ combines recursively the _H_ of the arrow head and tail. For atomistic arrow, _H_ is computed as a CheckSum (_Tag_) or a Cryptographic hash function (_BLOB_).
     * _H_ is the default location where to put an additional reference back to the arrow.
-    * This location may be shifted to subsequent cells when a conflict occurs (open addressing).
+    * This location may be shifted on conflict (open addressing).
     * _H_ located references form an index to find arrows from their embedded atoms without fetching every intermediate ancestors.
     * On this purpose the H combinator *must* be a commutative operation.
 
 A given arrow 'i' will be stored as is:
   * tail @ i,
-  * head @ i+1,
-  * _H_ @ i+3 (combined with a reference counter).
+  * head @ i+offset,
+  * _H_ @ i+2*offset (combined with a reference counter).
 And in addition
   * _i_ (arrow back reference)@ H (shifted on conflict).
 
@@ -53,17 +53,17 @@ Finally, here is the typical footprint of an arrow _i_ going out of a _tail_ arr
 {{{
 //  Cell# Flag   Content
 // [...]
-//  i-4   0      0
-//  i-3   IN     third incoming arrow id
-//  i-2   IN     second incoming arrow id
-//  i-1   IN     first incoming arrow id
+//  i-4o  0      0
+//  i-3o  IN     third incoming arrow id
+//  i-2o  IN     second incoming arrow id
+//  i-o   IN     first incoming arrow id
 //  i     PAIR   tail id
-//  i+1   REMAIN head id
-//  i+2   REMAIN H | reference counter
-//  i+3   OUT    first outgoing arrow id
-//  i+4   OUT    second outgoing arrow id
-//  i+5   OUT    third outgoing arrow id
-//  i+6   0      0
+//  i+o   REMAIN head id
+//  i+2o  REMAIN H | reference counter
+//  i+3o  OUT    first outgoing arrow id
+//  i+4o  OUT    second outgoing arrow id
+//  i+5o  OUT    third outgoing arrow id
+//  i+6o  0      0
 // [...]
 //   H    IDX    arrow self id, that is 'i'
 // [...]
@@ -72,11 +72,13 @@ Finally, here is the typical footprint of an arrow _i_ going out of a _tail_ arr
 
 ==Open Addressing==
 
-The cell pointed by 'h' (identifiers hash) is supposed to receive the corresponding arrow definition. However, it may be already used. In such a case, one makes use of the "open addressing" trick.
+The cell pointed by 'h' (identifiers hash) is supposed to receive the corresponding arrow definition. However, it might be already used. In such a case, one makes use of the "open addressing" trick.
 
-This trick consists in managing conflicts by putting conflicting elements one after another, forming a contiguous memory block from the conflicting address up to the first free cell. Such a memory block will be called an "open block" hereafter.
+This trick consists in managing conflicts by putting conflicting elements among neighbor cells. Such a set of same-hash memory cells will be called an "open block" hereafter.
 
-So when the cell default location is already used, the definition data are shifted up to the next free cells.
+Actually, when looking for free cells, the location shifting offset is computed by a dedicated hash function as well so to be different in each case. This is the "double hashing" improvement to "open addressing", which avoid a scheme of serial aligned conflicts to occurs.
+
+See http://www.eece.unm.edu/faculty/heileman/hash/node4.html for a better explanation of all these principles.
 
 ==Arrows Sweeper==
 
