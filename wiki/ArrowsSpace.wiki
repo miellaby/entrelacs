@@ -13,6 +13,10 @@ The level 0 (persistent) memory is operated as a single memory bank of cells
 
 Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
 
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   ||In storage memory, arrows are pairs of pointers linking to parent arrows and atomistic data||
+
+
 The cells where a given arrow data are stored are chosen by computing 2 hash codes: _h_ and _H_.
   * _h_ is the _arrow identifiers hash code_.
     * _h_ combines both the arrow head and tail identifiers.
