@@ -26,6 +26,7 @@ Each arrow definition embeds (leads to) a set of ancestor arrows forming a close
 Some of these entrelacs are so reentrant they can't be divided into smaller ones. They are "prim entrelacs". They may be seen as atomistic pieces of data.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   || this arrow is also a "prim entrelacs". It is named _eve_ (certainly because it has no parent) ||
+||http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png|| this arrow is not a "prim entrelacs" but it embeds two ones ||
 
 Note that an arrow is equivalent in every aspect to the entrelacs formed by all its ancestors. We may substitute indifferently one to the other.
 
