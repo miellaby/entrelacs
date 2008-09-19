@@ -17,8 +17,11 @@ An arrow is an unique immutable oriented pair of arrows.
 ==_entrelacs_==
 Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
 
+<!>connected means there is at least one arrow which embeds the whole pattern in its definition. See counter-example.
+
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png   ||Here is a introduction of few entrelacs (and one counter-example)||
 
+== prim entrelacs==
 
 Some of these entrelacs are so reentrant they can't be divided into smaller ones. They are "prim entrelacs". They may be seen as atomistic pieces of data.
 
