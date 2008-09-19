@@ -46,6 +46,18 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
 ===Rooted arrows===
 All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. 
 
-However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
+However, it's more convenient to represent the system top-level context as a set of "rooted" arrows.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png   || this arrow is "rooted". See the graphic notation here. It corresponds to a dedicated flag bit on storage||
+Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark. This "rooted" boolean property of each known arrow is its only mutable property.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png   || this arrow is "rooted". See the graphic notation here (Lambda / check mark). It corresponds to a dedicated flag bit on storage||
+
+==unicity==
+
+Never forget one definable arrow is represented only once in the whole system (redundancy free principle).
+
+It implies each arrow might be an ancestor belonging to the definition of many other arrows.
+
+That's the main reason why an arrow can't be modified once stored (immutability principle).
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   || this average entrelacs embeds arrows which are several times ancestors of children arrows.||
