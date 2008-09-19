@@ -1,11 +1,11 @@
 #summary Entrelacs Arrow Space is a persistent storage for "arrows".
 
 =The "Arrow paradigm"=
-http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   
+http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png  
 Entrelacs System deals with "arrows". Please see the ArrowParadigm page to understand the basics.
 
-=The Arrows Space= http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   
-
+=The Arrows Space= 
+http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   
 The main characteristic of the _Entrelacs_ system is to provide an homogeneous matrix to store knowledge as arrows. This storage space is called the "Arrows Space". Please see the ArrowsSpace page for further readings.
 
 =Entrelacs Prim Language=
