@@ -47,3 +47,5 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
 All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. 
 
 However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png   || this arrow is "rooted". See the graphic notation here. It corresponds to a dedicated flag bit on storage||
