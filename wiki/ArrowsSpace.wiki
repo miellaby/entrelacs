@@ -105,6 +105,13 @@ We study the possibility to:
   * ~~use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.~~
   * ~~combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.~~
 
+==candidate hash functions==
+     * key hash = f(tail, head) = ((head << 24) & tail) % P0
+     * drone hash = g(tail, head) = ((head << 24) & tail) % P1
+        * where P0 and P1 are twin prims near mem0 size 2^24
+     * BLOB hash = truncated SHA-2
+     * TAG hash = simpler checksum.
+
 ==RAM cache==
 
 When needed, arrows climb up to a level 1 (RAM) memory device. This device is used as a fine-grained cache of level 0 cells. So it's an array of cell-containers (also called level 1 cells).
