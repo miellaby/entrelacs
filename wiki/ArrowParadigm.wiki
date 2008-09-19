@@ -11,6 +11,8 @@ An arrow is an unique immutable oriented pair of arrows.
   * "oriented" means the pair (A,B) is different from (B,A).
   * "unique" means each identifiable arrow is stored only once in the whole storage space.
   * "immutable" means an arrow can't be modified once stored.
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png   ||Here is some arrows. As you can see, arrows ends are other arrows.||
+
 
 ==_entrelacs_==
 Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
