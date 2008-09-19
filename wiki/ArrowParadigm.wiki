@@ -34,7 +34,7 @@ Note that an arrow is equivalent in every aspect to the entrelacs formed by all 
 Entrelacs allows to store "unique" and "immutable" flat data as BLOB or TAG (C-String) scalars in addition to regular arrows.
 
 Entrelacs underlying theory demonstrates such atomistic data are equivalent to prim entrelacs. In other mean, such binary data are arrows as well. See AtomEntrelacEquivalency for further reading.
-|| httHere is some arrows. As you can see, arrows ends are other arrows.p://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png   ||Binary things may be seen as encoded big prim entrelacs.||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png   ||Binary things may be seen as encoded big prim entrelacs.||
 
 ===vocabulary===
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png || an _arrow_, its _head_, its _tail_, its _incoming children_ arrows, its _outgoing children_ ||
