@@ -40,7 +40,9 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
   * an arrow "goes out" its tail arrow and "comes into" its head arrow.
   * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow.
   * An arrow may have many incoming/outgoing arrows, sometimes called "children" arrows.
-  * Arrows reached by recursively following head/tail definitions are called the considered arrow ancestors. As a whole, these ancesters form an _entrelacs_.
+  * Arrows reached by recursively following head/tail definitions are ancestors. As a whole, these ancestors form a valid _entrelacs_.
 
 ===Rooted arrows===
-All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
+All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. 
+
+However, it's more convenient to represent the system top-level context as a set of "rooted" arrows. Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark.
