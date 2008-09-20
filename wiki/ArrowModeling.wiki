@@ -1,9 +1,7 @@
 #summary One-may represent any piece of information thanks to "arrows".
 
 = Introduction =
-There are lenty of ways to use arrows to represent information.
-
-The arrows usage fundamental key is to define _contexts_ as sets of arrows pointed by context arrows. Contexts can embeds inner contexts, forming a context hierarchy.
+There are plenty of ways to use arrows to represent information. But the fundamental key to arrows usage is to define _contexts_ as sets of arrows pointed by context arrows. Contexts can embeds inner contexts, forming a context hierarchy.
 
 = Overview =
 
