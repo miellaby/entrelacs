@@ -1,4 +1,4 @@
-#summary The EL is yet an other language
+#summary The EL is a mix of several kind of languages. But in difference with any existing language, an EL program source is made of arrows and works with arrows.
 
 = Introduction =
 
