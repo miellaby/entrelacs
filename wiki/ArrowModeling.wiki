@@ -1,3 +1,14 @@
 #summary One-may represent any piece of information thanks to "arrows".
 
 = Introduction =
+There are lenty of ways to use arrows to represent information.
+
+The arrows usage fundamental key is to define _contexts_ as sets of arrows pointed by context arrows. Contexts can embeds inner contexts, forming a context hierarchy.
+
+= Overview =
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/OO.png   ||Object Oriented Arrows Usage||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/FnO.png   ||Intensive Function Oriented Arrows Usage||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/NeuralO.png   ||Neuron Oriented Arrows Usage||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/TagAndBundle.png   ||Its easy to implement a full featured tagsonomy with arrows||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/Confusion.png   ||Warning: Neuron oriented modeling may lead to confusion||
