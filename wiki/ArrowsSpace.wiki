@@ -6,7 +6,7 @@ The main characteristic of the _Entrelacs_ system is to provide a single matrix 
 ==Arrow: reminder==
 From the "Arrows Space" point of view, one regular arrow is a pair of pointers (tail & head), each pointer consisting in a id identifying some other arrow inside the same space.
 
-The "Arrows Space" must store atomistic binary object too. They are equivalent in every aspect to a regular arrow (precisly "prim entrelacs"). They are two binary types
+The "Arrows Space" must store atomistic binary object too. They are equivalent in every aspect to a regular arrow (precisly "prim entrelacs"). For now there are two binary types
    * BLOB : Large binary object
    * TAG : A not too long C-like null-terminated string.
 
