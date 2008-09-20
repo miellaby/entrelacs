@@ -49,14 +49,14 @@ Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we pu
 As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flag".
 
 ===Cell flags list===
-  * 0 0 0 0 = PAIR = first part of a regular arrow definition (ie. its tail id)
-  * 0 0 0 1 = REMAINING = subsequent part of definition (head and more for a regular arrow)
-  * 0 0 1 0 = INCOMING = reference an arrow whose head is an arrow defined in the following part of the block.
-  * 0 0 1 1 = OUTGOING = reference an arrow whose tail is an arrow defined in the preceding part of the block.
-  * 0 1 0 0 = INDEX = reference an arrow whose content-hash hits the preceding part of the block
-  * 0 1 0 1 = BLOB = reference a BLOB (atomistish raw data) whose content-hash hits the preceding part of the block.
-  * 0 1 1 0 = TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
-  * 0 1 1 1 = ROOTED_PAIR = a PAIR which belongs to a top-level root context.
+  * PAIR = first part of a regular arrow definition (ie. its tail id)
+  * ROOTED_PAIR = a PAIR which belongs to a top-level root context.
+  * BLOB = Big atomistic binary raw data) whose content-hash hits the preceding part of the block.
+  * TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
+  * CONTINUATION = remaining part of definition (head or H for a regular arrow, data for BLOG or DATA)
+  * INCOMING = reference to a child incoming arrow
+  * OUTGOING = reference to a child outgoing arrow
+  * INDEX = reference to an arrow indexed by H (content-hash)
 
 ==Arrow footprint==
 
@@ -65,15 +65,25 @@ Finally, here is the typical footprint of an arrow _i_ going out of a _tail_ arr
 //  Cell# Flag   Content
 // [...]
 //  i-4o  0      0
+// [...]
 //  i-3o  IN     third incoming arrow id
+// [...]
 //  i-2o  IN     second incoming arrow id
+// [...]
 //  i-o   IN     first incoming arrow id
+// [...]
 //  i     PAIR   tail id
+// [...]
 //  i+o   REMAIN head id
+// [...]
 //  i+2o  REMAIN H | reference counter
+// [...]
 //  i+3o  OUT    first outgoing arrow id
+// [...]
 //  i+4o  OUT    second outgoing arrow id
+// [...]
 //  i+5o  OUT    third outgoing arrow id
+// [...]
 //  i+6o  0      0
 // [...]
 //   H    IDX    arrow self id, that is 'i'
@@ -95,22 +105,15 @@ See http://www.eece.unm.edu/faculty/heileman/hash/node4.html for a better explan
 
 The "Arrows Sweeper" is a kind of _garbage collector_ working in the Arrows Space. The "arrows sweeper" spares rooted arrows and all their "ancestors", while no more rooted nor referred arrows are threaten to deletion.
 
-On this purpose, a reference counter is attached in cell # i+3 for every arrow _i_. This counter is incremented each time a new arrow is incoming/outgoing  from/to _i_. It is decremented when such an arrow is deleted by the "arrow sweeper" itself.
+On this purpose, a reference counter is attached in cell # i+3o for every arrow _i_. This counter is incremented each time a new arrow is incoming/outgoing  from/to _i_. It is decremented when such an arrow is deleted by the "arrow sweeper" itself.
 
-The Arrows Sweeper is an incremental GC which proceeds a FIFO of to-be-deleted arrows. This job is scheduled on many transactions to avoid CPU overhead. Arrows are added to this FIFO when unrooted or when their reference-counter go back to zero.
+The Arrows Sweeper is an incremental GC which proceeds to-be-deleted arrows. This job is dispatched on many transactions to avoid CPU overhead. Arrows to proceed are unrooted arrow or arrow with a reference-counter back to zero.
 
-Since arrows are not deleted immediately, they may be saved from deletion by being rooted or refered back. An additional check of deletion criteria is performed just before the actual deletion.
+Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
 
 Note the reference counter definition range is quite short. When it reaches its maximal value, it can't change anymore. It means the corresponding arrow will never be deleted. (TBC)
 
 Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
-
-==To Be Studied==
-
-We study the possibility to:
-  * move IN/OUT cells to stuff holes due to cells deletion.
-  * ~~use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.~~
-  * ~~combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.~~
 
 ==candidate hash functions==
      * key hash = f(tail, head) = ((head << 24) & tail) % P0
@@ -131,3 +134,7 @@ Each level 1 container stores:
 When climbing up to level 1, a cell is preferably put to its level 0 address modulo cache size (yet an other hash). Conflicts management makes use of the "open addressing" trick as well. It means conflicting cells are putted one after an other.
 
 Furthermore, all changes in level 1 cell contents are logged to prepare the saving process into level 0.
+
+==Misc.==
+
+cf. InProgress
