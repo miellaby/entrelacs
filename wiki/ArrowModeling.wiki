@@ -1,0 +1,3 @@
+#summary One-may represent any piece of information thanks to "arrows".
+
+= Introduction =
