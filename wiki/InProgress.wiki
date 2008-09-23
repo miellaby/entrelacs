@@ -3,9 +3,32 @@
 = Introduction =
 This a *scratch page* to store work in progress note and ideas.
 
-= To Be Studied =
+= Future usage =
+== prototype as a web server usage ideas ==
+   * powering a mind-mapping web application based on arrows rather than old-school graphs.
+   * sharing files and actually anything else between its web users.
+   * powering various AJAX&COMET application.
 
-We study the possibility to:
-  * move IN/OUT cells to stuff holes due to cells deletion.
-  * ~~use the reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.~~
-  * ~~combine a "lastOne" bit with various cell contents to limit open addressing search. This bit must be updated when adding or removing elements in a block.~~
+= Entrelacs vs. X theory =
+
+=== Me vs. Shanon ===
+   * Entrelacs doesn't pretend to encode data further than any limit proved by http://en.wikipedia.org/wiki/Information_theory
+   * However, by adapting Huffman coding to transform a sequence of atoms into a structure of unique pairs, it should be possible to optimize the way to pair things (that is in a way which makes the resulting graph more compact)
+
+=== Me vs. Turing ===
+   * Entrelacs doesn't pretend to do things which couldn't be accomplished by any other computing languages and run-time environments as we already know everything is eventually equivalent to a Turing Machine, not less nor more.
+   * However, two Turing equivalent systems can be very different in terms of usability and utility. You might write a Word Processor with the famous Conway "Game Of Life" Automata, but it's much more efficient to use a modern computing language which surpasses its concurrents in expressiveness like OCAML does.
+   * Entrelacs system surpasses classical system in information handling. When data are stored in Entrelacs, they are much more useful than when they are stored in a classical file read by a classical application over a classical operating system. That's all the reason why this project exists.
+
+= Not yet dead ideas =
+   * move INGOIN/OUTGOING cells to stuff holes due to cells deletion.
+
+= definitely dead ideas =
+
+This § gathers dismissed quite stupid ideas
+
+   * ~use the arrow reference counter to reduce the search range of IN/OUT arrows. The reference counters may be duplicated (one for IN, one for OUT) on this purpose.
+   * combine a "lastOne" bit with cell contents to limit a little more open addressing search. This bit must be updated when adding or removing elements in a block.
+
+= I daren't =
+   * I daren't thinking this "information brought by an entrelacs machine" idea is the most important invention since writing.
