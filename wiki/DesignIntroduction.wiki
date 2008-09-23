@@ -1,4 +1,5 @@
 #summary The Entrelacs System Prototype is a kind of virtual machine working with an "Arrows Space".
+#labels Featured,Phase-Design
 
 =The "Arrow paradigm"=
 
