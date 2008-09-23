@@ -1,4 +1,5 @@
 #summary Entrelacs relays on the "arrow" paradigm.
+#labels Featured
 
 = Introduction =
 
