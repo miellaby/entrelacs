@@ -8,22 +8,26 @@ This a *scratch page* to store work in progress note and ideas.
    * powering a mind-mapping web application based on arrows rather than old-school graphs.
    * sharing files and actually anything else between its web users.
    * powering various AJAX&COMET application.
+== arrows made structures ideas ==
+   * mute arrows in fundamental modeled neurons. Each neuron-arrow might be enriched with a learning coefficient evolving according to Hebb's rule.
+   * TO DO: porting _Hebb's rule_ to arrows graph.
 
 = Entrelacs vs. X theory =
 
-=== Me vs. Shanon ===
+=== vs. Shanon ===
    * Entrelacs doesn't pretend to encode data further than any limit proved by http://en.wikipedia.org/wiki/Information_theory
    * However, by adapting Huffman coding to transform a sequence of atoms into a structure of unique pairs, it should be possible to optimize the way to pair things (that is in a way which makes the resulting graph more compact)
 
-=== Me vs. Turing ===
+=== vs. Turing ===
    * Entrelacs doesn't pretend to do things which couldn't be accomplished by any other computing languages and run-time environments as we already know everything is eventually equivalent to a Turing Machine, not less nor more.
    * However, two Turing equivalent systems can be very different in terms of usability and utility. You might write a Word Processor with the famous Conway "Game Of Life" Automata, but it's much more efficient to use a modern computing language which surpasses its concurrents in expressiveness like OCAML does.
    * Entrelacs system surpasses classical system in information handling. When data are stored in Entrelacs, they are much more useful than when they are stored in a classical file read by a classical application over a classical operating system. That's all the reason why this project exists.
 
-= Not yet dead ideas =
+= ideas=
+==Not yet dead ideas ==
    * move INGOIN/OUTGOING cells to stuff holes due to cells deletion.
 
-= definitely dead ideas =
+== definitely dead ideas ==
 
 This § gathers dismissed quite stupid ideas
 
