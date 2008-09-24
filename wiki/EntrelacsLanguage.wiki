@@ -1,8 +1,16 @@
-#summary The EL is a mix of several kinds of language. But in difference with any existing language, an EL program source is made of _arrows_ and works with _arrows_.
+#summary The EntrelacsLanguage (EL) is a language specially designed for the Entrelacs System.
 
 = Introduction =
 
-EL (_Entrelacs Language_) is a mix of:
-   # Lambda Calculus, Lisp.
-   # Combinatory Logic, Rewriting rules based languages.
-   # Inference engine languages (Prolog), Query language (SQL).
+In difference with any existing language, an EL source is directly made from the material the evaluator operates! Indeed, when stored into a working Entrelacs System, an EL source is made of arrows (from the ArrowParadigm) brought by the ArrowsSpace. This is definitely not a text file, which is only a importation/exportation format).
+
+EL is a single class citizenship based language as Combinatory Logic Theorical Language is. There is no separation between variable/symbol vs. literals/scalars. This audacious choice makes easier to design a computation cache (Memoization). It leads to an interesting universally applicable strategy of optimization, as most often used code patterns will hit the computation cache for ready-to-use _continuations_.
+
+= Related concepts =
+   * Combinatory Logic
+   * Continuation
+   * http://en.wikipedia.org/wiki/Memoization
+   * Rewriting rules based languages.
+   * Lambda Calculus, Functional Language, Lisp.
+   * Inference engine languages (Prolog)
+   * Query language (SQL)
