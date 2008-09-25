@@ -18,14 +18,14 @@ This audacious choice makes easier to design a computation cache (Memoization co
 = combinators =
 
 When EL perfoms an "application", it recognises this set of combinatory pattern. Take into account some of these combinators are continuations, that is intermediate form of a  combinator which is partially applied.
-
+   * *label: exp ==> (exp !) result*
    * head: t0.(t.h) H ==> t0.h ;
    * tail: t0.(t.h) T ==> t0.t ;
    * root: t.h _ ==> t.h ; if t.h is a rooted arrow
-   * root: t.h _ ==> h ; if t.h is not rooted
-   * cut: t.h / ==> h ; dismiss back tracks
-   * outgoing: t.h out ==> t.o1.o2..o_n_ (every h outgoing arrow)
-   * incoming: t.h in ==> t.i1.i2..i_n_ (every h incoming arrow)
+   * root: t.h _ ==> t ; if t.h is not rooted
+   * cut: t.h / ==> eve.h ; dismiss back tracks
+   * outgoing: t.h out ==> t.o1.o2..o _n_ (every h outgoing arrow)
+   * incoming: t.h in ==> t.i1.i2..i _n_ (every h incoming arrow)
    * pushCC: A.push ==> A ; push A (may be seen as a continuation)
    * popCC: X.pop ==> A ; pop the last pushed arrow (sort of call-cc)
    * forgettable: temp A ==> A ; switch off memoization
@@ -39,16 +39,22 @@ When EL perfoms an "application", it recognises this set of combinatory pattern.
          * b.(S'.x) y ==> b.(S''.(x.y))
          * b.(S''.(x.y)) z ==> b z.x ! z.y ! !
    * substitution: (b.A)^.x y -> b.A' ; where A' is a new arrow corresponding to A with x replaced by y in its definition and all (\ thing) pairs replaced by thing (if thing is 'x', it won't be substituted)
-   * apply: A.B ! ==> apply B to A ; by default: arrows are like "quoted" Lisp things, you must explicitly tell when a intermediate result corresponds to an application, that is a pattern which has to be substituted according to existing combinator patterns.
+   * apply: A.B ! ==> apply B to A
+      * by default: arrows are like "quoted" Lisp things, you must explicitly tell when a intermediate pair corresponds to an application, that is a pattern which has to be substituted according to existing combinator patterns.
+   * map: eve.h1.h2..hn map x ! =>  eve.h1.h2..hn-1 map x ! hn x !
+       * eve map x ! => eve
 
-Warning: brackets and dots are there only to help vizualize arrows pattern. They don't correspond to any additional arrow.
+Warning: brackets and dots are there only to help visualizing arrows patterns. They don't correspond to any additional arrow.
 
-When an arrow doesn't match any combinator pattern bellow, it is taken as it is by the evaluator and is added to the current environment, that is a chain of arrows. When the apply operator is called like in "A.B!" B will be applied to each element in the A chain.
+When an arrow doesn't match any combinator pattern bellow, it is taken as it is by the evaluator and is added to a chain of arrows. In other means: (((any->thing)->before)->A) stays as is if there is no matching combination condition. Then, the map combinator can make an arrow be applied to each element in such a chain . (eve.x.y.z).map B!" evaluates to: ((x.B)! (y.B).! (z.B).!). This chain may correspond to a local environment.
 
 = evaluation principles =
-   * an EL expression is an arrow
-   * evaluate an expression consists in repeating until exhaustion
-   * To continue...
+   * an EL expression E is an arrow of the form (A B) C) D) ... )
+   * evaluate an expression consists in repeating until no more application left
+      * continuation 0 = (E !)
+      * continuation _i_ := eval(continuation _i-1_)
+
+
 
 
 EL evaluation iteration
