@@ -19,7 +19,7 @@ This audacious choice makes easier to design a computation cache (Memoization co
 
 When EL perfoms an "application", it recognises this set of combinatory pattern. Take into account some of these combinators are continuations, that is intermediate form of a  combinator which is partially applied.
    * *exp ==> (exp !) result; comment*
-   * 0.(t.h) Head ==> t0.h ;
+   * t0.(t.h) Head ==> t0.h ;
    * t0.(t.h) Tail ==> t0.t ;
    * t.h Root ==> t.h ; if t.h is a rooted arrow
    * t.h Root ==> t ; if t.h is not rooted
