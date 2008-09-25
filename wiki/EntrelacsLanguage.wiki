@@ -54,17 +54,11 @@ When an arrow doesn't match any combinator pattern bellow, it is taken as it is 
       * continuation 0 = (E !)
       * continuation _i_ := eval(continuation _i-1_)
 
-
-
-
-EL evaluation iteration
-   * (Context;Applicated Arrow)->Context.
-
 = related concepts =
    * Combinatory Logic
    * Continuation
    * http://en.wikipedia.org/wiki/Memoization
    * Rewriting rules based languages.
    * Lambda Calculus, Functional Language, Lisp.
-   * Inference engine languages (Prolog)
-   * Query language (SQL)
+   * Inference engine languages (Prolog) (because of / and map combinators)
+   * Query language (SQL) (because of in, out and map combinators)
