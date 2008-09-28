@@ -4,17 +4,22 @@
 
 Remember Entrelacs deals only with arrows, not files. Text based source files might exist only for transportation between two systems (or users). While once handled by an Entrelacs System, EL sources consist in graphs of arrows (see ArrowParadigm) among the ArrowsSpace.
 
-So, in difference with any existing language, an EL source is made in the same material that the evaluator operates!
+So, in difference with any existing language, an EL *source* is made in the same material that the evaluator operates!
 
 This makes EL goes a step further than classical _homoiconicity_. We may name this _system-level homoiconicity_.
 
 = ready for reflexivity =
 
-Consequently, EL program can access and modify itself as source level and in a persistent way. It makes Entrelacs an ideal platform for reflexive computing.
+Consequently, an EL program can...
+   * access itself: introspection
+   * modify itself: intercession
+... at source level and in a persistent way.
+
+It makes Entrelacs an ideal platform for reflexive computing.
 
 = ready for Memoization=
 
-To get the best benefits of this feature, EL is designed in a way which makes an EL source looks like as a continuation passing style (CPS) representation of a traditional functional language ( like Lisp or ML) program.
+To get the best benefits of this feature, EL is designed in a way which makes an EL source looks like a _continuation passing style_ (CPS) representation of a traditional functional language ( like Lisp or ML) program.
 
 Moreover, EL is a single class citizenship based language somewhat similar to the _Combinatory Logic_ theorical Language. It implies there is no distinction between variable vs. literals. An EL expression evaluation doesn't depend on an so-called "environment".
 
