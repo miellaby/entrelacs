@@ -1,23 +1,32 @@
 #summary The EntrelacsLanguage (EL) is a language specially designed for the Entrelacs System.
 
+= source code as a first class citizen =
+
+Remember Entrelacs deals only with arrows, not files. Text based source files might exist only for transportation between two systems (or users). While once handled by an Entrelacs System, EL sources consist in graphs of arrows (see ArrowParadigm) among the ArrowsSpace.
+
+= system-level homoiconicity =
+
+So, in difference with any existing language, an EL source is made in the same material that the evaluator operates!
+
+To get the best benefits of this feature, EL is designed in a way which makes an EL source looks like as a continuation passing style (CPS) representation of a traditional functional language ( like Lisp or ML) program.
+
+Moreover, EL is a single class citizenship based language somewhat similar to the _Combinatory Logic_ theorical Language. It implies there is no distinction between variable vs. literals.
+
+These properties makes EL goes a step further than classical _homoiconicity_.
+
 = reflexivity =
 
-In difference with any existing language, an EL source is directly made from the material the evaluator operates!
+The first benefit is that an EL program can access and modify itself as source level and in a persistent way. It makes Entrelacs an ideal platform for reflexive computing.
 
-   Indeed, when stored into a working Entrelacs System, an EL source is made from arrows (as defined by the ArrowParadigm) brought by the ArrowsSpace. There is definitely no text files here. Such format may exist only as an importation/exportation format out of the system boundaries.
+= Memoization=
 
-So an EL programs can access and modify themselves in a persistent way. It makes Entrelacs an ideal platform for reflexive computing.
-
-
-= homoiconicity =
-
-EL is a single class citizenship based language similar to Combinatory Logic Theorical Language. There is no separation between variable/symbol vs. literals/scalars. EL deals with arrows and only arrows.
-
-This audacious choice makes easier to design a computation cache (Memoization concept). It leads to an interesting universally applicable strategy of optimization, as most often used code patterns will hit the computation cache for ready-to-use _continuations_.
+The second benefit is that optimization can be obtained trough a computation cache, aka. Memoization. Memoization is an universally applicable strategy of optimization where most often used code patterns will hit the computation cache for ready-to-use _continuations_.
 
 = combinators =
 
-When EL perfoms an "application", it recognises this set of combinatory pattern. Take into account some of these combinators are continuations, that is intermediate form of a  combinator which is partially applied.
+EL is a combinators based language.
+
+When EL performs an "application", it recognizes this set of combinatory pattern. Take into account some of these combinators are continuations, that is intermediate form of a  combinator which is partially applied.
    * *exp ==> (exp !) result; comment*
    * t0.(t.h) Head ==> t0.h ;
    * t0.(t.h) Tail ==> t0.t ;
