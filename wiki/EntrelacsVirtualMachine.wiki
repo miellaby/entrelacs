@@ -36,11 +36,13 @@ R is an arrow forming a chain of match&replace rules or match&execute rules.
       * a remplacement arrow which may reuse the matched arrow components. We might speak about arrows "macro".
       * a plugin callback which will be called with the matched arrow as parameter. It corresponds to "primitiv operation" in CEK Machine. The callback returns an arrow which takes place of the matching arrow.
 
-===Controlling arrow===
+===controlling arrow A===
 A is an arrow controlling the next transition state of the machine.
    * A takes place of the Control String (C) in a CEK Machine
    * A corresponds either to a part of the source tree, or to a "closure". A closure is an arrow in the form ("closure"->(x->(R->A))) created when storing a "lambda" expression in R
 
+
+===continuation chain K===
 K is a "0" terminated chain of  continuations. K is an arrow in the form:  {{{ (x->(R->(A->(x->(R->(A->(x->...->(R->(A->0))...))))))) }}}
    * this chain of continuations takes the place of the continuation (K) in the CEK machine.
       * There is only one kind of continuation in the form x->(A->(R->K)). It actually corresponds to an "ar" continuation in a CaEK machine.
