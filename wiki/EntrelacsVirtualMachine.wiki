@@ -2,15 +2,17 @@
 This page is a work in progress.
 
 ==Introduction==
-The Entrelacs Machine (EM) is a computing environment which allows to execute programs stored as arrows graph in the ArrowsSpace.
+The Entrelacs Machine (EM) is a computing environment which executes programs stored as arrows graphs in the ArrowsSpace.
 
-The Entrelacs Machine recognizes a function oriented minimalist  language.
+The Entrelacs Machine recognizes a function oriented minimalist  language described hereafter.
 
-The Entrelacs machine design is somewhat inspired from the CaEK Machine described in flanagan93essance paper
+The Entrelacs machine design is somewhat inspired from the CaEK Machine described in flanagan93essance paper. But, EM actually encompasses traditional functional paradigm by reorganizing function related concepts (environment, Lambda term, closure...)in a new, simpler and more general reading.
 
-But, EM actually encompasses traditional functional paradigm by reorganizing most of the underlying concepts (environment, Lambda term, closure...) into a new and more general reading.
+The major improvement resides in a wider homoiconism, bluring distinction between values and non-values, free-variables and constants.
 
-Firstly an environment is not a symbol lookup table anymore. It's rather a function which takes a to-be-reduced arrow and returns a reduced one. This function is defined as a composition (chain) of elementary functions such as classical variable-to-value translators. But variable-to-value association is only a particular use case of a much more powerful scheme. For example, one may either rewrite some call schemes (like sort of macros). One may even define an environment which inverts (ie. swap tail and head) every evaluated arrow.
+A running environment is not a symbol lookup table anymore. It's rather a function which compute an arrow from another.  It's defined as a composition (chain) of elementary functions such as classical variable-to-value bindings and arrow rewriting rules.
+
+So variable-to-value bindings form a particular use case of a much more powerful scheme. For example, one may either rewrite some call schemes (like sort of macros). One may even define an environment which inverts (ie. swap tail and head) every evaluated arrow.
 
 When applying an arrow to an environment, we refer to meta environments which may bind and rewrite things among the application. Such a meta environment may even refer to a a upper-level environment and so one.
 
@@ -24,10 +26,11 @@ C#4   A->":"
 C#5 "if"->(cond->(A->B))
 }}}
 
-   * C#1 construct is used to build a traditional environment which bind some arrow (the variable) to some other (the value).
-   * C#2 construct is used to add macro-like replacement of arrow sequence into the environment.
+   * C#1 construct "binds" some arrow (a free variable) to some other (variable value).
+   * C#2 construct adds a macro-like 
+arrow into the environment.
    * C#3 adds A to the environment, then the applied arrow is evaluated
-   * C#4 adds the applied arrow to the environment then evaluates A.
+   * C#4 adds first the applied arrow to the environment then evaluates A.
    * C#5 is a classical control structure. This construct evals 'A' if 'cond' is evaluated to 0, otherwise it evals 'B'.
 
 
