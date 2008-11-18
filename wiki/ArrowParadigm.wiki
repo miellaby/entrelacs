@@ -3,7 +3,7 @@
 
 = Introduction =
 
-Entrelacs System deals only with "arrows". Its credo could be "Everything is an arrow". This is the *"Arrow Paradigm"*.
+Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". This is the *"Arrow Paradigm"*.
 
 ==regular arrows==
 An arrow is an unique immutable oriented pair of arrows.
