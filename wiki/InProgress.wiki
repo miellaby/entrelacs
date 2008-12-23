@@ -6,8 +6,8 @@ This a *scratch page* to store work in progress note and ideas.
 
 = VM scope =
 I think I may be more precise about the scope of the Entrelacs VM.
-* No, for now the Entrelacs language doesn't pretend to replace every other existing languages.
-* No, for now the Entrelacs Virtual Machine doesn't pretend to hold up higher levels language as the .NET machine does for C# and VB.
+  * No, for now the Entrelacs language doesn't pretend to replace every other existing languages.
+  * No, for now the Entrelacs Virtual Machine doesn't pretend to hold up higher levels language as the .NET machine does for C# and VB.
 
 The main goal of the Entrelacs machine is to evaluate composition of Entrelacs Space primitive operators (these operators will be evaluated in a continuation passing style way).
 
