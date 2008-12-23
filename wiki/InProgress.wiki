@@ -5,9 +5,37 @@ This a *scratch page* to store work in progress, notes and ideas.
 *Last additions are listed first.*
 
 = About VM API for executable hook =
-This section deals with an API to be used by software linked with an autonomous entrelacs system as a library.
+This section deals with an API to be used by software linked with a running entrelacs system (ES) prototype.
+
+How to imagine this binary software linked with ES?
+
+1st approach: the ES is a library. The resulting executable embeds an autonomous ES.
   * it is quite the same thing than an exe linked with sqlite
+  * I don't want that. I want a single ES by host.
+
+2d approach: Executables are binary extensions loaded by a single shared entrelacs server, i.e plugins.
+  * plugins could be loaded when put in a dedicated folder of a running ES installation, supposing they are dynamical libraries.
+  * once the dynamic library is loaded, an onLoad() function might be resolved then called. This function would register "hooks" into the system, that is arrows bound to pointer-to-function based continuations.
+   * those bounded arrows might be compared with executable files put in a filesystem.
+
+3d approach: Executables pushed into the network API
+   * I suppose such extensions should also be added via the main API, that is the network HTTP based API. The extensions data might be sent through some POST DATA.
+   * a better way to hook a binary program might be to send the program body including a well defined entry point (corresponding to the hook) thanks to a special operator which might bind this exe to a given arrow.
+
+Reminder
+   * A HTTP agent communicating with ES should immediatly be assigned with a session cookie. Communication must occure in sessions. A non trusted client would be confined in a sub-context of the system. It means such a client would have no access to the root context. It'd be confined inside a sort of embedded context. The operation might be transparent to the agent who could not guess whether it hits the root context or a sort of virtual instance of entrelacs. It might be comparable with an operating system running inside a virtualized host.
+   * On the other side, a trusted agent might access to a upper context where risky operations are really proceeded. The administrator agent might directly handle the system root context.
+   * A simple way to design embedded entrelacs context might be to transform every root()/unroot() so that the actually rooted/unrooted arrow won't be the agent one but a composed arrow linking the initial arrow with a context identifier arrow.
+
+
+Reflexion: REST philosophy supports Entrelacs theory
+   * REST meta design pattern recommends to model an application as a set of named resources with well-defined identifier (URI).
+   * ES approach leads to name everything as everything is eventually an arrow and that each arrow has an unique and permanent ID.
+
+
+About the C API
   * the exe builds arrows by calling tag() and blob() functions and combining their results with arrow() calls.
+  * those are functions out of some sort of C API
 {{{
  ArrowRef tag(char *);
  ArrowRef blob(char *, uint64 length);
