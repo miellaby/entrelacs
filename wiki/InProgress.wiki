@@ -1,8 +1,21 @@
 #summary Scratch Page. Work in progress.
 
 = Introduction =
-This a *scratch page* to store work in progress note and ideas.
+This a *scratch page* to store work in progress, notes and ideas.
 *Last additions are listed first.*
+
+= About VM API for executable hook =
+This section deals with an API to be used by software linked with an autonomous entrelacs system as a library.
+  * it is quite the same thing than an exe linked with sqlite
+  * the exe builds arrows by calling tag() and blob() functions and combining their results with arrow() calls.
+  * the exe may build an EVM (Entrelacs VM) program in the same way because EVM programs source code are made from arrows.
+ * reserved arrows of the EL (Entrelac Languages) might be retrieved by corresponding functions, like h() (not to confound with the head function of the C API). 
+  * it could also be possible to quickly retrieve an arrow defined by a DNP (dot and parenthesis) string.
+     * a DNP string defines an arrow as a structure of pairs of strings. It follows a simple language which recycles popular operators from various classical languages.
+  * a function working like printf() might be used to operate DNP strings including run-time parameters. Parameter values would be given at function call. In other means, the DNP string corresponds to the printf() format string and the dynamical parameters corresponds additional function arguments.
+  * an operator similar with tag() and blob(), namely hook(), would allow to build a _continuation_ from a function pointer.
+    * like the lambda operator, the hook() call might build a continuation based on the current environment.
+  * I wish to extend the hook concept to the network oriented prototype. The callback might be proceed trough some sort of RPC technology.
 
 = VM scope =
 I think I may be more precise about the scope of the Entrelacs VM.
