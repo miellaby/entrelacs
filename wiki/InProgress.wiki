@@ -2,6 +2,21 @@
 
 = Introduction =
 This a *scratch page* to store work in progress note and ideas.
+*Last additions are listed first.*
+
+= VM scope =
+I think I may be more precise about the scope of the Entrelacs VM.
+* No, for now the Entrelacs language doesn't pretend to replace every other existing languages.
+* No, for now the Entrelacs Virtual Machine doesn't pretend to hold up higher levels language as the .NET machine does for C# and VB.
+
+The main goal of the Entrelacs machine is to evaluate composition of Entrelacs Space primitive operators (these operators will be evaluated in a continuation passing style way).
+
+In other means, the scope of this machine is equivalent to the scope of an SQL engine in a relationnal data base.
+
+So, the Entrelacs machine is here to be used by old-school program (typically built from compiled C sources) which wants to query the Arrows Space in the simplest way. Such executables would be probably stored among the arrow graph, even if they are powered by the system VM. Programs to be evaluated by EVM might be build by the caller on the fly or be persistently stored inside the graph.
+
+However, the future of this project might be to enhance the EVM in order to transform it in a full-featured virtual machine with an efficient optimization and machine-code generation mechanism.
+
 
 = Future usage =
 == prototype as a web server usage ideas ==
