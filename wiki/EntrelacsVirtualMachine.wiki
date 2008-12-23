@@ -27,8 +27,7 @@ C#5 "if"->(cond->(A->B))
 }}}
 
    * C#1 construct "binds" some arrow (a free variable) to some other (variable value).
-   * C#2 construct adds a macro-like 
-arrow into the environment.
+   * C#2 construct adds a macro-like arrow into the environment.
    * C#3 adds A to the environment, then the applied arrow is evaluated
    * C#4 adds first the applied arrow to the environment then evaluates A.
    * C#5 is a classical control structure. This construct evals 'A' if 'cond' is evaluated to 0, otherwise it evals 'B'.
