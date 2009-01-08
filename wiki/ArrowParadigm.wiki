@@ -1,39 +1,45 @@
 #summary Entrelacs relays on the "arrow" paradigm.
 #labels Featured
 
-= Introduction =
+=Introduction=
 
-Entrelacs System deals only with "arrows". Its credo might be "Everything is an arrow". This is the *"Arrow Paradigm"*.
+Entrelacs System deals only with _arrows_. Its credo might be _Everything is an arrow_. This is the _*Arrow Paradigm*_.
 
-==regular arrows==
-An arrow is an unique immutable oriented pair of arrows.
+==Definition of a regular arrow==
+An _arrow_ is an unique immutable oriented pair of arrows.
 
-  * "pair of arrows" means both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
-  * "oriented" means the pair (A,B) is different from (B,A).
-  * "unique" means each identifiable arrow is stored only once in the whole storage space.
-  * "immutable" means an arrow can't be modified once stored.
+  * an arrow is a "pair of arrows". It means both ends of each arrow are two other arrows.  In other words, *an arrow graph doesn't contain any node.*
+  * an arrow is "oriented". It means the pair (A,B) is distinct from (B,A).
+  * an arrow is "unique". It means each identifiable arrow is stored only once in the whole storage space.
+  * an arrow is "immutable". It means an arrow can't be modified once stored.
+
+Example:
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png   ||Here is some arrows. As you can see, arrows ends are other arrows.||
 
 
-==_entrelacs_==
-Each arrow definition embeds (leads to) a set of ancestor arrows forming a closed and connected interlaced pattern as a whole. Such a pattern is called an "entrelacs".
+==Definition of an _entrelacs_==
 
-<!>connected means there is at least one arrow which embeds the whole pattern in its definition. See counter-example.
+An _entrelacs_ is a set of arrows connected to each other, forming a closed graph as a whole.
+
+A set of arrows can be identified as an entrelacs if it contains at least one arrow whom the set of ancestors matches the considered set. See a counter-example hereafter. Actually it means every arrow belongs to an entrelacs including all its _ancestors_.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png   ||Here is a introduction of few entrelacs (and one counter-example)||
 
-== prim entrelacs==
+==Definition of an _prim entrelacs_==
 
-Some entrelacs are so much reentrant they can't be divided into smaller ones. They are called "prim entrelacs".
+A _prim entrelacs_ is an entrelacs which is so much interlaced it doesn't contain smaller entrelacs.
+
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   || this arrow is also a "prim entrelacs". It is named _eve_ (certainly because it has no parent) ||
 ||http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png|| this arrow is not a "prim entrelacs" but it embeds two ones ||
 
-"Prim entrelacs" may be seen as atomistic pieces of data. They can't be divided and they are closed. As they got finished boundaries, you can handle them, name them, compute things about them, like comparing them each others.
+"Prim entrelacs" look like atomistic pieces of data. They can't be divided in smaller parts; they are closed; and they got finished boundaries. It implies you can handle them, name them, count them, ordering them, etc as you can do with, says, numbers.
 
 ==atomistic binary arrows==
-Entrelacs allows to store "unique" and "immutable" flat data as BLOB or TAG (C-String) scalars in addition to regular arrows.
+The _Entrelacs System_ allows to store "unique" and "immutable" flat data as well.
 
-Entrelacs underlying theory demonstrates such atomistic data are equivalent to prim entrelacs. In other mean, such binary data are arrows as well. See AtomEntrelacEquivalency for further reading.
+However, this feature doesn't deny the _arrow paradigm_, because the entrelacs underlying theory demonstrates such atomistic data are equivalent to _prim entrelacs_.
+
+In other mean, such binary data may be seen as some sort of arrows as well. See AtomEntrelacEquivalency for further reading.
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png   ||Binary things may be seen as encoded big prim entrelacs.||
 
 ==related concepts==
@@ -43,29 +49,32 @@ Entrelacs underlying theory demonstrates such atomistic data are equivalent to p
   * an arrow "goes out" its tail arrow and "comes into" its head arrow.
   * from its tail (resp. its head) point of view, an arrow is an outgoing (resp. incoming) arrow.
   * An arrow may have many incoming/outgoing arrows, sometimes called "children" arrows.
-  * Arrows reached by recursively following head/tail definitions are ancestors. As a whole, these ancestors form a valid _entrelacs_.
+  * Arrows reached by recursively following head/tail definitions are ancestors. The set of ancestors of any arrow is an _entrelacs_.
 
 ==arrow / entrelacs equivalency==
 
-An arrow is equivalent in every aspect of its to the entrelacs formed by it and all its ancestors. One may substitute indifferently each other.
+An arrow is equivalent in every aspect of its to the entrelacs formed by it and all its ancestors. Inversely, an entrelacs is equivalent in every aspect of its to at least one of its arrows.
+
+In other words, an entrelacs is an arrow, and an arrow is an entrelacs. Actually, one may substitute indifferently these two concepts each other.
 
 ==rooted arrows==
 
-All the system knowledge state might be represented as a single  interlaced pattern embedded in a unique arrow definition. 
+All the system knowledge state at a given state might be represented in one unique arrow containing all the useful information in its definition.
 
-However, it's more convenient to represent the system top-level context as a set of "rooted" arrows.
+However, it's more convenient to represent the system top-level context as a set of distinct arrows. These arrows are called _rooted arrows_.
 
-Rooted arrows are regular arrows among the storage space simply flagged by a "root" mark. This "rooted" boolean property of each known arrow is its only mutable property.
+Rooted arrows are concretely regular arrows flagged with a "root" mark. This "root" boolean property is the only mutable property of an arrow within the system storage space.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png   || this arrow is "rooted". See the graphic notation here (Lambda / check mark). It corresponds to a dedicated flag bit on storage||
 
-==unique and immutable==
+==redundancy free==
 
-Never forget one definable arrow -whatever it is a regular pair or a binary object- is represented only once in the whole system storage space with an unique id (redundancy free principle).
+One definable arrow -whatever it is a regular pair or a binary datum- has to be represented only once in the whole system storage space.
 
-It implies each arrow might be an ancestor belonging to the definition of many other arrows.
 
-That's the main reason why an arrow can't be modified once stored (immutability principle).
+==immutability==
+
+As one arrow might be an ancestor of many other arrows, one arrow can't be modified once stored in the system space.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   || this average entrelacs embeds arrows which are several times ancestors of children arrows.||
 
