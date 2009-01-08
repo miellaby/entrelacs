@@ -20,42 +20,49 @@ The level 0 (persistent) memory is operated as a single memory bank of cells
 
 Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
 
-
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   ||In storage memory, arrows are pairs of pointers linking to parent arrows and atomistic data||
 
+===Non-atomistic arrows storage===
 
-The cells where a given arrow data are stored are chosen by computing 2 hash codes: _h_ and _H_.
-  * _h_ is the _arrow identifiers hash code_.
-    * _h_ combines both the arrow head and tail identifiers.
-    * _h_ is the default location where to store the arrow definition.
-    * This location may be shifted when a conflict occurs (open addressing).
-    * The actual arrow location becomes the arrow identifier, noted _i_ hereafter.
-  * _H_ is the _arrow constructive hash code_.
-    * _H_ combines recursively the _H_ of the arrow head and tail. For atomistic arrow, _H_ is computed as a CheckSum (_Tag_) or a Cryptographic hash function (_BLOB_).
-    * _H_ is the default location where to put an additional reference back to the arrow.
-    * This location may be shifted on conflict (open addressing).
-    * _H_ located references form an index to find arrows from their embedded atoms without fetching every intermediate ancestors.
-    * On this purpose the H combinator *must* be a commutative operation.
+The default location of a given arrow is chosen by computing a hash: _h_.
+ * _h_ is the _arrow identifiers hash_. It is computed by combining both the arrow head and tail identifiers.
+ * The definitive arrow location may be shifted on conflict by following an _Open Addressing_ strategy.
+ * The definitive arrow location becomes the arrow identifier, noted _i_ hereafter.
+ 
+Additionally, the system puts _i_ -a reference back to the considered arrow- at _H_ address.
+ * _H_ is the _arrow content hash_.
+ * _H_ is computed by combining the _H_ of the considered arrow ends.
+ * The definitive location of the arrow back reference may be shifted on conflict by following an _open addressing_ strategy.
+ * _i_ back references at _H_ location allows to search for arrows from their embedded atoms without fetching intermediate ancestors.
 
-A given arrow 'i' will be stored as is:
+In other words, a given arrow 'i' will be stored as is:
   * tail @ i,
   * head @ i+offset,
   * _H_ @ i+2*offset (combined with a reference counter).
 And in addition
   * _i_ (arrow back reference)@ H (shifted on conflict).
 
+===Atomistic arrows storage===
+
+Atomistic arrow are directly stored at _H_ location.
+ * For atomistic arrows, _H_ is computed as a CheckSum (_Tag_) or a Cryptographic hash function (_BLOB_).
+
+===Parent arrows index===
+
 Moreover, for each new incoming (resp. outgoing) arrow _j_ linking to _i_, we put _j_ back reference into the first free cell before (resp. after) the _i_ arrow definition. These references stored near arrows definitions form an index to find arrows from their head or their queue.
 
-As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flag".
 
-===Cell flags list===
+===Cell flags===
+As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flags" hereafter.
+
+
   * PAIR = first part of a regular arrow definition (ie. its tail id)
-  * ROOTED_PAIR = a PAIR which belongs to a top-level root context.
+  * ROOT = a PAIR which belongs to a top-level root context.
   * BLOB = Big atomistic binary raw data) whose content-hash hits the preceding part of the block.
   * TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
-  * CONTINUATION = remaining part of definition (head or H for a regular arrow, data for BLOG or DATA)
-  * INCOMING = reference to a child incoming arrow
-  * OUTGOING = reference to a child outgoing arrow
+  * REMAIN = remaining part of definition (head or H for a regular arrow, data for BLOG or DATA)
+  * IN = reference to a child incoming arrow
+  * OUT = reference to a child outgoing arrow
   * INDEX = reference to an arrow indexed by H (content-hash)
 
 ==Arrow footprint==
@@ -93,13 +100,15 @@ Finally, here is the typical footprint of an arrow _i_ going out of a _tail_ arr
 
 ==Open Addressing==
 
-The cell pointed by 'h' (identifiers hash) is supposed to receive the corresponding arrow definition. However, it might be already used. In such a case, one makes use of the "open addressing" trick.
+The cell pointed by 'h' (identifiers hash) is supposed to receive the corresponding arrow definition. The cell pointed by 'H' (content hash) is supposed to receive the corresponding arrow definition. 
+However, it might be already used. In such a case, one makes use of the "open addressing" trick.
 
 This trick consists in managing conflicts by putting conflicting elements among neighbor cells. Such a set of same-hash memory cells will be called an "open block" hereafter.
 
 Actually, when looking for free cells, the location shifting offset is computed by a dedicated hash function as well so to be different in each case. This is the "double hashing" improvement to "open addressing", which avoid a scheme of serial aligned conflicts to occurs.
 
 See http://www.eece.unm.edu/faculty/heileman/hash/node4.html for a better explanation of all these principles.
+
 
 ==Arrows Sweeper==
 
@@ -116,6 +125,8 @@ Note the reference counter definition range is quite short. When it reaches its 
 Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
 ==candidate hash functions==
+For practical reasons, H and h functions have to be commutative.
+
      * key hash = f(tail, head) = ((head << 24) & tail) % P0
      * drone hash = g(tail, head) = ((head << 24) & tail) % P1
         * where P0 and P1 are twin prims near mem0 size 2^24
