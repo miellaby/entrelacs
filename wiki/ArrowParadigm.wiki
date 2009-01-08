@@ -57,9 +57,9 @@ An arrow is equivalent in every aspect of its to the entrelacs formed by it and 
 
 In other words, an entrelacs is an arrow, and an arrow is an entrelacs. Actually, one may substitute indifferently these two concepts each other.
 
-==rooted arrows==
+==Definition of rooted arrows==
 
-All the system knowledge state at a given state might be represented in one unique arrow containing all the useful information in its definition.
+All the system knowledge state at a given time might be represented in one unique arrow containing all the useful information in its definition.
 
 However, it's more convenient to represent the system top-level context as a set of distinct arrows. These arrows are called _rooted arrows_.
 
@@ -67,10 +67,15 @@ Rooted arrows are concretely regular arrows flagged with a "root" mark. This "ro
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png   || this arrow is "rooted". See the graphic notation here (Lambda / check mark). It corresponds to a dedicated flag bit on storage||
 
+Any mathematically definable arrow may be classified in one of these 2 groups.
+ * first case: the arrow belongs to the definition of one or several rooted arrows and/or the arrow is a rooted arrow as itself.
+ * second case: the arrow is nor a rooted arrow nor an ancestor of any rooted arrow.
+
+Arrows from the first group is useful information and have to be preserved. Arrows in the second group are garbage. They should be swiped from the system storage space if present.
+
 ==redundancy free==
 
-One definable arrow -whatever it is a regular pair or a binary datum- has to be represented only once in the whole system storage space.
-
+For practical reasons, one definable arrow -whatever it is a regular pair or a binary datum- has to be represented only once in the whole system storage space.
 
 ==immutability==
 
@@ -80,4 +85,4 @@ As one arrow might be an ancestor of many other arrows, one arrow can't be modif
 
 ==arrow modeling==
 
-How to represent useful information with only arrows? See ArrowModeling for an introduction.
+You don't know how to represent useful information with arrows only? See ArrowModeling for solutions.
