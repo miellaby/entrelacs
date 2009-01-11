@@ -1,23 +1,3 @@
 #summary The Entrelacs System sees the world as entrelacs.
 
-The EntrelacsSystem is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_.
-
-An _entrelacs_ is a closed and connected structure of immutable oriented pairs called "arrows".
-http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   
-
-Here are some characteristics of an _entrelacs_ in such a system.
-|| *characteristic* || *explanation* ||
-||_homoiconic_ || the entrelacs is made from just one kind of building block: the arrow||
-||_purely relationist_ || the entrelacs always represents knowledge as a set of relations and only relations||
-||_scale invariant_ || the entrelacs represents knowledge in the same way whatever the data size and complexity||
-||_introspectable_ || the entrelacs allows the system to access every aspect of its hosted knowledge||
-||_non-redundant_ || Each piece of information is stored only once in the whole system. There is no representational redundancy.||
-||_auto-indexed_ || Each piece of information can be used as an index to all the related information in the whole system.||
-||prone to _orthogonal persistence_ || the entrelacs makes _incremental & orthogonal persistence_ simpler||
-||prone to _persistent data structures_ || the entrelacs makes _persistent data structure_ design simpler||
-||prone to _garbage collection_ || the entrelacs makes _garbage collection_ simpler|| 
-||prone to _memoization_ || the entrelacs makes _memoization_ simpler||
-
-The Entrelacs system stores all the system's knowledge into entrelacs, whatever the scale of complexity or abstraction: from a single boolean state to a full featured office suite, from a meta-model framework to some "hello world" code. This knowledge representation strategy features high granularity, low redundancy and high speed access for a maximal expressiveness. As an example, any piece information can be used in an upper context as either a thing to be "tagged" or a "tag". Resulting tagged-to-tag relations can be abstracted in turn. This way of looking at data representation allow Entrelacs to encompasse existing systems like "tagsonomies",hierarchies or relational data bases.
-
-The EntrelacsSystem should be able to replace software middle layers like interpreters, data base managers, file systems, run-time frameworks, and such. It may even evolve as an autonomous operating system on top of a dedicated hardware. For now, the current prototype is designed as a network (HTTP based) software server on top of a GNU/Linux OS. For a better introduction of the project technical aspects, see DesignIntroduction.
+The EntrelacsSystem is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_. See Arrowsaradigm for the theory and DesignIntroduction for more useful details.
