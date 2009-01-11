@@ -21,7 +21,7 @@ Example:
 
 An _entrelacs_ is a set of arrows connected to each other, forming a closed graph as a whole.
 
-A set of arrows can be identified as an entrelacs if it contains at least one arrow whom the set of ancestors matches the considered set. See a counter-example hereafter. Actually it means every arrow belongs to an entrelacs including all its _ancestors_.
+A set of arrows can be identified as an entrelacs if it contains at least one arrow whom the set of ancestors matches the considered set. See a counter-example hereafter. Actually it means that every arrow belongs to a related entrelacs consisting in this arrow and all its _ancestors_.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png   ||Here is a introduction of few entrelacs (and one counter-example)||
 
