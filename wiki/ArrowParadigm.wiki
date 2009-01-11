@@ -1,17 +1,19 @@
-#summary Entrelacs relays on the "arrow" paradigm.
+#summary The EntrelacsSystem relays on the "arrow" paradigm.
 #labels Featured
 
 =Introduction=
 
-Entrelacs System deals only with _arrows_. Its credo might be _Everything is an arrow_. This is the _*Arrow Paradigm*_.
+The EntrelacsSystem deals only with _arrows_. Its credo might be _Everything is an arrow_. This is the _*Arrow Paradigm*_.
 
 ==Definition of a regular arrow==
-An _arrow_ is an unique immutable oriented pair of arrows.
+An _arrow_ -as defined within the EntrelacsSystem- is an unique immutable oriented pair of arrows.
 
   * an arrow is a "pair of arrows". It means both ends of each arrow are two other arrows.  In other words, *an arrow graph doesn't contain any node.*
   * an arrow is "oriented". It means the pair (A,B) is distinct from (B,A).
-  * an arrow is "unique". It means each identifiable arrow is stored only once in the whole storage space.
-  * an arrow is "immutable". It means an arrow can't be modified once stored.
+
+It has been said an arrow is "unique". It means the EntrelacsSystem deals with arrows as pure (uniquely definable) mathematical objects. Redundant constructs are rejected. It implies the system can tell whether two arrows are equals or not. This equality relationship is an isomorphism (?).
+
+It has been said an arrow is "immutable". It means again the EntrelacsSystem deals with arrows as pure mathematical objects. One can't change a number: PI is PI forever, and so is any definable arrow.
 
 Example:
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png   ||Here is some arrows. As you can see, arrows ends are other arrows.||
@@ -21,11 +23,13 @@ Example:
 
 An _entrelacs_ is a set of arrows connected to each other, forming a closed graph as a whole.
 
-A set of arrows can be identified as an entrelacs if it contains at least one arrow whom the set of ancestors matches the considered set. See a counter-example hereafter. Actually it means that every arrow belongs to a related entrelacs consisting in this arrow and all its _ancestors_.
+A set of arrows can be identified as an entrelacs if it contains at least one arrow whom the set of ancestors matches the considered set. See a counter-example hereafter.
+
+Actually it means that every arrow belongs to a related entrelacs consisting in this arrow and all its _ancestors_.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png   ||Here is a introduction of few entrelacs (and one counter-example)||
 
-==Definition of an _prim entrelacs_==
+==Definition of a _prim entrelacs_==
 
 A _prim entrelacs_ is an entrelacs which is so much interlaced it doesn't contain smaller entrelacs.
 
@@ -73,7 +77,7 @@ See the graphic notation here (Lambda / check mark).
 
 ==About garbage collector==
 
-Any mathematically definable arrow may be classified in one of these 2 groups.
+Any mathematically definable arrow may be classified in one of these 2 groups at a given time within a given system.
  * first case: the arrow belongs to the definition of one or several rooted arrows and/or it is a rooted arrow by itself.
  * second case: the arrow is neither a rooted arrow nor an ancestor of any rooted arrow.
 
@@ -81,9 +85,9 @@ Arrows from the first group is useful information and have to be preserved. Arro
 
 ==arrow assimilation==
 
-At any time, system inputs are converted into arrows before any other further processing. This process which converts a structured stream of data into the corresponding arrows graph is called "assimilation".
+At any time, system inputs are converted into arrows before any other further processing. This process converts a structured stream of data into the corresponding arrows graph. It is called "assimilation".
 
-"assimilation" takes place at system boundaries. Once "assimilated", something like a source code is not in a textual representation any more. It resides as a structured arrows sub-graph of the whole system graph.
+"Assimilation" takes place at system boundaries. Once "assimilated", something like a source code is not in a textual representation any more. It resides as a structured arrows sub-graph of the whole system graph.
 
 ==redundancy free principle==
 
