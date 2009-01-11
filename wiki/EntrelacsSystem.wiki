@@ -1,6 +1,6 @@
 #summary The Entrelacs System sees the world as entrelacs.
 
-The _EntrelacsSystem_ is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_.
+The EntrelacsSystem is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_.
 
 An _entrelacs_ is a closed and connected structure of immutable oriented pairs called "arrows".
 http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   
