@@ -124,16 +124,8 @@ For practical reasons, H and h functions have to be commutative.
 
 ==RAM cache==
 
-When needed, arrows climb up to a level 1 (RAM) memory device. This device is used as a fine-grained cache of level 0 cells. So it's an array of cell-containers (also called level 1 cells).
-
-Each level 1 container stores:
-  * one full level 0 cell,
-  * its level 0 address,
-  * its last usage transaction number. It is set when the cell is loaded and it is updated at each access. Level 1 cells are implicitly disposable when their related transaction numbers are old enough.
-
-When climbing up to level 1, a cell is preferably put to its level 0 address modulo cache size (yet an other hash). Conflicts management makes use of the "open addressing" trick as well. It means conflicting cells are putted one after an other.
-
-Furthermore, all changes in level 1 cell contents are logged to prepare the saving process into level 0.
+When needed, arrows climb up to a level 1 (RAM) memory device. This memory is used as a fine-grained cache of level 0 cells. 
+See ArrowsCache for further details.
 
 ==Misc.==
 
