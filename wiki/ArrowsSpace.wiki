@@ -120,7 +120,7 @@ For practical reasons, H and h functions have to be commutative.
      * drone hash = g(tail, head) = ((head << 24) & tail) % P1
         * where P0 and P1 are twin prims near mem0 size 2^24
      * BLOB hash = truncated SHA-2
-     * TAG hash = simpler checksum.
+     * TAG hash = simpler checksums, like in http://www.cse.yorku.ca/~oz/hash.html
 
 ==RAM cache==
 
