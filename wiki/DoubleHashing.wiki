@@ -1,0 +1,1 @@
+DoubleHashing prevents recurrent patterns of conflicts to occur when resorting to an OpenAddressing strategy. See http://www.eece.unm.edu/faculty/heileman/hash/node4.html for a better explanation.
