@@ -27,7 +27,7 @@ Each individual "cell" can store one "reference", that is an other cell address.
 ===Arrows storage===
 
 The default location of an arrow is chosen by computing its hash code, namely _h_.
- * For atomistic arrows, _h_ is computed as a CheckSum (_Tag_) or a Cryptographic hash function (_BLOB_).
+ * For atomistic arrows, _h_ is computed as a Checksum (_Tag_) or a Cryptographic hash function (_BLOB_).
  * For regular arrows, _h_ is computed by combining the _h_ of the arrow's tail and head.
  * The definitive arrow location may be shifted on conflict by following an OpenAddressing strategy.
  * The definitive arrow location becomes the arrow identifier, noted _i_ hereafter.
@@ -114,18 +114,25 @@ Note the reference counter definition range is quite short. When it reaches its 
 Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
 ==candidate hash functions==
-For practical reasons, H and h functions have to be commutative.
+For practical reasons, the hash function should be commutative on structure of pairs. To be done.
 
      * key hash = f(tail, head) = ((head << 24) & tail) % P0
      * drone hash = g(tail, head) = ((head << 24) & tail) % P1
         * where P0 and P1 are twin prims near mem0 size 2^24
      * BLOB hash = truncated SHA-2
-     * TAG hash = simpler checksums, like in http://www.cse.yorku.ca/~oz/hash.html
+     * TAG hash = simpler checksum, like in http://www.cse.yorku.ca/~oz/hash.html
 
 ==RAM cache==
 
 When needed, arrows climb up to a level 1 (RAM) memory device. This memory is used as a fine-grained cache of level 0 cells. 
 See ArrowsCache for further details.
+
+==What about the atomistic arrows?==
+
+Atomistic arrows (BLOB or TAG) are stored like any regular arrow directly into the arrows bank. Data are stored in the definition cell (hash-indexed) and its neighbours (as defined by the OpenAddressing strategy).
+
+For BLOB, data are actually preceded by the full computed SHA-2 hash code, in order to immediately eliminate false positives.
+
 
 ==Misc.==
 
