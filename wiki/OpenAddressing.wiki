@@ -1,0 +1,9 @@
+#summary The OpenAddressing strategy
+
+When storing an arrow into the Arrows Bank, one computes a hash code noted _h_.
+
+The cell pointed by 'h' is supposed to receive the arrow definition. However, this cell might be already used. In such a case, one makes use of the "open addressing" trick.
+
+This trick consists in managing conflicts by putting conflicting elements among neighbor cells. Such a set of loaded memory cells is called an "open block" in this document. 
+
+Actually, when looking for free cells, the location offset is not constant. It is computed by a dedicated hash function as well so to be different in every case. This improvement to "open addressing" is called DoubleHashing. It prevents similar patterns of conflicts to occur. See http://www.eece.unm.edu/faculty/heileman/hash/node4.html for a better explanation of all these principles.
