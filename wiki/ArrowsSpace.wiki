@@ -45,21 +45,24 @@ This hash based location allows to search for an existing arrow from their embed
 
 For each newly stored arrow _i_  outgoing for a _tail_ arrow and incoming into a _head_ arrow, the ArrowsSpace puts 2 back references (i.e. _i_) into two additional cells:
  * One _i_ "after" the _tail_ definition,
+   * "after" means the location is computed with the DoubleHashing offset derived from _tail_ hash code.
  * One _i_ "before" the _head_ definition.
+   * "before" means the location is computed with the opposite of the DoubleHashing offset derived from _head_ hash code.
 
 These references stored near arrow definitions form an index to find connected arrows from a given head or queue.
 
 ===Cell flags===
 As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flags" hereafter.
 
+Here is a candidate flags list.
+  * PAIR = non-rooted regular arrow definition first storage cell
+  * ROOT = rooted regular arrow first storage cell
+  * BLOB = BLOB first storage cell
+  * TAG = TAG first storage cell
+  * REMAIN = remaining part of an arrow definition. Such a cell complete a "pair", "root", "blob", "tag" cell.
+  * CHILD = reference to a child incoming/outgoing arrow
 
-  * PAIR = first part of a regular arrow definition (ie. its tail id)
-  * ROOT = a PAIR which belongs to a top-level root context.
-  * BLOB = Big atomistic binary raw data) whose content-hash hits the preceding part of the block.
-  * TAG = reference to a C-formatted string whose content-hash hits the preceding part of the block.
-  * REMAIN = remaining part of definition (head and hash of a regular arrow, data of a BLOG or TAG)
-  * IN = reference to a child incoming arrow
-  * OUT = reference to a child outgoing arrow
+
 
 ==Arrow footprint==
 
