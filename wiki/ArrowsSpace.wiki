@@ -1,10 +1,11 @@
-#summary The "Arrows Space" is a part of the EntrelacsSystem. It's an orthogonally persistent storage space for arrows.
+#summary The "Arrows Space" is a part of the EntrelacsSystem. It's an orthogonally persistent storage space for arrows where each mathematically definable arrow is stored once.
 
 =Introduction=
-The main characteristic of the EntrelacsSystem is to provide a single matrix where to store any form of knowledge as arrows. This storage space is called the "Arrows Space" hereafter.
+The main characteristic of the EntrelacsSystem is to provide a single matrix where to store knowledge as arrows. This storage space is called the "Arrows Space" hereafter.
 
 ==Arrow types==
-From the "Arrows Space" point of view, one regular arrow is a pair of identifiers, where each identifier is pointing some other arrow within the storage space.
+
+From a mathematical point of view, a regular arrow is a pair of arrows. From the "Arrows Space" point of view, one regular arrow is a pair of identifiers, each identifier pointing an on other arrow definition within the storage space.
 
 Additionally, the "Arrows Space" can store atomistic binary objects. Such an object is equivalent in every aspect of its to a regular arrow (precisly some "prim entrelacs").
 
@@ -22,7 +23,9 @@ The level 0 (disk) memory is operated as a single memory bank of cells.
 
 Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   ||In storage memory, arrows are pairs of pointers linking to parent arrows and atomistic data||
+24/02/09: A currently studied alternative is the pair of identifiers storage cell. Some sort of well flagged collocation might be used to store heterogeneous data within a cell.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   ||Storage memory artistic view. Regular arrows are pairs of pointers linking parent arrows each other. Binary arrows are more or less long binary sequences.||
 
 ===Arrows storage===
 
@@ -34,10 +37,10 @@ The default location of an arrow is chosen by computing its hash code, namely _h
 
 The definition of the arrow identified by 'i' it then stored as is:
   * tail @ i,
-  * head @ i + some offset,
-  * _H_ (combined with additional data) @ i + some more offset.
+  * head @ i + open offset,
+  * _H_ (combined with additional data) @ i + 2 open offset.
 
-The offset between arrow data is computed according to a DoubleHashing strategy.
+The _open offset_ is computed according to the DoubleHashing strategy.
 
 This hash based location allows to search for an existing arrow from their embedded atoms without necessarily fetching every intermediate ancestor of its.
 
@@ -62,6 +65,11 @@ Here is a candidate flags list.
   * REMAIN = remaining part of an arrow definition. Such a cell complete a "pair", "root", "blob", "tag" cell.
   * CHILD = reference to a child incoming/outgoing arrow
 
+23/02/09: A king Huffman code for cell flags is currently studied. It will free storage bits in most useful/frequent cases. e.g.
+* code 1 =>REMAIN & the 7 bits left within the byte are used to store the "Offset factor".
+* code 01=>PAIR & the 6 bits left stores the ref counter
+
+23/02/09: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. SMALL, TAG and BLOB storage strategies might be transparently chosen by the arrow space algorithm from a commmon arrow creation API call.
 
 
 ==Arrow footprint==
@@ -94,8 +102,18 @@ Finally, here is the typical (no conflict) footprint of an arrow _i_ going out f
 // [...]
 }}}
 
-
 The offsets are computed according to the DoubleHashing and OpenAddressing strategies. Conflicting data may introduce additional shifts.
+
+23/02/09: offsets used will be different for each cell content dispatching: PAIR, IN, OUT, REMAIN to avoid resonance phenomena as much as possible. Some misc candidate offsets:
+ * offset def = h % p2 (p2 = second twin prim number)
+ * offset remaining = swapBytes(h) % p2
+ * offset IN = neg(h) % p2
+ * offset OUT = neg(swapBytes(h)) % p2
+
+
+23/02/09: Arrow definition must be located on 3 successive cells withing an open space because we can melt two definitions in an unambiguous way. When a free cell is not followed by 2 other free cells, one can't use it to store a new definition, it has to be filled up with stuffing value to preserve the search algorithm accuracy. In the other side, IN/OUT ids list might be melted with various other data within an open space.
+
+23/02/09: The few last values of the "jump factor" might be reserved to encode the number of valid bytes within the last cell used to store a binary string.
 
 
 ==Open Addressing==
@@ -136,6 +154,7 @@ Atomistic arrows (BLOB or TAG) are stored like any regular arrow directly into t
 
 For BLOB, data are actually preceded by the full computed SHA-2 hash code, in order to immediately eliminate false positives.
 
+Atomistic arrows bodies must not be mixed up as we might not find which cell belongs to which arrow after all. Some bits are used to store a offset factor within each binary cell. This factor is used to directly jump up to the next cell containing the remaining part of the binary string. It allows to jump over conflicting data located in nearest cells within the considered open space.
 
 ==Misc.==
 
