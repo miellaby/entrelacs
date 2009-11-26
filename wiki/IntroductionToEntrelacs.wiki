@@ -1,0 +1,21 @@
+#summary An introduction to Entrelacs
+
+Hello my name is Sylvain. I'm fond of computers and A.I. (or rather A. Learning) since my youngest childhood. As soon as I learned to code, I've studied how to store statements and logical rules in a computer. I wanted data to be more useful and rich than traditional arrays, files and tables.
+
+At a time when Internet didn't exist, I invented as a hobbyist some sort of OO environment and semantic graphs, but to be honest nothing really new in comparison with what I learned in computing courses few years latter.
+
+However, I finally realized there was a mental lock in searchers and programmers' mind which prevented them to invent something really new.
+
+As a matter of fact, the whole data computing industry has been build upon a unique principle: the "value put in a box" way to store information. Nowadays, all widely used data structure and operators are derived from this design principle. Even very sophisticated data formats like RDF or data systems like RDBS are under the sad influence of this principle.
+
+That's why the industry-standard software technologies look so disappointing. I often tell myself the software industry looks like what car industry would be if nobody invented the wheel. Something fundamental is still missing.
+
+The reason why this approach is so wrong deals with abstraction and expressiveness. For a given value in a given box, a computing system can vaguely elaborate both on the box (whose location can be a value for other boxes) and the value (by computing subsequent box locations from it) but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be used neither as a box nor as a value.
+
+So my proposal consists in reinventing data computing from scratch by getting ride of this weak "value in a box" way of thinking and replace it by a better model: the arrow.
+
+The arrow might be seen as a pair of C pointers linking anything to anything. But contrary to the previous model, this link can be used itself either as a referrer or a referred in other links.
+
+
+
+ 
