@@ -27,4 +27,5 @@ And then? Then, arrows can be linked between terms, like between "Hello" and "Wo
 Now that we have arrows, we have "signs", but we still need meaning.  Well, one can make a dictionary out of entrelacs. For example, you might decide the "Eve" entrelacs introduced formerly correspond to the zero digit. Then you might define a language based on arrows constructs. In traditional system, meaning is most of the time "hard-coded". But when information is stored as arrows, meaning typically depends on the context. And this context itself is expressed as arrows, which in turn receives a meaning from an upper context. And so on.
 
 However, here is the second aspect of what I call an "arrow". From a mathematical point of view, arrows are pure mathematical objects, like the "PI" number is.
-[To be continued]
+
+To be continued
