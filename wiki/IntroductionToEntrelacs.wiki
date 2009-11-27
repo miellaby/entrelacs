@@ -32,4 +32,4 @@ Now, do you know the "PI" number? If so, your brain can easily make an abstracti
 
 Arrows based computing does, because the most important aspect of arrows are that they are uniquely defined both mathematically and in the system storage space. For example, the arrow linking "hello" to "world" is unique, and so it has to be stored once.
 
-The gain here is not so much to spare storage resource. The gain is that the system CAN now access any information related to, says, "hello" and "world" linked together. It can interact with other systems and human beings about this "hello" and "world" arrow and its meaning whatever the context.
+The gain here is not so much to spare storage resource. The gain is that the system CAN now access any information related to, says, "hello" and "world" linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, give a meaning out of it, and elaborate on it as a pure object, juste like the  human brain does.
