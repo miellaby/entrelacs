@@ -1,31 +1,35 @@
 #summary An introduction to Entrelacs
 
-Hello my name is Sylvain. I'm fond of computers and A.I. (or rather A. Learning) since my youngest childhood. As soon as I learned to code, I've studied how to store statements and logical rules in a computer. I wanted data to be more useful and rich than traditional arrays, files and tables.
+Hello my name is Sylvain. I'm fond of computers and A.I. (or rather A. Learning) since my youngest childhood. As soon as I learned to code, I've studied how to store statements and logical rules into a computer.
 
-At a time when Internet didn't exist, I invented as a hobbyist some sort of OO environment and semantic graphs, but to be honest nothing really new in comparison with what I learned in computing courses few years latter.
+At a time when Internet didn't exist, I invented as a hobbyist some sort of OO environment and semantic graphs, but to be honest nothing really new in comparison with what I eventually learned in computing courses few years latter.
 
-However, I finally realized there was a mental lock in searchers and programmers' mind which prevented them to invent something really new.
+However, what I learned didn't satisfy me as expected. Current software technologies look so disappointing. I often tell myself they looks like what car industry would be if nobody invented the wheel. Something fundamental is still missing.
 
-As a matter of fact, the whole data computing industry has been build upon a unique principle: the "value put in a box" way to store information. Nowadays, all widely used data structure and operators are derived from this design principle. Even very sophisticated data formats like RDF or data systems like RDBS are under the sad influence of this principle.
+I eventually realized there was a mental lock in searchers and programmers' mind which prevented them to invent something really new.
 
-That's why the industry-standard software technologies look so disappointing. I often tell myself the software industry looks like what car industry would be if nobody invented the wheel. Something fundamental is still missing.
+As a matter of fact, the whole data computing industry has been build upon a unique principle: the "value put in a box" way to store information. Nowadays, all widely used data structure and operators are derived from this design principle. Even very sophisticated data formats like RDF or data systems like RDBS are under its sad influence.
 
 The reason why this approach is so wrong deals with abstraction and expressiveness. For a given value in a given box, a computing system can vaguely elaborate both on the box and the value but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be used neither as a box nor as a value.
 
 So my proposal consists in reinventing data computing from scratch by getting ride of this weak "value in a box" way of thinking and replace it by a better model: the arrow.
 
-The arrow might be seen as a pair of data pointers linking anything to anything. But contrary to the previous model, this link can be used itself either as a referrer or a referred in other links.
+The arrow might be seen as a pair of data pointers linking anything to anything. But contrary to the previous approach, this link can be used itself either as a referrer or a referred in other defined links.
 
-OK, at this step of my reasoning, you might ask: but how a simple set of arrows could store any information? My answer consists in focusing on particular connected set of arrows. Let's call them "entrelacs". For example, an arrow which refers itself both by its tail and its head forms as is an entrelacs I'd name "Eve". As a pure mathematical object, I postulate there is only one "Eve" arrow.
+OK, at this step of my reasoning, you might ask: but how arrows could be used to store any information? My answer consists in focusing on particular connected sets of arrow I call "entrelacs".
+
+For example, the arrow which refers itself both by its tail and its head forms as is what I call an entrelacs. I call this particular entrelacs "Eve". As a pure mathematical object, I postulate there is only one "Eve" arrow.
 
 Entrelacs form a basis to build a more elaborate form of knowledge, because you can recognize them, order them, enumerate them....
 
-So what? So one is authorized to link arrows with "terms" like the "Hello" character string even if one only deals with arrows, because terms are actually equivalent to entrelacs, some sort of intricate arrow structures.
+So what? So one is authorized to link arrows with terms like the "Hello" character string even if one only deals with arrows, because terms are actually equivalent to much or less complex entrelacs.
 
-And then? Then, arrows can be linked between terms, like between "Hello" and "World" terms, and such arrows can be used in turn to build next arrows.
+So one can consider terms and link arrows between them, like the arrow between "Hello" and "World" terms. Such arrows can be used in turn to build following arrows.
 
 Now that we have arrows, we have "signs", but we still need meaning.  Well, one can make a dictionary out of entrelacs. For example, you might decide the "Eve" entrelacs introduced formerly correspond to the zero digit. Then you might define a language based on arrows constructs. In traditional system, meaning is most of the time "hard-coded". But when information is stored as arrows, meaning typically depends on the context. And this context itself is expressed as arrows, which in turn receives a meaning from an upper context. And so on.
 
-However, here is the second aspect of what I call an "arrow". From a mathematical point of view, arrows are pure mathematical objects, like the "PI" number is.
+Now, do you know the "PI" number? If so, your brain can easily make an abstraction out of "PI" and elaborate out of it. But while they are plenty of PI values and symbols stored within a computer, a computer just can't handle "PI" as a pure concept and take decisions about it.
 
-To be continued
+Arrows based computing does, because the most important aspect of arrows are that they are uniquely defined both mathematically and in the system storage space. For example, the arrow linking "hello" to "world" is unique, and so it has to be stored once.
+
+The gain here is not so much to spare storage resource. The gain is that the system CAN now access any information related to, says, "hello" and "world" linked together. It can interact with other systems and human beings about this "hello" and "world" arrow and its meaning whatever the context.
