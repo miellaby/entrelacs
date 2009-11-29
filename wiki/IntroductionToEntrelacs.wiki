@@ -5,30 +5,44 @@ I've got an explanation. According to me, there is a mental lock in programmers 
 
 However this approach is terribly wrong. It dooms abstraction and expressiveness. Considering a given value in a given box, a computing system can vaguely elaborate either on the box or its value but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be directly used neither as a box nor as a value.
 
-That's why I work on this new EntrelacsSystem. My proposal consists in reinventing data computing from scratch and getting ride of this weak "value in a box" way of thinking. I bet one can represent knowledge by one and only one building block: the arrow.
+That's why I work on this new EntrelacsSystem. My proposal consists in reinventing data computing from scratch and getting ride of this weak "value in a box" way of thinking. I bet one can represent knowledge by using only one building block: the arrow.
 
-The arrow might be seen as a pair of data pointers linking anything to anything. But this time, such a link can be used itself either as a referrer or a referred in other defined links.
+The first point of the arrow definition is that an arrow is... a pair of arrows. If you're a C programmer, you might see an arrow as a pair of data pointers linking anything to anything, but this time, such a link can be used itself either as a referrer or a referred in other defined links.
 
-I'm convinced arrows are the only one building block I need to store any form of information. How it could be?
+Please note how the definition of an arrow is self-sufficient (it is recursive). One says the underlying maths feature homoiconicity because they're build upon only one concept. That's why arrows structure are so different than graphs seen in traditional courses. Just forget everything you learned or you could be afraid by statments like "arrows deals with a formal grammar with no terminal symbols".
+
+I'm convinced arrows are the only one building block I need to store any kind of information. How it could be?
 
 Let's me introduce first you what I call "entrelacs".
 
-"Entrelacs" are intricate balls of arrows linked each others. For example, the simple arrow which refers itself both by its tail and its head forms an entrelacs. Further in the reading, I'll call this particular entrelacs "Eve". By now, as a pure mathematical object, I postulate there is only one "Eve" arrow, recognizable by this particular topology: eve.tail = eve.head = eve.
+"Entrelacs" are intricate balls of arrows linked each others. For example, the single arrow which refers itself both by its tail and its head forms an entrelacs by itself.
 
-Entrelacs are very important. Because you can recognize them, order them, enumerate them... As a matter of fact, entrelacs perfectly act as terms.
+Please keep in mind this particular arrow. Further in the reading, I'll call it "Eve". By now, I postulate there is only one "Eve" arrow. Think about it as a pure mathematical object recognizable by this particular topology: eve.tail = eve.head = eve.
 
-So one can build arrows out of terms like the "Hello" character string even if one only deals with arrows. Do you get the point? Terms are actually equivalent to much or less complex entrelacs, that is arrows. "Hello" is an arrow, "world" is another one. Everything is arrow.
+Entrelacs are very important. You can isolate them, recognize them, order them, enumerate them... As a matter of fact, entrelacs perfectly act as terms.
 
-So one can consider arrows linking terms, like the arrow between "Hello" and "World" strings. Such arrows can be linked in turn by some other arrows, and so on.
+So one can build arrows out of terms like the "Hello" character string even if one only deals with arrows. Do you get the point? Terms are actually equivalent to much or less complex entrelacs, that is arrows. "Hello" is an arrow, "world" is another one. Everything is arrow. So one can consider arrows linking terms, like the arrow between "Hello" and "World" strings. Such arrows can be linked in turn by some other arrows, and so on.
 
-At this step, we've got "signs" -thanks to entrelacs- and arrows to combine these signs in expressive structures. But signs are useless without a meaning. Hopefully, you can define a dictionary of entrelacs. For example, you may decide that "Eve" (formerly introduced) corresponds to the zero digit. Then you may define a programming language based on this assumption.
+At this step, we've got "signs" -thanks to entrelacs- and arrows to combine these signs in expressive structures. But signs are useless without a meaning. Hopefully, you can define a dictionary out of entrelacs. For example, you may decide that "Eve" (formerly introduced) corresponds to the zero digit. Then you may define a programming language based on this assumption.
 
 However here is a major difference with traditional systems. With the "value in a box" paradigm, Meaning is most of the time "hard-coded". In other words, it lays out of the scope of the system.
 
 On the other side, arrows based knowledge representation allows meaning to be defined according to a context that will be expressed by arrows as well. Those arrows can in turn get a meaning from an upper context. And so on.
 
-Now, let's speak about the "PI" number. Are you agree your brain can easily make an abstraction out of "PI" and elaborate out of it? On its own, a computer stores plenty of copies of the same PI values and symbols, and yet it can't handle "PI" as is, that is as a pure concept. It can't take decisions about it, access the knowledge it's got about it, know when it uses it, and such.
+Now, let's speak about the "PI" number. Are you agree how your brain can easily make an abstraction out of "PI" and elaborate out of it? On its own, a computer stores plenty of copies of the same PI values and symbols, and yet it can't handle "PI" as is, that is as a pure concept. It can't take decisions about it, access the knowledge it's got about it, know when it uses it, and such.
 
-But arrows based computing does, because the second particularity of arrows is that they are uniquely defined both mathematically and within the system storage space. For example, the arrow linking "hello" to "world" is unique. It is also stored only once in the whole system memory.
+But arrows based computing does, because the second point of the definition of the arrow is that each arrow is uniquely defined both mathematically and within the system storage space. For example, the arrow linking "hello" to "world" is unique. It is also stored only once in the whole system memory.
 
-The point is not so much to spare storage resources. The point is that now the system CAN access any information related to, says, "hello" and "world" strings linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, found all the meanings of it, and elaborate on it as a pure concept, juste like the human brain always does.
+The point is not so much to spare storage resources. The point is that now the system CAN access any information related to, says, "hello" and "world" strings linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, found all the meanings of it, and elaborate on it as a concept, juste like the human brain always does.
+
+Now you may ask: how can I could host several applications within such a system if they all shares the same arrows?
+
+This is the third and last point of what an arrow is. Arrows are immutable. Once an arrow is stored within the system, you can't change it. So no risk of side effects.
+
+Arrows structures are consequently persistent. When the end user interacts with the system, it doesn't modify these structures in place, it only create new structures by reusing most parts of the existing material. File system authors call this principle "copy on write", but this expression doesn't fit well, because one never copy anything, and one writes a given arrow only once.
+ 
+Now you might share some doubts about the overall system efficiency. You're right worring. Ensuring each arrow is stored only once is costly. It has to be checked in two cases.
+ * When one imports some data from the outside.
+ * When some internal process declares new arrows within the system.
+
+The EntrelacsSystem proposal consists in transforming the whole computer storage space into a giant self-refered open-adressed hash table. The declaration of a new arrow is constructive. One first builds terms, then terms pairs, then arrows out of them, and so on. For each arrow, one computes an hash from its definition and one looks for the arrow in memory at the hash-given location.
