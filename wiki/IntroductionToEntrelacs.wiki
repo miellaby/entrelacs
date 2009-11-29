@@ -39,10 +39,19 @@ Now you may ask: how can I could host several applications within such a system 
 
 This is the third and last point of what an arrow is. Arrows are immutable. Once an arrow is stored within the system, you can't change it. So no risk of side effects.
 
-Arrows structures are consequently persistent. When the end user interacts with the system, it doesn't modify these structures in place, it only create new structures by reusing most parts of the existing material. File system authors call this principle "copy on write", but this expression doesn't fit well, because one never copy anything, and one writes a given arrow only once.
- 
+Arrows structures are consequently persistent. When the end user interacts with the system, it doesn't modify these structures in place, it only create new structures by reusing most parts of the existing material. File system authors call this principle "copy on write", but this expression doesn't fit well, because one never copies anything, and one writes a given arrow only once.
+
 Now you might share some doubts about the overall system efficiency. You're right worring. Ensuring each arrow is stored only once is costly. It has to be checked in two cases.
  * When one imports some data from the outside.
  * When some internal process declares new arrows within the system.
 
-The EntrelacsSystem proposal consists in transforming the whole computer storage space into a giant self-refered open-adressed hash table. The declaration of a new arrow is constructive. One first builds terms, then terms pairs, then arrows out of them, and so on. For each arrow, one computes an hash from its definition and one looks for the arrow in memory at the hash-given location.
+The EntrelacsSystem proposal consists in transforming the whole computer storage space into a giant self-refered open-adressed hash table. For each considered arrow, one computes an hash from its definition and looks for an existing copy into memory at the hash-given location. If such a copy exists, one reuses it, otherelse one stores the arrow there. One store arrows in a constructive way. One first builds terms, then term pairs, then more complex arrows, and so on. Actually, it's quite simple, isn't it?
+
+That being said, the EntrelacsSystem features orthogonal persistency and garbage collecting. In other worlds, the system totally blurs the old computing space boundaries (you know: RAM, disk, files...) by offering a much more convenient and consistent knowledge space. The nice part of it is that arrows based storage makes these features really easy to design. The main idea is to add a simple boolean flag to each arrow definition, telling whether the arrow belongs to a root context or not. This flag is the only modifiable property within an existing arrow. When set, the arrow and all its ancesters are stored to disk and are spared by the garbage collector. When unset, the corresponding arrow will be recycled if no other arrow still refers it (reference counters are used).
+
+I guess at this step of this reading, you might still ask what kind of programming language the EntrelacsSystem corresponds.
+
+Well actually, one could adapt any computing machine at the root context of evaluation of arrow structures, like some classical imperative interpreted language, from OOL or FL families.
+
+To be continued.
+
