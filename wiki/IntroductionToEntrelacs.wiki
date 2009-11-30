@@ -60,8 +60,6 @@ The point is that the arrows underlying theory is a theory of information repres
 Language searchers somewhat ignore the information representation part of the problem. That's why they often a little bit condescending regarding real world trends like object-oriented technologies or tagsonomies. On my own, I see these trends as an aborted path up to arrows paradigm.
 
 That being said, I think it could be a good idea reinventing a new language from scratch as well. A new language could leverage on arrows based storage to get innovative properties like:
-* making all internal aspects of the language first oder objects: continuations, partial evaluations, environments, call stack...
-* generalizing memoization: that is a transparent computation cache for any intermediate and complete computations.
-
-
+ * making all internal aspects of the language first oder objects: continuations, partial evaluations, environments, call stack...
+ * generalizing memoization: that is a transparent computation cache for any intermediate and complete computations.
 
