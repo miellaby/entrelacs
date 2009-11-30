@@ -47,19 +47,31 @@ Now you might share some doubts about the overall system efficiency. You're righ
 
 The EntrelacsSystem proposal consists in transforming the whole computer storage space into a giant self-refered open-adressed hash table. For each considered arrow, one computes an hash from its definition and looks for an existing copy into memory at the hash-given location. If such a copy exists, one reuses it, otherelse one stores the arrow there. One store arrows in a constructive way. One first builds terms, then term pairs, then more complex arrows, and so on. Actually, it's quite simple, isn't it?
 
-That being said, the EntrelacsSystem features orthogonal persistency and garbage collecting. In other worlds, the system totally blurs the old computing space boundaries (you know: RAM, disk, files...) by offering a much more convenient and consistent knowledge space. The nice part of it is that arrows based storage makes these features really easy to design.
+That being said, please note the EntrelacsSystem also features orthogonal persistency and garbage collecting. These buzzwords mean that the system totally blurs the old computing space boundaries (you know... RAM, disk, files...) by offering a much more convenient and consistent working space where every agent is alive and every piece of information is saved on the fly. The nice part of it is that arrows based storage makes these properties really easy to design.
 
-The main idea is to add a simple boolean flag to each arrow definition, telling whether the arrow belongs to a root context or not. This flag is the only modifiable property within the arrow definition. When set, the arrow and all its ancestors are stored into disk and are spared from the garbage collector process. When unset, the corresponding arrow will be recycled if no other arrow still refers it (reference counters are used).
+It's time to put the stress on what the system knowledge looks like as a whole. As a matter of facts, the whole system knowledge might be seen as a single giant structure of arrows totally contained in a single unique arrow definition. You read well: the whole knowledge of the system at a given actually consists in only one arrow whose all the ancestors form the knowledge as a whole.
+
+However this theoretical view is not very handy. A simpler solution consists in adding a boolean flag to each arrow definition, telling whether the arrow belongs to a root context or not. This flag is the only modifiable property within the arrow definition. When set, the arrow and all its ancestors are stored into disk and are spared from the garbage collector process. When unset, the corresponding arrow is recycled as soon as no other arrow refers it any more (reference counters are used on this purpose).
 
 I guess at this step of this reading, you might still wonder what kind of programming language the EntrelacsSystem corresponds to.
 
-As a matter of fact, one can adapt any existing machine to handle arrow structures. It may be some sort of imperative or declarative language. It may be functional, procedural or object oriented. It's actually out of topic.
+As a matter of fact, one can adapt any existing language to handle arrow structures. It may be some sort of imperative or declarative language. It may be functional, procedural or object oriented as well.
 
-The point is that the arrows underlying theory is a theory of information representation, while lambda calculus, combinatory logic or pattern matching are fundamental theories of computation. A good language and its related runtime environment should combine the best of these two worlds.
+Please note as well that many abstract machines, corresponding to many languages and modeling technologies, could be hosted within a single system. Arrows allow to embed evaluation contexts each others in a very natural way. As a matter of facts, creating Domain Specific Languages could be probably the best way to add knowledge into a working system. In other words, each application -even your favorite office application- might be viewed as a abstract machine processing inputs and computing outputs according to a particular language. This machine could be defined on a top of a virtual running machine, which could be in turn defined on top of a meta machine, and so on.
 
-Language searchers somewhat ignore the information representation part of the problem. That's why they often a little bit condescending regarding real world trends like object-oriented technologies or tagsonomies. On my own, I see these trends as an aborted path up to arrows paradigm.
+However the root context of evaluation still needs for a primary language. How could it looks like? Lambda Calculus, Combinatory Logic?
 
-That being said, I think it could be a good idea reinventing a new language from scratch as well. A new language could leverage on arrows based storage to get innovative properties like:
- * making all internal aspects of the language first oder objects: continuations, partial evaluations, environments, call stack...
- * generalizing memoization: that is a transparent computation cache for any intermediate and complete computations.
+The point is that the arrows underlying theory deals with information representation, while lambda calculus, combinatory logic or pattern matching are fundamental theories of computation.
 
+
+Language theoreticians somewhat ignore the information representation part of the overall problem. That's why they often look a little bit condescending regarding real world trends like object-oriented technologies or tagsonomies. On my own, I see these trends as incomplete attempts to enhance the representation problem. A good language and its related runtime environment should combine the best of these two worlds.
+
+That being said, I think the EntrelacsSystem is a basis to invent a new language from scratch. Such a language could leverage on arrows based storage to get innovative properties like:
+ * making all internal aspects of the language first order objects: closures, continuations, partial evaluations, environments, continuation chains...
+ * generalizing "memoization": that is offering a transparent computation cache for any intermediate and complete computations so to never repeat twice the same calculation.
+
+That's why I prefer to introduce the EntrelacsSystem as a new kind of computing environment rather than yet another data base manager. If you read me carefully, I think you may understand this point of view now.
+
+Please contact me if you'd like to contribute to this project. To be honest, I've no spare time at the moment being for this project. I forecast I won't be able to work much on it during these next years.
+
+And yet, I do think one could design an arrows space prototype right now. On a more theoretical side, one still need a convenient language as a primary abstract machine. I'm currently exploring how I could adapt a CEK machine to make it arrows oriented. If anybody out there finds this idea exciting, I'd be happy pass on the torch.
