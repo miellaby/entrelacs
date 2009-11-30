@@ -1,7 +1,7 @@
 #summary An introduction to Entrelacs
 Have you ever found current software technologies disappointing? On my own, I tell myself they look like what car industry would be if nobody invented the wheel. Something fundamental is still missing.
 
-I've got an explanation. According to me, there is a mental lock in programmers and theoricians' mind which prevents them to invent something really new, because the whole data computing industry is built upon a single design principle: the "value put in a box" way to store information. Nowadays, all data structure and computing systems are derived from it. Even the very last data formats like RDF are still under its sad influence.
+I've got an explanation. According to me, there is a mental lock in programmers and theoriticians' mind which prevents them to invent something really new, because the whole data computing industry is built upon a single design principle: the "value put in a box" way to store information. Nowadays, all data structure and computing systems are derived from it. Even the very last data formats like RDF are still under its sad influence.
 
 However this approach is terribly wrong. It dooms abstraction and expressiveness. Considering a given value in a given box, a computing system can vaguely elaborate either on the box or its value but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be directly used neither as a box nor as a value.
 
