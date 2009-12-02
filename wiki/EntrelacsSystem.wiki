@@ -1,3 +1,3 @@
 #summary The Entrelacs System sees the world as entrelacs.
 
-The EntrelacsSystem is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_. See EntrelacsIntroduction and ArrowParadigm for a better introduction of this approach and DesignIntroduction for more useful details.
+The EntrelacsSystem is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_. See IntroductionToEntrelacs and ArrowParadigm for a better introduction of this approach and DesignIntroduction for more useful details.
