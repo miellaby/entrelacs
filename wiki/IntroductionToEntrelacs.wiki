@@ -1,4 +1,5 @@
 #summary An introduction to Entrelacs
+#labels Featured
 Have you ever found current software technologies disappointing? On my own, I tell myself they look like what car industry would be if nobody invented the wheel. Something fundamental is still missing.
 
 I've got an explanation. According to me, there is a mental lock in programmers and theoriticians' mind which prevents them to invent something really new, because the whole data computing industry is built upon a single design principle: the "value put in a box" way to store information. Nowadays, all data structure and computing systems are derived from it. Even the very last data formats like RDF are still under its sad influence.
