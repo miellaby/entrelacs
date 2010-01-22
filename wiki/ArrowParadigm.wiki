@@ -6,6 +6,8 @@
 The EntrelacsSystem deals only with _arrows_. Its credo might be _Everything is an arrow_. This is the _*Arrow Paradigm*_.
 
 ==Definition of a regular arrow==
+<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=left>   
+
 An _arrow_ -as defined within the EntrelacsSystem- is an unique immutable oriented pair of arrows.
 
   * an arrow is a "pair of arrows". It means both ends of each arrow are two other arrows.  In other words, *an arrow graph doesn't contain any node.*
@@ -14,9 +16,6 @@ An _arrow_ -as defined within the EntrelacsSystem- is an unique immutable orient
 It has been said an arrow is "unique". It means the EntrelacsSystem deals with arrows as pure (uniquely definable) mathematical objects. Redundant constructs are rejected. It implies the system can tell whether two arrows are equals or not. This equality relationship is an isomorphism (?).
 
 It has been said an arrow is "immutable". It means again the EntrelacsSystem deals with arrows as pure mathematical objects. One can't change a number: PI is PI forever, and so is any definable arrow.
-
-Example:
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png   ||Here is some arrows. As you can see, arrows ends are other arrows.||
 
 
 ==Definition of an _entrelacs_==
