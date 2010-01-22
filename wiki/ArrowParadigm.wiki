@@ -6,7 +6,7 @@
 The EntrelacsSystem deals only with _arrows_. Its credo might be _Everything is an arrow_. This is the _*Arrow Paradigm*_.
 
 ==Definition of a regular arrow==
-<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=left>   
+<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
 
 An _arrow_ -as defined within the EntrelacsSystem- is an unique immutable oriented pair of arrows.
 
