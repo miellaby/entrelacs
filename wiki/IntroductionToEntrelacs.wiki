@@ -73,6 +73,6 @@ That being said, I think the EntrelacsSystem is a basis to invent a new language
 
 That's why I prefer to introduce the EntrelacsSystem as a new kind of computing environment rather than yet another data base manager. If you read me carefully, I think you may understand this point of view now.
 
-Please contact me if you'd like to contribute to this project. To be honest, I've no spare time at the moment being for this project. I forecast I won't be able to work much on it during these next years.
+Please contact me if you'd like to contribute to this project. To be honest, I've no spare time for it at the moment being. I forecast I won't be able to work much on it during these next years.
 
-And yet, I do think one could design an arrows space prototype right now. On a more theoretical side, one still need a convenient language as a primary abstract machine. I'm currently exploring how I could adapt a CEK machine to make it arrows oriented. If anybody out there finds this idea exciting, I'd be happy pass on the torch.
+And yet, I do think one could design an arrows space prototype right now. On a more theoretical side, one still needs a convenient language as a primary abstract machine. I'm currently exploring how I could adapt a CaEK machine to make it arrows oriented. If anybody out there finds this idea exciting, I'd be happy pass on the torch.
