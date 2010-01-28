@@ -26,14 +26,17 @@ A set of arrows can be identified as an entrelacs if it contains at least one ar
 
 Actually it means that every arrow belongs to a related entrelacs consisting in this arrow and all its _ancestors_.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png   ||Here is a introduction of few entrelacs (and one counter-example)||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png ||
+|| Here is a introduction of few entrelacs (and one counter-example) ||
 
 ==Definition of a _prim entrelacs_==
 
 A _prim entrelacs_ is an entrelacs which is so much interlaced it doesn't contain smaller entrelacs.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   || this arrow is also a "prim entrelacs". It is named _eve_ (certainly because it has no parent) ||
-||http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png|| this arrow is not a "prim entrelacs" but it embeds two ones ||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   ||
+|| this arrow is also a "prim entrelacs". It is named _eve_ (certainly because it has no parent) ||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png ||
+|| this arrow is not a "prim entrelacs" but it embeds two ones ||
 
 "Prim entrelacs" look like atomistic pieces of data. They can't be divided in smaller parts; they are closed; and they got finished boundaries. It implies you can handle them, name them, count them, ordering them, etc as you can do with, says, numbers.
 
@@ -43,10 +46,13 @@ The _Entrelacs System_ allows to store "unique" and "immutable" flat data as wel
 However, this feature doesn't deny the _arrow paradigm_, because the entrelacs underlying theory demonstrates such atomistic data are equivalent to _prim entrelacs_.
 
 In other mean, such binary data may be seen as some sort of arrows as well. See AtomEntrelacEquivalency for further reading.
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png   ||Binary things may be seen as encoded big prim entrelacs.||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png ||
+|| Binary things may be seen as encoded big prim entrelacs. ||
 
 ==Arrow connectivity==
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png || an _arrow_, its _head_, its _tail_, its _incoming children_ arrows, its _outgoing children_ ||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png ||
+|| an _arrow_, its _head_, its _tail_, its _incoming children_ arrows, its _outgoing children_ ||
+
   * an arrow is an oriented pair of arrows.
   * the first arrow in the pair is named the "tail".
   * the last arrow in the pair is named the "head".
@@ -71,7 +77,8 @@ However, it's more convenient to represent the system top-level context as a set
 
 Rooted arrows are concretely regular arrows flagged with a "root" mark. This "root" boolean property is the only mutable property of an arrow within the system storage space.  The "root" property typically corresponds to a dedicated flag bit stuck to the arrow definition within the storage space.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png   || this arrow is "rooted".||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png ||
+|| this arrow is "rooted".||
 See the graphic notation here (Lambda / check mark).
 
 ==About garbage collector==
@@ -96,7 +103,8 @@ For practical reasons, one definable arrow -whatever it is a regular pair or a b
 
 As one arrow might be an ancestor of many other arrows, one arrow can't be modified once stored in the system space.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   || this average entrelacs embeds arrows which are several times ancestors of children arrows.||
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   ||
+|| this average entrelacs embeds arrows which are several times ancestors of children arrows.||
 
 System changes are conducted by rooting/un-rooting operations. Please take into considerations such operations recycle most of the material (arrows) involved into the change thanks to the redundancy free principle of the assimilation process.
 
