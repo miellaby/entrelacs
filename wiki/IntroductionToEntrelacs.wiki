@@ -1,10 +1,17 @@
 #summary An introduction to Entrelacs
 #labels Featured
-Have you ever found current software technologies disappointing? On my own, I tell myself they look like what car industry would be if nobody invented the wheel. Something fundamental is still missing.
+Have you ever found software technologies disappointing? They look to me what car industry would be if nobody had invented the wheel. They lack for something fundamental.
 
-I've got an explanation. According to me, there is a mental lock in programmers and theoriticians' mind which prevents them to invent something really new, because the whole data computing industry is built upon a single design principle: the "value put in a box" way to store information. Nowadays, all data structure and computing systems are derived from it. Even the very last data formats like RDF are still under its sad influence.
+IT technologies have taken a wrong path many years ago: the _value put in a box_ way to store information.
 
-However this approach is terribly wrong. It dooms abstraction and expressiveness. Considering a given value in a given box, a computing system can vaguely elaborate either on the box or its value but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be directly used neither as a box nor as a value.
+The whole data computing industry is built upon this design approach. All data structure and computing systems are derived from it. Even the most recent data formats like RDF were designed according to this way of thinking.
+
+This design principle is easy to understand by human beings, because it's a natural transposition of a famous tool people knows under the name of "writing" which consists in putting signs at expected locations on some adequate support.
+
+As a matter of fact, the "writing" metaphor forms a deep-buried lock in programmers and theoreticians' minds. This mental lock prevents to invent something really new in term of knowledge representation.
+
+
+Because this actual approach is terribly limited as it dooms abstraction and expressiveness. Considering a given value in a given box, a computing system can vaguely elaborate either on the box or its value but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be directly used neither as a box nor as a value.
 
 That's why I work on this new EntrelacsSystem. My proposal consists in reinventing data computing from scratch and getting ride of this weak "value in a box" way of thinking. I bet one can represent knowledge by using only one building block: the arrow.
 
