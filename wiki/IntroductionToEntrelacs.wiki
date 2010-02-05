@@ -1,24 +1,36 @@
 #summary An introduction to Entrelacs
 #labels Featured
+
+==stupid, stupid computers==
+
 Have you ever found software technologies disappointing? They look to me what car industry would be if nobody had invented the wheel. They lack for something fundamental.
 
-IT technologies have taken a wrong path many years ago: the _value put in a box_ way to store information.
+It's due to the wrong path IT technologies have taken many years ago: the _value put in a box_ way to store information.
 
-The whole data computing industry is built upon this design approach. All data structure and computing systems are derived from it. Even the most recent data formats like RDF were designed according to this way of thinking.
+Now, the whole data computing industry is built upon this design approach. All data structures and computing systems are derived from it. Even the most recent data formats like RDF have been designed according to this way of thinking.
 
-This design principle is easy to understand by human beings, because it's a natural transposition of a famous tool people knows under the name of "writing" which consists in putting signs at expected locations on some adequate support.
+As a matter of fact, there is a deep-buried lock in programmers and theoreticians' minds. This mental lock prevents them to find a better way to represent knowledge. It can be explained by the fact the _box_ approach is a natural transposition of "writing", an aged technology which consists in putting signs at expected locations on some adequate support. In other means, this design principle is what human beings are accustomed to.
 
-As a matter of fact, the "writing" metaphor forms a deep-buried lock in programmers and theoreticians' minds. This mental lock prevents to invent something really new in term of knowledge representation.
+The fact is that this natural approach is inherently limited because it only makes computer able to work on a given value in a given box but not on "that value in that box" relation itself. Indeed, the particular "that value in that given box" piece of information can't directly be used neither as a box nor a value.
 
+In other words, it's the _box_ way which dooms abstraction and expressiveness of computers' knowledge and makes them inherently stupid.
 
-Because this actual approach is terribly limited as it dooms abstraction and expressiveness. Considering a given value in a given box, a computing system can vaguely elaborate either on the box or its value but not on the "that value in that box" relation itself. Indeed, "a given value in a given box" information can't be directly used neither as a box nor as a value.
+The EntrelacsSystem proposal consists in reinventing data computing from scratch and getting ride of this weak "value in a box" way of thinking. This proposal consists in representing knowledge through a single building block: the _arrow_.
 
-That's why I work on this new EntrelacsSystem. My proposal consists in reinventing data computing from scratch and getting ride of this weak "value in a box" way of thinking. I bet one can represent knowledge by using only one building block: the arrow.
+===what's an arrow?===
 
-The first point of the arrow definition is that an arrow is... a pair of arrows. If you're a C programmer, you might see an arrow as a pair of data pointers linking anything to anything, but this time, such a link can be used itself either as a referrer or a referred in other defined links.
+In short, an arrow is... a pair of arrows.
 
-Please note how the definition of an arrow is self-sufficient (it is recursive). One says the underlying maths feature homoiconicity because they're build upon only one concept. That's why arrows structure are so different than graphs seen in traditional courses. Just forget everything you learned or you could be afraid by considerations like "a formal grammar with no terminal symbols".
+* C coders may see it as a structure of 2 pointers both referring such a structure.
+* Lisp coders as a _con_.
+* SQL hackers as a record in a twice reentrant relation table.
+* REST developers as a pair of URI being itself identified by an URI.
 
+Note how the arrow twice recursive definition is self-sufficient. One of its feature is homoiconicity, meaning that contrary to many academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
+
+That's why arrows structure are so different than graphs seen in academic institutions. Please forget everything you learned as it won't fit well. As an example, according to language theory, arrows set should be studied as a formal grammar with no terminal symbols, which is obviously out of the theory scope.
+
+==
 I'm convinced arrows are the only one building block I need to store any kind of information. How it could be?
 
 Let's me introduce first you what I call "entrelacs".
