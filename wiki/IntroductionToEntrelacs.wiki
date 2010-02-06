@@ -1,21 +1,21 @@
 #summary An introduction to Entrelacs
-#labels Featured
+#labels Featured,introduction
 
-==stupid, stupid computers==
+===stupid, stupid computers!===
 
-Have you ever found software technologies disappointing? On my own, they look to me what car industry would be if nobody had invented the wheel. They lack for something fundamental.
+Have you ever found software technologies disappointing? On my own, they make me think about what car industry would be if nobody had ever invented the wheel.
 
-According to me, it's due to the wrong path IT technologies have taken many years ago: the _value put in a box_ way to store information.
+it's due to the wrong path IT technologies have taken many years ago: the _value in a box_ way to store information.
 
-The whole data computing industry is now built upon this wrong design. All data structures and computing systems are derived from it. Even the most recent data formats like RDF have been doomed by this way of thinking.
+The whole data computing industry is now built upon this wrong design. All data structures and computing systems are derived from it. Even the most recent data formats like RDF is doomed by this way of thinking.
 
-There is s a lock deeply buried in programmers and theoreticians' minds which prevents them to look for a better approach. It can be explained by the fact the wrong _box_ approach is a natural transposition of "writing", an aged technology which consists in putting signs at expected locations on some adequate support. In other means, the _box_ approach is what human beings are accustomed to.
+There is actually a lock deeply buried in programmers and theoreticians' minds which prevents them to find a better solution. This mental lock can be explained by the fact the _box/value_ concept is a natural transposition of "writing", an aged technology which consists in putting signs at expected locations on some adequate support.
 
-The fact is that this natural approach is inherently limited because it only makes computer able to work on a given value in a given box but not on "that value in that box" relation itself. Indeed, the particular "that value in that given box" piece of information can't directly be used neither as a box nor a value.
+But even if the _box_ approach is what human beings are accustomed to, the fact is that it 's a terribly *limited* solution. Because of it, a computer can work on a given value in a given box but not on "that value in that box" relation itself. Indeed, the "that value in that given box" piece of information can itself be used neither as a box nor as a value.
 
-In other words, it's the _box_ oriented data model which dooms abstraction and expressiveness of computers' knowledge and makes them inherently stupid.
+Therefore, this is the terrible _value in a box_ design principle which dooms abstraction and expressiveness of computers' knowledge and makes them inherently stupid from the very beginning of data computing history.
 
-The EntrelacsSystem proposal consists in reinventing knowledge representation theory from scratch and getting ride of this weak "value in a box" way of thinking. This proposal consists in representing knowledge through a single building block: the _arrow_.
+That's why the EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will represent knowledge through only a single building block: the _arrow_.
 
 ===what's an arrow?===
 
@@ -24,51 +24,53 @@ In short, an arrow is... a pair of arrows.
 * C coders may see it as a structure of 2 pointers both referring such a structure.
 * Lisp coders as a _con_.
 * SQL hackers as a record in a twice reentrant relation table.
-* REST developers as a pair of URI being identified as well by an URI.
+* Web developers as a pair of URI being identified as well by an URI.
 
-Note how the arrow twice recursive definition is self-sufficient. One of its feature is homoiconicity, meaning that contrary to many academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
+Note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to most academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
 
-That's why arrows structure are so different than graphs seen in academic institutions. Please forget everything you learned as it won't fit well. As an example, according to language theory, arrows set should be studied as a formal grammar with no terminal symbols, which is obviously out of the theory scope.
+That's why arrows structure are so different than graphs seen in academic institutions. Please forget everything you learned: it just won't fit. For example, according to language theory, arrows could be modeled as a formal grammar with no terminal symbols; Literally mind-blowing!
 
-==How can one get rid of atoms, literals, symbols, terms, vertices and such?==
+===how can one get rid of vertices?===
 
 Arrows are the only building block one need to store any kind of information thanks to "_entrelacs_".
 
-Entrelacs are sorts of intricate balls of arrows linked each others. For example, consider this entrelacs formed by a single arrow: the arrow which links itself both by its tail and its head. Please remember this particular arrow/entrelacs. One calls it "Eve".
+Entrelacs are sorts of intricate balls of arrows linked each others. For example, consider the entrelacs formed by a single arrow  which links itself both by its tail and its head. Please remember this particular arrow/entrelacs. One calls it "Eve".
 
 I find it reasonable postulating there is only one "Eve" arrow, that is one pure mathematical object identified by this particular topology: eve's tail = eve's head = eve.
 
-Eve is the smallest entrelacs one can build thought one can imagine more complicate entrelacs, featuring two, three or any number of arrows. The key point is that each entrelacs is recognizable by its topology (how arrows are linked each others).
+Eve is the smallest entrelacs ever but one can define much more complicate entrelacs, including two, three or any number of arrows. The key aspect of entrelacs is that each of them is recognizable by its topology (how arrows are linked each others).
 
-Entrelacs are really important objects because they actually behave as _terms_. You can recognize them, order them, enumerate them, and so on *but* you can't isolate smaller closed structures inside.
+Entrelacs are important because they actually behave as _terms_. One can recognize them, order them, enumerate them, and in the same time one can't find smaller closed structures inside.
 
 In other words, an entrelacs is equivalent to a "foo" symbol, a 42 literal or a "hello" character string. And vice-versa: "Hello" string is an entrelacs, "world" is an entrelacs, and so on. All in all, I don't cheat when saying that everything is an arrow.
 
 When an arrow is not part of an entrelacs (i.e. when it's not a term), it corresponds to a link between two things, either an entrelacs or a previously defined link. Such arrows can be linked in turn by some other arrows, and so on.
 
-To summed up what we've got until now, we've got "signs" -entrelacs- and arrows to combine these signs in expressive structures. It's enough to represent any form of knowledge. The key step is to make a dictionary out of existing entrelacs. For example, one may decide that Eve is a particular instruction for a new arrows based programming language.
+To summed up what we've got until now, we've got "signs" -entrelacs- and arrows to combine signs in pair structures. It's more than enough to represent any form of knowledge. The next step is to make a dictionary out of existing entrelacs. For example, one may decide that Eve is a particular instruction for a new arrows based programming language.
 
-== Meaning ==
+===explicit meaning===
 
 Signs and signs combination would be useless if one couldn't get their meaning. In traditional systems, signs-to-meaning relationship is most of the time "hard-coded", ie. out of the system scope.
 
-But arrows permit to store meaning and signs together. The key concept is that one can attach arrows to any existing arrow and so putting information in an higher order context. Those arrows can be in turn explicated in an upper context. And so on.
+But arrows permit to store meaning and signs together. The key concept is that one can attach arrows to any existing arrow and form an higher order context of information. Those arrows can be in turn explicated in an upper context. And so on.
 
-== pure abstraction ==
+===pure abstraction===
 
-When an human being thinks about the "PI" number, his brain can easily reasoning about what he knows about PI, when he makes use of it, what concepts are related (circle, angle, perimeter, number, decimal, etc.), and so on.
+When an human being thinks about the "PI" number, his brain can easily reasoning about what he knows about PI, when he makes use of it, what related concepts he can think about (circle, angle, decimal, etc.), and so on.
 
-On its own, any regular computer stores a bunch of PI copies either as a floating-point value or a symbol string. But the more copies there are, the less chances this computer can handle "PI" as a pure concept and make reasoning about it, like knowing when it makes use of it.
+On its own, any regular computer stores a bunch of PI copies either as a floating-point encoded value or a symbol string. But the more copies there are, the less chances this computer can handle "PI" as a pure concept and make reasoning about it, like knowing when it makes use of it.
 
-Arrows highly simplifies this problem by preventing such copies to exist. It forms the second aspect of arrows introduction: Each arrow is *uniquely defined*.  both mathematically and within the system storage space. For example, the arrow linking "hello" to "world" is unique. It is also stored only once in the whole system memory.
+Arrows based systems highly simplify this problematic by preventing such copies to exist. Here is the second key concept regarding arrows system: Each arrow can't be stored more than once in the whole system storage. For example, the arrow linking "hello" to "world" is unique both as a mathematical object and in the system storage.
 
-The point is not so much to spare storage resources. The point is that now the system CAN access any information related to, says, "hello" and "world" strings linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, found all the meanings of it, and elaborate on it as a concept, juste like the human brain always does.
+The point is not so much to spare storage resources. The point is that now the system *can* access any information related to, says, "hello" and "world" strings linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, found all the meanings of it, and elaborate on it as a pure concept, just like the human brain always does.
 
-Now you may ask: how can I could host several applications within such a system if they all shares the same arrows?
+Now you may ask: "how can one run several applications within such a system if they all shares the same arrows?"
 
-This is the third and last point of what an arrow is. Arrows are immutable. Once an arrow is stored within the system, you can't change it. So no risk of side effects.
+This is the third and last key concept of arrows. Arrows are _immutable_. It means that once an arrow is stored within the system, one can't change it any more. It eliminates any risk of side effects.
 
-Arrows structures are consequently persistent. When the end user interacts with the system, it doesn't modify these structures in place, it only create new structures by reusing most parts of the existing material. File system authors call this principle "copy on write", but this expression doesn't fit well, because one never copies anything, and one writes a given arrow only once.
+Arrows structures are consequently persistent. User interactions don't make the system modify existing structures. It creates new structures instead by reusing most of their material. File system authors call this principle "copy on write", but this expression doesn't fit well, because one never copies anything, and one writes a given arrow only once.
+
+===what about the perfs?===
 
 Now you might share some doubts about the overall system efficiency. You're right worring. Ensuring each arrow is stored only once is costly. It has to be checked in two cases.
  * When one imports some data from the outside.
@@ -78,22 +80,31 @@ The EntrelacsSystem proposal consists in transforming the whole computer storage
 
 That being said, please note the EntrelacsSystem also features orthogonal persistency and garbage collecting. These buzzwords mean that the system totally blurs the old computing space boundaries (you know... RAM, disk, files...) by offering a much more convenient and consistent working space where every agent is alive and every piece of information is saved on the fly. The nice part of it is that arrows based storage makes these properties really easy to design.
 
+===how an arrow system really look likes?===
+
 It's time to put the stress on what the system knowledge looks like as a whole. As a matter of facts, the whole system knowledge might be seen as a single giant structure of arrows totally contained in a single unique arrow definition. You read well: the whole knowledge of the system at a given actually consists in only one arrow whose all the ancestors form the knowledge as a whole.
 
-However this theoretical view is not very handy. A simpler solution consists in adding a boolean flag to each arrow definition, telling whether the arrow belongs to a root context or not. This flag is the only modifiable property within the arrow definition. When set, the arrow and all its ancestors are stored into disk and are spared from the garbage collector process. When unset, the corresponding arrow is recycled as soon as no other arrow refers it any more (reference counters are used on this purpose).
+However this theoretical view is not very handy. A simpler solution consists in adding a boolean flag to each arrow definition, telling whether the arrow belongs to a root context or not. This flag is the only modifiable property within the arrow definition.
+* When set, the arrow and all its ancestors are stored into disk and are spared from the garbage collector process.
+* When unset, the corresponding arrow is recycled as soon as no other arrow refers it any more (reference counters are used on this purpose).
 
 I guess at this step of this reading, you might still wonder what kind of programming language the EntrelacsSystem corresponds to.
 
-As a matter of fact, one can adapt any existing language to handle arrow structures. It may be some sort of imperative or declarative language. It may be functional, procedural or object oriented as well.
+As a matter of fact, one can adapt any existing language: It may be imperative or declarative, functional or object oriented, etc.
 
-Please note as well that many abstract machines, corresponding to many languages and modeling technologies, could be hosted within a single system. Arrows allow to embed evaluation contexts each others in a very natural way. As a matter of facts, creating Domain Specific Languages could be probably the best way to add knowledge into a working system. In other words, each application -even your favorite office application- might be viewed as a abstract machine processing inputs and computing outputs according to a particular language. This machine could be defined on a top of a virtual running machine, which could be in turn defined on top of a meta machine, and so on.
+Please note as well that many abstract machines, corresponding to many languages and technologies, could be hosted simultaneously within a single system. Arrows allow to embed evaluation contexts each others in a very natural way.
 
-However the root context of evaluation still needs for a primary language. How could it looks like? Lambda Calculus, Combinatory Logic?
+As a matter of facts, creating Domain Specific Languages could be probably the best way to add knowledge into a working system. In other words, each application -even your favorite office application- might be viewed as a abstract machine processing inputs and computing outputs according to a particular language. This machine could be defined on a top of a virtual running machine, which could be in turn defined on top of a meta machine, and so on.
 
-The point is that the arrows underlying theory deals with information representation, while lambda calculus, combinatory logic or pattern matching are fundamental theories of computation.
+===arrows system vs. Lambda calculus and other abstract machines===
 
+I confess the root context of an arrows evaluation stack still needs for a primary language. How could it looks like? Lambda Calculus, Combinatory Logic?
 
-Language theoreticians somewhat ignore the information representation part of the overall problem. That's why they often look a little bit condescending regarding real world trends like object-oriented technologies or tagsonomies. On my own, I see these trends as incomplete attempts to enhance the representation problem. A good language and its related runtime environment should combine the best of these two worlds.
+The point is that arrows underlying theory deals with information representation, while lambda calculus, combinatory logic or pattern matching are fundamental theories of computation.
+
+Language theoreticians somewhat ignore the information representation part of the whole problem. That's why they often look a little bit condescending regarding real world trends like object-oriented technologies or tagsonomies.
+
+On my own, I see these trends as partial attempts to enhance the representation problem. A good language and its related runtime environment should combine the best of these two worlds.
 
 That being said, I think the EntrelacsSystem is a basis to invent a new language from scratch. Such a language could leverage on arrows based storage to get innovative properties like:
  * making all internal aspects of the language first order objects: closures, continuations, partial evaluations, environments, continuation chains...
@@ -101,6 +112,6 @@ That being said, I think the EntrelacsSystem is a basis to invent a new language
 
 That's why I prefer to introduce the EntrelacsSystem as a new kind of computing environment rather than yet another data base manager. If you read me carefully, I think you may understand this point of view now.
 
-Please contact me if you'd like to contribute to this project. To be honest, I've no spare time for it at the moment being. I forecast I won't be able to work much on it during these next years.
+Please contact me if you think you can contribute to this project. To be honest, I've no spare time for it at the moment being. I forecast it will be the same during these next years.
 
-And yet, I do think one could design an arrows space prototype right now. On a more theoretical side, one still needs a convenient language as a primary abstract machine. I'm currently exploring how I could adapt a CaEK machine to make it arrows oriented. If anybody out there finds this idea exciting, I'd be happy pass on the torch.
+And yet, I do think one could design an arrows space prototype right now. On a more theoretical side, one still needs a convenient language as a primary abstract machine. I'm currently exploring how I could adapt a CaEK machine to make it "arrows friendly". If anybody out there finds this idea exciting, I'd be happy pass on the torch.
