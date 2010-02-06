@@ -21,10 +21,10 @@ That's why the EntrelacsSystem proposes to get ride of this weak "value in a box
 
 In short, an arrow is... a pair of arrows.
 
-* C coders may see it as a structure of 2 pointers both referring such a structure.
-* Lisp coders as a _con_.
-* SQL hackers as a record in a twice reentrant relation table.
-* Web developers as a pair of URI being identified as well by an URI.
+  * C coders may see it as a structure of 2 pointers both referring such a structure.
+  * Lisp coders as a _con_.
+  * SQL hackers as a record in a twice reentrant relation table.
+  * Web developers as a pair of URI being identified as well by an URI.
 
 Note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to most academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
 
@@ -73,8 +73,8 @@ Arrows structures are consequently persistent. User interactions don't make the 
 ===what about the perfs?===
 
 Now you might share some doubts about the overall system efficiency. You're right worring. Ensuring each arrow is stored only once is costly. It has to be checked in two cases.
- * When one imports some data from the outside.
- * When some internal process declares new arrows within the system.
+  * When one imports some data from the outside.
+  * When some internal process declares new arrows within the system.
 
 The EntrelacsSystem proposal consists in transforming the whole computer storage space into a giant self-refered open-adressed hash table. For each considered arrow, one computes an hash from its definition and looks for an existing copy into memory at the hash-given location. If such a copy exists, one reuses it, otherelse one stores the arrow there. One store arrows in a constructive way. One first builds terms, then term pairs, then more complex arrows, and so on. Actually, it's quite simple, isn't it?
 
