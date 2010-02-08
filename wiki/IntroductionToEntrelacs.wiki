@@ -9,9 +9,9 @@ It's due to the wrong manner of storing information that IT technologies has fol
 
 This principle is derived from an aged invention named "writing", which also consists in putting signs at expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in programmers and theoreticians' minds, it forms a mental lock which prevents people imagining something else.
 
-Everything now is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even the latest data formats like RDF.
+And now, everything is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even the latest data formats like RDF.
 
-And yet the _value in a box_ solution is actually terribly *limited*, simply because it can't use "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
+And yet the _value in a box_ solution is terribly *limited*, simply because it can't use "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
 
 The EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will build out knowledge representation of one and only one building block known as the _arrow_.
 
@@ -21,32 +21,27 @@ In short, an arrow is... a pair of arrows.
 
 Coders may see it as a structure of 2 pointers linking such structures (C), a _con_ of cons (Lisp), a record in a twice reentrant relation table (SQL), an URI returning a pair of URI (web), etc.
 
-But please note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to its academic counterparts, arrows theory doesn't depend on a concept duality like _vertices and edge_.
+But please note how the arrow twice recursive definition is self-sufficient. The underlying theory features homoiconicity, meaning that contrary to graphs studied in academic institutions, it doesn't depend on a concept duality like _vertices and edge_.
 
-That's what makes arrows structure so different than graphs studied in academic institutions. Please forget everything you learned: it just won't fit. For example, according to language theory, arrows could be modeled as a formal grammar with no terminal symbols; Literally mind-blowing!
+That's what makes arrows structure so different. Traditional models just don't fit. For example, language theory might see arrows as a formal grammar without terminal symbols, what's the point?
 
 ===how can one get rid of vertices?===
 
-_Entrelacs_ can act as vertices when necessary. Entrelacs are intricate balls of arrows linked each others. For example, the arrow whose tail and head both links back itself forms an entrelacs. Please remember this particular arrow/entrelacs one will calls "Eve" hereafter.
+_Entrelacs_ are intricate balls of arrows linked each others. For example, the arrow whose tail and head both links back itself forms a simple entrelacs named "Eve". There is an infinity of entrelacs built out of any number of arrows.
 
+Entrelacs actually behave as _terms_. One can't find smaller structures within but one can recognize them according to their topology (how arrows are linked each others).  For example, one can recognize Eve as the only arrow featuring : Eve's head = Eve's tail == Eve.
 
-Eve is the smallest entrelacs one can define but there are an infinity of entrelacs, composed of two, three or any number of arrows.
-
-The key property of entrelacs is that they can be recognized by their topology (how their arrows are linked each others).  For example, one can recognize Eve as the only and only arrow featuring : Eve's head = Eve's tail == Eve.
-
-Entrelacs actually behave as _terms_. One can't find smaller structures within but one can recognize them individuously.
-
-In other words, an entrelacs is equivalent to a "foo" symbol, a 42 literal or a "hello" character string. And vice-versa: "Hello" string is an entrelacs, "world" is an entrelacs, and so on. All in all, I don't cheat when saying that everything is an arrow.
+In other words, entrelacs are somewhat equivalent to things like symbols, literals and atomistic data. And vice-versa: the "Hello" string is equivalent to a specific entrelacs, while "world" is an other entrelacs. All in all, I don't cheat when saying that everything is an arrow.
 
 When an arrow is not part of an entrelacs (i.e. when it's not a term), it corresponds to a link between two things, either an entrelacs or a previously defined link. Such arrows can be linked in turn by some other arrows, and so on.
 
-To summed up what we've got until now, we've got "signs" -entrelacs- and arrows to combine signs in pair structures. It's more than enough to represent any form of knowledge. The next step is to make a dictionary out of existing entrelacs. For example, one may decide that Eve is a particular instruction for a new arrows based programming language.
+So we've got "signs" -entrelacs- and arrows to pair them together. It's more than enough to represent any form of knowledge.
 
-===explicit meaning===
+===Meaning made explicit===
 
-Signs and signs combination would be useless if one couldn't get their meaning. In traditional systems, signs-to-meaning relationship is most of the time "hard-coded", ie. out of the system scope.
+An arrow have no meaning by itself as it depends on the context. For example, one may decide that Eve is a particular instruction for a new arrow based programming language.
 
-But arrows permit to store meaning and signs together. The key concept is that one can attach arrows to any existing arrow and form an higher order context of information. Those arrows can be in turn explicated in an upper context. And so on.
+In traditional systems, signs-to-meaning relationship is most of the time "hard-coded" so that meaning is out of system scope, while arrows permit to store signs and their meaning together thanks to additional arrows. Those arrows can be explained in turn. And so on.
 
 ===pure abstraction===
 
