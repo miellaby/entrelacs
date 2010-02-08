@@ -9,33 +9,32 @@ It's due to the wrong manner of storing information that IT technologies has fol
 
 This principle is derived from an aged invention named "writing", which also consists in putting signs at expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in programmers and theoreticians' minds, it forms a mental lock which prevents people imagining something else.
 
-Everything now is built according to the _value in a box_ principle: operating systems, programs, language, data structures, and even the latest data formats like RDF.
+Everything now is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even the latest data formats like RDF.
 
-And yet the _value in a box_ solution is actually terribly *limited* because it can't use "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
+And yet the _value in a box_ solution is actually terribly *limited*, simply because it can't use "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
 
-The EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will build out knowledge representation out of one and only one building block known as the _arrow_.
+The EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will build out knowledge representation of one and only one building block known as the _arrow_.
 
 ===An arrow? what is it?===
 
 In short, an arrow is... a pair of arrows.
 
-C coders may see it as a structure of 2 pointers to such a structure. Lisp coders as a _con_ of cons, SQL hackers as a record in a twice reentrant relation table, web developers as an URI returning a pair of URI...
+Coders may see it as a structure of 2 pointers linking such structures (C), a _con_ of cons (Lisp), a record in a twice reentrant relation table (SQL), an URI returning a pair of URI (web), etc.
 
-Please note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to most academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
+But please note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to its academic counterparts, arrows theory doesn't depend on a concept duality like _vertices and edge_.
 
 That's what makes arrows structure so different than graphs studied in academic institutions. Please forget everything you learned: it just won't fit. For example, according to language theory, arrows could be modeled as a formal grammar with no terminal symbols; Literally mind-blowing!
 
 ===how can one get rid of vertices?===
 
-Arrows are the only building block one need to store any kind of information thanks to "_entrelacs_".
+_Entrelacs_ can act as vertices when necessary. Entrelacs are intricate balls of arrows linked each others. For example, the arrow whose tail and head both links back itself forms an entrelacs. Please remember this particular arrow/entrelacs one will calls "Eve" hereafter.
 
-Entrelacs are sorts of intricate balls of arrows linked each others. For example, consider the entrelacs formed by a single arrow  which links itself both by its tail and its head. Please remember this particular arrow/entrelacs. One calls it "Eve".
 
-I find it reasonable postulating there is only one "Eve" arrow, that is one pure mathematical object identified by this particular topology: eve's tail = eve's head = eve.
+Eve is the smallest entrelacs one can define but there are an infinity of entrelacs, composed of two, three or any number of arrows.
 
-Eve is the smallest entrelacs ever but one can define much more complicate entrelacs, including two, three or any number of arrows. The key aspect of entrelacs is that each of them is recognizable by its topology (how arrows are linked each others).
+The key property of entrelacs is that they can be recognized by their topology (how their arrows are linked each others).  For example, one can recognize Eve as the only and only arrow featuring : Eve's head = Eve's tail == Eve.
 
-Entrelacs are important because they actually behave as _terms_. One can recognize them, order them, enumerate them, and in the same time one can't find smaller closed structures inside.
+Entrelacs actually behave as _terms_. One can't find smaller structures within but one can recognize them individuously.
 
 In other words, an entrelacs is equivalent to a "foo" symbol, a 42 literal or a "hello" character string. And vice-versa: "Hello" string is an entrelacs, "world" is an entrelacs, and so on. All in all, I don't cheat when saying that everything is an arrow.
 
