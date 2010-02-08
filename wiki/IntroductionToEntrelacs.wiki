@@ -3,32 +3,27 @@
 
 ===stupid, stupid computers!===
 
-Have you ever found software technologies disappointing? On my own, they make me think about what car industry would be if nobody had ever invented the wheel.
+Have you ever found software technologies disappointing? I consider on my own they are what mechanical engineering could be if nobody had ever invented the wheel.
 
-it's due to the wrong path IT technologies have taken many years ago: the _value in a box_ way to store information.
+It's due to the wrong manner of storing information that IT technologies has followed since its very beginning: the _value put in a box_ way.
 
-The whole data computing industry is now built upon this wrong design. All data structures and computing systems are derived from it. Even the most recent data formats like RDF is doomed by this way of thinking.
+This principle is derived from an aged invention named "writing", which also consists in putting signs at expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in programmers and theoreticians' minds, it forms a mental lock which prevents people imagining something else.
 
-There is actually a lock deeply buried in programmers and theoreticians' minds which prevents them to find a better solution. This mental lock can be explained by the fact the _box/value_ concept is a natural transposition of "writing", an aged technology which consists in putting signs at expected locations on some adequate support.
+Everything now is built according to the _value in a box_ principle: operating systems, programs, language, data structures, and even the latest data formats like RDF.
 
-But even if the _box_ approach is what human beings are accustomed to, the fact is that it 's a terribly *limited* solution. Because of it, a computer can work on a given value in a given box but not on "that value in that box" relation itself. Indeed, the "that value in that given box" piece of information can itself be used neither as a box nor as a value.
+And yet the _value in a box_ solution is actually terribly *limited* because it can't use "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
 
-Therefore, this is the terrible _value in a box_ design principle which dooms abstraction and expressiveness of computers' knowledge and makes them inherently stupid from the very beginning of data computing history.
+The EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will build out knowledge representation out of one and only one building block known as the _arrow_.
 
-That's why the EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will represent knowledge through only a single building block: the _arrow_.
-
-===what's an arrow?===
+===An arrow? what is it?===
 
 In short, an arrow is... a pair of arrows.
 
-  * C coders may see it as a structure of 2 pointers both referring such a structure.
-  * Lisp coders as a _con_.
-  * SQL hackers as a record in a twice reentrant relation table.
-  * Web developers as a pair of URI being identified as well by an URI.
+C coders may see it as a structure of 2 pointers to such a structure. Lisp coders as a _con_ of cons, SQL hackers as a record in a twice reentrant relation table, web developers as an URI returning a pair of URI...
 
-Note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to most academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
+Please note how the arrow twice recursive definition is self-sufficient. It features homoiconicity, meaning that contrary to most academic models, arrows theory doesn't depend on a concept duality like _vertices and edge_.
 
-That's why arrows structure are so different than graphs seen in academic institutions. Please forget everything you learned: it just won't fit. For example, according to language theory, arrows could be modeled as a formal grammar with no terminal symbols; Literally mind-blowing!
+That's what makes arrows structure so different than graphs studied in academic institutions. Please forget everything you learned: it just won't fit. For example, according to language theory, arrows could be modeled as a formal grammar with no terminal symbols; Literally mind-blowing!
 
 ===how can one get rid of vertices?===
 
