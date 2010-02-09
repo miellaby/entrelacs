@@ -18,6 +18,7 @@ The EntrelacsSystem proposes to get ride of this weak "value in a box" way of th
 
 ===An arrow? what is it?===
 
+<img align="right" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png"/>
 In short, an arrow is... a pair of arrows.
 
 Coders may think of it as a structure of 2 pointers linking such structures (C), a _con_ of cons (Lisp), a record in a twice reentrant relation table (SQL), an URI returning a pair of URI (web), etc.
