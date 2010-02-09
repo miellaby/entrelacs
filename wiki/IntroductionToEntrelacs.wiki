@@ -3,11 +3,11 @@
 
 ===stupid, stupid computers!===
 
-Have you ever found software technologies disappointing? I consider on my own they are what mechanical engineering whould have been if nobody had ever invented the wheel.
+Have you ever found software technologies disappointing? I consider on my own they are what mechanical engineering would have been if nobody had ever invented the wheel.
 
-It's due to a wrong manner of storing information that these technologies has followed since the very beginning: the _value in a box_ way.
+What's wrong? Mainly the way computers are used to store information: the _value in a box_ way.
 
-This principle is derived from an aged invention named "writing", which also consists in putting signs to expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in people's mind, it forms a mental lock which prevents programmers and theoreticians imagining something else.
+This manner of doing is derived from an aged invention named "writing", which also consists in putting signs to expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in people's mind, it forms a mental lock which prevents programmers and theoreticians imagining something else.
 
 And now, everything is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even the latest data formats like RDF.
 
@@ -21,23 +21,23 @@ In short, an arrow is... a pair of arrows.
 
 Coders may think of it as a structure of 2 pointers linking such structures (C), a _con_ of cons (Lisp), a record in a twice reentrant relation table (SQL), an URI returning a pair of URI (web), etc.
 
-But the arrow twice recursive definition is self-sufficient. The underlying theory features homoiconicity, meaning that contrary to graphs studied in academic institutions, it doesn't depend on a concept duality like _vertices and edge_.
+But the arrow twice recursive definition is self-sufficient. The underlying theory features homoiconicity, meaning that contrary to graphs studied in academic institutions, it doesn't depend on a concept duality like _vertices vs.edges_.
 
 That's what makes arrow structures different. Old models don't fit. For example, language theory might see arrows as a formal grammar without terminal symbols, but what's the point?
 
 ===how can one get rid of vertices?===
 
-_Entrelacs_ are intricate balls of arrows linked each others. For example, the arrow whose tail and head both links back itself forms a simple entrelacs named "Eve". One can build an infinity of entrelacs out of any number of arrows.
+_Entrelacs_ are intricate balls of arrows linked each others. For example, the arrow whose tail and head both links back itself forms a simple entrelacs. One can build an infinity of entrelacs out of any number of arrows.
 
-Entrelacs actually behave like _terms_. One can't find smaller structures within but one can still recognize them according to their topology (i.e. how arrows are linked each others).  For example, one can recognize Eve as the only arrow featuring : Eve's head = Eve's tail = Eve.
+Entrelacs actually behave like _terms_. One can't find smaller structures within but one can still recognize them according to their topology (i.e. how arrows are linked each others).  For example, one can recognize and name "Eve" the entrelacs whose only arrow features : Eve's head = Eve's tail = Eve.
 
-In other words, entrelacs are somewhat equivalent to things like symbols, literals and linear pieces of data. And vice-versa: the "Hello" string is equivalent to a specific entrelacs, while "world" is an other entrelacs. All in all, everything is an arrow.
+In other words, entrelacs are somewhat equivalent to things like symbols, literals and raw data. And vice-versa: the "Hello" string is equivalent to a specific entrelacs, while "world" is an other entrelacs. All in all, everything is an arrow.
 
-When an arrow is not part of an entrelacs, it corresponds to a link between two things, either an entrelacs or a previously defined link. Such an arrow can be linked in turn by some other arrows, and so on. So we've got signs and regular arrows to link them together. It's more than enough to represent any form of knowledge.
+When an arrow is not part of an entrelacs, it corresponds to a link between two things, either an entrelacs or a previously defined link. Such an arrow can be linked in turn by some other arrows in a constructive manner. So we've got signs and regular arrows to link them together. It's more than enough to represent any form of knowledge.
 
 ===Meaning made explicit===
 
-An arrow has no meaning by itself. But one may invent a programming language and its related abstract machine where a set of arrows gets a particular meaning.
+An arrow has no absolute meaning. Meaning depends on the observation context. For example, one can invent a programming language where Eve gets a particular meaning.
 
 In traditional systems, such a sign-to-meaning relationship would be out of system scope. But arrows based system can link arrows to some behaviour as additional arrows within an upper context. Resulting arrows can possibly be explained in turn. And so on.
 
@@ -45,15 +45,15 @@ In traditional systems, such a sign-to-meaning relationship would be out of syst
 
 When an human being thinks about a concept (eg. PI), his brain can easily access all sorts of information about it, like when he makes use of it, what concepts are related, and so on.
 
-On its own, any regular computer stores a bunch of PI copies either as a floating-point encoded value or a symbol string. But the more copies there are, the less chances this computer can handle "PI" as a pure concept and make reasoning about it, like knowing when it makes use of it.
+On its own, any regular computer stores a bunch of PI copies either as a floating-point encoded value or a symbol string. There's no chance this computer can handle "PI" as a pure concept and make reasoning about it, like knowing when it makes use of it.
 
-Arrows based systems highly simplify this problematic by preventing such copies to exist. Here is the second key concept regarding arrows system: Each arrow can't be stored more than once in the whole system storage. For example, the arrow linking "hello" to "world" is unique both as a mathematical object and in the system storage.
+But Arrows based systems prevent such duplicates to exist. An unique mathematically definable arrow will ever be mapped to an unique arrow within the system storage space. For example, the arrow linking "hello" to "world" will never be duplicated in the whole system storage space.
 
-The point is not so much to spare storage resources. The point is that now the system *can* access any information related to, says, "hello" and "world" strings linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, find all its known meanings, and think of it as a pure concept, just like the human brain always does.
+This is another key concept of arrows based system. The point is not so much to spare storage resources. The point is that now the system *can* access any information related to, says, "hello" and "world" strings linked together. It can interact with other systems and human beings about this "hello" and "world" arrow. It can handle it, find all its known meanings, and think of it as a pure concept, just like the human brain always does.
 
 Now you may ask: "how can one run several applications within such a system if they all shares the same arrows?"
 
-This is the third and last key concept of arrows. Arrows are _immutable_. It means that once an arrow is stored within the system, one can't change it any more. It eliminates any risk of side effects.
+This is the third and last key concept of arrows based system. Arrows are _immutable_. It means that once an arrow is stored within the system, one can't change it any more. It eliminates any risk of side effects.
 
 Arrows structures are consequently persistent. User interactions don't make the system modify existing structures. It creates new structures instead by reusing most of their material. File system authors call this principle "copy on write", but this expression doesn't fit well, because one never copies anything, and one writes a given arrow only once.
 
