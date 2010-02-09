@@ -1,15 +1,16 @@
 #summary An introduction to Entrelacs
 #labels Featured,introduction
-
+<img align="left" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/car.png"/>
 ===stupid, stupid computers!===
 
 Have you ever found software technologies disappointing? I consider on my own they are what mechanical engineering would have been if nobody had ever invented the wheel.
 
 What's wrong? Mainly the way computers are used to store information: the _value in a box_ way.
+<img align="right" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/box.png"/>
 
 This manner of doing is derived from an aged invention named "writing", which also consists in putting signs to expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in people's mind, it forms a mental lock which prevents programmers and theoreticians imagining something else.
 
-And now, everything is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even the latest data formats like RDF.
+And now, everything is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even recently created data formats like RDF.
 
 And yet the _value in a box_ solution is terribly *limited*, simply because it can't accept "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
 
