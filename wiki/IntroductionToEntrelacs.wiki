@@ -31,7 +31,7 @@ That's what makes arrow structures different. Old models don't fit. For example,
 
 _Entrelacs_ are intricate balls of arrows linked each others. For example, the arrow whose tail and head both get back to itself forms a simple entrelacs. One can build an infinity of entrelacs out of any number of arrows.
 
-Entrelacs actually behave like _terms_. One can't isolate smaller structures within but one can still recognize them according to their topology (i.e. how arrows are linked each others).  For example, one can recognize and name as "Eve" the entrelacs whose only arrow features : Eve's head = Eve's tail = Eve.
+Entrelacs actually behave like _terms_. One can't isolate smaller structures within but one can still recognize them according to their topology (i.e. how arrows are linked each others).  For example, one can recognize and name as "Eve" the entrelacs whose the only arrow features : Eve's head = Eve's tail = Eve.
 
 In other words, entrelacs are somewhat equivalent to things like symbols, literals and raw data. And vice-versa: the "Hello" string is equivalent to a specific entrelacs, while "world" is an other entrelacs. All in all, everything is an arrow.
 
