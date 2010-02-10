@@ -96,8 +96,8 @@ In theory, the whole system knowledge might be contained in a single unique arro
 The chosen solution consists in adding a "root flag" to each stored arrow. This boolean value determines whether the arrow belongs to the _system root context_ or not. This flag can change during the system life time. It is actually the only modifiable property of already stored arrows.
 
 This root flag is essential to the incremental garbage collector algorithm of the EntrelacsSystem. Considering a stored arrow:
-* When its flag is set, this arrow and all its ancestors are spared by the garbage collector.
-* When unset, corresponding resources can be recycled if no external arrow refers it any more (reference counters).
+  * When its flag is set, this arrow and all its ancestors are spared by the garbage collector.
+  * When unset, corresponding resources can be recycled if no external arrow refers it any more (reference counters).
 
 ===arrows as a language===
 
