@@ -5,10 +5,12 @@
 
 Have you ever found software technologies disappointing? I consider on my own they are what mechanical engineering would have been if nobody had ever invented the wheel.
 
-What's wrong? Mainly the way computers are used to store information: the _value in a box_ way.
+What's wrong? Mainly the way computers are used to store information: the _value in a box_ principle.
 <img align="right" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/box.png"/>
 
-This manner of doing comes from a previous traditional technology named "writing", which also consists in putting signs to expected locations on some adequate support.  This principle is what human beings are accustomed to. It's so deeply buried in people's mind, it forms a mental lock which prevents programmers and theoreticians imagining something else.
+The  _value in a box_ principle is the strait-forward adaptation of a ancient technology named "writing", which also consists in putting signs to expected locations on some adequate support.
+
+This principle is what human beings are accustomed to. It's so deeply buried in people's mind, it forms a mental lock which prevents programmers and theoreticians imagining something else.
 
 And now, everything is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even recently created data formats like RDF.
 
@@ -16,46 +18,54 @@ And yet the _value in a box_ solution is terribly *limited*, simply because it c
 
 The EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will build knowledge representation out of one and only one kind of building blocks: _arrows_.
 
-===An arrow? what is it?===
+===arrow, what is it?===
 
 <img align="right" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png"/>
 In short, an arrow is... a pair of arrows.
 
-Coders may think of it as a structure of 2 pointers linking such structures (C), a _con_ of cons (Lisp), a record in a twice reentrant relation table (SQL), an URI returning a pair of URI (web), etc.
+Coders may think of it as a structure of 2 pointers linking such structures (C), or as a _con_ of cons (Lisp), or as a record in a twice reentrant relation table (SQL), or as an URI returning a pair of URI (web), etc.
 
-But the arrow twice recursive definition is self-sufficient. The underlying theory features homoiconicity, meaning that contrary to graphs studied in academic institutions, it doesn't depend on a concept duality like _vertices vs.edges_.
+The arrow twice recursive definition is self-sufficient. One says the underlying theory features homoiconicity, meaning that, contrary to graphs studied in academic institutions, it doesn't depend on a concepts duality like _vertices vs.edges_.
 
-That's what makes arrow structures different. Old models don't fit. For example, language theory might see arrows as a formal grammar without terminal symbols, but what's the point?
+That's what makes arrow structures different. Old models don't fit. For example, language theory might consider arrows as a formal grammar without terminal symbols, but what's the point?
+
+<img align="right" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png"/>
 
 ===how can one get rid of vertices?===
 
 _Entrelacs_ are intricate balls of arrows linked each others. For example, the arrow whose tail and head both get back to itself forms a simple entrelacs. One can build an infinity of entrelacs out of any number of arrows.
 
-Entrelacs actually behave like _terms_. One can't isolate smaller structures within but one can still recognize them according to their topology (i.e. how arrows are linked each others).  For example, one can recognize and name as "Eve" the entrelacs whose the only arrow features : Eve's head = Eve's tail = Eve.
+Entrelacs are interesting reentrant structures.
+  * One can't isolate smaller structures within.
+  * but one can still recognize them according to their topology (i.e. how arrows are linked each others). For example, one can recognize and name as "Eve" the entrelacs whose only arrow features : Eve's head = Eve's tail = Eve.
 
-In other words, entrelacs are somewhat equivalent to things like symbols, literals and raw data. And vice-versa: the "Hello" string is equivalent to a specific entrelacs, while "world" is an other entrelacs. All in all, everything is an arrow.
+In other words, entrelacs are somewhat equivalent to terms. They behave like symbols, literals and raw data. And vice-versa: the "Hello" string is equivalent to a specific entrelacs, while "world" is an other entrelacs. All in all, everything is an arrow.
 
 When an arrow is not part of an entrelacs, it corresponds to a link between two things, either an entrelacs or a previously defined link. Such an arrow can be linked in turn by some other arrows in a constructive manner. So we've got signs and regular arrows to link them together. It's more than enough to represent any form of knowledge.
 
-===Meaning made explicit===
+===when meaning is made explicit in meta-context===
 
-An arrow has no default meaning. That depends on the observer. For example, one can invent a programming language where Eve gets a particular meaning.
+Arrows has no default meaning. Meaning depends on the observer's point of view.
 
-In traditional systems, such a sign-to-meaning relationship would be out of system scope. But arrows based system can link arrows to some behavior as additional arrows within an upper context. Resulting arrows can possibly be explained in turn. And so on.
+Now, let's suppose one defines a new programming language where Eve gets a particular meaning.
+
+In a traditional system, such a sign-to-meaning relationship would be hardcoded in an interpreter or a compiler. It would consequently stay out of system scope.
+
+But in an arrow based system, arrow-to-meaning relationship is made explicit. It takes the form of additional arrows within an upper context. In this example, the new programming language would be interpreted by an abstract machine whose behaviour would be defined as well as arrows. The meaning of these arrows could possibly be explained in turn. And so on up to a primary machine. The primary machine would be the only machine whose behavior description resides out of the system scope.
 
 ===arrows as pure concepts===
 
-What happens when an human being thinks about a concept like pi number? Well, his brain can easily access all sorts of information about it, like when and how he makes use of it, what concepts are related to it, and so on. By digging into his memory, he could even remember any sort of personal memories that this concept is linked with. For example, a mathematician could remember the first teacher who told him about pi.
+What can an human being do when he thinks about a concept like the pi number? Well, his brain can easily access all sorts of known information about it, like when and how it is used, what concepts are related to it, and so on. By digging into his memory, the brain can remember even more personal memories. For example, a mathematician would probably remember the first teacher who told him about pi.
 
 In the same time, a regular computer stores plenty of "pi" copies -either its approximative value or its textual symbol- in various "boxes" but it can't make any reasoning about pi as a pure concept.
- * _Hey computer! Can you tell me when you make use of pi and what values do you use?_
+ * _Hey computer! Can you tell me when you make use of pi and what approximations do you use?_
  * bzz bzz!
- * _Come on, computer! I just want you to use more decimals next time._
+ * _Come on, computer! I just want to ask you to use more decimals next time._
  * bzzzzzz...
 
 To make computers more useful, an arrows based system forbids duplicates. It ensures each mathematically definable arrow, like Eve or the arrow from "hello" to "world", is mapped to at most one physical copy in the whole storage space.
 
-The point is not so much to spare storage space. The goal is to make the computer as capable as an human. One wants the system being able to recognize as an unique object the "hello" and "world" link every time he handles it, then being able to find all the known information about this object.
+The point is not so much to spare storage space. The goal is to make the computer as capable as an human being. One wants the system being able to recognize as an unique object the "hello" and "world" link every time he handles it, then being able to find all the known information about this object.
 
 Now you may ask: "What happens when one changes an arrow copy which is involved in many contexts of knowledge and behavior?"
 
@@ -67,7 +77,7 @@ Arrows structures are naturally _persistent_. It means the user interactions don
 The idea could be compared with the "copy on write" feature of disk file system, except that one doesn't write over anything nor make a copy of anything.
 
 
-===transforming storage resources in a single giant and reentrant hash table===
+===use the whole computer memory as a single giant and reentrant hash table===
 
 Do you doubt about the overall EntrelacsSystem efficiency? You're right worring. Ensuring each arrow is stored only once is costly. It has to be checked during a process called "arrow assimilation" which occurs when:
   * one imports information -like user inputs- from the outside.
