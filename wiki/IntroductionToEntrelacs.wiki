@@ -73,19 +73,27 @@ Do you doubt about the overall EntrelacsSystem efficiency? You're right worring.
   * one imports information -like user inputs- from the outside.
   * some computation produces new arrows within the system.
 
-To do so, the EntrelacsSystem architecture transforms the whole computer storage space into a giant self-referred open-adressed hash table.
+To do so, the EntrelacsSystem architecture uses the whole computer storage space as a giant self-referred open-adressed hash table.
 
-For each to-be-assimilated arrow, one computes an hash from its already assimilated tail and head definition and looks for an existing copy into disk at the hash-given location.
+Each incoming arrow is assimilated by starting from its simplest components, that is its entrelacs. One first assimilates entrelacs, then pairs, then pairs of pairs, and so on up to the overall arrow. 
 
-If such a copy exists, one reuses it, else one stores the arrow there. Each incoming arrow is assimilated by starting from its entrelacs. One first assimilates entrelacs, then pairs, then pairs of pairs, and so on up to the overall arrow. Isn't it simple?
+For each arrow to assimilate:
+  * one computes an hash from the tail and head location (which were previously assimilated)
+  * one looks for an existing copy into disk at the location given by the hash.
+    * If such a copy exists, one reuses it,
+    * else one stores the arrow there.
 
-That being said, please note the EntrelacsSystem also features orthogonal persistency. This buzzword means that the system totally blurs the old computing space boundaries (you know: RAM, disk, files...) by offering a much more convenient and consistent work space where every agent is alive and every piece of information is saved on the fly. The nice part of it is that arrows based storage makes this property really easy to design (through reference counters).
+Isn't it simple?
+
+That being said, please note the EntrelacsSystem also features orthogonal persistency. This buzzword means that the system totally blurs the old computing space boundaries; you know: RAM, disk, files...
+
+The EntrelacsSystem proposes a much more convenient and consistent work space where every agent is alive and every piece of information is saved on the fly.
 
 ===rooting and recycling knowledge===
 
 In theory, the whole system knowledge might be contained in a single unique arrow. However this theoretical approach is not very handy.
 
-The chosen solution consists in adding a "root flag" to each stored arrow. This boolean value determines whether the arrow belongs to the _system root context_ or not. This flag can change during the system life time. It is actually the only modifiable property within stored arrows since they are immutable.
+The chosen solution consists in adding a "root flag" to each stored arrow. This boolean value determines whether the arrow belongs to the _system root context_ or not. This flag can change during the system life time. It is actually the only modifiable property of already stored arrows.
 
 This root flag is essential to the incremental garbage collector algorithm of the EntrelacsSystem. Considering a stored arrow:
 * When its flag is set, this arrow and all its ancestors are spared by the garbage collector.
@@ -93,25 +101,27 @@ This root flag is essential to the incremental garbage collector algorithm of th
 
 ===arrows as a language===
 
-I guess at this step of this reading, you might still wonder what kind of programming language the EntrelacsSystem corresponds to.
+I guess at this step of this reading, you might still wonder what kind of programming languages the EntrelacsSystem corresponds to.
 
-As a matter of fact, one can adapt any existing language: It may be imperative or declarative, functional or object oriented, etc.
+As a matter of fact, one can adapt any language of any kind: imperative or declarative, functional or object oriented, etc.
 
 Please note as well that many abstract machines, corresponding to many languages and technologies, could be hosted simultaneously within a single system. Arrows allow to embed evaluation contexts in each others in a very natural way.
 
-As a matter of fact, creating Domain Specific Languages could be the best way to add new behaviors to the system. In other words, each application -even your favorite office application- might be designed as an abstract machine processing user inputs and computing some outputs according to a particular language. This machine could be defined on a top of another higher level abstract machine, which could be in turn defined on top of a even higher machine, and so on.
+As a matter of fact, creating Domain Specific Languages could be the best way to add new behaviors to the system. In other words, each application -even your favorite office application- might be designed as an abstract machine processing user inputs and computing some outputs according to a particular language.
+
+Such a machine could be defined on a top of another higher level abstract machine, which could be in turn defined on top of a even higher machine, and so on up to a primary machine.
 
 ===arrows system vs. Lambda calculus and relatives===
 
-The root context of an arrows evaluation stack needs for a primary language evaluated by a primary machine. How could it looks like? Lambda Calculus, Combinatory Logic?
+The root context of an arrows evaluation stack needs for a primary language evaluated by a primary machine. How could it looks like: Lambda calculus, combinatory logic?
 
-The point is that arrows underlying theory doesn't compete with Lambda Calculus and other modeled computation machines. Quite the contrary, arrows storage is the ideal complement to purely functional systems.
+The point is that arrows underlying theory doesn't compete with Lambda Calculus and other modeled computation machines. Quite the contrary, arrows storage is the ideal complement to purely functional languages.
 
-On my own, I see the Entrelacs System as a fundamental theory of knowledge representation  while lambda calculus (and combinatory logic, pattern matching...) are fundamental theories of computation.
+On my own, I consider the arrows theory as a fundamental theory of knowledge representation  while lambda calculus (and combinatory logic, pattern matching...) are fundamental theories of computation.
 
-Because of the mental lock I told you about, language theoreticians ignore the knowledge representation problem. That's why they often look so condescending with real world trends like object-oriented modeling or tagsonomies. They should not because these trends are actually partial attempts to enhance the representation solution.
+Because of the mental lock I told you about, language theoreticians have ignored the knowledge representation problem. That explains why they are condescending with real world trends like object-oriented modeling or tagsonomies, which are actually naive attempts to enhance the way one stores information in a computer.
 
-That being said, I think the EntrelacsSystem is an ideal basis to invent a new language combining both a pure functional and a pure relationist theory. Such a language could leverage on arrows to get innovative properties like:
+That being said, I think the EntrelacsSystem is an ideal basis to invent a new language combining both a purely functional and a purely relationist theory. Such a language could leverage on arrows to get innovative properties like:
  * making even more language concepts first order objects: closures, continuations, partial evaluations, environments, continuation chains...
  * generalizing "memoization", ie. managing a cache of any intermediate computed results so to never repeat twice the same computation.
 
@@ -119,6 +129,6 @@ That being said, I think the EntrelacsSystem is an ideal basis to invent a new l
 
 In conclusion, the EntrelacsSystem is not only a new way to store information within a computer. It's a plain new computing environment.
 
-Please contact me if you like to contribute to this project. There's plenty of work.
+Please contact me if you like to contribute to this project. There's a lot of work.
  * I guess one could design an arrows space prototype rapidly.
- * In parallel, one should choose or invent a convenient language as a primary abstract machine for the system. I'm currently exploring how I could adapt a CaEK machine. If anybody finds this idea exciting, I'd be happy pass on the torch.
+ * In parallel, one should choose or invent a convenient language as a primary abstract machine. I'm currently exploring how I could adapt a CaEK machine. If anybody finds this idea exciting, I'd be happy pass on the torch.
