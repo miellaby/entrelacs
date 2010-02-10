@@ -8,13 +8,11 @@ Have you ever found software technologies disappointing? I consider on my own th
 What's wrong? Mainly the way computers are used to store information: the _value in a box_ principle.
 <img align="right" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/box.png"/>
 
-The  _value in a box_ principle is the strait-forward adaptation of a ancient technology named "writing", which also consists in putting signs to expected locations on some adequate support.
+The  _value in a box_ principle is  what human beings are accustomed to because it's the strait-forward adaptation of an ancient technology named "writing", which also consists in putting signs to expected locations on some adequate support. That's why it's so deeply buried in people's mind, forming a mental lock which prevents programmers and theoreticians imagining something else.
 
-This principle is what human beings are accustomed to. It's so deeply buried in people's mind, it forms a mental lock which prevents programmers and theoreticians imagining something else.
+Now, everything computer-related is designed according to the _value in a box_ principle: operating systems, programming languages, data structures, and even recently created data formats like RDF.
 
-And now, everything is built according to the _value in a box_ principle: operating systems, programming languages, data structures, and even recently created data formats like RDF.
-
-And yet the _value in a box_ solution is terribly *limited*, simply because it can't accept "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers stupid.
+And yet the _value in a box_ solution is terribly *limited*, simply because it can't accept "some value in some box" relation neither as a box nor as a value. That's what makes computers unable to abstract or elaborate any aspect of their knowledge. In other words, that's what makes computers *stupid*.
 
 The EntrelacsSystem proposes to get ride of this weak "value in a box" way of thinking. Starting from now, one will build knowledge representation out of one and only one kind of building blocks: _arrows_.
 
