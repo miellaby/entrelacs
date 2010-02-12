@@ -3,44 +3,32 @@
 
 =Introduction=
 
-The EntrelacsSystem deals only with _arrows_. Its credo might be _Everything is an arrow_. This is the _*Arrow Paradigm*_.
+The EntrelacsSystem's proposal consists in digitalizing information as structures made out of _arrows_. Its credo might be _Everything is an arrow_. Let's introduce this new _*Arrow Paradigm*_.
 
-==Definition of a regular arrow==
+==The arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
 
-An _arrow_ -as defined within the EntrelacsSystem- is an unique immutable oriented pair of arrows.
+An _arrow_ is an _unique immutable oriented pair of arrows_.
 
-  * an arrow is a "pair of arrows". It means both ends of each arrow are two other arrows.  In other words, *an arrow graph doesn't contain any node.*
-  * an arrow is "oriented". It means the pair (A,B) is distinct from (B,A).
+It means:
+  * _a pair of arrows_: both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
+  *  _oriented_: the pair (A,B) is distinct from (B,A).
+  * _unique_: There is only one arrow linking A to B, whatever A and B: two well-defined arrows. The EntrelacsSystem ensures this uniqueness in its arrows storage space as well. Each mathematically definable arrow is present at most once in the whole system address space.
+  * _immutable_: The system doesn't modify an arrow definition once it's stored within the system storage space. System interactions produce new arrows instead.
 
-It has been said an arrow is "unique". It means the EntrelacsSystem deals with arrows as pure (uniquely definable) mathematical objects. Redundant constructs are rejected. It implies the system can tell whether two arrows are equals or not. This equality relationship is an isomorphism (?).
+==The _entrelacs_==
 
-It has been said an arrow is "immutable". It means again the EntrelacsSystem deals with arrows as pure mathematical objects. One can't change a number: PI is PI forever, and so is any definable arrow.
+An _entrelacs_ is an unique set of _intricated_ arrows. It means:
+  * any arrow from the set contains the whole set of arrows in its definition. In other words: whatever A & B two arrows from the set, A is an ancestor of B, and B is an ancestor of A.
+  * uniqueness : two entrelacs are equivalent when they are
 
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this is an entrelacs named _Eve_ (whose unique arrow has no ancestor except itself)</p>
 
-==Definition of an _entrelacs_==
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png'/><br/>an arrow from _yin-yang_ to _triskel_ (two distinct entrelacs)</p>
 
-An _entrelacs_ is a set of arrows connected to each other, forming a closed graph as a whole.
+"Prim entrelacs" behave like atomistic pieces of data. Like atoms, they can't be divided in smaller parts and they got finished boundaries. You can handle them, name them, count them, ordering them, etc as you can do with, says, numbers.
 
-A set of arrows can be identified as an entrelacs if it contains at least one arrow whom the set of ancestors matches the considered set. See a counter-example hereafter.
-
-Actually it means that every arrow belongs to a related entrelacs consisting in this arrow and all its _ancestors_.
-
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/entrelacs1.png ||
-|| Here is a introduction of few entrelacs (and one counter-example) ||
-
-==Definition of a _prim entrelacs_==
-
-A _prim entrelacs_ is an entrelacs which is so much interlaced it doesn't contain smaller entrelacs.
-
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   ||
-|| this arrow is also a "prim entrelacs". It is named _eve_ (certainly because it has no parent) ||
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png ||
-|| this arrow is not a "prim entrelacs" but it embeds two ones ||
-
-"Prim entrelacs" look like atomistic pieces of data. They can't be divided in smaller parts; they are closed; and they got finished boundaries. It implies you can handle them, name them, count them, ordering them, etc as you can do with, says, numbers.
-
-==atomistic binary arrows==
+==|E to |R isomorphism==
 The _Entrelacs System_ allows to store "unique" and "immutable" flat data as well.
 
 However, this feature doesn't deny the _arrow paradigm_, because the entrelacs underlying theory demonstrates such atomistic data are equivalent to _prim entrelacs_.
