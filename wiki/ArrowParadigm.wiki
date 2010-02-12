@@ -3,7 +3,7 @@
 
 =Introduction=
 
-The EntrelacsSystem's proposal consists in digitalizing information as structures made out of _arrows_. Its credo might be _Everything is an arrow_. Let's introduce this new _*Arrow Paradigm*_.
+The EntrelacsSystem's proposal consists in digitalizing information as structures made out of _arrows_. Its credo might be _Everything is an arrow_. Let's introduce hereafter this new _*Arrow Paradigm*_.
 
 ==The arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
@@ -13,51 +13,44 @@ An _arrow_ is an _unique immutable oriented pair of arrows_.
 It means:
   * _a pair of arrows_: both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
   *  _oriented_: the pair (A,B) is distinct from (B,A).
-  * _unique_: There is only one arrow linking A to B, whatever A and B: two well-defined arrows. The EntrelacsSystem ensures this uniqueness in its arrows storage space as well. Each mathematically definable arrow is present at most once in the whole system address space.
+  * _unique_: There is only one arrow  (A,B) from A to B, whatever A and B two well-defined arrows. The EntrelacsSystem ensures this uniqueness in its arrows storage space as well. Each mathematically definable arrow is present at most once in the whole system address space.
   * _immutable_: The system doesn't modify an arrow definition once it's stored within the system storage space. System interactions produce new arrows instead.
 
 ==The _entrelacs_==
 
 An _entrelacs_ is an unique set of _intricated_ arrows. It means:
   * any arrow from the set contains the whole set of arrows in its definition. In other words: whatever A & B two arrows from the set, A is an ancestor of B, and B is an ancestor of A.
-  * uniqueness : two entrelacs are equivalent when they are
+  * uniqueness : One distinguishes each entrelacs regarding its topology (how its arrows are connected each other). Two entrelacs which are isomorphic are equals.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this is an entrelacs named _Eve_ (whose unique arrow has no ancestor except itself)</p>
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png'/><br/>an arrow from _yin-yang_ to _triskel_ (two distinct entrelacs)</p>
 
-"Prim entrelacs" behave like atomistic pieces of data. Like atoms, they can't be divided in smaller parts and they got finished boundaries. You can handle them, name them, count them, ordering them, etc as you can do with, says, numbers.
+Entrelacs are interesting set of arrows as they behave like atomistic pieces of data. Like atoms, they can't be divided in smaller parts and they got finished boundaries. And last but not least, you can *enumerate* them.
 
-==|E to |R isomorphism==
-The _Entrelacs System_ allows to store "unique" and "immutable" flat data as well.
+==Entrelacs / raw data equivalency==
+The _arrows paradigm_ allows to compose arrows with atomistic row data as well.
+It doesn't deny the _everything is arrow_ credo since all in all _entrelacs_ and _atomistic pieces of data_ are equivalent. In other words, raw binary data corresponds to some sort of arrows as well. Mathematically, one says there's an isomorphism between the set of entrelacs and the set of natural numbers (ie. raw data).
 
-However, this feature doesn't deny the _arrow paradigm_, because the entrelacs underlying theory demonstrates such atomistic data are equivalent to _prim entrelacs_.
+Big notice: As any regular arrow, the EntrelacsSystem stores each piece of data in an "unique" and "immutable" way. For instance, one won't find more than one copy of "hello world" character string in the whole system storage space.
 
-In other mean, such binary data may be seen as some sort of arrows as well. See AtomEntrelacEquivalency for further reading.
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png ||
-|| Binary things may be seen as encoded big prim entrelacs. ||
+See AtomEntrelacEquivalency for further reading.
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/><br/>binary data are equivalent to entrelacs.</p>
 
-==Arrow connectivity==
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png ||
-|| an _arrow_, its _head_, its _tail_, its _incoming children_ arrows, its _outgoing children_ ||
+==Arrow connectivity and wording==
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/><br/>an _arrow_, its _head_, its _tail_, its _incoming_ and _outgoing_ _children_</p>
 
   * an arrow is an oriented pair of arrows.
-  * the first arrow in the pair is named the "tail".
-  * the last arrow in the pair is named the "head".
+    * the first arrow in the pair is named the "tail".
+    * the last arrow in the pair is named the "head".
   * one says an arrow "goes out" its tail arrow.
   * one says an arrow "comes into" its head arrow.
   * from its tail point of view, an arrow is an "outgoing" arrow.
   * from its head point of view, an arrow is an "incoming" arrow.
-  * An arrow may have many incoming and outgoing arrows. One calls them "children" arrows.
-  * The arrows which are reachable by recursively following head/tail definitions from a given arrow are called the arrow's "ancestors". Remember: The arrow and its ancestors form an _entrelacs_.
+  * each arrow may have many incoming and outgoing arrows. One calls them "children" arrows.
+  * arrows one can reach by following head and tail links starting from a given arrow are called this arrow's "ancestors".
 
-==arrow / entrelacs equivalency==
-
-An arrow is equivalent in every aspect of its to the entrelacs formed by it and all its ancestors. Inversely, an entrelacs is equivalent in every aspect of its to at least one of its arrows (a prim entrelacs is equivalent to any of its arrows).
-
-In other words, an entrelacs is an arrow, and an arrow is an entrelacs. Actually, one may substitute indifferently these two concepts each other.
-
-==Definition of rooted arrows==
+==rooted arrows==
 
 All the system knowledge state at a given time might be represented in one unique arrow containing all the useful information in its definition.
 
