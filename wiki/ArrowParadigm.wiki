@@ -26,7 +26,9 @@ An _entrelacs_ is an unique set of _intricated_ arrows. It means:
 
 Entrelacs behave like atomistic pieces of data. Like atoms, they can't be divided in smaller parts and they got finished boundaries. And last but not least, you can *enumerate* them.
 
+<img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 ==Entrelacs / raw data equivalency==
+
 The _arrows paradigm_ allows to compose arrows with atomistic row data as well.
 It doesn't deny the _everything is arrow_ credo since all in all _entrelacs_ and _atomistic pieces of data_ are equivalent.
 
@@ -34,11 +36,13 @@ In other words, raw binary data corresponds to some sort of arrows as well. Math
 
 Big notice: As any regular arrow, the EntrelacsSystem stores each piece of data in an "unique" and "immutable" way. For instance, one won't find more than one copy of "hello world" character string in the whole system storage space.
 
+
+
+
 See AtomEntrelacEquivalency for further reading.
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/><br/>binary data are equivalent to entrelacs.</p>
 
 ==Arrow connectivity and wording==
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/><br/>an _arrow_, its _head_, its _tail_, its _incoming_ and _outgoing_ _children_</p>
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/></p>
 
 Each arrow is an oriented pair of arrows.
   * the first arrow in the pair is named the "tail".
