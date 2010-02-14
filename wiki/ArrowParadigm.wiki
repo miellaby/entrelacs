@@ -52,15 +52,15 @@ Each arrow is an oriented pair of arrows.
 
 ==rooted arrows==
 
-The whole system knowledge might be represented with a single arrow whose definition would embed all known information. But it's more convenient to represent the system top-level context as a set of distinct arrows.
+The whole system knowledge might be represented with a single arrow whose definition would embed all known information.
 
-These arrow are call _rooted arrows_. They corresponds to regular arrows flagged with a "root" mark, that is a "root" boolean property added to the arrow definition within the system storage space.
+But it's more convenient to represent the system top-level context as a set of distinct arrows.
 
-Note: Arrows representation uniqueness induces rooted arrows could as well be linked as ancestors from other rooted arrows.
+Such arrow are call _rooted arrows_. They corresponds to regular arrows flagged with a "root" mark, that is a "root" boolean property added to the arrow definition within the system storage space.
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png'\><br/>some rooted arrow. Note the check mark (Lambda) notation.</p>
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png'/><br/>some rooted arrow. Note the check mark (Lambda) notation.</p>
 
-The system garbage collector can reclaim storage resources of any arrow which is neither a rooted arrow nor an ancestor of at least one rooted arrow.
+Arrows representation uniqueness induces rooted arrows may as well be ancestors of other rooted arrows. The system garbage collector can only reclaim storage resources of an arrow which is neither a rooted arrow nor an ancestor of any remaining rooted arrow.
 
 ==arrow assimilation and redundancy free storage=
 
@@ -72,7 +72,7 @@ The "assimilation"  process ensure stored arrows uniqueness. Any definable arrow
 
 ==immutability==
 
-<p align='right'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align=right/><br/>an arrow can be the ancestor of several arrows</p>
+<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align='right'/>
 
 As one arrow might be the ancestor of many other arrows, it can't be modified once stored in the system space.
 
