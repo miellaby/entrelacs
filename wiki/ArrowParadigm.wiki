@@ -3,17 +3,15 @@
 
 =Introduction=
 
-The EntrelacsSystem's proposal consists in digitalizing information as structures made out of _arrows_. Its credo might be _Everything is an arrow_. Let's introduce hereafter this new _*Arrow Paradigm*_.
+The EntrelacsSystem's proposal consists in digitalizing information as structures made out of _arrows_. Its credo might be _Everything is an arrow_. Let's introduce herein this new _*Arrow Paradigm*_.
 
 ==The arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
 
-An _arrow_ is an _unique immutable oriented pair of arrows_.
-
-It means:
+An _arrow_ is:
   * _a pair of arrows_: both ends of each arrow are two other arrows. *An arrow graph doesn't contain any node.*
   *  _oriented_: the pair (A,B) is distinct from (B,A).
-  * _unique_: There is only one arrow  (A,B) from A to B, whatever A and B two well-defined arrows. The EntrelacsSystem ensures this uniqueness in its arrows storage space as well. Each mathematically definable arrow is present at most once in the whole system address space.
+  * _unique_: There is only one arrow  (A,B) from A to B, whatever A and B two formerly defined arrows. The EntrelacsSystem ensures this uniqueness in its arrows storage space as well. Each mathematically definable arrow is present at most once in the whole system address space.
   * _immutable_: The system doesn't modify an arrow definition once it's stored within the system storage space. System interactions produce new arrows instead.
 
 ==The _entrelacs_==
@@ -22,15 +20,17 @@ An _entrelacs_ is an unique set of _intricated_ arrows. It means:
   * any arrow from the set contains the whole set of arrows in its definition. In other words: whatever A & B two arrows from the set, A is an ancestor of B, and B is an ancestor of A.
   * uniqueness : One distinguishes each entrelacs regarding its topology (how its arrows are connected each other). Two entrelacs which are isomorphic are equals.
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this is an entrelacs named _Eve_ (whose unique arrow has no ancestor except itself)</p>
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this entrelacs is named _Eve_ (Eve has no ancestor but itself)</p>
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png'/><br/>an arrow from _yin-yang_ to _triskel_ (two distinct entrelacs)</p>
 
-Entrelacs are interesting set of arrows as they behave like atomistic pieces of data. Like atoms, they can't be divided in smaller parts and they got finished boundaries. And last but not least, you can *enumerate* them.
+Entrelacs behave like atomistic pieces of data. Like atoms, they can't be divided in smaller parts and they got finished boundaries. And last but not least, you can *enumerate* them.
 
 ==Entrelacs / raw data equivalency==
 The _arrows paradigm_ allows to compose arrows with atomistic row data as well.
-It doesn't deny the _everything is arrow_ credo since all in all _entrelacs_ and _atomistic pieces of data_ are equivalent. In other words, raw binary data corresponds to some sort of arrows as well. Mathematically, one says there's an isomorphism between the set of entrelacs and the set of natural numbers (ie. raw data).
+It doesn't deny the _everything is arrow_ credo since all in all _entrelacs_ and _atomistic pieces of data_ are equivalent.
+
+In other words, raw binary data corresponds to some sort of arrows as well. Mathematically, one says there's an isomorphism between the set of entrelacs and the set of natural numbers (ie. raw data).
 
 Big notice: As any regular arrow, the EntrelacsSystem stores each piece of data in an "unique" and "immutable" way. For instance, one won't find more than one copy of "hello world" character string in the whole system storage space.
 
@@ -40,55 +40,44 @@ See AtomEntrelacEquivalency for further reading.
 ==Arrow connectivity and wording==
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/><br/>an _arrow_, its _head_, its _tail_, its _incoming_ and _outgoing_ _children_</p>
 
-  * an arrow is an oriented pair of arrows.
-    * the first arrow in the pair is named the "tail".
-    * the last arrow in the pair is named the "head".
+Each arrow is an oriented pair of arrows.
+  * the first arrow in the pair is named the "tail".
+  * the last arrow in the pair is named the "head".
   * one says an arrow "goes out" its tail arrow.
   * one says an arrow "comes into" its head arrow.
   * from its tail point of view, an arrow is an "outgoing" arrow.
   * from its head point of view, an arrow is an "incoming" arrow.
   * each arrow may have many incoming and outgoing arrows. One calls them "children" arrows.
-  * arrows one can reach by following head and tail links starting from a given arrow are called this arrow's "ancestors".
+  * arrows reached by following head and tail links starting from a given arrow are called this arrow's "ancestors".
 
 ==rooted arrows==
 
-All the system knowledge state at a given time might be represented in one unique arrow containing all the useful information in its definition.
+The whole system knowledge might be represented with a single arrow whose definition would embed all known information. But it's more convenient to represent the system top-level context as a set of distinct arrows.
 
-However, it's more convenient to represent the system top-level context as a set of distinct arrows. These arrows are called _rooted arrows_.
+These arrow are call _rooted arrows_. They corresponds to regular arrows flagged with a "root" mark, that is a "root" boolean property added to the arrow definition within the system storage space.
 
-Rooted arrows are concretely regular arrows flagged with a "root" mark. This "root" boolean property is the only mutable property of an arrow within the system storage space.  The "root" property typically corresponds to a dedicated flag bit stuck to the arrow definition within the storage space.
+Note: Arrows representation uniqueness induces rooted arrows could as well be linked as ancestors from other rooted arrows.
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png ||
-|| this arrow is "rooted".||
-See the graphic notation here (Lambda / check mark).
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png'\><br/>some rooted arrow. Note the check mark (Lambda) notation.</p>
 
-==About garbage collector==
+The system garbage collector can reclaim storage resources of any arrow which is neither a rooted arrow nor an ancestor of at least one rooted arrow.
 
-Any mathematically definable arrow may be classified in one of these 2 groups at a given time within a given system.
- * first case: the arrow belongs to the definition of one or several rooted arrows and/or it is a rooted arrow by itself.
- * second case: the arrow is neither a rooted arrow nor an ancestor of any rooted arrow.
+==arrow assimilation and redundancy free storage=
 
-Arrows from the first group is useful information and have to be preserved. Arrows in the second group are garbage. They may be swiped from the system to reclaim storage space.
+At each system iteration, system inputs are converted into arrows before being processed. This conversion is called "assimilation".
 
-==arrow assimilation==
+"Assimilation" takes place at system boundaries. "Assimilation" converts textual representation of information (events, data, programs, commands, ...)  as arrows.
 
-At any time, system inputs are converted into arrows before any other further processing. This process converts a structured stream of data into the corresponding arrows graph. It is called "assimilation".
-
-"Assimilation" takes place at system boundaries. Once "assimilated", something like a source code is not in a textual representation any more. It resides as a structured arrows sub-graph of the whole system graph.
-
-==redundancy free principle==
-
-For practical reasons, one definable arrow -whatever it is a regular pair or a binary datum- has to be represented only once in the whole system storage space. This constraint is verified during the "assimilation" process.
+The "assimilation"  process ensure stored arrows uniqueness. Any definable arrow -whatever it is a regular pair or a binary datum- has to be represented only once in the whole system storage space.
 
 ==immutability==
 
-As one arrow might be an ancestor of many other arrows, one arrow can't be modified once stored in the system space.
+<p align='right'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png'/><br/>an arrow can be the ancestor of several arrows</p>
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png   ||
-|| this average entrelacs embeds arrows which are several times ancestors of children arrows.||
+As one arrow might be the ancestor of many other arrows, it can't be modified once stored in the system space.
 
-System changes are conducted by rooting/un-rooting operations. Please take into considerations such operations recycle most of the material (arrows) involved into the change thanks to the redundancy free principle of the assimilation process.
+Modifying an existing arrow definition within the knowledge system consists in rooting the new updated arrow then un-rooting the existing definition. This process wil recycle most of the arrow ancestors thanks to the arrow uniqueness rule of assimilation.
 
-==arrow modeling==
+==arrows based knowledge representation==
 
-You don't know how to represent useful information with arrows only? See ArrowModeling for solutions.
+To represent useful information with arrows, one can't adapt many existing computing models and even invent new ones. See ArrowModeling for further readings.
