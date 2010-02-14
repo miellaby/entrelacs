@@ -1,3 +1,6 @@
-#summary The Entrelacs System sees the world as entrelacs.
+The _Entrelacs_ system is a computing environment where the "arrow" supersedes the "bit" as the fundamentally smallest piece of information. By "arrow", one means an immutable and uniquely defined oriented link between two said "arrows". _Entrelacs_  proposes to represent Knowledge with redundancy-free structures uniquely built from _arrows_.
 
-The EntrelacsSystem is a computing environment which represents knowledge through an innovative data structure called an _entrelacs_. See IntroductionToEntrelacs and ArrowParadigm for a better introduction of this approach and DesignIntroduction for more useful details.
+Further reading
+  * Entrelacs [EntrelacsIntroduction introduction],
+  * Entrelacs' [ArrowParadigm paradigm],
+  * Entrelacs [DesignIntroduction design] explained.
