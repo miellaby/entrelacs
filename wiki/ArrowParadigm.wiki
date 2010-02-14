@@ -72,7 +72,7 @@ The "assimilation"  process ensure stored arrows uniqueness. Any definable arrow
 
 ==immutability==
 
-<p align='right'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png'/><br/>an arrow can be the ancestor of several arrows</p>
+<p align='right'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align=right/><br/>an arrow can be the ancestor of several arrows</p>
 
 As one arrow might be the ancestor of many other arrows, it can't be modified once stored in the system space.
 
