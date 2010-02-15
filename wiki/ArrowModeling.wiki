@@ -1,7 +1,13 @@
-#summary One may represent any piece of information thanks to "arrows".
+#summary Overview of knowledge representation strategy with "arrows" structures
 
-= Introduction =
-There are plenty of ways to use arrows to represent information. But the fundamental key to arrows usage is to define _contexts_ as sets of arrows pointed by context arrows. Contexts can embeds inner contexts, forming a context hierarchy.
+= Low principles =
+== intensional definition of a function with arrows ==
+
+The straightforward way to store knowledge with arrows consists in rooting referrer to referee mapping links. A set of rooted arrows intensionally defines a function &#131;: referrer &rarr; referee
+
+== contextualizing information ==
+
+But the fundamental key to arrows usage is to define _contexts_ as sets of arrows pointed by context arrows. Contexts can embeds inner contexts, forming a context hierarchy.
 
 = Overview =
 
