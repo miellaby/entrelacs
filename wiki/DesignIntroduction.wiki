@@ -5,27 +5,24 @@
 
 =arrow paradigm=
 
-Remember: The Entrelacs System deals with "arrows". Please see ArrowParadigm first.
+Reminder: The Entrelacs System deals with "arrows". It's the ArrowParadigm.
 
+<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png' align='right'>
 =arrows space=
 
-http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png  
+The EntrelacsSystem provides an orthogonally persistent support of arrows storage, namely the [ArrowsSpace Arrows Space].
 
-The EntrelacsSystem provides an homogeneous support to store knowledge as arrows, namely the "Arrows Space". Please see ArrowsSpace.
+=primary abstract machine & primary language=
 
-=virtual machine & prim language=
+The EntrelacsSystem includes a top-level abstract machine somehow similar to an abstract Lisp machine adapted to the ArrowParadigm. This EntrelacsAbstractMachine interprets a primary language: the EntrelacsLanguage.
 
-To make a full use of the ArrowParadigm and the ArrowsSpace, the EntrelacsSystem includes a virtual machine running on top of the ArrowsSpace. This computing environment is somewhat similar to a minimalistic Lisp machine with additional features provided by the ArrowParadigm. Its scope is mainly focused on arrow queries. Please see EntrelacsVirtualMachine.
-
-The Virtual Machine is programmable with a "prim language". Please see EntrelacsLanguage.
-
-=Network and C API of the Entrelacs prototype==
+=REST and C API of the Entrelacs prototype==
 
 The Entrelacs Prototype stands as a client/server software on top of a GNU/Linux platform.
 
-An HTTP/AJAX/COMET/REST based protocol allows "arrows publishers" and "arrows subscribers" (corresponding to applicative agents) to communicate with or within a running Entrelacs System.
+A COMET/REST protocol allows applicative agents to interact with the Entrelacs System as arrows "publishers" and "subscribers".
 
-Moreover, a C API allows to plugs VM extensions as special effect arrows. Please  see the EntrelacsPrototypeArchitecture page for further readings.
+The EntrelacsPrototypeArchitecture offers a C API which allows system extensions to bind actions to special arrow schemes.
 
 =Other questions?=
 Bad luck. That's all. Try "Work InProgress" page too.
