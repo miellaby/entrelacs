@@ -1,5 +1,6 @@
-#summary Introduction to the Entrelacs Virtual Machine.
-This page is a work in progress.
+#summary Introduction to the Entrelacs Abstract Machine -Old draft-
+
+This page is a work in progress. See EntrelacsAbstractMachine as well.
 
 ==Introduction==
 The Entrelacs Machine (EM) is a computing environment which executes programs stored as arrows graphs in the ArrowsSpace.
