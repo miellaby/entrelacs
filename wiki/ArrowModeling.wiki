@@ -1,18 +1,66 @@
 #summary Overview of knowledge representation strategy with "arrows" structures
 
 = Low principles =
-== intensional definition of a function with arrows ==
+== intensional definition ==
 
-The straightforward way to store knowledge with arrows consists in rooting referrer to referee mapping links. A set of rooted arrows intensionally defines a function &#131;: referrer &rarr; referee
+A straightforward way to store knowledge with arrows consists in intensionally defining a function from referrer to referee with links like:
+{{{
+  (color,red)
+  (age,150)
+  (height,3m)
+}}}
 
 == contextualizing information ==
 
-But the fundamental key to arrows usage is to define _contexts_ as sets of arrows pointed by context arrows. Contexts can embeds inner contexts, forming a context hierarchy.
+Directly rooting statements would mix unrelated information in the same top-level context. It's better rooting arrows which refers such statement arrows by a context entity.
+
+For example:
+{{{
+   (Bob,(age,20))
+}}}
+
+Those contextualizing arrows can be contextualized in outer contexts, as well. This abstraction process can be repeated as much as necessary, to form a context meta-hierarchy.
+{{{
+   (Jane,(Belief,(Bob,(age,20))))
+}}}
+
+The entity used as a context depends on the paradigm in use. Here is an overview of the possible choices of context.
 
 = Overview =
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/OO.png   ||Object Oriented Arrows Usage||
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/FnO.png   ||Intensive Function Oriented Arrows Usage||
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/NeuralO.png   ||Neuron Oriented Arrows Usage||
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/TagAndBundle.png   ||Its easy to implement a full featured tagsonomy with arrows||
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/Confusion.png   ||Warning: Neuron oriented modeling may lead to confusion||
+== Object Oriented ==
+The context is the object that one knows information about. One roots arrows between the object context and property to value arrows.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/OO.png   || Context = Object ||
+
+== Functional Oriented ==
+The context is a function that gathers all known statements about the value of this function when applied to various objects. One roots arrows between the function object (typically a property) and object to value arrows.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/FnO.png   || Context = Function ||
+
+== Neuronal network ==
+
+In short, there is no particular context. Different kinds of statements arrows are rooted in the top-level context whatever they corresponds  property->value, objet->value or value->value relations.
+
+Retrieving stored information consists in propagating activation states from several input entities. The most activated arrow forms the network's response.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/NeuralO.png   || Neuron model ||
+
+=== Warning ===
+
+Neuron oriented model could be the most efficient knowledge representation strategy in terms of storage usage. But the resulting graph could also become ambiguous when non-orthogonal statements are mixed together.
+
+http://entrelacs.googlecode.com/svn/trunk/doc/pictures/Confusion.png
+
+== Tagsonomy ==
+
+Tagsonomy structures works in the same way as neuronal networks. It implies they have the same strength and weakness.
+
+|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/TagAndBundle.png   ||It's easy to implement a full featured tagsonomy with arrows||
+
+== Meta tagsonomy / unambiguous neuronal model == 
+
+Ambiguity can be removed from tagsonomy by tagging tag-to-tagged relationship. For example
+{{{
+   anti->(socialism->http://capitalism.org)
+}}}
