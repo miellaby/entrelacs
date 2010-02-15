@@ -1,4 +1,4 @@
-#summary The Entrelacs System Prototype combines an "Arrows Space" and a "virtual machine".
+#summary The anticipated Entrelacs prototype publishes API to interact and extend an Entrelacs abstract machine on top of an "Arrows space".
 #labels Featured,Phase-Design
 
 <wiki:toc max_depth="1" />
@@ -10,15 +10,15 @@ Reminder: The Entrelacs System deals with "arrows". It's the ArrowParadigm.
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png' align='right'>
 =arrows space=
 
-The EntrelacsSystem provides an orthogonally persistent support of arrows storage, namely the [ArrowsSpace Arrows Space].
+The EntrelacsSystem prototype will provide an orthogonally persistent support of arrows storage, namely the [ArrowsSpace Arrows Space].
 
 =primary abstract machine & primary language=
 
-The EntrelacsSystem includes a top-level abstract machine somehow similar to an abstract Lisp machine adapted to the ArrowParadigm. This EntrelacsAbstractMachine interprets a primary language: the EntrelacsLanguage.
+The EntrelacsSystem prototype will include a top-level abstract machine somehow similar to an abstract Lisp machine adapted to the ArrowParadigm. This EntrelacsAbstractMachine interprets a primary language: the EntrelacsLanguage.
 
-=REST and C API of the Entrelacs prototype==
+=REST and C API==
 
-The Entrelacs Prototype stands as a client/server software on top of a GNU/Linux platform.
+The anticipated Entrelacs Prototype will stand as a software server on top of a GNU/Linux platform.
 
 A COMET/REST protocol allows applicative agents to interact with the Entrelacs System as arrows "publishers" and "subscribers".
 
