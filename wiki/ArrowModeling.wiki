@@ -39,9 +39,9 @@ The context is a function that gathers all known statements about the value of t
 
 == Neuronal network ==
 
-One may still choose to not contextualize statements. It leads to rooting different kinds of statements in the same top-level context whatever they corresponds to property->value, objet->value or value->value relationships.
+One may still choose to not contextualize statements. It leads to rooting different kinds of statement in the same top-level context: property->value, objet->value and value->value relationships.
 
-Retrieving stored information consists in propagating activation states from several input arrow. The most activated arrow forms the network's response.
+Retrieving stored information consists in propagating activation states from several input arrows. The most activated output arrow forms the network's response.
 
 || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/NeuralO.png   || Neuron model ||
 
