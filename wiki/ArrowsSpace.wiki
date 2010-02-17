@@ -1,20 +1,31 @@
-#summary The "Arrows Space" is a part of the EntrelacsSystem. It's an orthogonally persistent storage space for arrows where each mathematically definable arrow is stored once.
+#summary The "Arrows Space" is an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
 
-=Introduction=
-The main characteristic of the EntrelacsSystem is to provide a single matrix where to store knowledge as arrows. This storage space is called the "Arrows Space" hereafter.
+== Introduction ==
+The EntrelacsSystem aims to offer an arrows storage system, namely the "Arrows Space" (AS).
 
-==Arrow types==
+==Arrow categories==
+The AS can store 3 types of data so far.
+   * regular arrow,
+   * blob,
+   * tag.
 
-From a mathematical point of view, a regular arrow is a pair of arrows. From the "Arrows Space" point of view, one regular arrow is a pair of identifiers, each identifier pointing an on other arrow definition within the storage space.
+=== regular arrow ===
+A regular arrow is a pair of arrows. So regular arrows are stored as pairs of address, each address pointing to another arrow location in the AS.
 
-Additionally, the "Arrows Space" can store atomistic binary objects. Such an object is equivalent in every aspect of its to a regular arrow (precisly some "prim entrelacs").
+=== blob & tag === 
 
-One distinguishes two types of binary arrows:
-   * _BLOB_ arrows are large binary objects. They are indexed by a cryptographic unambiguous hash code like SHA2.
-   * _TAG_ arrows are short C-like null-terminated strings. They are indexed by a prone to conflict simple checksum-like hash code. Thats' why tags comparison must be enforced by a char by char check.
+Blobs and tags are atomistic binary objects. Such data are handled as regular arrows (as they are equivalent to "entrelacs").
 
-==Orthogonal persistence==
-Entrelacs System is "orthogonally persistent" regarding arrows storage. The "Arrows Space" ensures all handled arrows are transparently stored into a persistent memory (disk-like) device.
+==== Size difference ====
+  * _Blobs_ are *large* binary objects.
+  * _Tags_ are *short* C-like null-terminated strings.
+
+==== Hash function difference ====
+  * _Blobs_ hash codes are returned by a cryptographic unambiguous hash function (SHA)
+  * _Tags_ hash codes are returned by a simple checksum-like hash function. They are only 16 bits long and are obviously prone to conflicts. When looking for an existing tag, one must complete the hash comparison with a char-by-char check.
+
+== Orthogonal persistence ==
+The AS is "orthogonally persistent". Arrows are transparently stored into mass memory (host disk).
 
 System dynamics occur inside successive short "micro-transactions" so that changes are "atomically" saved on a regular basis.
 
