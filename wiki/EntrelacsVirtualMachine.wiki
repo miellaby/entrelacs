@@ -1,4 +1,5 @@
 #summary Introduction to the Entrelacs Abstract Machine -Old draft-
+#labels Deprecated
 
 This page is a work in progress. See EntrelacsAbstractMachine as well.
 
