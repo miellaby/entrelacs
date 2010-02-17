@@ -20,6 +20,8 @@ Blobs and tags are atomistic binary objects. Such data are handled as regular ar
   * _Blobs_ are *large* binary objects.
   * _Tags_ are *short* C-like null-terminated strings.
 
+Note: the choice of converting external data into either tags or blogs might be automatic.
+
 ==== Hash function difference ====
   * _Blobs_ hash codes are returned by a cryptographic unambiguous hash function (SHA)
   * _Tags_ hash codes are returned by a simple checksum-like hash function. They are only 16 bits long and are obviously prone to conflicts. When looking for an existing tag, one must complete the hash comparison with a char-by-char check.
@@ -27,46 +29,55 @@ Blobs and tags are atomistic binary objects. Such data are handled as regular ar
 == Orthogonal persistence ==
 The AS is "orthogonally persistent". Arrows are transparently stored into mass memory (host disk).
 
-System dynamics occur inside successive short "micro-transactions" so that changes are "atomically" saved on a regular basis.
+== Mass memory architecture ==
 
-==The arrows bank==
-The level 0 (disk) memory is operated as a single memory bank of cells.
+The mass memory is structured as a single memory bank of _cells_.
 
-Each individual "cell" can store one "reference", that is an other cell address. Cells are used to store both definitions and connectivity of all known arrows.
+A _cell_ is a storage unit. It can :
+  * be identified by an unique address
+  * can store one cell address.
 
-24/02/09: A currently studied alternative is the pair of identifiers storage cell. Some sort of well flagged collocation might be used to store heterogeneous data within a cell.
+Cells store everything in the AS:
+  * arrows definition
+  * arrows connectivity
+  * blobs and tags content
 
-|| http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png   ||Storage memory artistic view. Regular arrows are pairs of pointers linking parent arrows each other. Binary arrows are more or less long binary sequences.||
+Still studied: A cell could store a pair of address rather than a single address. Cells collocation could be managed by adequate flag bits.
 
-===Arrows storage===
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are either pairs of pointers to other arrows or binary raw data.||
 
-The default location of an arrow is chosen by computing its hash code, namely _h_.
- * For atomistic arrows, _h_ is computed as a Checksum (_Tag_) or a Cryptographic hash function (_BLOB_).
- * For regular arrows, _h_ is computed by combining the _h_ of the arrow's tail and head.
- * The definitive arrow location may be shifted on conflict by following an OpenAddressing strategy.
- * The definitive arrow location becomes the arrow identifier, noted _i_ hereafter.
+== Arrows location ==
 
-The definition of the arrow identified by 'i' it then stored as is:
-  * tail @ i,
-  * head @ i + open offset,
-  * _H_ (combined with additional data) @ i + 2 open offset.
+The default location of an arrow _f_ is returned by an hash function _h_.
+ * arrow : _h_(f) = function(h(tail(f)), h(head(f))) 
+ * tag : _h_(f) = checksum(content(f))
+ * blob : _h_(f) = hash(content(f)) (a cryptographic hash function).
 
-The _open offset_ is computed according to the DoubleHashing strategy.
+When hash conflict occurs, the location of a stored arrow _f_ may be shifted from _h(f)_ according to an OpenAddressing strategy. The definitive location of _f_ is also its AS internal identifier _i_.
 
-This hash based location allows to search for an existing arrow from their embedded atoms without necessarily fetching every intermediate ancestor of its.
+The hash based default location allows to quickly search for existing arrows. The recursive definition of _h_ for a regular arrow allow to compute this location without even fetching every ancestor of the arrow.
 
-===Parent arrows index===
+== Arrows definition data ==
 
-For each newly stored arrow _i_  outgoing for a _tail_ arrow and incoming into a _head_ arrow, the ArrowsSpace puts 2 back references (i.e. _i_) into two additional cells:
- * One _i_ "after" the _tail_ definition,
+The definition of an arrow _f_ internally identified by 'i' is stored as is:
+  * tail(f) at i,
+  * head(f) at i + offset(f),
+  * h(f) (combined with additional data) starting at i + 2 open offset.
+
+_offset(f)_ is a variable offset. It is computed according to the DoubleHashing strategy.
+
+== Connectivity data ==
+
+For each newly stored arrow _i_  outgoing from a _tail_ arrow and incoming into a _head_ arrow, the AS puts:
+  * _i_ in one cell "after" the _tail_ definition,
    * "after" means the location is computed with the DoubleHashing offset derived from _tail_ hash code.
- * One _i_ "before" the _head_ definition.
+  * _i_ in one cell "before" the _head_ definition.
    * "before" means the location is computed with the opposite of the DoubleHashing offset derived from _head_ hash code.
 
-These references stored near arrow definitions form an index to find connected arrows from a given head or queue.
+These back-references form an index to find connected arrows from a given head or a given queue.
 
 ===Cell flags===
-As different kinds of reference may be put in one cell, cell contents are categorized by few bits called "cell flags" hereafter.
+As different kinds of data may be put in a single cell, cell contents are categorized by few bits called "cell flags" hereafter.
 
 Here is a candidate flags list.
   * PAIR = non-rooted regular arrow definition first storage cell
@@ -76,16 +87,15 @@ Here is a candidate flags list.
   * REMAIN = remaining part of an arrow definition. Such a cell complete a "pair", "root", "blob", "tag" cell.
   * CHILD = reference to a child incoming/outgoing arrow
 
-23/02/09: A king Huffman code for cell flags is currently studied. It will free storage bits in most useful/frequent cases. e.g.
-* code 1 =>REMAIN & the 7 bits left within the byte are used to store the "Offset factor".
-* code 01=>PAIR & the 6 bits left stores the ref counter
+23/02/09: A Huffman-style cell flags encoding is studied in order to spare bits, e.g.
+* code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
+* code 01=>PAIR + the 6 remaining bits store a "ref counter".
 
-23/02/09: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. SMALL, TAG and BLOB storage strategies might be transparently chosen by the arrow space algorithm from a commmon arrow creation API call.
-
+23/02/09: Still studied: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. 
 
 ==Arrow footprint==
 
-Finally, here is the typical (no conflict) footprint of an arrow _i_ going out from a _tail_ arrow and incoming to an _head_ arrow, _i_ being itself connected with few incoming/outgoing arrows.
+Finally, here is the typical (no conflict) footprint of an arrow _f_ internally identified as _i_. _f_ goes out a _tail_ arrow and comes into an _head_ arrow. _f_ is also connected to several incoming or outgoing children arrows.
 {{{
 //  Cell# Flag   Content
 // [...]
@@ -113,8 +123,7 @@ Finally, here is the typical (no conflict) footprint of an arrow _i_ going out f
 // [...]
 }}}
 
-The offsets are computed according to the DoubleHashing and OpenAddressing strategies. Conflicting data may introduce additional shifts.
-
+Conflicts data introduce shifts into this typical footprint. Offsets are computed according to the DoubleHashing and OpenAddressing strategies.
 23/02/09: offsets used will be different for each cell content dispatching: PAIR, IN, OUT, REMAIN to avoid resonance phenomena as much as possible. Some misc candidate offsets:
  * offset def = h % p2 (p2 = second twin prim number)
  * offset remaining = swapBytes(h) % p2
@@ -126,22 +135,19 @@ The offsets are computed according to the DoubleHashing and OpenAddressing strat
 
 23/02/09: The few last values of the "jump factor" might be reserved to encode the number of valid bytes within the last cell used to store a binary string.
 
-
 ==Open Addressing==
 
 See OpenAddressing
 
-==Arrows Sweeper==
+== Garbage collector ==
 
-The "Arrows Sweeper" is a kind of _garbage collector_ working in the Arrows Space. The "arrows sweeper" spares rooted arrows and all their "ancestors", while no more rooted nor referred arrows are threaten to deletion.
+The Garbage Collector must spare rooted arrows and all their "ancestors" and get back resources used by no more rooted nor referred arrows.
 
-On this purpose, a reference counter is attached in cell # i+3o for every arrow _i_. This counter is incremented each time a new arrow is incoming/outgoing  from/to _i_. It is decremented when such an arrow is deleted by the "arrow sweeper" itself.
+On this purpose, a reference counter is attached in cell # i+3o for every arrow _i_. This counter is incremented each time a new arrow is incoming/outgoing  from/to _i_. It is decremented when the arrow is deleted by the garbage collector. When a non-rooted arrow ref counter is equal to 0, one can recycle this arrow storage resources.
 
-The Arrows Sweeper is an incremental GC which proceeds to-be-deleted arrows. This job is dispatched on many transactions to avoid CPU overhead. Arrows to proceed are unrooted arrow or arrow with a reference-counter back to zero.
+The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatched on many transactions to avoid CPU overhead. Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
 
-Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
-
-Note the reference counter definition range is quite short. When it reaches its maximal value, it can't change anymore. It means the corresponding arrow will never be deleted. (TBC)
+Still studied: As the reference counter definition range is short. One postulates that when the counter max value is reached, one doesn't it anymore. It means the corresponding arrow will never be deleted. (TBC)
 
 Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
@@ -159,11 +165,11 @@ For practical reasons, the hash function should be commutative on structure of p
 When needed, arrows climb up to a level 1 (RAM) memory device. This memory is used as a fine-grained cache of level 0 cells. 
 See ArrowsCache for further details.
 
-==What about the atomistic arrows?==
+==What about atomistic arrows?==
 
 Atomistic arrows (BLOB or TAG) are stored like any regular arrow directly into the arrows bank. Data are stored in the definition cell (hash-indexed) and its neighbours (as defined by the OpenAddressing strategy).
 
-For BLOB, data are actually preceded by the full computed SHA-2 hash code, in order to immediately eliminate false positives.
+Raw data are actually preceded by the full computed hash code, in order to immediately eliminate false positives.
 
 Atomistic arrows bodies must not be mixed up as we might not find which cell belongs to which arrow after all. Some bits are used to store a offset factor within each binary cell. This factor is used to directly jump up to the next cell containing the remaining part of the binary string. It allows to jump over conflicting data located in nearest cells within the considered open space.
 
