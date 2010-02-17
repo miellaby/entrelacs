@@ -88,8 +88,8 @@ Here is a candidate flags list.
   * CHILD = reference to a child incoming/outgoing arrow
 
 23/02/09: A Huffman-style cell flags encoding is studied in order to spare bits, e.g.
-* code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
-* code 01=>PAIR + the 6 remaining bits store a "ref counter".
+  * code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
+  * code 01=>PAIR + the 6 remaining bits store a "ref counter".
 
 23/02/09: Still studied: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. 
 
