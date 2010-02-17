@@ -147,9 +147,9 @@ On this purpose, a reference counter is attached in cell # i+3o for every arrow 
 
 The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatched on many transactions to avoid CPU overhead. Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
 
-Still studied: As the reference counter definition range is short. One postulates that when the counter max value is reached, one doesn't it anymore. It means the corresponding arrow will never be deleted. (TBC)
+Still studied: As the reference counter definition range is short. One postulates that when the counter max value is reached, one can't change it anymore. It means the corresponding arrow will never be deleted. (TBC)
 
-Actually, there may be a difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
+Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
 
 ==candidate hash functions==
 For practical reasons, the hash function should be commutative on structure of pairs. To be done.
