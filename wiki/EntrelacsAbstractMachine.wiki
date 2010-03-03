@@ -14,12 +14,13 @@ The language is as well:
   * a functional language
   * a stack based language
   * a Call By Continuation style language
+  * a query language à la SQL
+
+Programs can be embedded into strings, but once assimilated by the system, a program resides in the form of a regular arrow.
 
 = The language =
-
+== operators to change "current arrow" state variable ==
 {{{
- operators to change "current arrow" state variable:
- ----------------------------------------
  nnnnnnn   Number -> arrow
  #nnnn     arrowId -> arrow
  "foo"      const char* -> arrow
@@ -34,29 +35,33 @@ The language is as well:
  ~         ( stack head ; current arrow ) pair -> arrow if stored only, otherwhise Eve
  ==        current arrow set to Eve if not equal to stack head
  _         current arrow set to Eve if not rooted
+}}}
 
- "current arrow" (un)stacking:
- ----------------------------------------
+== arrows stacking ==
+{{{
  < add current arrow to stack
  > unstack to current arrow
+}}}
 
- continuation chain (un)stacking:
- ----------------------------------------
+== continuation chaining ==
+{{{
  : add current arrow to continuation chain (supposed to be closure but not necessary)
  / cut = unchain current continuation (won't be called)
  ; swap current continuation with first continuation in chain 
+}}}
 
- branching
- ----------------------------------------
+== branching ==
+{{{
  ? if current arrow == eve then cut
+}}}
 
- continuation mapping:
- ----------------------------------------
+== continuation mapping ==
+{{{
  i incomings of current arrow
  o outgoings ...
-
- syntaxic sugars
- ----------------------------------------
+}}}
+== syntaxic sugars ==
+{{{
  'foo (then white space) <==> "foo"
  $foo (then white space) <==> 'foo o_?h
  , <==> <
@@ -64,9 +69,8 @@ The language is as well:
 }}}
 
 = Examples (in the form of unparsed strings) =
+==  Basic browse ==
 {{{
- Basic browse exemples:
- ----------------------------------------
  "'foo" ==> cb called with "foo" arrow
  "'foo + 'bar &" ==> cb called with 'foo->'bar arrow
  "'foo o" ==> cb called w/ each arrow outgoing from 'foo'
@@ -75,13 +79,13 @@ The language is as well:
  "'foo i_?<t<'bar ==?>>" ==> cb called w/ each rooted arrow matching ('bar'->*)->'foo' pattern
  (plan by "foo" incoming children)
  "'bar o<o<'foo'==?>>" ==> ditto, plan by "bar" outgoing children
-
- Branching exemples:
- ----------------------------------------
+}}}
+== Branching ==
+{{{
  "('bar):'foo_?42/" ==> cb w/ '42' if 'foo' rooted, 'bar' otherwise
-
- Continuation chaining:
- ----------------------------------------
+}}}
+== Continuation chaining ==
+{{{
  "(tt):'foo o_?t" ==>  cb w/ all x / (foo->(*->(*->(*->x)))) rooted
  "(t):'foo,'bar&;+42&" ==>  cb w/ ('foo'->42)
 }}}
