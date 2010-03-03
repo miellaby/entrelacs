@@ -10,7 +10,7 @@ Reminder: The Entrelacs System deals with "arrows". It's the ArrowParadigm.
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png' align='right'>
 =arrows space=
 
-The EntrelacsSystem prototype will provide an orthogonally persistent support of arrows storage, namely the [ArrowsSpace Arrows Space].
+The EntrelacsSystem prototype will provide an orthogonally persistent support for arrows storage, namely the [ArrowsSpace Arrows Space].
 
 =primary abstract machine & primary language=
 
