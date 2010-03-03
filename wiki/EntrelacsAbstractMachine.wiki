@@ -2,6 +2,86 @@
 
 = Introduction =
 
-The Entrelacs Abstract Machine interprets an arrows-based functional language. The machine itself is inspired from the CaEK Machine described in flanagan93essance paper.
+The Entrelacs Abstract Machine interprets an arrows-based language.
 
-ToBeContinued.
+The Machine state is the following:
+  * a current arrow
+  * a program arrow
+  * an arrow stack (which is an arrow)
+  * a continuation chain (which is an arrow)
+
+The language is as well:
+  * a functional language
+  * a stack based language
+  * a Call By Continuation style language
+
+= The language =
+
+{{{
+ operators to change "current arrow" state variable:
+ ----------------------------------------
+ nnnnnnn   Number -> arrow
+ #nnnn     arrowId -> arrow
+ "foo"      const char* -> arrow
+ xFFFF..FF blob -> arrow
+ sFFFF..FF char* -> arrow
+ bFFFF..FF blob& -> arrow
+ (...)     closure -> arrow
+ .         current continuation -> arrow
+ t         current arrow tail ->arrow
+ h         current arrow head -> arrow
+ &         ( stack head ; current arrow ) pair -> arrow
+ ~         ( stack head ; current arrow ) pair -> arrow if stored only, otherwhise Eve
+ ==        current arrow set to Eve if not equal to stack head
+ _         current arrow set to Eve if not rooted
+
+ "current arrow" (un)stacking:
+ ----------------------------------------
+ < add current arrow to stack
+ > unstack to current arrow
+
+ continuation chain (un)stacking:
+ ----------------------------------------
+ : add current arrow to continuation chain (supposed to be closure but not necessary)
+ / cut = unchain current continuation (won't be called)
+ ; swap current continuation with first continuation in chain 
+
+ branching
+ ----------------------------------------
+ ? if current arrow == eve then cut
+
+ continuation mapping:
+ ----------------------------------------
+ i incomings of current arrow
+ o outgoings ...
+
+ syntaxic sugars
+ ----------------------------------------
+ 'foo (then white space) <==> "foo"
+ $foo (then white space) <==> 'foo o_?h
+ , <==> <
+
+}}}
+
+= Examples (in the form of unparsed strings) =
+{{{
+ Basic browse exemples:
+ ----------------------------------------
+ "'foo" ==> cb called with "foo" arrow
+ "'foo + 'bar &" ==> cb called with 'foo->'bar arrow
+ "'foo o" ==> cb called w/ each arrow outgoing from 'foo'
+ "'foo oh" ==> cb called w/ the head of every known arrow outgoing from 'foo'
+ "'foo i_?t" ==> cb called w/ each x verifying (x->'foo') rooted
+ "'foo i_?<t<'bar ==?>>" ==> cb called w/ each rooted arrow matching ('bar'->*)->'foo' pattern
+ (plan by "foo" incoming children)
+ "'bar o<o<'foo'==?>>" ==> ditto, plan by "bar" outgoing children
+
+ Branching exemples:
+ ----------------------------------------
+ "('bar):'foo_?42/" ==> cb w/ '42' if 'foo' rooted, 'bar' otherwise
+
+ Continuation chaining:
+ ----------------------------------------
+ "(tt):'foo o_?t" ==>  cb w/ all x / (foo->(*->(*->(*->x)))) rooted
+ "(t):'foo,'bar&;+42&" ==>  cb w/ ('foo'->42)
+}}}
