@@ -2,39 +2,49 @@
 
 = Introduction =
 
-The Entrelacs Abstract Machine evals programs made of arrows.
+The Entrelacs Abstract Machine evals programs built with arrows.
 
-The Machine state itself is fully defined by a single arrow M.
-
-M = (current ((stack program) continuation))) where
-  * _current_ : a "current" arrow
-  * _program_ : a program arrow
-  * _stack_ : a stack of arrows (which is an arrow)
-  * _continuation_ : a continuation chain (which is an arrow)
-
-The language is as well:
+Its language is as well:
   * a functional language
   * a stack based language
   * a Call By Continuation style language
   * a query language à la SQL
   * a fully reflexive language
 
-Programs can be embedded into strings, but once assimilated by the system, a program resides in the form of a regular arrow.
+= Machine State =
+
+The Machine state itself is fully defined by a single arrow M = (current ((stack program) continuation))) where
+  * _current_ : a "current" arrow
+  * _program_ : to-be-evaluated program
+  * _stack_ : a stack (as an arrow)
+  * _continuation_ : a continuation
+
+= Real reflexivity =
+
+* The current machine state M can be acceded and modified by programs.
+* Programs can modify themselves in a persistent way.
+  * Programs can be serialized and communicated in the form of character strings, but once assimilated by an Entrelacs system, programs reside in the form of regular arrows.
+  * Such an arrow acts as well as a piece of source code, a Concrete Syntax Tree and even an Abstract Syntax Tree (AST)!
+  * Programs can browse (introspection) and modify (intercession) such arrows in order to modify themselves for real!
 
 = The language =
-== operators to change "current arrow" state variable ==
+== loading "current arrow" ==
 {{{
- nnnnnnn   Number -> arrow
- #nnnn     arrowId -> arrow
- "foo"      const char* -> arrow
- xFFFF..FF blob -> arrow
- sFFFF..FF char* -> arrow
- bFFFF..FF blob& -> arrow
- (...)     closure -> arrow
- .         current continuation -> arrow
- t         current arrow tail ->arrow
- h         current arrow head -> arrow
- &         ( stack head ; current arrow ) pair -> arrow
+ 42             tag "42"
+ @AEFA00FA      previously retrieved arrow
+ "foo"          tag "foo"
+ (some program) closure
+ t              current arrow tail
+ h              current arrow head
+ &              ( stack head ; current arrow ) link
+ M              current state machine
+  ->  Mhh       current continuation
+  ->  Mhth      current program
+  ->  Mhtt      current stack
+}}}
+
+== Testing ==
+{{{
  ~         ( stack head ; current arrow ) pair -> arrow if stored only, otherwhise Eve
  ==        current arrow set to Eve if not equal to stack head
  _         current arrow set to Eve if not rooted
@@ -48,14 +58,15 @@ Programs can be embedded into strings, but once assimilated by the system, a pro
 
 == continuation chaining ==
 {{{
- : add current arrow to continuation chain (supposed to be closure but not necessary)
- / cut = unchain current continuation (won't be called)
- ; swap current continuation with first continuation in chain 
+ : add current arrow to continuation chain (supposed to be closure but not necessary) 
+ / cut = replace current continuation with next continuation
+ ; unchain next continuation without make it current
+ ???? swap current continuation with next continuation (TBC)
 }}}
 
 == branching ==
 {{{
- ? if current arrow == eve then cut
+ ? if current arrow is Eve then cut
 }}}
 
 == continuation mapping ==
@@ -63,29 +74,30 @@ Programs can be embedded into strings, but once assimilated by the system, a pro
  i incomings of current arrow
  o outgoings ...
 }}}
+
 == syntaxic sugars ==
 {{{
  'foo (then white space) <==> "foo"
  $foo (then white space) <==> 'foo o_?h
- , <==> <
-
+ , <==> < (stack)
+ . <==> Mhh (current continuation)
 }}}
 
 = Examples (in the form of unparsed strings) =
 ==  Basic browse ==
 {{{
- "'foo" ==> cb called with "foo" arrow
- "'foo + 'bar &" ==> cb called with 'foo->'bar arrow
- "'foo o" ==> cb called w/ each arrow outgoing from 'foo'
- "'foo oh" ==> cb called w/ the head of every known arrow outgoing from 'foo'
- "'foo i_?t" ==> cb called w/ each x verifying (x->'foo') rooted
- "'foo i_?<t<'bar ==?>>" ==> cb called w/ each rooted arrow matching ('bar'->*)->'foo' pattern
+ "'foo" ==> "foo" arrow
+ "'foo + 'bar &" ==> 'foo->'bar arrow
+ "'foo o" ==> each arrow outgoing from 'foo'
+ "'foo oh" ==> the head of each known arrow outgoing from 'foo'
+ "'foo i_?t" ==> each x verifying (x->'foo') rooted
+ "'foo i_?<t<'bar ==?>>" ==> each rooted arrow matching ('bar'->*)->'foo' pattern
  (plan by "foo" incoming children)
- "'bar o<o<'foo'==?>>" ==> ditto, plan by "bar" outgoing children
+ "'bar o<o<'foo ==?>>" ==> ditto, plan by "bar" outgoing children
 }}}
 == Branching ==
 {{{
- "('bar):'foo_?42/" ==> cb w/ '42' if 'foo' rooted, 'bar' otherwise
+ "('bar):'foo_?42/" ==> if 'foo' rooted then '42' else 'bar'
 }}}
 == Continuation chaining ==
 {{{
