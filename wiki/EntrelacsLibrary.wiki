@@ -1,0 +1,3 @@
+#summary The entrelacs library C API.
+
+See sources repository.
