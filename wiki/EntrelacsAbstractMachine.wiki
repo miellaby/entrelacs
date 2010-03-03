@@ -2,19 +2,22 @@
 
 = Introduction =
 
-The Entrelacs Abstract Machine interprets an arrows-based language.
+The Entrelacs Abstract Machine evals programs made of arrows.
 
-The Machine state is the following:
-  * a current arrow
-  * a program arrow
-  * an arrow stack (which is an arrow)
-  * a continuation chain (which is an arrow)
+The Machine state itself is fully defined by a single arrow M.
+
+M = (current ((stack program) continuation))) where
+  * _current_ : a "current" arrow
+  * _program_ : a program arrow
+  * _stack_ : a stack of arrows (which is an arrow)
+  * _continuation_ : a continuation chain (which is an arrow)
 
 The language is as well:
   * a functional language
   * a stack based language
   * a Call By Continuation style language
   * a query language à la SQL
+  * a fully reflexive language
 
 Programs can be embedded into strings, but once assimilated by the system, a program resides in the form of a regular arrow.
 
