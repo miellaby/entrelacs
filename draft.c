@@ -4,133 +4,73 @@
 
 /* API */
 
-define uint32 ArrowId; // ArrowId = <---TransactionId---><---MemRef--->
+define uint32 Arrow; // Arrow = <---TransactionId---><---MemoryRef--->
 
 /* Defining */
-const ArrowId Eve;
-ArrowId string(char *);
-ArrowId blob(char *, long);
-ArrowId arrow(ArrowId, ArrowId);
+const Arrow Eve;
+Arrow string(char *);
+Arrow blob(char *, uint32 size);
+Arrow arrow(Arrow, Arrow);
 
 /* Unbuilding */
-ArrowId headOf(ArrowId);
-ArrowId tailOf(ArrowId);
-char*   stringOf(ArrowId);
-char*   blobOf(ArrowId, long*);
+Arrow headOf(Arrow);
+Arrow tailOf(Arrow);
+char* stringOf(Arrow);
+char* blobOf(Arrow, long*);
 
 
 /* Rooting */
-ArrowId root(arrowId);
-void unroot(arrowId);
+Arrow root(Arrow);
+void unroot(Arrow);
+int rooted(Arrow); // returns 0 if rooted.
 
 /* Transaction */
-void commit(); // ArrowId may be unvalidated
+void commit(); // Arrow may be unvalidated
 
 /* Browsing */
-int (CallBack*)(ArrowId input, char *browseString, ArrowId stack, ArrowId cc);
-FuzzyEnum incomingsOf(ArrowId);
-FuzzyEnum outgoingsOf(ArrowId);
-arrowId next(*FuzzyEnum);
-void incomingsCB(ArrowId, CallBack);
-void outgoingsCB(ArrowId, CallBack);
-int rooted(ArrowId); // returns 0 if rooted.
+FuzzyEnum incomingsOf(Arrow);
+FuzzyEnum outgoingsOf(Arrow);
+Arrow next(*FuzzyEnum);
+
+int (SimpleCallBack*)(Arrow arrow, char* context);
+void incomingsCB(Arrow, SimpleCallBack);
+void outgoingsCB(Arrow, SimpleCallBack);
 
 
-// The Stack & Call By Continuation style "Browse Language" Machine
-// MachineState = { currentArrow; browseString ; arrowStack ; continuationChain }
-ArrowId continuation(CallBack);
-int browse(char *browseString, ArrowId cc);
-int browseFrom(char *browseString, ArrowId cc, ArrowId current, ArrowId stack);
-
-
-// operators to set "current arrow" state variable:
-// ----------------------------------------
-// nnnnnnn   Number -> arrow
-// #nnnn     arrowId -> arrow
-// "foo"      const char* -> arrow
-// xFFFF..FF blob -> arrow
-// sFFFF..FF char* -> arrow
-// bFFFF..FF blob& -> arrow
-// (...)     closure -> arrow
-// .         current continuation -> arrow
-// t         current arrow tail ->arrow
-// h         current arrow head -> arrow
-// &         ( stack head ; current arrow ) pair -> arrow
-// ~         ( stack head ; current arrow ) pair -> arrow if stored only, otherwhise Eve
-// ==        current arrow set to Eve if not equal to stack head
-// _         current arrow set to Eve if not rooted
-
-// "current arrow" (un)stacking:
-// ----------------------------------------
-// < add current arrow to stack
-// > unstack to current arrow
-
-// continuation chain (un)stacking:
-// ----------------------------------------
-// : add current arrow to continuation chain (supposed to be closure but not necessary)
-// / cut = unchain current continuation (won't be called)
-// ; swap current continuation with first continuation in chain 
-
-// branching
-// ----------------------------------------
-// ? if current arrow == eve then cut
-
-// continuation mapping:
-// ----------------------------------------
-// i incomings of current arrow
-// o outgoings ...
-
-// syntaxic sugars
-// ----------------------------------------
-// 'foo (then white space) <==> "foo"
-// $foo (then white space) <==> 'foo o_?h
-// , <==> <
-
-
-
-
-// Basic browse exemples:
-// ----------------------------------------
-// "'foo" ==> cb called with "foo" arrow
-// "'foo + 'bar &" ==> cb called with 'foo->'bar arrow
-// "'foo o" ==> cb called w/ each arrow outgoing from 'foo'
-// "'foo oh" ==> cb called w/ the head of every known arrow outgoing from 'foo'
-// "'foo i_?t" ==> cb called w/ each x verifying (x->'foo') rooted
-// "'foo i_?<t<'bar ==?>>" ==> cb called w/ each rooted arrow matching ('bar'->*)->'foo' pattern
-// (plan by "foo" incoming children)
-// "'bar o<o<'foo'==?>>" ==> ditto, plan by "bar" outgoing children
-
-// Branching exemples:
-// ----------------------------------------
-// "('bar):'foo_?42/" ==> cb w/ '42' if 'foo' rooted, 'bar' otherwise
-
-// Continuation chaining:
-// ----------------------------------------
-// "(tt):'foo o_?t" ==>  cb w/ all x / (foo->(*->(*->(*->x)))) rooted
-// "(t):'foo,'bar&;+42&" ==>  cb w/ ('foo'->42)
+// The Stack & Call By Continuation style "Entrelacs Language"
+// Abstract Machine State Arrow = ( current, ( (stack program ), continuation ) )
+int (CallBack*)(Arrow M);
+Arrow continuation(CallBack);
+Arrow program(char*);
+Arrow machine(Arrow program, Arrow cc, Arrow current, Arrow stack);
+int   run(Arrow M);
+int   eval(char* programString, Callback cb);
 
 
 // Extending the browse language with your own operators:
 // ----------------------------------------
-struct MachineState { ArrowId current; char* browseString ; ArrowId stack ; ArrowId cc };
-int (OperatorCallBack*)(struct MachineState* m);
-ArrowId operator(OperatorCallBack continuation);
+Arrow (OperatorCallBack*)(Arrow M);
+Arrow operator(OperatorCallBack continuation);
+// and don't forget link your operator to a term and root the link!
 
-// don't forget link your operator to a term and root the link!
+
 // exemple:
-// int sumCB(MachineState* m) { 
-//   m->current = string(i2s( s2i(stringOf(m->current)) + s2i( stringOf( headOf(m->stack)))));
-//   m->stack = tailOf(m->stack)
-//   m->cc = tailOf(m->cc)
-//   return 0;
+// return sumCB(Arrow M) { 
+//   Arrow current = tailOf(M);
+//   Arrow stack = tailOf(tailOf(headOf(M)));
+//   Arrow cc = headOf(headOf(M));
+//   current = string(i2s( s2i(stringOf(current)) + s2i(tailOf(stack)))));
+//   stack = headOf(stack);
+//   cc = headOf(m->cc);
+//   return machine(program, cc, current, stack);
 // }
-// ArrowId sum = root(arrow(string("sum"),operator(sumCB)));
+// Arrow sum = root(arrow(string("sum"),operator(sumCB)));
 //
 // usage: "$sum:2,2" or "2,$sum:2" or "2,2<$sum:>"
 //
 //
 // other exemple: 
-// int myOwnBranch(MachineState* m) { 
+// int myOwnBranch(Arrow m) { 
 //   m->cc = tailOf(m->cc);
 //   if (m->current == Eve) 
 //       m->cc = tailOf(m->cc);
@@ -141,4 +81,4 @@ ArrowId operator(OperatorCallBack continuation);
 // ----------------------------------------
 /* Internal */
 uint16   _transactionId;
-ArrowId* _dirtyArrows; // arrows to submit to garbage collector (new/unrooted)
+Arrow* _dirtyArrows; // arrows to submit to garbage collector (new/unrooted)
