@@ -10,7 +10,7 @@ This prototype is structured with several components:
   * "arrows evaluators"
 
 These components are delimited by clean interfaces.
-  * C API
+  * C API : EntrelacsLibraryAPI
   * network API, derived from HTTP.
 
 ==Arrows Space==
