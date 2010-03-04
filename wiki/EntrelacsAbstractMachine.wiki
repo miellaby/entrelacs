@@ -2,7 +2,7 @@
 
 = Introduction =
 
-The Entrelacs Abstract Machine evals programs built with arrows.
+The Entrelacs Abstract Machine evals programs formed by arrows.
 
 Its language is as well:
   * a functional language
@@ -13,19 +13,22 @@ Its language is as well:
 
 = Machine State =
 
-The Machine state itself is fully defined by a single arrow M = (current ((stack program) continuation))) where
+The Machine state is defined by a single arrow M which is compound of:
   * _current_ : a "current" arrow
   * _program_ : to-be-evaluated program
   * _stack_ : a stack (as an arrow)
   * _continuation_ : a continuation
 
+{{{
+ M = (current ((stack program) continuation)))
+}}}
+
+
 = Real reflexivity =
 
-* The current machine state M can be acceded and modified by programs.
-* Programs can modify themselves in a persistent way.
-  * Programs can be serialized and communicated in the form of character strings, but once assimilated by an Entrelacs system, programs reside in the form of regular arrows.
-  * Such an arrow acts as well as a piece of source code, a Concrete Syntax Tree and even an Abstract Syntax Tree (AST)!
-  * Programs can browse (introspection) and modify (intercession) such arrows in order to modify themselves for real!
+Within a working Entrelacs systems, programs are directly stored as arrow structures (serialized text representation is only supported for communication purpose).
+
+All in all, there is no difference between a piece of source code, a Concrete Syntax Tree (CST) and even an Abstract Syntax Tree (AST) in Entrelacs! Moreover, the current machine state (M) can be fully acceded and modified by programs. Programs can browse (introspection) and modify (intercession) such arrows in order to modify themselves for real!  Programs can not only modify themselves but also store their changes.
 
 = The language =
 == loading "current arrow" ==
