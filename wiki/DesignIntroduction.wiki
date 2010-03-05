@@ -18,13 +18,9 @@ The system behavior is computed by the EntrelacsAbstractMachine. It's a top-leve
 ===primary language===
 The top-level evaluation context interprets the EntrelacsLanguage.
 
-===REST and C API===
+===about the anticipated prototype===
 
-The anticipated Entrelacs Prototype stands as a software server on top of a GNU/Linux platform.
-
-A COMET/REST protocol allows applicative agents to interact with the system as arrows "publishers" and "subscribers".
-
-The EntrelacsPrototypeArchitecture offers a C API allowing system extensions to bind actions to special arrow schemes.
+The anticipated Entrelacs Prototype will stand as a software server on top of a GNU/Linux platform. A COMET/REST protocol will allow network agents to connect. A C API will allow system extensions. See the EntrelacsPrototypeArchitecture for details.
 
 ===Other questions?===
 Bad luck. That's all for the moment. Try "Work InProgress" page too.
