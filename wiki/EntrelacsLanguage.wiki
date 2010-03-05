@@ -1,79 +1,112 @@
-#summary The EntrelacsLanguage (EL) is a language specially designed for the Entrelacs System.
+#summary The EntrelacsLanguage (EL) is specially designed to deal with arrows.
+= The language =
 
-= EL source is a first class citizen =
+== loading "current arrow" with ... ==
+{{{
+ 42             tag "42"
+ @AEFA00FA      a previously retrieved arrow identified by its internal ID
+ "foo"          tag "foo"
+ (some program) a closure
+ t              the current arrow's tail
+ h              the current arrow's head
+ &              the arrow between the stack head and the current arrow
+ M              the current state machine
+     ->  Mhh       the current continuation
+     ->  Mhth      the current program
+     ->  Mhtt      the current stack
+}}}
 
-Remember Entrelacs deals only with arrows, not files. Text based source files might exist only for transportation between two systems (or users). While once handled by an Entrelacs System, EL sources consist in graphs of arrows (see ArrowParadigm) among the ArrowsSpace.
+== Testing ==
+{{{
+ ~         sets current arrow to ( stack head ; current arrow ) linking arrow only if already stored, otherwise Eve
+ ==        changes the current arrow to Eve if it isn't equal to stack head
+ _         changes the current arrow to Eve if it isn't rooted
+}}}
 
-So, in difference with any existing language, an EL *source* is made in the same material that the evaluator operates!
+== arrows stacking ==
+{{{
+ <     adds current arrow to stack
+ >     unstacks to current arrow
+}}}
 
-This makes EL goes a step further than classical _homoiconicity_. We may name this _system-level homoiconicity_.
+== continuation chaining ==
+{{{
+ :     adds current arrow to continuation chain (supposed to be closure but not necessary) 
+ /     cut = replaces current continuation with next continuation
+ ;     unchains next continuation without make it current
+ ????  swaps current continuation with next continuation (TBC)
+}}}
 
-= ready for reflexivity =
+== branching ==
+{{{
+ ? cuts if current arrow is Eve
+}}}
 
-Consequently, an EL program can...
-   * access itself: introspection
-   * modify itself: intercession
-... at source level and in a persistent way.
+== continuation mapping ==
+{{{
+ i map/cc incomings of current arrow
+ o map/cc outgoings ...
+}}}
+
+== syntaxic sugars ==
+{{{
+ 'foo (then white space) <==> "foo"
+ $foo (then white space) <==> 'foo o_?h
+ , <==> < (stack)
+ . <==> Mhh (current continuation)
+}}}
+
+= Examples =
+The following examples are given in the form of unparsed program strings.
+
+==  Basic browse ==
+{{{
+ "'foo" ==> "foo" arrow
+ "'foo + 'bar &" ==> 'foo->'bar arrow
+ "'foo o" ==> each arrow outgoing from 'foo'
+ "'foo oh" ==> the head of each known arrow outgoing from 'foo'
+ "'foo i_?t" ==> each x verifying (x->'foo') rooted
+ "'foo i_?<t<'bar ==?>>" ==> each rooted arrow matching ('bar'->*)->'foo' pattern
+ (plan by "foo" incoming children)
+ "'bar o<o<'foo ==?>>" ==> ditto, plan by "bar" outgoing children
+}}}
+
+== Branching ==
+{{{
+ "('bar):'foo_?42/" ==> if 'foo' rooted then '42' else 'bar'
+}}}
+
+== Continuation chaining ==
+{{{
+ "(tt):'foo o_?t" ==>  cb w/ all x / (foo->(*->(*->(*->x)))) rooted
+ "(t):'foo,'bar&;+42&" ==>  cb w/ ('foo'->42)
+}}}
+
+= factoids =
+
+==EL source codes are first class citizen==
+
+EL sources are made up of arrows within the ArrowsSpace.
+
+To get the best benefits of this unique property, EL is designed in a way which makes source code directly in the form of traditional functional oriented programs after being translated in a _continuation passing style_ (CPS) Abstract Syntax Tree.
+
+This makes EL goes a step further than classical _homoiconicity_. An EL program can:
+  * access itself at source level,
+  * modify itself
+  * make these changes persistent.
+
+It gives Entrelacs hosted applications the ability to be fully reflexive. That is:
+   * the ability to access itself, aka introspection
+   * the ability to modify itself, aka intercession
 
 It makes Entrelacs an ideal platform for reflexive computing.
 
-= ready for Memoization=
+==ready for Memoization==
 
-To get the best benefits of this feature, EL is designed in a way which makes an EL source looks like a _continuation passing style_ (CPS) representation of a traditional functional language ( like Lisp or ML) program.
+The language is also designed to make the design of a computation cache easier. This approach is called Memoization. This is an universally applicable strategy of optimization where most often used code patterns will hit the computation cache for ready-to-use results or _continuations_.
 
-Moreover, EL is a single class citizenship based language somewhat similar to the _Combinatory Logic_ theorical Language. It implies there is no distinction between variable vs. literals. An EL expression evaluation doesn't depend on an so-called "environment".
-
-These choices make the design of a computation cache easier. This approach is called Memoization. This is an universally applicable strategy of optimization where most often used code patterns will hit the computation cache for ready-to-use results or _continuations_.
-
------
-= WORK IN PROGRESS =
-
-
-= combinators =
-
-EL is a combinators based language.
-
-When EL performs an "application", it recognizes this set of combinatory pattern. Take into account some of these combinators are continuations, that is intermediate form of a  combinator which is partially applied.
-   * *exp ==> (exp !) result; comment*
-   * t0.(t.h) Head ==> t0.h ;
-   * t0.(t.h) Tail ==> t0.t ;
-   * t.h Root ==> t.h ; if t.h is a rooted arrow
-   * t.h Root ==> t ; if t.h is not rooted
-   * t.h Cut ==> eve.h ; dismiss back tracks
-   * t.h Out ==> t.o1.o2..o _n_ (every h outgoing arrow)
-   * t.h In ==> t.i1.i2..i _n_ (every h incoming arrow)
-   * A Push ==> A ; A is saved and as a kind of continuation
-   * X Pop ==> A ; pop the last pushed arrow (sort of call-cc)
-   * Temp A ==> A ; switch off memoization
-   * Perm A ==> A ; switch on memoization
-   * A.K ==>  K'.A
-      * where K'.A x ==> A
-   * (b.x).S ==> (b.x).S'
-      * where (b.x).S' y ==> (b.x).y.S''
-         * where (b.x).y.S'' z ==> b x.z ! y.z ! !
-   * S variant: b.(S.x) ==> b.(S'.x)
-      * where b.(S'.x) y ==> b.(S''.(x.y))
-         * where b.(S''.(x.y)) z ==> b z.x ! z.y ! !
-   * (b.A)^.x y -> b.A' ; where A' is a new arrow corresponding to A with x replaced by y in its definition and all (\ thing) pairs replaced by thing (if thing is 'x', it won't be substituted)
-   * A.B ! ==> B applied to A ; by default: arrows are like "quoted" Lisp things, you must explicitly tell when a intermediate pair corresponds to an application, that is a pattern which has to be substituted according to existing combinator patterns.
-   * map: eve.h1.h2..hn map x ! =>  eve.h1.h2..hn-1 map x ! hn x !
-       * eve map x ! => eve
-
-Warning: brackets and dots are present here only to help visualizing arrows patterns. They don't correspond to any additional arrow.
-
-When an arrow doesn't match any combinator pattern bellow, it is taken as it is by the evaluator and is added to a chain of arrows. In other means: (((any->thing)->before)->A) stays as is if there is no matching combination condition. Then, the map combinator can make an arrow be applied to each element in such a chain . (eve.x.y.z).map B!" evaluates to: ((x.B)! (y.B).! (z.B).!). This chain may correspond to a local environment.
-
-= evaluation principles =
-   * an EL expression E is an arrow of the form (A B) C) D) ... )
-   * evaluate an expression consists in repeating until no more application left
-      * continuation 0 = (E !)
-      * continuation _i_ := eval(continuation _i-1_)
-
-= related concepts =
-   * Combinatory Logic
-   * Continuation
+==related concepts ==
+   * Combinatory Logic / Lambda Calculus / Rewriting rules based languages
+   * CAeK abstract machine / Stack Machine / Continuation
    * http://en.wikipedia.org/wiki/Memoization
-   * Rewriting rules based languages.
-   * Lambda Calculus, Functional Language, Lisp.
-   * Inference engine languages (Prolog) (because of / and map combinators)
-   * Query language (SQL) (because of in, out and map combinators)
+   * Query language à la SQL
