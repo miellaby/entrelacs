@@ -2,7 +2,7 @@
 
 = Introduction =
 
-The Entrelacs Abstract Machine evals programs formed by arrows.
+The Entrelacs Abstract Machine evals programs made up of arrows.
 
 Its language is as well:
   * a functional language
@@ -13,7 +13,7 @@ Its language is as well:
 
 = Machine State =
 
-The Machine state is defined by a single arrow M which is compound of:
+The Machine state is defined by a single arrow _M_ which is made up of:
   * _current_ : a "current" arrow
   * _program_ : to-be-evaluated program
   * _stack_ : a stack (as an arrow)
@@ -98,10 +98,12 @@ All in all, there is no difference between a piece of source code, a Concrete Sy
  (plan by "foo" incoming children)
  "'bar o<o<'foo ==?>>" ==> ditto, plan by "bar" outgoing children
 }}}
+
 == Branching ==
 {{{
  "('bar):'foo_?42/" ==> if 'foo' rooted then '42' else 'bar'
 }}}
+
 == Continuation chaining ==
 {{{
  "(tt):'foo o_?t" ==>  cb w/ all x / (foo->(*->(*->(*->x)))) rooted
