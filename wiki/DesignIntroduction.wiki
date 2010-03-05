@@ -1,28 +1,30 @@
 #summary The anticipated Entrelacs prototype publishes API to interact and extend an Entrelacs abstract machine on top of an "Arrows space".
 #labels Featured,Phase-Design
 
-<wiki:toc max_depth="1" />
+===Introduction===
+Please find herein an overview of the EntrelacsSystem.
 
-=arrow paradigm=
-
-Reminder: The Entrelacs System deals with "arrows". It's the ArrowParadigm.
+===arrow paradigm===
+The system deals with "arrows". It's the ArrowParadigm.
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png' align='right'>
-=arrows space=
+===arrows space===
+Arrows defined within the system are stored in the [ArrowsSpace Arrows Space].
 
-The EntrelacsSystem prototype will provide an orthogonally persistent support for arrows storage, namely the [ArrowsSpace Arrows Space].
+===primary abstract machine===
 
-=primary abstract machine & primary language=
+The system behavior is computed by the EntrelacsAbstractMachine. It's a top-level machine somehow similar to an functional language abstract machine.
 
-The EntrelacsSystem prototype will include a top-level abstract machine somehow similar to an abstract Lisp machine adapted to the ArrowParadigm. This EntrelacsAbstractMachine interprets a primary language: the EntrelacsLanguage.
+===primary language===
+The top-level evaluation context interprets the EntrelacsLanguage.
 
-=REST and C API==
+===REST and C API===
 
-The anticipated Entrelacs Prototype will stand as a software server on top of a GNU/Linux platform.
+The anticipated Entrelacs Prototype stands as a software server on top of a GNU/Linux platform.
 
-A COMET/REST protocol allows applicative agents to interact with the Entrelacs System as arrows "publishers" and "subscribers".
+A COMET/REST protocol allows applicative agents to interact with the system as arrows "publishers" and "subscribers".
 
-The EntrelacsPrototypeArchitecture offers a C API which allows system extensions to bind actions to special arrow schemes.
+The EntrelacsPrototypeArchitecture offers a C API allowing system extensions to bind actions to special arrow schemes.
 
-=Other questions?=
-Bad luck. That's all. Try "Work InProgress" page too.
+===Other questions?===
+Bad luck. That's all for the moment. Try "Work InProgress" page too.
