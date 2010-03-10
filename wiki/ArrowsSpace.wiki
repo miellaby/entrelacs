@@ -1,26 +1,17 @@
-#summary The "Arrows Space" is an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
+#summary The "Arrows Space" (AS) is the main component of the EntrelacsSystem. It's an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
 
-== Introduction ==
-The EntrelacsSystem aims to offer an arrows storage system, namely the "Arrows Space" (AS).
+==Arrow types==
+The AS can handle 3 types of arrows so far.
+   * regular arrows (ie. pairs),
+   * blobs : *large* binary Objects,
+   * tags : *short* C-Like NULL-terminated char strings.
 
-==Arrow categories==
-The AS can store 3 types of data so far.
-   * regular arrow,
-   * blob,
-   * tag.
+Reminder: Despite Blobs and tags are atomistic raw binary objects, they are considered as entrelacs, that is reentrant intricate self-defined arrows structures.
 
-=== regular arrow ===
-A regular arrow is a pair of arrows. So regular arrows are stored as pairs of address, each address pointing to another arrow location in the AS.
+Note: assimilating data into either tags or blogs depends on data size.
 
-=== blob & tag === 
-
-Blobs and tags are atomistic binary objects. Such data are handled as regular arrows (as they are equivalent to "entrelacs").
-
-==== Size difference ====
-  * _Blobs_ are *large* binary objects.
-  * _Tags_ are *short* C-like null-terminated strings.
-
-Note: the choice of converting external data into either tags or blogs might be automatic.
+=== regular arrows ===
+A regular arrow is a pair of arrows. It is consequently stored as a pair of address both pointing to a location in the AS.
 
 ==== Hash function difference ====
   * _Blobs_ hash codes are returned by a cryptographic unambiguous hash function (SHA)
