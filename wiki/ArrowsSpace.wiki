@@ -20,7 +20,7 @@ Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. 
 
 To ensure each mathematically definable arrow is stored at most once, the assimilation process considers the whole computer storage space (hard disks) as a single giant content-indexed open-addressed hash table.
 
-It's less complicate as it looks like. In short, assimilating an arrow consists in:
+It's less complicate than it looks like. In short, assimilating an arrow consists in:
   # deducing the arrow location from the arrow definition.
   # looking for an existing copy at the expected location.
   # putting the arrow definition here if missing.
