@@ -42,7 +42,7 @@ From this _open_ address, one looks for a copy of the arrow in the storage space
   * If one finds some thing which is not the expected arrow, then one looks at a nearby location by adding some offset to the considered address.
   * If one finds an empty location, then one stores the arrow definition here.
 
-This way to manage a storage space is called OpenAdressing. It's an usual strategy to manage hash conflicts within hash tables.
+This way to manage a storage space is called OpenAddressing. It's an usual strategy to manage hash conflicts within hash tables.
 
 ==== locations are ID ====
 The eventual location of an assimilated arrow becomes its internal (and public) ID.
@@ -194,7 +194,7 @@ The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatche
 
 Still studied: As the reference counter definition range is short. One simply postulates that when the counter max value is reached, one can't change it anymore. It means the corresponding arrow will never be deleted. (TBC)
 
-Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. See OpenAdressing for details.
+Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. See OpenAddressing for details.
 
 == more ! ==
 ==== candidate hash functions so far ====
