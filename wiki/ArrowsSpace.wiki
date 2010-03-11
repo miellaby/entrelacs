@@ -1,21 +1,76 @@
-#summary The "Arrows Space" (AS) is the main component of the EntrelacsSystem. It's an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
+#summary The "Arrows Space" (AS) is the main component of a working Entrelacs system.
+=== introduction===
+As explained herein, the _"Arrows Space"_  (AS) is an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
 
-==Arrow types==
-The AS can handle 3 types of arrows so far.
-   * regular arrows (ie. pairs),
-   * blobs : *large* binary Objects,
-   * tags : *short* C-Like NULL-terminated char strings.
+The AS also stores connectivity data. Those additional data allow to query the system for all existing _children_ of a given arrow. Children arrows are all arrows leaving from or coming into a particular known arrow (aka _incoming_ and _outgoing_ arrows).
 
-Reminder: Despite Blobs and tags are atomistic raw binary objects, they are considered as entrelacs, that is reentrant intricate self-defined arrows structures.
+The AS also manages the _root flag_. This boolean property is attached to each arrow definition and tells whether the arrow belongs to the _root context_ or not.
 
-Note: assimilating data into either tags or blogs depends on data size.
+The AS also features a _garbage collector_ algorithm. It manages arrow _reference counters_ on this purpose.
 
-=== regular arrows ===
-A regular arrow is a pair of arrows. It is consequently stored as a pair of address both pointing to a location in the AS.
+The AS is acceded through a RAM-based cache. This cache uses all available memory levels of the hosting system. This cache is totally transparent, meaning the AS features what one calls _orthogonal persistence_.
 
-==== Hash function difference ====
-  * _Blobs_ hash codes are returned by a cryptographic unambiguous hash function (SHA)
-  * _Tags_ hash codes are returned by a simple checksum-like hash function. They are only 16 bits long and are obviously prone to conflicts. When looking for an existing tag, one must complete the hash comparison with a char-by-char check.
+====assimilation====
+
+The _Arrows Space_ is filled by converting data into arrows. This conversion process is called _assimilation_.
+
+_Assimilation_ happens:
+  * when data -like user inputs- come from the outside.
+  * when computation produces new arrows from the inside.
+
+Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. One first assimilates entrelacs, then children arrows, then grand children, and so on up to the overall assimilated arrow.
+
+====hash everywhere====
+
+To ensure each mathematically definable arrow is stored at most once, the whole computer storage space (hard disks) is converted into a single giant content-indexed self-referred open-addressed hash table.
+
+It's not as complicate as it looks like.
+
+In short, assimilating an arrow consists in:
+  # deducing the arrow location from the arrow definition.
+  # looking for an existing copy at the expected location.
+  # putting the arrow definition here if missing.
+
+The first step of the assimilation process consists in computing a location in the AS.
+
+To do so, one compute an hash code from the considered arrow. The chosen hash function depends on what kind of arrow has to be assimilated.
+  * For entrelacs, the hash function will be either a cryptographic hashing function or a simpler checksum depending on the raw data size.
+  * For a regular arrow (ie. a link from a _tail_ to a _head_), the hash function will simply combine the tail and head's already known ID.
+
+====open addressing====
+The hash code is truncated modulo the space total size to obtain what one calls an "open address" hereafter. 
+
+From this _open_ address, one looks for a copy of the arrow in the storage space. This search process works as is:
+  * if one finds the expected arrow at the considered address, then the job is done.
+  * If one finds some thing which is not the expected arrow, then one looks at a nearby location by adding some offset to the considered address.
+  * If one finds an empty location, then one stores the arrow definition here.
+
+This way to manage a storage space is called OpenAdressing. It's an usual strategy to manage hash conflicts within _coalescent_ hash tables.
+
+====location as ID====
+The eventual location of an assimilated arrow becomes its internal (and public) ID.
+
+This ID may be reused to define subsequent children arrows.
+
+====arrow types====
+In the anticipated prototype, the AS can handle 3 types of arrows so far. 
+  * regular arrows : ie. pairs,
+  * blobs : *large* binary Objects,
+  * tags : *short* C-Like NULL-terminated char strings.
+
+  * Reminder: Despite Blobs and tags are raw binary objects, they are considered as entrelacs (reentrant intricate self-defined arrows structures), that is as arrows as well.
+  * Note: assimilating data into either tags or blogs should depend on data size.
+
+====stored definition====
+
+  * a regular arrow is a pair of arrows. It is consequently stored as a pair of address both pointing to a location in the AS.
+  * a blob is said to be long. That's why one makes preceding its content by its hash signature in order to quickly recognize it when it has been already assimilated.
+  * a tag is short enough to be directly stored by dumping its content into the AS.
+
+==== used hash function ====
+The hash function used to compute an assimilated arrow's open address depend of the arrow type:
+  * For _Blobs_, one uses a cryptographic unambiguous hash function (SHA)
+  * For _Tags_, one uses a much simple checksum-like hash function. The result is prone to conflicts. That's why when assimilating a tag, one must do a full comparison with copies found at its open adress.
 
 == Orthogonal persistence ==
 The AS is "orthogonally persistent". Arrows are transparently stored into mass memory (host disk).
