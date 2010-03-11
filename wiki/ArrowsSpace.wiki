@@ -2,42 +2,39 @@
 === introduction===
 As explained herein, the _"Arrows Space"_  (AS) is an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
 
-The AS also stores connectivity data. Those additional data allow to query the system for all existing _children_ of a given arrow. Children arrows are all arrows leaving from or coming into a particular known arrow (aka _incoming_ and _outgoing_ arrows).
+The AS also stores connectivity data needed to query the system for all known _children_ of a given arrow. See ArrowParadigm.
 
-The AS also manages the _root flag_. This boolean property is attached to each arrow definition and tells whether the arrow belongs to the _root context_ or not.
+The AS also manages the _root flag_ telling whether a given arrow is rooted. See ArrowParadigm.
 
-The AS also features a _garbage collector_ algorithm. It manages arrow _reference counters_ on this purpose.
+The AS design also includes a _garbage collector_ algorithm. _Reference counters_ are updated on this purpose.
 
-The AS is acceded through a RAM-based cache. This cache uses all available memory levels of the hosting system. This cache is totally transparent, meaning the AS features what one calls _orthogonal persistence_.
+The AS is acceded through a RAM-based cache which leverages on all available memory levels of the hosting system. This cache is totally transparent, meaning the AS features what one calls _orthogonal persistence_.
 
-====assimilation====
+==== assimilation ====
 
-The _Arrows Space_ is filled by converting data into arrows. This conversion process is called _assimilation_.
-
-_Assimilation_ happens:
+The _Arrows Space_ is filled by converting data into arrows. This conversion process is called _assimilation_. It takes place:
   * when data -like user inputs- come from the outside.
-  * when computation produces new arrows from the inside.
+  * when internal computation produces new arrows from the inside.
 
 Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. One first assimilates entrelacs, then children arrows, then grand children, and so on up to the overall assimilated arrow.
 
-====hash everywhere====
+To ensure each mathematically definable arrow is stored at most once, the assimilation process considers the whole computer storage space (hard disks) as a single giant content-indexed open-addressed hash table.
 
-To ensure each mathematically definable arrow is stored at most once, the whole computer storage space (hard disks) is converted into a single giant content-indexed self-referred open-addressed hash table.
-
-It's not as complicate as it looks like.
-
-In short, assimilating an arrow consists in:
+It's less complicate as it looks like. In short, assimilating an arrow consists in:
   # deducing the arrow location from the arrow definition.
   # looking for an existing copy at the expected location.
   # putting the arrow definition here if missing.
 
+==== hash everything ====
+
 The first step of the assimilation process consists in computing a location in the AS.
 
-To do so, one compute an hash code from the considered arrow. The chosen hash function depends on what kind of arrow has to be assimilated.
-  * For entrelacs, the hash function will be either a cryptographic hashing function or a simpler checksum depending on the raw data size.
-  * For a regular arrow (ie. a link from a _tail_ to a _head_), the hash function will simply combine the tail and head's already known ID.
+To do so, one compute an hash code from the considered arrow. The chosen hash function depends on what kind of arrow is assimilated.
+  * For an entrelacs, one hashes its raw data.
+  * For a regular arrow (ie. a link from a _tail_ to a _head_), one quickly makes an hash code out of the tail and head's already known ID.
 
-====open addressing====
+==== open addressing ====
+
 The hash code is truncated modulo the space total size to obtain what one calls an "open address" hereafter. 
 
 From this _open_ address, one looks for a copy of the arrow in the storage space. This search process works as is:
@@ -45,76 +42,89 @@ From this _open_ address, one looks for a copy of the arrow in the storage space
   * If one finds some thing which is not the expected arrow, then one looks at a nearby location by adding some offset to the considered address.
   * If one finds an empty location, then one stores the arrow definition here.
 
-This way to manage a storage space is called OpenAdressing. It's an usual strategy to manage hash conflicts within _coalescent_ hash tables.
+This way to manage a storage space is called OpenAdressing. It's an usual strategy to manage hash conflicts within hash tables.
 
-====location as ID====
+==== locations are ID ====
 The eventual location of an assimilated arrow becomes its internal (and public) ID.
 
 This ID may be reused to define subsequent children arrows.
 
-====arrow types====
+==== arrow types ====
+
 In the anticipated prototype, the AS can handle 3 types of arrows so far. 
   * regular arrows : ie. pairs,
   * blobs : *large* binary Objects,
   * tags : *short* C-Like NULL-terminated char strings.
 
-  * Reminder: Despite Blobs and tags are raw binary objects, they are considered as entrelacs (reentrant intricate self-defined arrows structures), that is as arrows as well.
-  * Note: assimilating data into either tags or blogs should depend on data size.
+  * Reminder: Despite Blobs and tags are raw binary objects, they are considered as entrelacs (reentrant intricate self-defined arrows structures), that is arrows as well.
+  * Note: the choice assimilating data into either tags or blogs mainly depends on data size.
 
-====stored definition====
+==== stored definition ====
 
-  * a regular arrow is a pair of arrows. It is consequently stored as a pair of address both pointing to a location in the AS.
-  * a blob is said to be long. That's why one makes preceding its content by its hash signature in order to quickly recognize it when it has been already assimilated.
+  * a regular arrow is a pair of arrows. It is consequently stored as a pair of ID both pointing to a location of an already assimilated arrow in the AS.
+  * a blob is supposed to be long. That's why one stores its whole hash signature with its content in order to quickly recognize an already assimilated copy of it.
   * a tag is short enough to be directly stored by dumping its content into the AS.
 
-==== used hash function ====
-The hash function used to compute an assimilated arrow's open address depend of the arrow type:
-  * For _Blobs_, one uses a cryptographic unambiguous hash function (SHA)
-  * For _Tags_, one uses a much simple checksum-like hash function. The result is prone to conflicts. That's why when assimilating a tag, one must do a full comparison with copies found at its open adress.
+==== hash function ====
 
-== Orthogonal persistence ==
-The AS is "orthogonally persistent". Arrows are transparently stored into mass memory (host disk).
+The hash function used to compute an assimilated arrow's open address depends of the arrow type:
+  * For _Blobs_, one uses a cryptographic unambiguous hash function (like SHA)
+  * For _Tags_, one uses a much simpler checksum-like hash function. As hash collisions are frequent, one must compare an assimilated tag with stored copies char by char to check if it has already been assimilated.
+* For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's already known ID. Such an hash can be deduced from a structure of pairs of entrelacs without even fetching every intermediate arrows of the structure.
 
-== Mass memory architecture ==
+The overall hash function _h_ verifies :
+  * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
+  * _h_(Tag) = checksum(Tag)
+  * _h_(Blob) = sha(Blob) (or any cryptographic hash function).
 
-The mass memory is structured as a single memory bank of _cells_.
+==== double hashing ====
 
-A _cell_ is a storage unit. It can :
-  * be identified by an unique address
-  * can store one cell address.
+Mass memory is operated as a single bank of storage units called _cells_.
 
-Cells store everything in the AS:
-  * arrows definition
-  * arrows connectivity
-  * blobs and tags content
+One cell :
+  * is identified by a cell address,
+  * and can store one cell address + few administrative bits.
 
-Still studied: A cell could store a pair of address rather than a single address. Cells collocation could be managed by adequate flag bits.
+However, many cells are need for a given arrow to store:
+  * its definition:
+     * tail and head of a pair
+     * C string of a tag
+     * SHA signature + raw data of a blob.
+  * its root flag (one bit)
+  * its connectivity data:
+     * a list of back-references to incoming and outgoing children arrows
+     * a total reference counters for each stored arrow.
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are either pairs of pointers to other arrows or binary raw data.||
+One could decide to reserve and fill up a set of consecutive cells on this purpose. But this naive approach would threat the overall OpenAddressing efficiency.
 
-== Arrows location ==
+The right approach consists in dispatching data among cells separated by a variable offset. This offset is computed to be different for each open address in order to minimize collisions. This particular strategy is called DoubleHashing and can be optimized by making use of twin prim numbers when computing the open address on one side and the offset on the other side.
 
-The default location of an arrow _f_ is returned by an hash function _h_.
- * arrow : _h_(f) = function(h(tail(f)), h(head(f))) 
- * tag : _h_(f) = checksum(content(f))
- * blob : _h_(f) = hash(content(f)) (a cryptographic hash function).
+==== coalesced hashing ====
 
-When hash conflict occurs, the location of a stored arrow _f_ may be shifted from _h(f)_ according to an OpenAddressing strategy. The definitive location of _f_ is also its AS internal identifier _i_.
+Collisions may still occures when dispatching data among offset-separated cells. But an arrow definition (tail/head Ids) must not be melted in an ambiguous way with other arrow definitions.
+  * For a regular arrow, one simply forbids such a mix. One shifts the eventual arrow location until one finds several consecutive free cells. Stuff values are put in isolate free cells to ensure further search accuracy.
+  * For entrelacs definitions, one combines data with a "jump factor" within a cell. This factor allows to jump over collisions in the sequence. The jump factor max value is low, but one considers the probability of many repeated *consecutive* collisions in the AS is very low even under high usage density.
 
-The hash based default location allows to quickly search for existing arrows. The recursive definition of _h_ for a regular arrow allow to compute this location without even fetching every ancestor of the arrow.
+This strategy is also known as CoalescedHashing.
 
-== Arrows definition data ==
+Note: On the other side, connectivity data (children back references) might be melted with various other data without any risk as one easily consolidates the obtained list.
 
-The definition of an arrow _f_ internally identified by 'i' is stored as is:
-  * tail(f) at i,
-  * head(f) at i + offset(f),
-  * h(f) (combined with additional data) starting at i + 2 open offset.
+Note: The few last values of the "jump factor" might be reserved to encode the number of valid bytes within the last cell used to store a binary string.
 
-_offset(f)_ is a variable offset. It is computed according to the DoubleHashing strategy.
+Still studied: TBC! Offsets are lightly different depending on what content is dispatched: PAIR, IN, OUT, REMAIN to avoid resonance as much as possible. Some misc candidate offsets:
+ * offset def = h % p2 (p2 = second twin prim number)
+ * offset remaining = swapBytes(h) % p2
+ * offset IN = neg(h) % p2
+ * offset OUT = neg(swapBytes(h)) % p2
 
-== Connectivity data ==
 
-For each newly stored arrow _i_  outgoing from a _tail_ arrow and incoming into a _head_ arrow, the AS puts:
+Still studied: A cell could store a small amount of addresses rather than a single address. Cells collocation could be envisaged via adequate flag bits.
+
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are pairs of pointers or binary raw data.||
+
+==== connectivity ====
+
+For each newly assimilated arrow _i_  outgoing from a _tail_ arrow and incoming into a _head_ arrow, one also puts:
   * _i_ in one cell "after" the _tail_ definition,
    * "after" means the location is computed with the DoubleHashing offset derived from _tail_ hash code.
   * _i_ in one cell "before" the _head_ definition.
@@ -122,10 +132,11 @@ For each newly stored arrow _i_  outgoing from a _tail_ arrow and incoming into 
 
 These back-references form an index to find connected arrows from a given head or a given queue.
 
-===Cell flags===
-As different kinds of data may be put in a single cell, cell contents are categorized by few bits called "cell flags" hereafter.
+==== cell flags ====
 
-Here is a candidate flags list.
+As different kinds of data may be put in a single cell, cell contents are categorized by few administrative bits called "cell flags" hereafter.
+
+Cell categories so far.
   * PAIR = non-rooted regular arrow definition first storage cell
   * ROOT = rooted regular arrow first storage cell
   * BLOB = BLOB first storage cell
@@ -133,15 +144,18 @@ Here is a candidate flags list.
   * REMAIN = remaining part of an arrow definition. Such a cell complete a "pair", "root", "blob", "tag" cell.
   * CHILD = reference to a child incoming/outgoing arrow
 
-23/02/09: A Huffman-style cell flags encoding is studied in order to spare bits, e.g.
+Still studied: As a matter of fact, only regular arrows can be rooted, not entrelacs.
+
+A variable-width encoding helps sparing bits for other purposes:
   * code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
-  * code 01=>PAIR + the 6 remaining bits store a "ref counter".
+  * code 01 => PAIR + the 6 remaining bits store a "ref counter".
+  * etc.
 
 23/02/09: Still studied: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. 
 
-==Arrow footprint==
+=== arrow footprint example ====
 
-Finally, here is the typical (no conflict) footprint of an arrow _f_ internally identified as _i_. _f_ goes out a _tail_ arrow and comes into an _head_ arrow. _f_ is also connected to several incoming or outgoing children arrows.
+Finally, here is the typical (no conflict) footprint of an arrow assimilated as _i_ (its ID). _i_ goes out a _tail_ arrow and comes into an _head_ arrow (two other ID). _i_ is also connected to several incoming or outgoing children arrows.
 {{{
 //  Cell# Flag   Content
 // [...]
@@ -169,35 +183,21 @@ Finally, here is the typical (no conflict) footprint of an arrow _f_ internally 
 // [...]
 }}}
 
-Conflicts data introduce shifts into this typical footprint. Offsets are computed according to the DoubleHashing and OpenAddressing strategies.
-23/02/09: offsets used will be different for each cell content dispatching: PAIR, IN, OUT, REMAIN to avoid resonance phenomena as much as possible. Some misc candidate offsets:
- * offset def = h % p2 (p2 = second twin prim number)
- * offset remaining = swapBytes(h) % p2
- * offset IN = neg(h) % p2
- * offset OUT = neg(swapBytes(h)) % p2
 
+==== garbage collector ====
 
-23/02/09: Arrow definition must be located on 3 successive cells withing an open space because we can melt two definitions in an unambiguous way. When a free cell is not followed by 2 other free cells, one can't use it to store a new definition, it has to be filled up with stuffing value to preserve the search algorithm accuracy. In the other side, IN/OUT ids list might be melted with various other data within an open space.
+The AS features a garbage collector process which spares rooted arrows and all their "ancestors" and gets back resources used by no more rooted nor referred arrows.
 
-23/02/09: The few last values of the "jump factor" might be reserved to encode the number of valid bytes within the last cell used to store a binary string.
-
-==Open Addressing==
-
-See OpenAddressing
-
-== Garbage collector ==
-
-The Garbage Collector must spare rooted arrows and all their "ancestors" and get back resources used by no more rooted nor referred arrows.
-
-On this purpose, a reference counter is attached in cell # i+3o for every arrow _i_. This counter is incremented each time a new arrow is incoming/outgoing  from/to _i_. It is decremented when the arrow is deleted by the garbage collector. When a non-rooted arrow ref counter is equal to 0, one can recycle this arrow storage resources.
+On this purpose, a reference counter is attached to every arrow. This counter is incremented each time a new arrow is incoming/outgoing  from/to the given arrow. It is decremented when the arrow is deleted by the garbage collector. When a non-rooted arrow reference counter gets back to 0, one can recycle its storage resources.
 
 The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatched on many transactions to avoid CPU overhead. Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
 
-Still studied: As the reference counter definition range is short. One postulates that when the counter max value is reached, one can't change it anymore. It means the corresponding arrow will never be deleted. (TBC)
+Still studied: As the reference counter definition range is short. One simply postulates that when the counter max value is reached, one can't change it anymore. It means the corresponding arrow will never be deleted. (TBC)
 
-Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut.
+Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. See OpenAdressing for details.
 
-==candidate hash functions==
+== more ! ==
+==== candidate hash functions so far ====
 For practical reasons, the hash function should be commutative on structure of pairs. To be done.
 
      * key hash = f(tail, head) = ((head << 24) & tail) % P0
@@ -206,12 +206,12 @@ For practical reasons, the hash function should be commutative on structure of p
      * BLOB hash = truncated SHA-2
      * TAG hash = simpler checksum, like in http://www.cse.yorku.ca/~oz/hash.html
 
-==RAM cache==
+==== more about RAM cache ====
 
 When needed, arrows climb up to a level 1 (RAM) memory device. This memory is used as a fine-grained cache of level 0 cells. 
 See ArrowsCache for further details.
 
-==What about atomistic arrows?==
+==== more about atomistic arrows ====
 
 Atomistic arrows (BLOB or TAG) are stored like any regular arrow directly into the arrows bank. Data are stored in the definition cell (hash-indexed) and its neighbours (as defined by the OpenAddressing strategy).
 
@@ -219,6 +219,6 @@ Raw data are actually preceded by the full computed hash code, in order to immed
 
 Atomistic arrows bodies must not be mixed up as we might not find which cell belongs to which arrow after all. Some bits are used to store a offset factor within each binary cell. This factor is used to directly jump up to the next cell containing the remaining part of the binary string. It allows to jump over conflicting data located in nearest cells within the considered open space.
 
-==Misc.==
+== still more ==
 
 cf. InProgress
