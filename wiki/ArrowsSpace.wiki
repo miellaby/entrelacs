@@ -68,11 +68,11 @@ In the anticipated prototype, the AS can handle 3 types of arrows so far.
 ==== hash function ====
 
 The hash function used to compute an assimilated arrow's open address depends of the arrow type:
-  * For _Blobs_, one uses a cryptographic unambiguous hash function (like SHA)
-  * For _Tags_, one uses a much simpler checksum-like hash function. As hash collisions are frequent, one must compare an assimilated tag with stored copies char by char to check if it has already been assimilated.
-* For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's already known ID. Such an hash can be deduced from a structure of pairs of entrelacs without even fetching every intermediate arrows of the structure.
+  * For a _blob_, one uses a cryptographic unambiguous hash function (like SHA).
+  * For a _tag_, one uses a much simpler checksum-like hash function. As hash collisions are frequent, one must compare an assimilated tag with stored copies char by char to check if it has already been assimilated.
+  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's already known ID. Such an hash can be deduced from a structure of pairs of entrelacs without even fetching every intermediate arrows of the structure.
 
-The overall hash function _h_ verifies :
+The overall hash function _h_ consequently verifies :
   * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
   * _h_(Tag) = checksum(Tag)
   * _h_(Blob) = sha(Blob) (or any cryptographic hash function).
