@@ -5,17 +5,17 @@ Please find herein an overview of the EntrelacsSystem, which deals with _arrows_
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png' align='right'>
 ====arrows space====
-The most strategical component of the EntrelacsSystem is the [ArrowsSpace Arrows Space]. It's a place where one stores arrows.
+The most strategical component of the system is the [ArrowsSpace Arrows Space]. It's a place where one stores arrows.
 
 ====primary abstract machine====
-The system dynamics is powered by the EntrelacsAbstractMachine, a software machine somehow similar to functional abstract machines from programming language theory.
+The system dynamics is powered by the EntrelacsAbstractMachine, a software machine somehow similar to functional abstract machines modeled by programming language theory.
 
 ====primary language====
 This top-level evaluation context interprets programs made out of arrows and "written" in the EntrelacsLanguage.
 
 ====First prototype====
 
-The anticipated Entrelacs Prototype will stand as a software server on top of a GNU/Linux platform. A COMET/REST protocol will allow network agents to connect. A C API will allow system extensions programming. See the EntrelacsPrototypeArchitecture for details.
+The anticipated prototype will stand as a software server on top of a GNU/Linux platform. A COMET/REST protocol will allow network agents to interact with it. A C API will allow to program system extensions. See the EntrelacsPrototypeArchitecture for details.
 
 ===Other questions?===
 Bad luck. That's all for the moment. Try "Work InProgress" page too.
