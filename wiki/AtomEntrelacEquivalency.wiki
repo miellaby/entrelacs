@@ -6,7 +6,7 @@ This page explains how atoms (especially binary sequences) can be stored within 
 
 = Details =
 
-According to the EntrelacsParadigm, "everything is an arrow". In other words, any piece of information can be expressed in the form of a connected set of arrows linked to each others. Such constructs don't relay on "nodes". The system only deals with one building block: *arrows*.
+According to the ArrowParadigm, "everything is an arrow". In other words, any piece of information can be expressed in the form of a connected set of arrows linked to each others. Such constructs don't relay on "nodes". The system only deals with one building block: *arrows*.
 
 However, one may define constructs which are so interlaced it's impossible to find smaller closed constructs inside.  Such a non-decomposable arrows structure is called an "entrelacs".
 
