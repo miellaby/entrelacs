@@ -4,17 +4,13 @@
 
 According to the ArrowParadigm, "everything is an arrow". In other words, any piece of information can be expressed in the form of a connected set of arrows linked to each others. Such constructs don't relay on "nodes". The system only deals with one building block: *arrows*.
 
-However, one may define constructs which are so interlaced it's impossible to find smaller closed constructs inside.  Such a non-decomposable arrows structure is called an "entrelacs".
-
-== what an "entrelacs" looks like ? ==
-
-Please look at these few signs on Wikipedia:
+Now, please look at these few signs on Wikipedia:
   * http://en.wikipedia.org/wiki/Ouroboros
   * http://en.wikipedia.org/wiki/Taijitu
   * http://en.wikipedia.org/wiki/Triquetra
   * http://en.wikipedia.org/wiki/Celtic_knot
 
-The EntrelacsSystem's theory helps us to understand why these ancestral signs look so much important. It gives them a new meaning: they are "Entrelacs".
+These are so interlaced it's impossible to find smaller closed constructs inside. The EntrelacsSystem's theory helps us to understand why these ancestral signs look so attractive. One calls such non-decomposable arrows structures "entrelacs".
 
 == entrelacs are terms ==
 
