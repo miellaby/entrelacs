@@ -84,4 +84,4 @@ Modifying an existing arrow definition within the knowledge system consists in r
 
 ==arrows based knowledge representation==
 
-To represent useful information with arrows, one can't adapt many existing computing models and even invent new ones. See ArrowModeling for further readings.
+To represent useful information with arrows, one can adapt many classical data models and even invent new ones. See ArrowModeling for further readings.
