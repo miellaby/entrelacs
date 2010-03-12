@@ -109,7 +109,7 @@ Creating a Domain Specific Language could actually be the best way to add a new 
 
 Such a machine could be defined on a top of a higher level abstract machine, which could be in turn defined on top of a even higher machine, and so on up to some _primary machine_.
 
-===... but one needs a new language===
+===... but they need for a new language===
 
 The root context of an arrows evaluation stack needs for a primary language evaluated by a primary machine. How could it looks like: Lambda calculus, combinatory logic, ...?
 
