@@ -2,15 +2,15 @@ Atoms to Entrelacs equivalency page
 
 = Introduction =
 
-This page explains how atoms (binary sequences) can be handled by the system without breaking the "everything is an arrow" paradigm.
+This page explains how atoms (especially binary sequences) can be stored within the EntrelacsSystem in accordance with the "everything is an arrow" paradigm.
 
 = Details =
 
-According to _Entrelacs_ system, "everything is an arrow". In other means, any piece of information can be expressed in the form of _entrelacs_, that is closed and connected sets of arrows linked to each others. Entrelacs don't relay on "nodes" to be built. There is only one building block: *arrows*.
+According to the EntrelacsParadigm, "everything is an arrow". In other words, any piece of information can be expressed in the form of a connected set of arrows linked to each others. Such constructs don't relay on "nodes". The system only deals with one building block: *arrows*.
 
-However, one may define //entrelacs// which are so interlaced it's impossible to find smaller closed graphs in them.  Such a non-decomposable entrelacs is called a "prim entrelacs".
+However, one may define constructs which are so interlaced it's impossible to find smaller closed constructs inside.  Such a non-decomposable arrows structure is called an "entrelacs".
 
-== What a "prim entrelacs" looks like ? ==
+== What an "entrelacs" looks like ? ==
 
 Please look at these few signs on Wikipedia:
   * http://en.wikipedia.org/wiki/Ouroboros
@@ -18,17 +18,17 @@ Please look at these few signs on Wikipedia:
   * http://en.wikipedia.org/wiki/Triquetra
   * http://en.wikipedia.org/wiki/Celtic_knot
 
-Entrelacs theory helping us to understand why these ancestral signs look so much important. It gives them a new meaning: they are "Prim Entrelacs".
+The EntrelacsSystem's theory helps us to understand why these ancestral signs look so much important. It gives them a new meaning: they are "Entrelacs".
 
-==Prim entrelacs are atoms==
+==Entrelacs are terms==
 
-A "prim entrelacs" doesn't contain any smaller entrelacs. That's why we can say a "prim entrelacs" is equivalent to an atom. it is full-defined and can't be divided.
+An "entrelacs" is fully defined and can't be divided. It doesn't contain any smaller entrelacs. That's why we can say an entrelacs is equivalent to a term. 
 
-And even more important: it's possible to identify each "prim entrelacs". For example, the arrow whose both ends links to itself is usually named "Ouroboros". Next time you'll see it, you'll be able to put a name on it. Considering two drawings of "Ouroboros", we may say that the second drawing is "isomorphic" to the first one.
+And even more important: it's actually possible to identify each kind of entrelacs. For example, the arrow whose both ends links to itself is usually named "Ouroboros" (or Eve in Entrelacs documentation). Next time you'll see it, you'll be able to put a name on it. Considering two drawings of "Ouroboros", we may say that the second drawing depicts the same entrelacs as the first one.
 
-Consequently, even in a pure space of relations, it's possible to build prim entrelacs and use them as the symbols of a dictionnary.
+Consequently, even in a pure space of relations, entrelacs can be used as terms to build a _Domain Specific Language_ dictionary.
 
-==Scalars are prim entrelacs==
-Moreover, by defining a bijection between the corresponding sets, one can even postulate that any binary sequence is equivalent to a particular "prim entrelacs". We may say the binary sequence is a condensed form of its corresponding entrelacs.
+==Terms are entrelacs==
+The set of entrelacs is a _*countable set*_. It implies that by defining an adequate bijection, one can easily prove that any binary sequence is equivalent to a corresponding "entrelacs". In short, one may say each binary sequence is a condensed form of some corresponding entrelacs.
 
-The conclusion is that using natively such binary sequences doesn't deny the fundamentals of Entrelacs.
+The conclusion is that handling such binary sequences doesn't deny the fundamentals of Entrelacs. All in all, everything is an arrow, even raw data. It also implies raw data must be proceed like regular arrows, especially regarding arrows uniqueness within the ArrowsSpace.
