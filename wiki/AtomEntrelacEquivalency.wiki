@@ -1,16 +1,12 @@
-Atoms to Entrelacs equivalency page
+#summary how atoms (especially binary sequences) can be stored within the EntrelacsSystem in accordance with the "everything is an arrow" paradigm
 
-= Introduction =
-
-This page explains how atoms (especially binary sequences) can be stored within the EntrelacsSystem in accordance with the "everything is an arrow" paradigm.
-
-= Details =
+== entrelacs ==
 
 According to the ArrowParadigm, "everything is an arrow". In other words, any piece of information can be expressed in the form of a connected set of arrows linked to each others. Such constructs don't relay on "nodes". The system only deals with one building block: *arrows*.
 
 However, one may define constructs which are so interlaced it's impossible to find smaller closed constructs inside.  Such a non-decomposable arrows structure is called an "entrelacs".
 
-== What an "entrelacs" looks like ? ==
+== what an "entrelacs" looks like ? ==
 
 Please look at these few signs on Wikipedia:
   * http://en.wikipedia.org/wiki/Ouroboros
@@ -20,7 +16,7 @@ Please look at these few signs on Wikipedia:
 
 The EntrelacsSystem's theory helps us to understand why these ancestral signs look so much important. It gives them a new meaning: they are "Entrelacs".
 
-==Entrelacs are terms==
+== entrelacs are terms ==
 
 An "entrelacs" is fully defined and can't be divided. It doesn't contain any smaller entrelacs. That's why we can say an entrelacs is equivalent to a term. 
 
@@ -28,7 +24,12 @@ And even more important: it's actually possible to identify each kind of entrela
 
 Consequently, even in a pure space of relations, entrelacs can be used as terms to build a _Domain Specific Language_ dictionary.
 
-==Terms are entrelacs==
+== atoms are entrelacs ==
+
 The set of entrelacs is a _*countable set*_. It implies that by defining an adequate bijection, one can easily prove that any binary sequence is equivalent to a corresponding "entrelacs". In short, one may say each binary sequence is a condensed form of some corresponding entrelacs.
 
-The conclusion is that handling such binary sequences doesn't deny the fundamentals of Entrelacs. All in all, everything is an arrow, even raw data. It also implies raw data must be proceed like regular arrows, especially regarding arrows uniqueness within the ArrowsSpace.
+== equivalency ==
+
+The conclusion is that handling such binary sequences doesn't deny the fundamentals of Entrelacs. All in all, everything is an arrow, even raw data.
+
+But it also implies raw data must be proceed like regular arrows, especially regarding arrows uniqueness within the ArrowsSpace.
