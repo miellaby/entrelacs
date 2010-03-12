@@ -45,7 +45,7 @@ When an arrow is not part of an entrelacs, it's a link between two things, eithe
 
 Entrelacs (signs) and regular arrows (to link signs together) are more than enough to represent any form of knowledge.
 
-But arrows has no default meaning. Meaning depends on the observer's point of view.
+But arrows have no default meaning. Meaning depends on the observer's point of view.
 
 Now, let's suppose one defines a new programming language where Eve gets a particular meaning.
 
@@ -79,67 +79,45 @@ Arrows structures are consequently _persistent_. It means the user interactions 
 
 The idea could be compared with the "copy on write" feature of disk file system, except that one doesn't write over anything nor make a copy of anything.
 
+===the Arrows Space: an unique, giant, reentrant hash table===
 
-===use the whole computer storage space as a unique, giant, reentrant hash table===
+Ensuring each arrow is stored only once might be costly when converting new data into arrows. The solution consists in considering the whole computer storage space (hard disks) as a giant content-indexed open-addressed hash table mainly containing back-references within this same table.
 
-Do you doubt about the overall EntrelacsSystem efficiency? You're right worring. Ensuring each arrow is stored only once is costly. It's part of a process called "arrow assimilation" which happens when:
-  * data -like user inputs- come from the outside.
-  * computation produces new arrows inside.
+The so-called _arrows space_ features _orthogonal persistence_. This buzzword means that the system blurs the old computing boundaries like RAM, disks and files... The Arrows space as a whole forms a convenient and consistent work space where every agent is alive and every piece of information is saved on the fly.
 
-To do so, the system uses the whole computer storage space (hard disks) as a giant content-indexed self-referred open-adressed hash table.
+===rooting or recycling knowledge===
 
-Each new arrow is assimilated by starting from its farthest ancestors, ie. entrelacs. One first assimilates entrelacs, then pairs, then pairs of pairs, and so on up to the overall arrow. 
+The whole system knowledge at a given time might be contained in a single unique arrow definition. However this theoretical approach appears not to be so handy.
 
-Assimilating an entrelacs simply consists in deducing its location within the table. To do so, one makes an hash code of its whole content definition (a cryptographic hashing function or a basic checksum may be used depending on the data size).
+The preferred solution consists in adding a "root flag" to each stored arrow. This boolean value determines whether the arrow belongs to the system's _root context_.
 
-If the obtained location already contains the entrelacs, then one's found it. If the location is already used by an other arrow (hash codes can lead to conflicts), one simply shifts the location nearby (that's called OpenAddressing).
- 
-Assimilating regular arrows is as simple:
-  * one computes an hash code from the tail and head both locations.
-  * one looks at the obtained location.
-    * If the arrow definition is found there, there's nothing more to do,
-    * If something else is found, one shifts the location nearby
-    * otherwise, one stores the arrow definition right there.
+An incremental garbage collector algorithm works inside the Arrows Space. It spares rooted arrows and all their ancestors, but eventually recycles any storage resources. This algorithm deals with reference counters but contrary to traditional system, such a simple algorithm perfectly does the job here.
 
-The so-called _arrows space_ also features orthogonal persistency. This buzzword means that the system behavior blurs the old computing space boundaries; you know: RAM, disk, files... The Arrows space as a whole forms a convenient and consistent work space where every agent is alive and every piece of information is saved on the fly.
+===arrows are not a language...===
 
-===rooting and recycling knowledge===
+I guess at this step of this reading, you might wonder what kind of programming languages the EntrelacsSystem refers to.
 
-The whole system knowledge at a given time might be contained in a single unique arrow definition. However this theoretical approach may not be so handy.
+The fact is that arrows underlying theory doesn't compete with Lambda Calculus and any other computation models (combinatory logic, pattern matching languages, ...).
 
-The preferred solution consists in adding a "root flag" to each stored arrow. This boolean value determines whether the arrow belongs to the _system root context_ or not. This flag may change during the system life time. It is actually the only modifiable property of already stored arrows.
+Quite the contrary, arrows storage is the ideal complement to purely functional languages. The arrows theory is a fundamental theory of knowledge representation while Lambda Calculus and its relatives are fundamental theories of computation.
 
-This root flag is essential to the incremental garbage collector algorithm of the EntrelacsSystem. Considering a stored arrow:
-  * When its flag is set, this arrow and all its ancestors are spared by the garbage collector.
-  * When unset, corresponding resources can be recycled if no external arrow refers it any more (reference counters are used on this purpose).
+Because of the mental lock I told you about, language theoreticians have ignored the knowledge representation problem, being condescending with engineering trends like object-oriented modeling or tagsonomies. Those trends are actually naive attempts to enhance the way one stores information in a computer.
 
-===arrows as a language===
+That being said and as a matter of fact, one may adapt any language of any kind: imperative or declarative, functional or object oriented, etc. Arrows are ideal constructs to embed evaluation contexts in each others. So many abstract (understand software) machines, corresponding to many languages and technologies, could be hosted simultaneously within a single EntrelacsSystem.
 
-I guess at this step of this reading, you might still wonder what kind of programming languages the EntrelacsSystem corresponds to.
+Creating a Domain Specific Language could actually be the best way to add a new behavior into the system. In other words, each application -even your favorite office application- might be designed as an abstract machine processing user inputs and computing some outputs according to a dedicated graphic/command language.
 
-As a matter of fact, one can adapt any language of any kind: imperative or declarative, functional or object oriented, etc.
+Such a machine could be defined on a top of a higher level abstract machine, which could be in turn defined on top of a even higher machine, and so on up to some _primary machine_.
 
-Please note as well that many abstract (understand software) machines, corresponding to many languages and technologies, could be hosted simultaneously within a single system. Arrows allow to embed evaluation contexts in each others in a very natural way.
+===... but one needs a new language===
 
-As a matter of fact, creating Domain Specific Languages could be the best way to add new behaviors to the system. In other words, each application -even your favorite office application- might be designed as an abstract machine processing user inputs and computing some outputs according to a particular language.
+The root context of an arrows evaluation stack needs for a primary language evaluated by a primary machine. How could it looks like: Lambda calculus, combinatory logic, ...?
 
-Such a machine could be defined on a top of another higher level abstract machine, which could be in turn defined on top of a even higher machine, and so on up to a primary machine.
-
-===arrows system vs. Lambda calculus and relatives===
-
-The root context of an arrows evaluation stack needs for a primary language evaluated by a primary machine. How could it looks like: Lambda calculus, combinatory logic?
-
-The point is that arrows underlying theory doesn't compete with Lambda Calculus and other modeled computation machines. Quite the contrary, arrows storage is the ideal complement to purely functional languages.
-
-On my own, I consider the arrows theory as a fundamental theory of knowledge representation  while lambda calculus (and combinatory logic, and pattern matching...) are fundamental theories of computation.
-
-Because of the mental lock I told you about, language theoreticians have ignored the knowledge representation problem. That explains why they are condescending with real world trends like object-oriented modeling or tagsonomies. Those trends are actually naive attempts to enhance the way one stores information in a computer.
-
-That being said, I think the EntrelacsSystem is an ideal basis to invent a new language combining both a purely functional and a purely relationist theory. Such a language could leverage on arrows to get innovative properties. To name a few:
+The EntrelacsSystem forms a new basis to invent a language combining both a purely functional computation model and a purely relationist storage model. Such a language could leverage on arrows to get innovative properties. To name a few:
  * machine-level reflexivity: the whole machine state could be acceded by programs as a first order object. It would include closures, continuations chains, partial evaluations, environments, etc.
  * transparent "memoization": A cache of any intermediate computed results would automatically prevent repeating twice the same computation.
- * merged source code, CST and AST constructs: A single arrows based construct replaces them all.
- * persistent reflexivity: programs can make persistent changes into themselves.
+ * merged source code, CST and AST constructs: Arrows based construct can replace them all.
+ * persistent reflexivity: programs can easily make persistent changes into themselves (as source = CST = AST = arrows). It makes reflexivity much more powerful than in most today's systems.
 
 ===conclusion===
 
