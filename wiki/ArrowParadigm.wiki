@@ -13,6 +13,7 @@ An _arrow_ is:
   *  _oriented_: the pair (A,B) is distinct from (B,A).
   * _unique_: There is only one arrow  (A,B) from A to B, whatever A and B two formerly defined arrows. The EntrelacsSystem ensures this uniqueness in its arrows storage space as well. Each mathematically definable arrow is present at most once in the whole system address space.
   * _immutable_: The system doesn't modify an arrow definition once it's stored within the system storage space. System interactions produce new arrows instead.
+  * _connected_: Each arrow may be involved in many connections with children arrows. Those connections are easily accessible. It form information to produce new knowledge and system usefulness.
 
 ==The _entrelacs_==
 
