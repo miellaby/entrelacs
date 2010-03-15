@@ -11,11 +11,11 @@ As explained herein,
 
 When storing an arrow into the ArrowsSpace, one first computes an hash code noted _h_.
 
-_h_ returns the storage cell which is supposed to receive the arrow definition. However, this cell might be already used by an other arrow. In such a case, one makes use of the "open addressing" way to resolve collisions.
+_h_ returns the storage cell which is supposed to receive the arrow definition. However, this cell might be already used by an other arrow.
 
-It consists in putting conflicting arrows among neighbor cells. Such a set of loaded memory cells is called an "open block" herein.
+In such a case, one makes use of the "open addressing" way to deal with collisions. It consists in putting conflicting arrows among neighbor cells.
 
-Neighbor cells are not necessary nearby. They may be a big offset between two successive locations within an "open block".
+This set of neighbor cells is called an "open block" herein. They are not necessary nearby. There may be a big offset between two successive locations within an "open block".
 
 As a matter of fact, this offset is not necessarily constant. It may be computed by an hash function as well so to be different in most cases. This improvement prevents resonance phenomena which could lead to repeated collisions. It is called DoubleHashing.
 
@@ -38,6 +38,4 @@ That's why the ArrowsSpace operates the CoalescedHashing method within the Doubl
 The idea consists in linking cells used by the same data chain within an open block. Those links allow real cells freeing in the open block without losing the continuity of still used cells.
 
 Rather that storing a fully qualified address within the storage space, one only reserves few bits on this purpose. These bits form an offset factor to be multiplied to the actual offset factor when fetching the open block content.
-
-
 
