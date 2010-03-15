@@ -73,6 +73,8 @@ At each system iteration, system inputs are converted into arrows before being p
 
 "Assimilation" takes place at system boundaries. "Assimilation" converts textual representation of information (events, data, programs, commands, ...)  as arrows.
 
+"Assimilation" also occurs when some internal operator produces new information within the system.
+
 The "assimilation"  process ensure stored arrows uniqueness. Any definable arrow -whatever it is a regular pair or a binary datum- has to be represented only once in the whole system storage space.
 
 ==immutability==
