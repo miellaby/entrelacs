@@ -1,9 +1,10 @@
 #summary Coalesced hashing
 
-This enhancement to OpenAddressing consists in linking data cells within the ArrowsSpace.
+This enhancement to OpenAddressing consists in linking data cells within the ArrowsSpace when storing a big chain of data among many cells.
 
-The link is not a full address to any cell within the space.
+* Such a link needn't to be a fully defined address as we only need to identify one of a few of the next cells within the probing sequence.
+* It's only a small offset factor which allows to jump over freed or unrelated cells within an open block in order to directly get successive pieces of a coherent chain of data.
 
-It's only an offset factor which allows to jump over freed or unrelated cells within an open  block filled up with successive pieces of a coherent chain of data.
+This offset factor only needs for a few bits within a storage cell as repeated collisions for successive cells within an open block should be very rare thanks to the DoubleHashing enhancement to OpenAddressing.
 
-This offset factor only needs for a few bits within a storage cell.
+If this factor limit is reached. One must degrade the search method to a traditional DoubleHashing method until a free or stuffed cell is found.
