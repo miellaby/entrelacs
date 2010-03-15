@@ -4,7 +4,7 @@
 
 The ArrowParadigm is a very new manner of storing information within a computing system.
 
-This approach encompasses commonly used solutions like semantic planar graphs, relational data bases or object oriented models. It brings properties to Entrelacs which distinguish it from those more classical systems.
+This approach encompasses commonly used solutions like semantic planar graphs, relational data bases or object oriented models. It brings to Entrelacs properties which distinguish it from those more classical systems.
 
 = Entrelacs unique properties =
 
