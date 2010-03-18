@@ -1,13 +1,10 @@
-/* This scrap file is used to think about some design issues of a simple Entrelacs prototype
-* It contains Snips of C source code for Entrelacs
+/* This scrap file is used to think about design issues
 */
 
 /* API */
 
-define uint32 Arrow; // Arrow = <---TransactionId---><---MemoryRef--->
 
 /* Defining */
-const Arrow Eve;
 Arrow string(char *);
 Arrow blob(char *, uint32 size);
 Arrow arrow(Arrow, Arrow);
