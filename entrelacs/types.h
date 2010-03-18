@@ -1,7 +1,7 @@
+// TO BE DELETED
+
 typedef static char TransactionId; // Transaction number
 
-typedef void* Ref0; // Memory Level 0 address
-// Level 0 cell
 typedef struct Cell0Structure { Ref0 content } Cell0;
 
 // each reference is typed by 4 adjacent reserved bits (nammed "flags").
