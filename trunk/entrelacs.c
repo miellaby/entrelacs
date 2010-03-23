@@ -7,6 +7,7 @@
 typedef unsigned char uchar;
 
 static const Arrow Eve = 0;
+#define BLOG_TAG "#BLOB"
 
 #define ROOTED 0xF
 #define ARROW 0xE
@@ -258,7 +259,19 @@ Arrow _tag(uchar* str, int locateOnly) {
 
 
 Arrow _blob(uint32 size, uchar* data, int locateOnly) {
-  return pair(tag("#BLOB"), tag(sha(size, data)));
+  char *h = sha(size, data);
+
+  // Prototype only: BLOB data are stored out of the arrows space
+  // But I'm not sure it's the right time to do so
+  char *dir = h + strlen(h) - 2;
+  chdir(PERSISTENCE_DIR);
+  mkdir(dir) ;
+  FILE* fd = fopen(h, "w");
+  fwrite(fd, date, size);
+  chdir("..");
+  Arrow t = _tag(h, locate_only);
+  if (t == Eve) return Eve;
+  return arrow(tag(BLOB_TAG), t, locate_only);
 }
 
 Arrow arrow(tail, head) { return _arrow(tail, head, 0); }
