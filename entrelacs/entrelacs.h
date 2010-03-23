@@ -6,14 +6,20 @@ typedef uint32 Arrow; // Arrow = <---TransactionId---><---MemoryRef--->
 
 /* Assimilation */
 Arrow Eve();
-Arrow string(char *);
-Arrow blob(uint32 size, char *);
 Arrow arrow(Arrow, Arrow);
+Arrow tag(char *);
+Arrow blob(uint32 size, char *);
+
+/* Locating */
+Arrow locateArrow(Arrow, Arrow);
+Arrow locateTag(char *);
+Arrow locateBlob(uint32 size, char *);
 
 /* Unbuilding */
+enum e_type { UNDEF=-1, TYPE_EVE=0, TYPE_ARROW=1, TYPE_TAG=2, TYPE_BLOB=3 } typeOf(Arrow);
 Arrow headOf(Arrow);
 Arrow tailOf(Arrow);
-char* stringOf(Arrow);
+char* tagOf(Arrow);
 char* blobOf(Arrow, long*);
 
 /* Rooting */
