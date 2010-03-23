@@ -5,26 +5,48 @@
 #define MEM0_C
 #include "mem0.h"
 
-static FILE* F;
+static FILE* F = NULL;
 
-void mem0_init() {
-  char* env;
-  if (env = getenv("ENTRELACS_FILE")
-    F=fopen(env);
+char* dirname(char* file) {
+  char* d = strdup(file);
+  char* p = strrchr(d, '/');
+  if (p == d)
+    d[1] == '\0';
+  else if (p)
+    *p = '\0';
   else
-    F=fopen(PERSISTENCE_DIR "/" PERSITENCE_FILE, "wa");
-  assert(F);
+    strcpy(d, ".");
+  return d;
 }
 
-Address mem0_get(Address r) {
-   Address result;
-   fseek(F, r * sizeof(Address), SEEK_SET);
-   fread(&result, sizeof(Address), 1, F);
+int mem0_init() {
+  char* env;
+  if (F) return;
+
+  env = getenv(PERSISTENCE_ENV);
+  if (env) {
+    char* d = dirname(env);
+    chdir(d);
+    F = fopen(env);
+    free(d);
+  } else {
+    chdir(PERSISTENCE_DIR);
+    F = fopen(PERSITENCE_FILE, "wa");
+  }
+  assert(F);
+  fseek(F, 0, SEEK_END);
+  return (ftell(F) > 0);
+}
+
+Cell mem0_get(Address r) {
+   Cell result;
+   fseek(F, r * sizeof(Cell), SEEK_SET);
+   fread(&result, sizeof(Cell), 1, F);
    return result;
 }
 
-void mem0_set(Address r, Address v) {
-   fseek(F, r * sizeof(Address), SEEK_SET);
-   fwrite(&v, sizeof(Address), 1, F);
+void mem0_set(Address r, Cell v) {
+   fseek(F, r * sizeof(Cell), SEEK_SET);
+   fwrite(&v, 1, sizeof(Cell), F);
+   fflush(F);
 }
-

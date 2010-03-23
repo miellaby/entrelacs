@@ -6,9 +6,10 @@
 #define MEM0_H
 typedef unsigned uint32;
 typedef uint32 Address;
+typedef uint32 Cell;
 
 // initialization
-void mem0_init();
+init mem0_init(); // return !0 if very first init
 
 // Twin Prims prevent clustering when open-addressing
 // The nearest twin prims lower than 8388608 (2^23) is 2^23-157 and 2^23-159
@@ -21,10 +22,10 @@ void mem0_init();
 // Persistence file
 #define PERSISTENCE_DIR "~/.entrelacs"
 #define PERSISTENCE_FILE "entrelacs.dat"
-#define PERSISTENCE_ENV "ENTRELACS_FILE"
+#define PERSISTENCE_ENV "ENTRELACS"
 
-// access
-Address mem0_get(Address);
-void    mem0_set(Address, Address);
+// accessor
+Cell mem0_get(Address);
+void mem0_set(Address, Cell);
 
 #endif
