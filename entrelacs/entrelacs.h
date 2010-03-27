@@ -7,20 +7,20 @@ typedef uint32 Arrow; // Arrow = <---TransactionId---><---MemoryRef--->
 /* Assimilation */
 Arrow Eve();
 Arrow arrow(Arrow, Arrow);
-Arrow tag(char *);
-Arrow blob(uint32 size, char *);
+Arrow tag(char*);
+Arrow blob(uint32, char*);
 
 /* Locating */
 Arrow locateArrow(Arrow, Arrow);
-Arrow locateTag(char *);
-Arrow locateBlob(uint32 size, char *);
+Arrow locateTag(char*);
+Arrow locateBlob(uint32, char*);
 
 /* Unbuilding */
-enum e_type { UNDEF=-1, TYPE_EVE=0, TYPE_ARROW=1, TYPE_TAG=2, TYPE_BLOB=3 } typeOf(Arrow);
+enum e_type { TYPE_UNDEF=-1, TYPE_EVE=0, TYPE_ARROW=1, TYPE_TAG=2, TYPE_BLOB=3 } typeOf(Arrow);
 Arrow headOf(Arrow);
 Arrow tailOf(Arrow);
-char* tagOf(Arrow);
-char* blobOf(Arrow, long*);
+char* tagOf(Arrow); // to freed
+char* blobOf(Arrow, uint32*); // to freed
 
 /* Rooting */
 Arrow root(Arrow);
@@ -30,9 +30,9 @@ void unroot(Arrow);
 void commit(); // Arrow may be unvalidated
 
 /* Testing */
-int isEve(Arrow); // returns 0 if equals Eve
-int isRooted(Arrow); // returns 0 if rooted.
-int equal(Arrow, Arrow); // returns 0 if arrows are equal
+int isEve(Arrow); // returns !0 if equals Eve
+int isRooted(Arrow); // returns !0 if rooted.
+int equal(Arrow, Arrow); // returns !0 if arrows are equal
 
 /* Browsing */
 typedef struct s_Enum* Enum;
