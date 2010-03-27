@@ -28,4 +28,7 @@ init mem0_init(); // return !0 if very first init
 Cell mem0_get(Address);
 void mem0_set(Address, Cell);
 
+// prototype only methods
+void mem0_saveData(char *h, size_t size, uchar* data);
+void mem0_deleteData(char* h);
 #endif

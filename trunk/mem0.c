@@ -47,6 +47,51 @@ Cell mem0_get(Address r) {
 
 void mem0_set(Address r, Cell v) {
    fseek(F, r * sizeof(Cell), SEEK_SET);
-   fwrite(&v, 1, sizeof(Cell), F);
+   fwrite(&v, sizeof(Cell), 1, F);
    fflush(F);
+}
+
+void mem0_saveData(char *h, size_t size, char* data) {
+
+  // Prototype only: BLOB data are stored out of the arrows space
+  if (!size) return;
+
+  char *dir = h + strlen(h) - 2;
+  chdir(PERSISTENCE_DIR);
+  mkdir(dir) ;
+  chdir(dir);
+  FILE* fd = fopen(h, "w");
+  chdir("..");
+  fwrite(data, size, 1, fd);  
+  fclose(fd);
+}
+
+char* mem0_loadData(size_t* sizeP) {
+  *sizeP = 0;
+
+  size_t size;
+  char *dir = h + strlen(h) - 2;
+  chdir(PERSISTENCE_DIR);
+  int rc = chdir(dir);
+  if (rc) return NULL;
+
+  FILE* fd = fopen(h, "r");
+  chdir("..");
+  if (!fd) return NULL;
+
+  fseek(fd, 0, SEEK_END);
+  size = ftell(fd);
+  rewind(fd);
+  assert(size);
+
+  char *buffer = (char *)malloc(sizeof(char) * size);
+  assert(buffer);
+
+  int rc = fread(buffer, size, 1, fd);
+  fclose(fd);
+
+  assert(rc);
+
+  *sizeP = size;
+  return buffer;
 }
