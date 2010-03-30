@@ -281,10 +281,10 @@ Arrow locateTag(char* s) { return _tag(s, 1};}
 Arrow locateBlob(uint32 size, char* data) { return _blob(size, data, 1);}
 
 Arrow headOf(Arrow a) {
-  Arrow tail = tailOf(a);
+  Arrow next, tail = tailOf(a);
   uint32 h3 = hashChain(a, tail) % PRIM2;
-  shift(a, a, h3, next);
-  return cell_getData(space_get(a));
+  shift(a, next, h3, a);
+  return cell_getData(space_get(next));
 }
 
 Arrow tailOf(Arrow a) {
@@ -322,7 +322,7 @@ char* tagOf(Arrow a) {
 char* blobOf(Arrow a, uint32* lengthP) {
   char* h = tagOf(headOf(a));
   char* data = mem0_loadData(h, lengthP);
-  free(f);
+  free(h);
   return data;
 }
 
@@ -330,7 +330,7 @@ char* blobOf(Arrow a, uint32* lengthP) {
 int isEve(Arrow a) { return (a == Eve); }
 
 
-enum e_type typeOf(arrow a) {
+enum e_type typeOf(Arrow a) {
   if (a == Eve) return TYPE_EVE;
   
   Cell cell = space_get(a);
@@ -340,9 +340,53 @@ enum e_type typeOf(arrow a) {
     else
       return TYPE_ARROW;
   }
-  if (cell_isTag(cell)) return TYPE_UNDEF;
-  return TYPE_;
+  else if (cell_isTag(cell))
+    return TYPE_TAG;
+  else
+    return TYPE_UNDEF;
 }
+
+void connect(Arrow a, Arrow child) {
+  if (typeOf(a) == TYPE_TAG) {
+    // I don't know yet If I will eventually store connectivity data of tags.
+    // For the moment, if you want connectivity data, make an arrow out of
+    // a pair of tags first.
+    
+  } else { // ARROW, ROOTED, BLOB...
+    // Children arrows are chained after the arrow's tail and head.
+    Arrow current, tail = tailOf(a);
+    uint32 h3 = hashChain(a, tail) % PRIM2;
+    shift(a, current, h3, a);
+    Cell   cell = space_get(current);
+    while (cell_getData(cell) != 0 && cell_getJump(cell) != 0) {
+        jump(cell, current, current, h3, a);
+        cell = space_get(current);
+    }
+
+    if (cell_getData(cell) != 0) {
+      Arrow next;
+      Cell cell2;
+      unsigned jump = 1;
+      shift(current, next, h3, a);
+      cell2 = space_get(next);
+      while (!cell_isFree(cell2)) {
+        jump++;
+        shift(next, next, h3, a);
+        cell2 = space_get(next);
+      }
+      cell2 = cell_build(cell_getCrossover(cell2), 0, child);
+      space_set(next, cell2);
+      cell = cell_build(cell_getCrossover(cell), jump && 15, cell_getData(cell));
+      space_set(current, cell);
+    } else {
+      cell = cell_build(cell_getCrossover(cell), cell_getJump(cell), child);
+      space_set(current, cell);
+    }
+
+  }
+    
+}
+
 
 Arrow root(Arrow a) {  
   Cell cell = space_get(a);
