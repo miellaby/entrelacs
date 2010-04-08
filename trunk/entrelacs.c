@@ -13,9 +13,11 @@ static Arrow _blobTag = Eve;
 #define ARROW 0xE
 #define TAG 0xD
 // #define BLOB 0xC
-#define STUFFING 0xB
+#define STUFFING 0xC
 #define MAX_JUMP 0xA
 #define MAX_CROSSOVER 0xF
+
+#define MEM1_LOOSE 0x1
 
 #define SUCCESS 0
 
@@ -26,9 +28,9 @@ static Arrow _blobTag = Eve;
 #define cell_getData(C) ((C) & 0x00FFFFFF)
 
 #define cell_isZero(C) ((C) == 0)
-#define cell_isStuffed(C) (((C) & 0x0F000000) == 0x0B000000)
+#define cell_isStuffed(C) (((C) & 0x0F000000) == 0x0C000000)
 #define cell_isFree(C) (cell_isZero(C) || cell_isStuffed(C))
-#define cell_isArrow(C) ((C) & 0x0F000000) > 0x0E000000)
+#define cell_isArrow(C) ((C) & 0x0F000000) >= 0x0E000000)
 #define cell_isTag(C) ((C) & 0x0F000000) == 0x0D000000)
 // #define cell_isBlob(C) ((C) & 0x0F000000) == 0x0C000000)
 #define cell_isFollower(C) ((C) & 0x0F000000) < 0x0C000000)
@@ -125,7 +127,7 @@ Arrow _arrow(Arrow tail, Arrow head, int locateOnly) {
 
   while (!cell_isFree(cell2)) {
     // one stuffs unusable empty cell
-    space_set(a, cell_stuff(cell1));
+    space_set(a, cell_stuff(cell1), 0);
     shift(a, a, h2, h1);
     cell1 = space_get(a);
     while (!cell_isFree(cell1)) {
@@ -139,8 +141,8 @@ Arrow _arrow(Arrow tail, Arrow head, int locateOnly) {
   // (cell_isFree(cell1) && cell_isFree(cell2))
   cell1 = cell_build(cell_getCrossover(cell1), ARROW, tail);
   cell2 = cell_build(cell_getCrossover(cell2), 0, head);
-  space_set(a, cell1);
-  space_set(next, cell2);
+  space_set(a, cell1, MEM1_LOOSE);
+  space_set(next, cell2, 0);
 
   return a; // we did it;
 }
@@ -174,7 +176,7 @@ Arrow _tag(char* str, int locateOnly) {
       p = str;
       shift(a, next, h3, a);
       cell = space_get(next);
-      i = 1;
+      i = 2; // The first byte is reserved for ref counter.
       while ((c = *p++) == ((char*)&cell)[i] && c != 0) {
         i++;
         if (i == 4) {
@@ -210,7 +212,7 @@ Arrow _tag(char* str, int locateOnly) {
 
   while (!cell_isFree(cell2)) {
     // one stuffs unusable empty cell
-    space_set(a, cell_stuff(cell1));
+    space_set(a, cell_stuff(cell1), 0);
     shift(a, a, h2, h1);
     cell1 = space_get(a);
     while (!cell_isFree(cell1)) {
@@ -224,15 +226,16 @@ Arrow _tag(char* str, int locateOnly) {
   
   // First H2, then all chars
   cell1 = cell_build(cell_getCrossover(cell1), STRING, h2);
-  space_set(a, cell1);
+  space_set(a, cell1, 0);
   current = next;
   cell1 = cell2;
   // h3 already set
   p = str;
-  i = 0;
+  i = 1;
   content = 0;
+  c = 0;  /* first byte = ref counter = 0 */
   for (;;) {
-    c = *p++;
+    ((char*)&content)[i] = c; 
     i++;
     if (i == 4) {
       unsigned jump = 1;
@@ -244,18 +247,19 @@ Arrow _tag(char* str, int locateOnly) {
         cell2 = space_get(next);
       }
       cell1 = cell_build(cell_getCrossover(cell1), jump && 15, content);
-      space_set(current, cell1);
+      space_set(current, cell1, 0);
       current = next;
       cell1 = cell2;
       i = 1;
       content = 0;
     }
-    ((char*)&content)[i] = c; 
 
+    c = *p++;
     if (!c) break;
   }
+  // useless : ((char*)&content)[i] = c; // 0 
   cell1 = cell_build(cell_getCrossover(cell1), 0, content);
-  space_set(current, cell1);
+  space_set(current, cell1, 0);
   return a;
 }
 
@@ -347,23 +351,39 @@ enum e_type typeOf(Arrow a) {
 }
 
 void connect(Arrow a, Arrow child) {
-  if (typeOf(a) == TYPE_TAG) {
-    // I don't know yet If I will eventually store connectivity data of tags.
-    // For the moment, if you want connectivity data, make an arrow out of
-    // a pair of tags first.
-    
-  } else { // ARROW, ROOTED, BLOB...
-    // Children arrows are chained after the arrow's tail and head.
-    Arrow current, tail = tailOf(a);
-    uint32 h3 = hashChain(a, tail) % PRIM2;
+  if (a == Eve) return; // One doesn't store Eve connectivity.
+  Cell cell = space_get(a);
+  if (cell_isTag(cell)) {
+    // For the moment, I don't store connectivity data of tags. Only a ref counter.
+    // If you want connectivity data, build pair of tags.
+    Arrow  current;
+    uint32 h1 = cell_getData(cell);
+    h3 = hashChain(a, h1) % PRIM2; 
     shift(a, current, h3, a);
-    Cell   cell = space_get(current);
+    cell = space_get(current);
+    unsigned char c = ((char*)&cell)[1];
+    if (!(++c)) c = 255;// Max value reached.
+    ((char*)&cell)[1] = c;
+    space_set(current, cell, 0);
+    
+  } else if (space_getAdmin(a) == MEM1_LOOSE) { // Not connected ARROW, ROOTED, BLOB...
+    // First one changes the type to "connected"
+    space_set(a, cell, 0);
+
+    // Children arrows are chained after the arrow's tail and head.
+    uint32 h3 = hashChain(a, tail) % PRIM2;
+    Arrow current;
+    shift(a, current, h3, a);
+    Cell cell = space_get(current);
     while (cell_getData(cell) != 0 && cell_getJump(cell) != 0) {
         jump(cell, current, current, h3, a);
         cell = space_get(current);
     }
 
     if (cell_getData(cell) != 0) {
+      // if we went up to the h3/jump list end
+
+      // free cell search by computing jump
       Arrow next;
       Cell cell2;
       unsigned jump = 1;
@@ -374,13 +394,14 @@ void connect(Arrow a, Arrow child) {
         shift(next, next, h3, a);
         cell2 = space_get(next);
       }
+      // TBD: what if jump > 15
       cell2 = cell_build(cell_getCrossover(cell2), 0, child);
-      space_set(next, cell2);
+      space_set(next, cell2, 0);
       cell = cell_build(cell_getCrossover(cell), jump && 15, cell_getData(cell));
-      space_set(current, cell);
-    } else {
+      space_set(current, cell, 0);
+    } else { // free cell found within the sequence.
       cell = cell_build(cell_getCrossover(cell), cell_getJump(cell), child);
-      space_set(current, cell);
+      space_set(current, cell, 0);
     }
 
   }
@@ -391,13 +412,13 @@ void connect(Arrow a, Arrow child) {
 Arrow root(Arrow a) {  
   Cell cell = space_get(a);
   if (cell_isArrow(cell) && !cell_isRooted(cell))
-    space_set(a, cell_build(cell_getCrossover(cell), ROOTED, cell_getContent(cell)));
+    space_set(a, cell_build(cell_getCrossover(cell), ROOTED, cell_getContent(cell)), 0);
 }
 
 void unroot(Arrow a) {
   Cell cell = space_get(a);
   if (cell_isRooted(cell))
-    space_set(a, cell_build(cell_getCrossover(cell), ARROW, cell_getContent(cell)));
+    space_set(a, cell_build(cell_getCrossover(cell), ARROW, cell_getContent(cell)), 0);
 }
 
 int isRooted(Arrow a) {
@@ -411,8 +432,8 @@ int equal(Arrow a, Arrow b) {
 void init() {
   if (space_init()) { // very first start 
     // Eve
-    space_set(0, ARROW, 0);
-    space_set(1, 0, 0);
+    space_set(0, ARROW, 0, 0);
+    space_set(1, 0, 0, 0);
     space_commit();
   }
   _blobTag = tag(BLOB_TAG);

@@ -10,7 +10,7 @@ static struct {
 } m, mem[size];
 
 static struct {
-  Address a;
+  Address a; // <--padding (4 bits)--><--cell address (24 bits)--><--mem1 admin (4 bits)-->
   Cell    c;
 } *reserve = NULL; // the cache array
 
@@ -23,6 +23,7 @@ static uint32 reserveHead = 0;
 #define pageOf(M) ((M).a >> 4) 
 
 #define CHANGED 0x1
+#define EMPTY   0xE
 
 
 // you don't want to know
@@ -50,50 +51,64 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
   return;
 }
 
+Cell space_getAdmin(Address a) {
+  Address i;
+  Address offset = a & 0xFFF;
+  uint32  page   = a >> 12;
+  m = mem[offset];
+  if (m.a != EMPTY && pageOf(m) == page)
+    return m.a & 0xF;
+
+  for (i = 0; i < reserveHead ; i++) {
+    if ((reserve[i].a >> 4) == a)
+      return reserve[i].a & 0xF;
+  }
+  return 0;
+}
+
 
 Cell space_get(Address a) {
   Address i;
   Address offset = a & 0xFFF;
   uint32  page   = a >> 12;
   m = mem[offset];
-  if (m.a != 0xE && pageOf(m) == page)
+  if (m.a != EMPTY && pageOf(m) == page)
     return m.c;
 
   for (i = 0; i < reserveHead ; i++) {
-    if (reserve[i].a == a)
+    if ((reserve[i].a >> 4) == a)
       return reserve[i].c;
   }
 
   if (m.a & CHANGED) {
     // move it to reserve
     assert(reserveHead < reserveSize);
-    reserve[reserveHead].a = ((m.a & 0xFFF0) < 4) | offset ;
+    reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF) ;
     reserve[reserveHead++].c = m.c;
   }
 
   mem[offset].a = page << 4;
-  mem[offset].c = mem0_get(a);
+  return (mem[offset].c = mem0_get(a));
 }
 
-void space_set(Address a , Cell c) {
+void space_set(Address a , Cell c, uint32 admin) {
   Address offset = a & 0xFFF;
   uint32 page    = a >> 12;
+  admin = (admin & 7) << 1;
   m = mem[offset];
-  if (!(m.a & CHANGED)) {
-    mem[offset].a = page << 4 | CHANGED;
-  } else if ((m.a >> 4) != page)  {
+  if ((m.a & CHANGED) && (m.a >> 4) != page)  {
     assert(reserveHead < reserveSize);
-    reserve[reserveHead].a = a;
+    reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF);
     reserve[reserveHead].c = c;
-    reserve_head++;
-    mem[offset].a = page << 4 | CHANGED;
+    reserveHead++;
   }
+  mem[offset].a = page << 4 | admin | CHANGED;
   mem[offset].c = c;
   geoalloc(&log, &logMax, &logSize, sizeof(Address), logSize + 1);
   log[logSize - 1] = a;
 }
 
-int addressCmp(const void *a, const void *b) {
+static int _addressCmp(const void *a, const void *b) {
   return (a == b ? 0 : (a > b ? 1 : -1));
 }
 
@@ -101,11 +116,11 @@ void space_commit() {
   Address i;
   if (!logSize) return;
 
-  qsort(log, logSize, sizeof(Address), addressCmp);
+  qsort(log, logSize, sizeof(Address), _addressCmp);
   for (i = 0; i < logSize, i++) {
     Address a = log[i];
     mem0_set(a, space_get(a));
-    mem[a & 0xFFF].a |& = 0xFFF0;
+    mem[a & 0xFFF].a &= 0xFFFE;
   }
   zeroalloc(&log, &logMax, &logSize);
   reserveHead = 0;
@@ -115,7 +130,7 @@ int space_init() {
   int firstTime = mem0_init();
   Address i;
   for (i = 0; i < memSize; i++) {
-    mem[i]. a = 0xE; // empty
+    mem[i].a = EMPTY;
   }
 
   reserve = malloc(reserveSize * sizeof(struct { Address a; Cell c; }));
