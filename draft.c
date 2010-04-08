@@ -1,6 +1,32 @@
 /* This scrap file is used to think about design issues
 */
 
+// About connectivity, garbage collector, new arrow, unrooted arrow
+
+// A freshly defined arrow won't be connected as long as it doesn't take part of a rooted arrow definition. All in all, such an arrow got the same status as a bound-to-be-recycled non-connected arrow.
+// the connection process takes place while rooting an arrow
+// root(a) ==> connect(headOf(a),a) & connect(tailOf(a),a)
+// connect(a,child) ==>
+//   if back-ref already stored then return false
+//   otherelse
+//       - add back-ref
+//       - connect(head(a),a) & connect(tail(a), a)
+// Fresh arrow and unrooted arrow are logged into a GC FIFO
+// What the GC does:
+// - consumme one arrow in the log (FIFO)
+// - check back-ref. If no back-ref nor root-flag.
+//   - Unconnect(head(a),a) & addToGCFIFO(head(a)) 
+//        & unconnect(tail(a),a) & addToGCFIFO(tail(a))
+// - repeat until one goes under some thresold
+//
+
+// Prototype constraints
+// Cell size: 32 bits
+// Address range: 0-2^24
+// Only regular arrows can be rooted
+// Blob are stored as a file in a traditional system while the #BLOB->SHA arrow is stored in the space.
+// Tags connectivity can't be queried. Build regular arrows out of tags to leverage on Entrelacs connectivity system.
+
 /* API */
 
 
@@ -79,3 +105,4 @@ Arrow operator(OperatorCallBack continuation);
 /* Internal */
 uint16   _transactionId;
 Arrow* _dirtyArrows; // arrows to submit to garbage collector (new/unrooted)
+
