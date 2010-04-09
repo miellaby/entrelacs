@@ -1,18 +1,21 @@
-// Here the RAM cache code
+// The entrelacs space code.
+// It consists in a RAM cache in front of the memory 0 level storage.
 
-static const Address size = 0x1000 ; // cache size
-static const Address reserveSize = 256 ; // cache size
+static const Address size = 0x1000 ; // cache size (4096)
+static const Address reserveSize = 256 ; // cache reserve size
 
-
+// The RAM cache : an n="size" array of record. Each record can carry one mem0 cell. 
 static struct {
-  unsigned short a; // <----page # (12 bits)---><--admin (4 bits)-->
+  unsigned short a; // <--page # (12 bits)--><--mem1admin (3 bits)--><--CHANGED (1 bit)-->
   Cell c;
 } m, mem[size];
 
-static struct {
-  Address a; // <--padding (4 bits)--><--cell address (24 bits)--><--mem1 admin (4 bits)-->
+
+// Modified cells are put in this reserve when its location is needed to load an other cell
+static struct s_reserve {
+  Address a; // <--padding (4 bits)--><--cell address (24 bits)--><--mem1admin (3 bits)--><-- CHANGED (1 bit) -->
   Cell    c;
-} *reserve = NULL; // the cache array
+} *reserve = NULL; // the cache reserve array
 
 static Address* log = NULL;
 static Address  logMax = 0;
@@ -20,10 +23,12 @@ static Address  logSize = 0;
 
 static uint32 reserveHead = 0;
 
-#define pageOf(M) ((M).a >> 4) 
 
-#define CHANGED 0x1
-#define EMPTY   0xE
+#define MEM1_CHANGED 0x1
+#define MEM1_EMPTY   0xE
+#define memPageOf(M) ((M).a >> 4) 
+#define memIsEmpty(M) ((M).a == MEM1_EMPTY) 
+#define memIsCHANGED(M) ((M).a & MEM1_CHANGED) 
 
 
 // you don't want to know
@@ -56,7 +61,7 @@ Cell space_getAdmin(Address a) {
   Address offset = a & 0xFFF;
   uint32  page   = a >> 12;
   m = mem[offset];
-  if (m.a != EMPTY && pageOf(m) == page)
+  if (!memIsEmpty(a) && memPageOf(m) == page)
     return m.a & 0xF;
 
   for (i = 0; i < reserveHead ; i++) {
@@ -72,7 +77,7 @@ Cell space_get(Address a) {
   Address offset = a & 0xFFF;
   uint32  page   = a >> 12;
   m = mem[offset];
-  if (m.a != EMPTY && pageOf(m) == page)
+  if (!memIsEmpty(a) && memPageOf(m) == page)
     return m.c;
 
   for (i = 0; i < reserveHead ; i++) {
@@ -80,32 +85,47 @@ Cell space_get(Address a) {
       return reserve[i].c;
   }
 
-  if (m.a & CHANGED) {
+  if (memIsChanged(m)) {
     // move it to reserve
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF) ;
     reserve[reserveHead++].c = m.c;
   }
 
-  mem[offset].a = page << 4;
+  mem[offset].a = page << 4; // for a newly loaded cell: mem1admin = 0;
   return (mem[offset].c = mem0_get(a));
 }
 
-void space_set(Address a , Cell c, uint32 admin) {
+void space_set(Address a , Cell c, uint32 mem1admin) {
   Address offset = a & 0xFFF;
   uint32 page    = a >> 12;
-  admin = (admin & 7) << 1;
+  mem1admin = (mem1admin & 7) << 1;
   m = mem[offset];
-  if ((m.a & CHANGED) && (m.a >> 4) != page)  {
+  if (memIsChanged(m) && memPageOf(a) != page)  {
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF);
     reserve[reserveHead].c = c;
     reserveHead++;
   }
-  mem[offset].a = page << 4 | admin | CHANGED;
+  mem[offset].a = page << 4 | mem1admin | MEM1_CHANGED;
   mem[offset].c = c;
   geoalloc(&log, &logMax, &logSize, sizeof(Address), logSize + 1);
   log[logSize - 1] = a;
+}
+
+
+void space_setAdmin(Address a, uint32 mem1admin) {
+  Address offset = a & 0xFFF;
+  uint32 page    = a >> 12;
+  mem1admin = (mem1admin & 7) << 1;
+  m = mem[offset];
+  if (memIsChanged(m) && memPageOf(a) != page)  {
+    assert(reserveHead < reserveSize);
+    reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF);
+    reserve[reserveHead].c = c;
+    reserveHead++;
+  }
+  mem[offset].a = page << 4 | mem1admin | MEM1_CHANGED;
 }
 
 static int _addressCmp(const void *a, const void *b) {
@@ -130,10 +150,10 @@ int space_init() {
   int firstTime = mem0_init();
   Address i;
   for (i = 0; i < memSize; i++) {
-    mem[i].a = EMPTY;
+    mem[i].a = MEM1_EMPTY;
   }
 
-  reserve = malloc(reserveSize * sizeof(struct { Address a; Cell c; }));
+  reserve = malloc(reserveSize * sizeof(struct s_reserve));
   geoalloc(&log, &logMax, &logSize, sizeof(Address), 0);
   
   return firstTime; // return !0 if very first start

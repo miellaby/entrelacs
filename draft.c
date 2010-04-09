@@ -1,17 +1,20 @@
 /* This scrap file is used to think about design issues
 */
+// Je viens d'imaginer une façon excellente d'accélerer le parcours d'un cache a la recherche des modifications
+// on fait comme le petit jeu des enfants avec les bateaux en papier, c'est à dire: on stocke dans 8 bits à coté de chaque cellule modifiée l'adresse modulo 255 de la cellule modifiée suivante.
+// Le problème c'est de trouver la cellule modifiée qui précède celle qu'on modifie. Flute.
+ 
 
 // About connectivity, garbage collector, new arrow, unrooted arrow
 
-// A freshly defined arrow won't be connected as long as it doesn't take part of a rooted arrow definition. All in all, such an arrow got the same status as a bound-to-be-recycled non-connected arrow.
-// the connection process takes place while rooting an arrow
-// root(a) ==> connect(headOf(a),a) & connect(tailOf(a),a)
+// A freshly defined arrow won't be connected with child arrows at first.
+// It stays in a "loose state" as long as it doesn't take part of a rooted arrow definition. All in all, such an arrow got the same status as a bound-to-be-recycled non-connected arrow.
+// the connection process takes place while rooting a loose arrow
+// root(a) ==> if (loose(a)) { unloose(a); connect(headOf(a),a) ; connect(tailOf(a),a); }
 // connect(a,child) ==>
-//   if back-ref already stored then return false
-//   otherelse
-//       - add back-ref
-//       - connect(head(a),a) & connect(tail(a), a)
-// Fresh arrow and unrooted arrow are logged into a GC FIFO
+//       - add child back-ref to h3 based a sequence.
+//       - if (loose(a)) { unloose(a) ; connect(head(a),a) & connect(tail(a), a); }
+// New (and initialy loose) arrows and unrooted arrows are logged into a GC FIFO
 // What the GC does:
 // - consumme one arrow in the log (FIFO)
 // - check back-ref. If no back-ref nor root-flag.

@@ -1,3 +1,5 @@
+/* The entrelacs space API */
+
 #include "mem0.h"
 
 Cell space_get(Address);
