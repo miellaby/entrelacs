@@ -21,7 +21,11 @@ static Arrow _blobTag = Eve;
 
 #define SUCCESS 0
 
-// Cell = XJD w/ X = Crossover (4bits), J = Jump (4bits), D = Data (24bits)
+// Cell = <--X--><--J--><--D--> (32 bits)
+// with
+//    X = Crossover (4 bits)
+//    J = Jump (4 bits)
+//    D = Data (24 bits)
 
 #define cell_getCrossover(C) ((C) >> 28)
 #define cell_getJump(C) (((C) >> 24) && 0xF)
@@ -354,10 +358,16 @@ void connect(Arrow a, Arrow child) {
   if (a == Eve) return; // One doesn't store Eve connectivity.
   Cell cell = space_get(a);
   if (cell_isTag(cell)) {
-    // For the moment, I don't store connectivity data of tags. Only a ref counter.
-    // If you want connectivity data, build pair of tags.
+    if (space_getAdmin(a) == MEM1_LOOSE) {
+      // One removes the Mem1 LOOSE flag at "a" address.
+      space_set(a, cell, 0);
+    }
+
+    // One doesn't attach back reference to tags. One manages a ref counter.
+    // If you want connectivity data, think on building pairs of tag.
     Arrow  current;
     uint32 h1 = cell_getData(cell);
+
     h3 = hashChain(a, h1) % PRIM2; 
     shift(a, current, h3, a);
     cell = space_get(current);
@@ -366,9 +376,14 @@ void connect(Arrow a, Arrow child) {
     ((char*)&cell)[1] = c;
     space_set(current, cell, 0);
     
-  } else if (space_getAdmin(a) == MEM1_LOOSE) { // Not connected ARROW, ROOTED, BLOB...
-    // First one changes the type to "connected"
-    space_set(a, cell, 0);
+  } else { //  ARROW, ROOTED, BLOB...
+    if (space_getAdmin(a) == MEM1_LOOSE) {
+      // One removes the Mem1 LOOSE flag.
+      space_set(a, cell, 0);
+      // One recusirvily connects the arrow with its ancestors.
+      connect(tailOf(a), a);
+      connect(headOf(a), a);
+    }
 
     // Children arrows are chained after the arrow's tail and head.
     uint32 h3 = hashChain(a, tail) % PRIM2;
@@ -395,6 +410,7 @@ void connect(Arrow a, Arrow child) {
         cell2 = space_get(next);
       }
       // TBD: what if jump > 15
+      assert(jump <= 15);
       cell2 = cell_build(cell_getCrossover(cell2), 0, child);
       space_set(next, cell2, 0);
       cell = cell_build(cell_getCrossover(cell), jump && 15, cell_getData(cell));
@@ -411,14 +427,22 @@ void connect(Arrow a, Arrow child) {
 
 Arrow root(Arrow a) {  
   Cell cell = space_get(a);
-  if (cell_isArrow(cell) && !cell_isRooted(cell))
-    space_set(a, cell_build(cell_getCrossover(cell), ROOTED, cell_getContent(cell)), 0);
+  if (!cell_isArrow(cell) || cell_isRooted(cell)) return Eve;
+
+  int loose = (space_getAdmin(a) == MEM1_LOOSE); // checked before set to zero hereafter
+  // change the arrow to ROOTED state + remove the Mem1 LOOSE state is any 
+  space_set(a, cell_build(cell_getCrossover(cell), ROOTED, cell_getData(cell)), 0);
+
+  if (loose) { // if the arrow has just lost its LOOSE state, one connects it to its ancestor
+    connect(headOf(a), a);
+    connect(tailOf(a), a);
+  }
 }
 
 void unroot(Arrow a) {
   Cell cell = space_get(a);
   if (cell_isRooted(cell))
-    space_set(a, cell_build(cell_getCrossover(cell), ARROW, cell_getContent(cell)), 0);
+    space_set(a, cell_build(cell_getCrossover(cell), ARROW, cell_getData(cell)), 0);
 }
 
 int isRooted(Arrow a) {
