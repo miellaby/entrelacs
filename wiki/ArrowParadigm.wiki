@@ -30,7 +30,7 @@ Entrelacs behave like atomistic pieces of data. Like atoms, they can't be divide
 <img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 ==Entrelacs / raw data equivalency==
 
-The _arrows paradigm_ allows to compose arrows with atomistic row data as well.
+The _arrows paradigm_ allows to define arrows out of raw data as well.
 It doesn't deny the _everything is arrow_ credo since all in all _entrelacs_ and _atomistic pieces of data_ are equivalent.
 
 In other words, raw binary data corresponds to some sort of arrows as well. Mathematically, one says there's an isomorphism between the set of entrelacs and the set of natural numbers (ie. raw data).
