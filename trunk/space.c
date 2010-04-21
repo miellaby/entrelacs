@@ -1,27 +1,28 @@
 // The entrelacs space code.
 // It consists in a RAM cache in front of the memory 0 level storage.
 
-static const Address size = 0x1000 ; // cache size (4096)
+static const Address memSize = 0x1000 ; // cache size (4096)
 static const Address reserveSize = 256 ; // cache reserve size
 
 // The RAM cache : an n="size" array of record. Each record can carry one mem0 cell. 
-static struct {
+static struct s_mem {
   unsigned short a; // <--page # (12 bits)--><--mem1admin (3 bits)--><--CHANGED (1 bit)-->
   Cell c;
-} m, mem[size];
+} m, mem[memSize];
 
 
 // Modified cells are put in this reserve when its location is needed to load an other cell
 static struct s_reserve {
   Address a; // <--padding (4 bits)--><--cell address (24 bits)--><--mem1admin (3 bits)--><-- CHANGED (1 bit) -->
   Cell    c;
-} *reserve = NULL; // the cache reserve array
+} reserve[reserveSize]; // cache reserve stack
+static uint32 reserveHead = 0; // cache reserve stack head
 
+// A changes log
 static Address* log = NULL;
 static Address  logMax = 0;
 static Address  logSize = 0;
 
-static uint32 reserveHead = 0;
 
 
 #define MEM1_CHANGED 0x1
@@ -153,7 +154,6 @@ int space_init() {
     mem[i].a = MEM1_EMPTY;
   }
 
-  reserve = malloc(reserveSize * sizeof(struct s_reserve));
   geoalloc(&log, &logMax, &logSize, sizeof(Address), 0);
   
   return firstTime; // return !0 if very first start

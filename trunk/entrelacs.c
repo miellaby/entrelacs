@@ -44,7 +44,7 @@ static Arrow _blobTag = Eve;
 #define cell_build(X, J, D) (((X) << 28) | ((J) << 24) | D)
 #define cell_free(C) (C = 0)
 #define cell_tooManyCrossOver(C) ((C) & 0xF0000000 == 0xF0000000)
-#define cell_stuff(C) (cell_isZero(C) ? 0x1B000000 : (cell_tooManyCrossOver(C) ? 0xFB000000 :(C + 0x10000000))
+#define cell_stuff(C) (cell_isZero(C) ? 0x1C000000 : (cell_tooManyCrossOver(C) ? 0xFC000000 :(C + 0x10000000))
 
 
 uint32 hash(Arrow tail, Arrow head) {
@@ -229,7 +229,7 @@ Arrow _tag(char* str, int locateOnly) {
   // 2 cells in a chain row found.
   
   // First H2, then all chars
-  cell1 = cell_build(cell_getCrossover(cell1), STRING, h2);
+  cell1 = cell_build(cell_getCrossover(cell1), TAG, h2);
   space_set(a, cell1, 0);
   current = next;
   cell1 = cell2;
@@ -363,12 +363,12 @@ void connect(Arrow a, Arrow child) {
       space_set(a, cell, 0);
     }
 
-    // One doesn't attach back reference to tags. One manages a ref counter.
+    // One doesn't attach back reference to tags. One only increments a ref counter.
     // If you want connectivity data, think on building pairs of tag.
-    Arrow  current;
+    // the ref counter is located in the 1st byte of the h3-next cell content
     uint32 h1 = cell_getData(cell);
-
     h3 = hashChain(a, h1) % PRIM2; 
+    Arrow  current;
     shift(a, current, h3, a);
     cell = space_get(current);
     unsigned char c = ((char*)&cell)[1];
@@ -386,6 +386,7 @@ void connect(Arrow a, Arrow child) {
     }
 
     // Children arrows are chained after the arrow's tail and head.
+    Arrow tail = tailOf(a);
     uint32 h3 = hashChain(a, tail) % PRIM2;
     Arrow current;
     shift(a, current, h3, a);
@@ -398,7 +399,7 @@ void connect(Arrow a, Arrow child) {
     if (cell_getData(cell) != 0) {
       // if we went up to the h3/jump list end
 
-      // free cell search by computing jump
+      // free cell search with jump computing
       Arrow next;
       Cell cell2;
       unsigned jump = 1;
@@ -425,6 +426,91 @@ void connect(Arrow a, Arrow child) {
 }
 
 
+void disconnect(Arrow a, Arrow child) {
+  if (a == Eve) return; // One doesn't store Eve connectivity.
+
+  Cell cell = space_get(a);
+  if (cell_isTag(cell)) { // parent arrow is a TAG or related
+
+    // One decrements a ref counter in 1st data byte of A+H3 cell.
+    uint32 h1 = cell_getData(cell);
+    h3 = hashChain(a, h1) % PRIM2; 
+    Arrow  current;
+    shift(a, current, h3, a);
+    cell = space_get(current);
+    unsigned char c = ((char*)&cell)[1];
+    if (c != 255) c--;// When ref counter max value reached, one doesn't change it anymore.
+    ((char*)&cell)[1] = c; // reminder: cell[0] contains administrative bits.
+    space_set(current, cell, 0);
+
+    if (!c) { // HE! This tag is totally unreferred
+      // Let's switch on its LOOSE status.
+      space_setAdmin(a, MEM1_LOOSE);
+    }
+    
+  } else { //  ARROW, ROOTED, BLOB...
+ 
+    // One removes the arrow from its parent h3-chain of back-references.
+    Arrow tail = tailOf(a);
+    uint32 h3 = hashChain(a, tail) % PRIM2;
+
+    // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
+    Arrow stillRemaining=0;
+    Arrow current;
+    shift(a, current, h3, a);
+    cell = space_get(current);
+
+    Arrow previous;
+    while (cell_getJump(cell) != 0) {
+      previous = current;
+      jump(cell, previous, current, h3, a);
+      cell = space_get(current);
+      if (cell_getData(cell) == child) break;
+      stillRemaining = 1;
+    }
+
+    assert(cell_getData(cell) == child);
+    unsigned jump = cell_getJump(cell);
+    
+    // back-ref cell recycled either as a free or STUFFED cell
+    unsigned crossover = cell_getCrossover(cell);
+    cell = (crossover ? cell_build(cell_getCrossover(cell), STUFFING, 0) : 0);
+    space_set(current, cell, 0);
+
+    // Now, one moves the jump amount of the erased cell to the previous cell in the chain
+    if (jump == 0) { // case when the erased cell is the last chained cell
+      cell = space_get(previous);
+      cell = cell_build(cell_getCrossover(cell), 0, cell_getData(cell));
+      space_set(previous, cell, 0);
+
+      if (!stillRemaining) { // we removed the only remaining back-ref
+        // The parent arrow is unreferred. Let's switch on its LOOSE status.
+        space_setAdmin(a, MEM1_LOOSE);
+        // One recusirvily disconnects the arrow from its ancestors.
+        disconnect(tailOf(a), a);
+        disconnect(headOf(a), a);
+      }
+
+    } else { // generic case
+      uint32 previousCell = space_get(previous);
+      unsigned previousJump = cell_getJump(previousCell);
+      previousJump += jump;
+      if (previousJump <= 15) {
+        previousCell = cell_build(cell_getCrossover(previousCell), previousJump,
+                                  cell_getData(previousCell));
+        space_set(previous, previousCell, 0);
+ 
+      } else { // Damned! I can't jump up to the next cell
+        // finally one just resets the back-ref in the freed cell
+        space_set(current, cell_build(crossover, jump, 0), 0);
+      }
+    }
+
+  }
+    
+}
+
+
 Arrow root(Arrow a) {  
   Cell cell = space_get(a);
   if (!cell_isArrow(cell) || cell_isRooted(cell)) return Eve;
@@ -437,12 +523,13 @@ Arrow root(Arrow a) {
     connect(headOf(a), a);
     connect(tailOf(a), a);
   }
+  return a;
 }
 
 void unroot(Arrow a) {
   Cell cell = space_get(a);
-  if (cell_isRooted(cell))
-    space_set(a, cell_build(cell_getCrossover(cell), ARROW, cell_getData(cell)), 0);
+  if (!cell_isRooted(cell)) return;
+  space_set(a, cell_build(cell_getCrossover(cell), ARROW, cell_getData(cell)), 0);
 }
 
 int isRooted(Arrow a) {
