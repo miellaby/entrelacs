@@ -3,8 +3,9 @@
 #ifndef MEM0_H
 #define MEM0_H
 typedef unsigned int uint32;
-typedef uint32 Address;
 typedef uint32 Cell;
+typedef uint32 CellData;
+typedef CellData Address;
 
 // initialization
 init mem0_init(); // return !0 if very first init
