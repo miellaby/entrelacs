@@ -1,57 +1,69 @@
-/* The really simple Entrelacs API */
+/* ________________________________________
+ * The Entrelacs C API*
+ * ________________________________________
+ * Note: Everything but the Arrow type is XL prefixed to prevent name conflicts with existing C libraries. Consider define macros in your project to unprefix things when possible.
+ */
 
 /* Arrow */
 typedef unsigned int uint32;
 typedef uint32 Arrow; // Arrow = <---TransactionId---><---MemoryRef--->
 
-/* Assimilation */
-Arrow Eve();
-Arrow arrow(Arrow, Arrow);
-Arrow tag(char*);
-Arrow blob(uint32, char*);
 
-/* Locating */
-Arrow locateArrow(Arrow, Arrow);
-Arrow locateTag(char*);
-Arrow locateBlob(uint32, char*);
+/** initialize the Entrelacs system */
+void xl_init();
+
+/* Assimilation */
+Arrow xl_Eve();
+Arrow xl_arrow(Arrow, Arrow);
+Arrow xl_tag(char*);
+Arrow xl_blob(uint32, char*);
+
+/* Retrieving arrows if already handled by the system only
+ * to query the system without storing probing arrows
+ */
+Arrow xl_arrowMaybe(Arrow, Arrow);
+Arrow xl_tagMaybe(char*);
+Arrow xl_blobMaybe(uint32, char*);
 
 /* Unbuilding */
-enum e_type { TYPE_UNDEF=-1, TYPE_EVE=0, TYPE_ARROW=1, TYPE_TAG=2, TYPE_BLOB=3 } typeOf(Arrow);
-Arrow headOf(Arrow);
-Arrow tailOf(Arrow);
-char* tagOf(Arrow); // to freed
-char* blobOf(Arrow, uint32*); // to freed
+enum e_xlType { XL_UNDEF=-1, XL_EVE=0, XL_ARROW=1, XL_TAG=2, XL_BLOB=3 } xl_typeOf(Arrow);
+Arrow xl_headOf(Arrow);
+Arrow xl_tailOf(Arrow);
+char* xl_tagOf(Arrow); // to freed
+char* xl_blobOf(Arrow, uint32*); // to freed
 
 /* Rooting */
-Arrow root(Arrow);
-void unroot(Arrow);
+Arrow xl_root(Arrow);
+void  xl_unroot(Arrow);
 
 /* Transaction */
-void commit(); // Arrow may be unvalidated
+void xl_commit(); //  Loose arrows are recycled here. Don't use them anymore.
 
 /* Testing */
-int isEve(Arrow); // returns !0 if equals Eve
-int isRooted(Arrow); // returns !0 if rooted.
-int equal(Arrow, Arrow); // returns !0 if arrows are equal
+int xl_isEve(Arrow); // returns !0 if equals Eve
+int xl_isRooted(Arrow); // returns !0 if rooted.
+int xl_equal(Arrow, Arrow); // returns !0 if arrows are equal
 
 /* Browsing */
-typedef struct s_Enum* Enum;
-Enum incomingsOf(Arrow);
-Enum outgoingsOf(Arrow);
-int  next(Enum*, Arrow*);
+//typedef uint32 XLEnum;
+//XLEnum xl_childrenOf(Arrow);
+//int  xl_next(XLEnum*, Arrow*);
 
-typedef int (SimpleCallBack*)(Arrow arrow, char* context);
-void incomingsCB(Arrow, SimpleCallBack);
-void outgoingsCB(Arrow, SimpleCallBack);
+typedef int (XLCallBack*)(Arrow arrow, char* context);
+void xl_childrenOf(Arrow, XLCallBack, char*);
 
-/* Special arrows for the EL */
-Arrow program(char*); // EL string
-typedef int (CallBack*)(Arrow);
-Arrow operator(CallBack hook); // operator arrow with hook
-Arrow continuation(CallBack hook); // continuation arrow with hook
+/* Program assimilation */
+Arrow xl_program(char*); // EL string
 
-/* The Entrelacs Machine */
-Arrow machine(Arrow program, Arrow cc, Arrow current, Arrow stack);
-int   run(Arrow M);
-int   eval(char* programString, Callback cb);
+/* C hook assimilation */
+Arrow xl_operator(XLCallBack hook, char*); // operator arrow with hook
+Arrow xl_continuation(XLCallBack hook, char*); // continuation arrow with hook
 
+/* Build an Entrelacs Machine */
+Arrow xl_machine(Arrow program, Arrow cc, Arrow current, Arrow stack);
+
+/* Run an Entrelacs Machine */
+int   xl_run(Arrow M);
+
+/* Eval, ie. the program, continuation, machine and run sequence */
+int   xl_eval(char* programString, XLCallback cb);
