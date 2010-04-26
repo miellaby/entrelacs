@@ -13,7 +13,7 @@ const Arrow Eve = 0;
 /*
  * _blobTag : A system defined tag-arrow used to store BLOB
  */
-static Arrow _blobTag = Eve;
+static Arrow blobTag = Eve;
 #define BLOB_TAG "#BLOB"
 
 
@@ -84,6 +84,28 @@ static Arrow _blobTag = Eve;
 #define cell_isOvercrossed(C) ((C) & 0xF0000000 == 0xF0000000)
 
 
+// The loose stack.
+// This is a stack of all newly created arrows still in loose state.
+static Address* looseStack = NULL;
+static Address  looseStackMax = 0;
+static Address  looseStackSize = 0;
+
+static looseStackAdd(Address a) {
+  geoalloc(&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), looseStackSize + 1);
+  looseStack[looseStackSize - 1] = a;
+}
+
+static looseStackRemove(Address a) {
+  if (!looseStackSize) return;
+  if (looseStack[looseStackSize - 1] == a)
+    looseStackSize--;
+  else if (looseStackSize > 1 && looseStack[looseStackSize - 2] == a) {
+    looseStackSize--;
+    looseStack[looseStackSize - 1] = looseStack[looseStackSize];
+  }   
+}
+
+
 /* ________________________________________
  * Hash functions
  * One computes 3 kinds of hashcode.
@@ -136,17 +158,18 @@ char* sha() { /* TBD ... */ return sha_buf; }
  * Address shifting and jumping macros
  *
  */
-#define shift(H,N,O,S) (N = ((H + O) % SPACE_SIZE), assert(N != S))
-#define jump(C,H,N,O,S) (N = ((H + O * cell_getJump(C)) % SPACE_SIZE), assert(N != S))
+#define shift(H, N, O, S) (N = ((H + O) % SPACE_SIZE), assert(N != S))
+#define _jump(J, H, N, O, S) (N = ((H + O * J) % SPACE_SIZE), assert(N != S))
+#define jump(C, H, N, O, S) _jump(cell_getJump(C), H, N, O, S)
 
 /** return Eve */ 
-Arrow Eve() { return Eve; }
+Arrow xl_Eve() { return Eve; }
 
 /** retrieve tail->head arrow,
  * by creating the arrow singleton in the arrow space if not found.
  * except if locateOnly param set.
  */
-Arrow _arrow(Arrow tail, Arrow head, int locateOnly) {
+static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   uint32 h, h1, h2, h3;
   Address a, next, stuff;
   Cell cell1, cell2;
@@ -219,14 +242,16 @@ Arrow _arrow(Arrow tail, Arrow head, int locateOnly) {
   space_set(a, cell1, MEM1_LOOSE);
   space_set(next, cell2, 0);
 
-  return a; // we did it;
+  // loose log
+  looseStackAdd(a);
+  return a;
 }
 
 /** retrieve a tag arrow defined by str string,
  * by creating the arrow singleton if not found,
  * except if locateOnly param is set
  */
-Arrow _tag(char* str, int locateOnly) {
+static Arrow tag(char* str, int locateOnly) {
   uint32 h, h1, h2, h3;
   Address a, next, stuff;
   Cell cell1, cell2, content;
@@ -346,6 +371,10 @@ Arrow _tag(char* str, int locateOnly) {
   // useless : ((char*)&content)[i] = c; // 0 
   cell1 = cell_build(cell_getCrossover(cell1), 0, content);
   space_set(current, cell1, 0);
+
+  // loose log
+  looseStackAdd(a);
+
   return a;
 }
 
@@ -353,48 +382,53 @@ Arrow _tag(char* str, int locateOnly) {
  * by creating the arrow singleton if not found,
  * except if locateOnly param is set
  */
-Arrow _blob(uint32 size, char* data, int locateOnly) {
+static Arrow blob(uint32 size, char* data, int locateOnly) {
   char *h = sha(size, data);
 
-  // Prototype only: a BLOB is stored into a pair arrow from "_blobTag" to the blog cryptographic hash. The blob data is stored separatly outside the arrows space.
+  // Prototype only: a BLOB is stored into a pair arrow from "blobTag" to the blog cryptographic hash. The blob data is stored separatly outside the arrows space.
   mem0_saveData(h, size, data);
   // TO DO: remove the data when cell at h is recycled.
 
-  Arrow t = _tag(h, locateOnly);
+  Arrow t = tag(h, locateOnly);
   if (t == Eve) return Eve;
-  return arrow(_blobTag, t, locateOnly);
+  return arrow(blobTag, t, locateOnly);
 }
 
-Arrow arrow(tail, head) { return _arrow(tail, head, 0); }
-Arrow tag(char* s) { return _tag(s, 0);}
-Arrow blob(uint32 size, char* data) { return _blob(size, data, 0);}
+Arrow xl_arrow(tail, head) { return arrow(tail, head, 0); }
+Arrow xl_tag(char* s) { return tag(s, 0);}
+Arrow xl_blob(uint32 size, char* data) { return blob(size, data, 0);}
 
-Arrow locateArrow(tail, head) { return _arrow(tail, head, 1); }
-Arrow locateTag(char* s) { return _tag(s, 1};}
-Arrow locateBlob(uint32 size, char* data) { return _blob(size, data, 1);}
+Arrow xl_arrowMaybe(tail, head) { return arrow(tail, head, 1); }
+Arrow xl_tagMaybe(char* s) { return tag(s, 1};}
+Arrow xl_blobMaybe(uint32 size, char* data) { return blob(size, data, 1);}
 
-Arrow headOf(Arrow a) {
-  Arrow next, tail = tailOf(a);
+Arrow xl_headOf(Arrow a) {
+  Arrow tail = xl_tailOf(a);
   uint32 h3 = hashChain(a, tail) % PRIM2;
-  shift(a, next, h3, a);
-  return cell_getData(space_get(next));
+  Address a_h3;
+  shift(a, a_h3, h3, a);
+  return (Arrow)cell_getData(space_get(a_h3));
 }
 
-Arrow tailOf(Arrow a) {
+Arrow xl_tailOf(Arrow a) {
   return (Arrow)cell_getData(space_get(a));
 }
 
-char* tagOf(Arrow a) {
-  cell h1 = space_get(a);
-  uint32 h3 = hashChain(a, h1) % PRIM2; 
+char* xl_tagOf(Arrow a) {
+  Cell cell = space_get(a);
+  assert(cell_isTag(cell));
+  uint32 h1 = cell_getData(cell);
+  uint32 h3 = hashChain(a, h1) % PRIM2;
+  Address next;
+
   shift(a, next, h3, a);
   cell = space_get(next);
-
-  char* tag =  NULL, p = NULL;
+  unsigned i = 2; // not 1, byte #1 contains ref counter
+  char* tag =  NULL;
   uint32 size = 0;
   uint32 max = 0;
   geoalloc(&tag, &max, &size, sizeof(char), 1);
-  while ((*p++ = ((char*)&cell)[i])) {
+  while ((tag[size] = ((char*)&cell)[i])) {
     geoalloc(&tag, &max, &size, sizeof(char), size + 1);
     i++;
     if (i == 4) {
@@ -407,36 +441,34 @@ char* tagOf(Arrow a) {
       cell = space_get(next);
     }
   }
-  *p = '\0';
-
   return tag;
 }
 
-char* blobOf(Arrow a, uint32* lengthP) {
-  char* h = tagOf(headOf(a));
+char* xl_blobOf(Arrow a, uint32* lengthP) {
+  char* h = tagOf(xl_headOf(a));
   char* data = mem0_loadData(h, lengthP);
   free(h);
   return data;
 }
 
 
-int isEve(Arrow a) { return (a == Eve); }
+int xl_isEve(Arrow a) { return (a == Eve); }
 
 
-enum e_type typeOf(Arrow a) {
-  if (a == Eve) return TYPE_EVE;
+enum e_xlType xl_typeOf(Arrow a) {
+  if (a == Eve) return XL_EVE;
   
   Cell cell = space_get(a);
   if (cell_isArrow(cell)) {
-    if (headOf(a) == _blobTag)
-      return TYPE_BLOB;
+    if (xl_headOf(a) == blobTag)
+      return XL_BLOB;
     else
-      return TYPE_ARROW;
+      return XL_ARROW;
   }
   else if (cell_isTag(cell))
-    return TYPE_TAG;
+    return XL_TAG;
   else
-    return TYPE_UNDEF;
+    return XL_UNDEF;
 }
 
 /** connect a child arrow to its parent arrow
@@ -445,39 +477,43 @@ enum e_type typeOf(Arrow a) {
  * * if the parent arrow is a pair, one add the child back-ref in the "h3 jump list" starting from a+h3
  * * * if the parent arrow was in LOOSE state (eg. a newly defined pair with no other child arrow), one connects the parent arrow to its head and tail (recursive calls) and one removes the LOOSE mem1 flag attached to 'a' cell
  */
-void connect(Arrow a, Arrow child) {
+static void connect(Arrow a, Arrow child) {
   if (a == Eve) return; // One doesn't store Eve connectivity.
   Cell cell = space_get(a);
   if (cell_isTag(cell)) {
     if (space_getAdmin(a) == MEM1_LOOSE) {
       // One removes the Mem1 LOOSE flag at "a" address.
       space_set(a, cell, 0);
+      // (try to) remove 'a' from the loose log
+      looseStackRemove(a);
     }
 
     // One doesn't attach back reference to tags. One only increments a ref counter.
     // If you want connectivity data, think on building pairs of tag.
     // the ref counter is located in the 1st byte of the h3-next cell content
     uint32 h1 = cell_getData(cell);
-    h3 = hashChain(a, h1) % PRIM2; 
-    Arrow  current;
-    shift(a, current, h3, a);
-    cell = space_get(current);
+    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    Address a_h3;
+    shift(a, a_h3, h3, a);
+    cell = space_get(a_h3);
     unsigned char c = ((char*)&cell)[1];
     if (!(++c)) c = 255;// Max value reached.
     ((char*)&cell)[1] = c;
-    space_set(current, cell, 0);
+    space_set(a_h3, cell, 0);
     
   } else { //  ARROW, ROOTED, BLOB...
     if (space_getAdmin(a) == MEM1_LOOSE) {
       // One removes the mem1 LOOSE flag attached to 'a' cell.
       space_set(a, cell, 0);
+      // (try to) remove 'a' from the loose log
+      looseStackRemove(a);
       // One recursively connects the parent arrow to its ancestors.
-      connect(tailOf(a), a);
-      connect(headOf(a), a);
+      connect(xl_tailOf(a), a);
+      connect(xl_headOf(a), a);
     }
 
     // Children arrows are chained in the h3 jump list starting from a+h3.
-    Arrow tail = tailOf(a);
+    Arrow tail = xl_tailOf(a);
     uint32 h3 = hashChain(a, tail) % PRIM2;
     Arrow current;
     shift(a, current, h3, a);
@@ -522,7 +558,7 @@ void connect(Arrow a, Arrow child) {
  * * if the parent arrow is a pair, one removes the child back-ref in the "h3 jump list" starting from a+h3
  * * * if the parent arrow is consequently unreferred (ie. a not rooted pair arrow with no more child arrow), the parent arrow is disconnected itself from its head and tail (recursive calls) and one raises the LOOSE mem1 flag attached to 'a' cell 
  */
-void disconnect(Arrow a, Arrow child) {
+static void disconnect(Arrow a, Arrow child) {
   if (a == Eve) return; // One doesn't store Eve connectivity.
 
   Cell cell = space_get(a);
@@ -530,19 +566,21 @@ void disconnect(Arrow a, Arrow child) {
 
     // One decrements a ref counter in 1st data byte at a+h3 cell.
     uint32 h1 = cell_getData(cell);
-    h3 = hashChain(a, h1) % PRIM2; 
-    Arrow  current;
-    shift(a, current, h3, a);
-    cell = space_get(current);
+    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    Address  a_h3;
+    shift(a, a_h3, h3, a);
+    cell = space_get(a_h3);
     unsigned char c = ((char*)&cell)[1];
     if (c != 255) {
       c--;// One decrements the tag ref counter only if not stuck to its max value.
       ((char*)&cell)[1] = c; // reminder: cell[0] contains administrative bits.
-      space_set(current, cell, 0);
+      space_set(a_h3, cell, 0);
   
       if (!c) { // HE! This tag is totally unreferred
         // Let's switch on its LOOSE status.
         space_setAdmin(a, MEM1_LOOSE);
+        // add 'a' to the loose log
+        looseStackAdd(a);
       }
     }
     
@@ -550,7 +588,7 @@ void disconnect(Arrow a, Arrow child) {
     uint32 rooted = cell_isRooted(cell);
  
     // One removes the arrow from its parent h3-chain of back-references.
-    Arrow tail = tailOf(a);
+    Arrow tail = xl_tailOf(a);
     uint32 h3 = hashChain(a, tail) % PRIM2;
 
     // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
@@ -585,9 +623,11 @@ void disconnect(Arrow a, Arrow child) {
       if (!rooted && !stillRemaining) { // we removed the only remaining back-ref
         // The parent arrow is unreferred. Let's switch on its LOOSE status.
         space_setAdmin(a, MEM1_LOOSE);
+        // add 'a' to the loose log
+        looseStackAdd(a);
         // One recursively disconnects the arrow from its ancestors.
-        disconnect(tailOf(a), a);
-        disconnect(headOf(a), a);
+        disconnect(xl_tailOf(a), a);
+        disconnect(xl_headOf(a), a);
       }
 
     } else { // generic case
@@ -609,8 +649,28 @@ void disconnect(Arrow a, Arrow child) {
     
 }
 
+void xl_childrenOf(Arrow a, XLCallBack cb, char* context) {
+  Arrow child;
+  Cell cell = space_get(a);
+  if (cell_isArrow(cell)) {
+    Arrow tail = cell_getData(cell);
+    uint32 h3 = hashChain(a, tail) % PRIM2; 
+    Address current;
+    shift(a, current, h3, a);
+    cell = space_get(current);
+    unsigned jump = cell_getJump(cell);
+    while (jump) {
+      _jump(jump, current, current, h3, a);
+      cell = space_get(current);
+      child = (Arrow)cell_getData(current);
+      if (cb(child, context)) break;
+      jump = cell_getJump(cell);
+    }
+  }  
+}
+
 /** root an arrow */
-Arrow root(Arrow a) {  
+Arrow xl_root(Arrow a) {  
   Cell cell = space_get(a);
   if (!cell_isArrow(cell) || cell_isRooted(cell)) return Eve;
   Arrow tail = cell_getData(cell);
@@ -621,24 +681,26 @@ Arrow root(Arrow a) {
 
   if (loose) { // if the arrow has just lost its LOOSE state, one connects it to its ancestor
     connect(tail, a);
-    connect(headOf(a), a);
+    connect(xl_headOf(a), a);
+    // (try to) remove 'a' from the loose log
+    looseStackRemove(a);
   }
   return a;
 }
 
-/** unroot an arrow */
-void unroot(Arrow a) {
+/** unroot a rooted arrow */
+void xl_unroot(Arrow a) {
   Cell cell = space_get(a);
-  if (!cell_isRooted(cell)) return;
-  Arrow tail = cell_getData(cell);
+  if (!cell_isRooted(cell)) return; // one can only unroot a rooted regular arrow
 
 
   // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
+  Arrow tail = cell_getData(cell);
   uint32 h3 = hashChain(a, tail) % PRIM2;
-  Arrow a_h3;
+  Address a_h3;
   shift(a, a_h3, h3, a);
   cell headCell = space_get(a_h3);
-  // When the parent arrow is unreferred, one switches on its LOOSE status.
+  // When the arrow is not referred, one switches on its LOOSE status.
   uint32 loose = (cell_getJump(headCell) == 0);
   space_set(a, cell_build(cell_getCrossover(cell), ARROW, tail), (loose ? MEM1_LOOSE : 0));
 
@@ -646,35 +708,108 @@ void unroot(Arrow a) {
     // If loose, one recusirvily disconnects the arrow from its ancestors.
     disconnect(tail, a);
     disconnect(cell_getData(headCell), a);
+    // loose log
+    looseStackAdd(a);
   }
 }
 
 /** return the root status */
-int isRooted(Arrow a) {
+int xl_isRooted(Arrow a) {
   return (cell_isRooted(space_get(a)));
 }
 
-/** TBD */
-int isLoose(Arrow a) {
-  Cell  cell = space_get(a);
-  Arrow data = cell_getData(a);
+int xl_isLoose(Arrow a) {
+  if (a == Eve) return 0;
+  if (space_getAdmin(a) == MEM1_LOOSE) return 1;
 
-  if (cell_isTag(a)) {
+  Cell  cell = space_get(a);
+
+  if (cell_isRooted(cell)) {
+    return 0; // rooted ==> not loose!
+  } else if (cell_isTag(cell)) {
+    // the ref counter is located in the 1st byte of the h3-next cell content
+    uint32 h1 = cell_getData(cell);
+    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    Address  a_h3;
+    shift(a, a_h3, h3, a);
+    cell = space_get(a_h3);
+    unsigned char c = ((char*)&cell)[1];
+    return (!c); // back-ref counter == 0 <==> loose!
+  } else {
+    // the arrow is loose if h3-next cell jump list is empty.
+    Arrow tail = cell_getData(cell);
+    uint32 h3 = hashChain(a, tail) % PRIM2;
+    Address a_h3;
+    shift(a, a_h3, h3, a);
+    cell = space_get(a_h3);
+    return (!cell_getJump(cell)); // no jump ==> loose!
   }
 }
 
 
-int equal(Arrow a, Arrow b) {
+int xl_equal(Arrow a, Arrow b) {
   return (a == b);
 }
 
+static void remove(Arrow a) {
+  Cell cell = space_get(a);
+  // As a matter of fact, this is exactly the same code for tag or arrow
+  // I let the both cases for tracability
+  if (cell_isTag(cell)) {
+    uint32 h1 = cell_getData(cell);
+    space_set(a, cell_free(cell), 0);
+
+    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    Address  current;
+    shift(a, current, h3, a);
+    cell = space_get(current);
+    while (1) {
+      unsigned jump = cell_getJump(cell);
+      space_set(current, cell_free(cell), 0);
+      if (!jump) break;
+      _jump(jump, current, current, h3, a);
+      cell = space_get(current);
+    }
+    
+  } else if (cell_isArrow(cell)) {
+    Arrow tail = cell_getData(cell);
+    space_set(a, cell_free(cell), 0);
+
+    uint32 h3 = hashChain(a, tail) % PRIM2; 
+    Address  current;
+    shift(a, current, h3, a);
+    cell = space_get(current);
+    while (1) {
+      unsigned jump = cell_getJump(cell);
+      space_set(current, cell_free(cell), 0);
+      if (!jump) break;
+      _jump(jump, current, current, h3, a);
+      cell = space_get(current);
+    }
+  }
+}
+
+void xl_commit() {
+  unsigned i;
+  for (i = 0; i < looseStackSize ; i++) { // loose stack scanning
+    Arrow a = looseStack[i];
+    if (xl_isLoose(a)) { // a loose arrow is removed NOW
+      remove(a);
+    }
+  }
+  zeroalloc(&looseStack, &looseStackMax, &looseStackSize);
+  space_commit();
+}
+
 /** initialize the Entrelacs system */
-void init() {
+void xl_init() {
   if (space_init()) { // very first start 
     // Eve
     space_set(0, ARROW, 0, 0);
     space_set(1, 0, 0, 0);
     space_commit();
   }
-  _blobTag = tag(BLOB_TAG);
+  blobTag = xl_tag(BLOB_TAG);
+
+  geoalloc(&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), 0);
 }

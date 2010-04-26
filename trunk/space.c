@@ -11,14 +11,16 @@ static struct s_mem {
 } m, mem[memSize];
 
 
-// Modified cells are put in this reserve when its location is needed to load an other cell
+// The RAM cache reserve.
+// Modified cells are put into this reserve when their location are needed to load other cells
 static struct s_reserve {
   Address a; // <--padding (4 bits)--><--cell address (24 bits)--><--mem1admin (3 bits)--><-- CHANGED (1 bit) -->
   Cell    c;
 } reserve[reserveSize]; // cache reserve stack
 static uint32 reserveHead = 0; // cache reserve stack head
 
-// A changes log
+// The change log.
+// This is a log of all changes made in cached memory.
 static Address* log = NULL;
 static Address  logMax = 0;
 static Address  logSize = 0;
@@ -48,10 +50,12 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
       *maxp = (s < 128 ? 256 : s + 128 );
       *pp = malloc(maxp * us);
       assert(*pp);
-  } else if ( s > *maxp) {
-    *maxp *= 2;
-    *pp = realloc(maxp * us);
-    assert(*pp);
+  } else {
+    while (s > *maxp) {
+      *maxp *= 2;
+      *pp = realloc(maxp * us);
+      assert(*pp);
+    }
   }
   *sp = s;
   return;
