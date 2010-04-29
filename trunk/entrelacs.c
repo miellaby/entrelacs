@@ -3,6 +3,7 @@
 #include "_entrelacs.h"
 #include "mem0.h"
 #include "space.h"
+#include "sha1.h"
 #define SUCCESS 0
 
 /*
@@ -140,18 +141,16 @@ uint32 hashString(char *s) { // simple string hash
   return hash;
 }
 
-#define hash1(tail, head) (hash(tail, head) % PRIM0)
-#define hash2(tail, head) (hash(tail, head) % PRIM1)
-#define hash3(address, cellData) (hashChain(a, cellData) % PRIM2)
-
-
 
 /* ________________________________________
  * The blob cryptographic hash computing fonction.
  * This function returns a string used to define a tag arrow.
  *
- */char sha_buff[256];
-char* sha() { /* TBD ... */ return sha_buf; }
+ */
+char* crypto(uint32 size, char* data, char output[20]) {
+  sha1(size, data, output);
+  return output;
+}
 
 
 /* ________________________________________
@@ -183,6 +182,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   h = hash(tail, head);
   h1 = h % PRIM1; // base address
   h2 = h % PRIM2; // probe offset
+  if (!h2) h2 = 2; // offset can't be 0 
 
   // One searches for an existing copy of this arrow
   stuff = Eve;
@@ -195,7 +195,9 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
     } else if (cell_isArrow(cell1) && cell_getData(cell1) == tail) {
       // good start
       // chain offset
-      h3 = hashChain(a, tail) % PRIM2; 
+      h3 = hashChain(a, tail) % PRIM2;
+      if (!h3) h3 = 1; // offset can't be 0
+
       shift(a, next, h3, a);
       cell2 = space_get(next);
       if (cell_getData(cell2) == head)
@@ -218,6 +220,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   // h3 is the chain offset
   // it depends on the actual arrow address
   h3 = hashChain(a, tail) % PRIM2;
+  if (!h3) h3 = 1; // offset can't be 0
   shift(a, next, h3, next);
   cell2 = space_get(next);
 
@@ -232,6 +235,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
       shift(a, a, h2, h1);
     }
     h3 = hashChain(a, tail) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
     shift(a, next, h3, next);
     cell2 = space_get(next);
   }
@@ -264,6 +268,7 @@ static Arrow tag(char* str, int locateOnly) {
   h = hashString(str);
   h1 = h % PRIM1;
   h2 = h % PRIM2;
+  if (!h2) h2 = 2; // offset can't be 0
 
   a = h1;
   stuff = Eve;
@@ -276,6 +281,7 @@ static Arrow tag(char* str, int locateOnly) {
       // good start
       // now one must compare the whole string, char by char
       h3 = hashChain(a, h1) % PRIM2; 
+      if (!h3) h3 = 1; // offset can't be 0
       p = str;
       shift(a, next, h3, a);
       cell = space_get(next);
@@ -314,6 +320,7 @@ static Arrow tag(char* str, int locateOnly) {
 
   // h3 is the chain offset, h3 is not h1
   h3 = hashChain(a, h1) % PRIM2; 
+  if (!h3) h3 = 1; // offset can't be 0
   shift(a, next, h3, next);
   cell2 = space_get(next);
 
@@ -328,6 +335,7 @@ static Arrow tag(char* str, int locateOnly) {
       shift(a, a, h2, h1);
     }
     h3 = hashChain(a, h1) % PRIM2;
+    if (!h3) h3 = 1; // offset can't be 0
     shift(a, next, h3, next);
     cell2 = space_get(next);
   }
@@ -383,7 +391,8 @@ static Arrow tag(char* str, int locateOnly) {
  * except if locateOnly param is set
  */
 static Arrow blob(uint32 size, char* data, int locateOnly) {
-  char *h = sha(size, data);
+  char h[20];
+  crypto(size, data, h);
 
   // Prototype only: a BLOB is stored into a pair arrow from "blobTag" to the blog cryptographic hash. The blob data is stored separatly outside the arrows space.
   mem0_saveData(h, size, data);
@@ -405,6 +414,7 @@ Arrow xl_blobMaybe(uint32 size, char* data) { return blob(size, data, 1);}
 Arrow xl_headOf(Arrow a) {
   Arrow tail = xl_tailOf(a);
   uint32 h3 = hashChain(a, tail) % PRIM2;
+  if (!h3) h3 = 1; // offset can't be 0
   Address a_h3;
   shift(a, a_h3, h3, a);
   return (Arrow)cell_getData(space_get(a_h3));
@@ -419,6 +429,7 @@ char* xl_tagOf(Arrow a) {
   assert(cell_isTag(cell));
   uint32 h1 = cell_getData(cell);
   uint32 h3 = hashChain(a, h1) % PRIM2;
+  if (!h3) h3 = 1; // offset can't be 0
   Address next;
 
   shift(a, next, h3, a);
@@ -493,6 +504,7 @@ static void connect(Arrow a, Arrow child) {
     // the ref counter is located in the 1st byte of the h3-next cell content
     uint32 h1 = cell_getData(cell);
     uint32 h3 = hashChain(a, h1) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
     Address a_h3;
     shift(a, a_h3, h3, a);
     cell = space_get(a_h3);
@@ -515,6 +527,7 @@ static void connect(Arrow a, Arrow child) {
     // Children arrows are chained in the h3 jump list starting from a+h3.
     Arrow tail = xl_tailOf(a);
     uint32 h3 = hashChain(a, tail) % PRIM2;
+    if (!h3) h3 = 1; // offset can't be 0
     Arrow current;
     shift(a, current, h3, a);
     Cell cell = space_get(current);
@@ -567,6 +580,7 @@ static void disconnect(Arrow a, Arrow child) {
     // One decrements a ref counter in 1st data byte at a+h3 cell.
     uint32 h1 = cell_getData(cell);
     uint32 h3 = hashChain(a, h1) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
     Address  a_h3;
     shift(a, a_h3, h3, a);
     cell = space_get(a_h3);
@@ -590,6 +604,7 @@ static void disconnect(Arrow a, Arrow child) {
     // One removes the arrow from its parent h3-chain of back-references.
     Arrow tail = xl_tailOf(a);
     uint32 h3 = hashChain(a, tail) % PRIM2;
+    if (!h3) h3 = 1; // offset can't be 0
 
     // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
     Arrow current;
@@ -655,6 +670,8 @@ void xl_childrenOf(Arrow a, XLCallBack cb, char* context) {
   if (cell_isArrow(cell)) {
     Arrow tail = cell_getData(cell);
     uint32 h3 = hashChain(a, tail) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
+      
     Address current;
     shift(a, current, h3, a);
     cell = space_get(current);
@@ -697,6 +714,7 @@ void xl_unroot(Arrow a) {
   // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
   Arrow tail = cell_getData(cell);
   uint32 h3 = hashChain(a, tail) % PRIM2;
+  if (!h3) h3 = 1; // offset can't be 0
   Address a_h3;
   shift(a, a_h3, h3, a);
   cell headCell = space_get(a_h3);
@@ -730,6 +748,7 @@ int xl_isLoose(Arrow a) {
     // the ref counter is located in the 1st byte of the h3-next cell content
     uint32 h1 = cell_getData(cell);
     uint32 h3 = hashChain(a, h1) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
     Address  a_h3;
     shift(a, a_h3, h3, a);
     cell = space_get(a_h3);
@@ -739,6 +758,7 @@ int xl_isLoose(Arrow a) {
     // the arrow is loose if h3-next cell jump list is empty.
     Arrow tail = cell_getData(cell);
     uint32 h3 = hashChain(a, tail) % PRIM2;
+    if (!h3) h3 = 1; // offset can't be 0
     Address a_h3;
     shift(a, a_h3, h3, a);
     cell = space_get(a_h3);
@@ -760,6 +780,7 @@ static void remove(Arrow a) {
     space_set(a, cell_free(cell), 0);
 
     uint32 h3 = hashChain(a, h1) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
     Address  current;
     shift(a, current, h3, a);
     cell = space_get(current);
@@ -776,6 +797,7 @@ static void remove(Arrow a) {
     space_set(a, cell_free(cell), 0);
 
     uint32 h3 = hashChain(a, tail) % PRIM2; 
+    if (!h3) h3 = 1; // offset can't be 0
     Address  current;
     shift(a, current, h3, a);
     cell = space_get(current);
