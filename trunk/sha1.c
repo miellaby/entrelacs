@@ -29,6 +29,26 @@
 #include <string.h>
 #include <stdio.h>
 
+/**
+ * \brief          SHA-1 context structure
+ */
+typedef struct {
+    unsigned long total[2];     /*!< number of bytes processed  */
+    unsigned long state[5];     /*!< intermediate digest state  */
+    unsigned char buffer[64];   /*!< data block being processed */
+
+    unsigned char ipad[64];     /*!< HMAC: inner padding        */
+    unsigned char opad[64];     /*!< HMAC: outer padding        */
+} sha1_context;
+
+/**
+ * \brief          Output = SHA-1( input buffer )
+ *
+ * \param input    buffer holding the  data
+ * \param ilen     length of the input data
+ * \param output   SHA-1 checksum result
+ */
+
 /*
  * 32-bit integer manipulation macros (big endian)
  */
@@ -55,7 +75,7 @@
 /*
  * SHA-1 context setup
  */
-void sha1_starts( sha1_context *ctx )
+static void sha1_starts( sha1_context *ctx )
 {
     ctx->total[0] = 0;
     ctx->total[1] = 0;
@@ -226,7 +246,15 @@ static void sha1_process( sha1_context *ctx, const unsigned char data[64] )
 /*
  * SHA-1 process buffer
  */
-void sha1_update( sha1_context *ctx, const unsigned char *input, int ilen )
+
+/**
+ * \brief          SHA-1 process buffer
+ *
+ * \param ctx      SHA-1 context
+ * \param input    buffer holding the  data
+ * \param ilen     length of the input data
+ */
+static void sha1_update( sha1_context *ctx, const unsigned char *input, int ilen )
 {
     int fill;
     unsigned long left;
@@ -278,7 +306,14 @@ static const unsigned char sha1_padding[64] =
 /*
  * SHA-1 final digest
  */
-void sha1_finish( sha1_context *ctx, unsigned char output[20] )
+
+/**
+ * \brief          SHA-1 final digest
+ *
+ * \param ctx      SHA-1 context
+ * \param output   SHA-1 checksum result
+ */
+static void sha1_finish( sha1_context *ctx, unsigned char output[20] )
 {
     unsigned long last, padn;
     unsigned long high, low;

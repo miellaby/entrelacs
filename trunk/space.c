@@ -1,14 +1,20 @@
+#define SPACE_C
+#include <stdlib.h>
+
+#include "space.h"
+
 // The entrelacs space code.
 // It consists in a RAM cache in front of the memory 0 level storage.
-
-static const Address memSize = 0x1000 ; // cache size (4096)
-static const Address reserveSize = 256 ; // cache reserve size
+#define MEMSIZE 0x1000
+#define RESERVESIZE 256
+static const Address memSize = MEMSIZE ; // cache size (4096)
+static const Address reserveSize = RESERVESIZE ; // cache reserve size
 
 // The RAM cache : an n="size" array of record. Each record can carry one mem0 cell. 
 static struct s_mem {
   unsigned short a; // <--page # (12 bits)--><--mem1admin (3 bits)--><--CHANGED (1 bit)-->
   Cell c;
-} m, mem[memSize];
+} m, mem[MEMSIZE];
 
 
 // The RAM cache reserve.
@@ -16,14 +22,14 @@ static struct s_mem {
 static struct s_reserve {
   Address a; // <--padding (4 bits)--><--cell address (24 bits)--><--mem1admin (3 bits)--><-- CHANGED (1 bit) -->
   Cell    c;
-} reserve[reserveSize]; // cache reserve stack
-static uint32 reserveHead = 0; // cache reserve stack head
+} reserve[RESERVESIZE]; // cache reserve stack
+static uint32_t reserveHead = 0; // cache reserve stack head
 
 // The change log.
 // This is a log of all changes made in cached memory.
 static Address* log = NULL;
-static Address  logMax = 0;
-static Address  logSize = 0;
+static size_t   logMax = 0;
+static size_t   logSize = 0;
 
 
 
@@ -37,7 +43,7 @@ static Address  logSize = 0;
 // you don't want to know
 void zeroalloc(char** pp, size_t* maxp, size_t* sp) {
   if (*maxp) {
-    *free(*pp);
+    free(*pp);
     *maxp = 0;
     *pp = 0;
   }
@@ -48,12 +54,12 @@ void zeroalloc(char** pp, size_t* maxp, size_t* sp) {
 void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
   if (!*maxp)	{
       *maxp = (s < 128 ? 256 : s + 128 );
-      *pp = malloc(maxp * us);
+      *pp = (char *)malloc(*maxp * us);
       assert(*pp);
   } else {
     while (s > *maxp) {
       *maxp *= 2;
-      *pp = realloc(maxp * us);
+      *pp = (char *)realloc(*pp, *maxp * us);
       assert(*pp);
     }
   }
@@ -64,9 +70,9 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 Cell space_getAdmin(Address a) {
   Address i;
   Address offset = a & 0xFFF;
-  uint32  page   = a >> 12;
+  uint32_t  page   = a >> 12;
   m = mem[offset];
-  if (!memIsEmpty(a) && memPageOf(m) == page)
+  if (!memIsEmpty(m) && memPageOf(m) == page)
     return m.a & 0xF;
 
   for (i = 0; i < reserveHead ; i++) {
@@ -80,9 +86,9 @@ Cell space_getAdmin(Address a) {
 Cell space_get(Address a) {
   Address i;
   Address offset = a & 0xFFF;
-  uint32  page   = a >> 12;
+  uint32_t  page   = a >> 12;
   m = mem[offset];
-  if (!memIsEmpty(a) && memPageOf(m) == page)
+  if (!memIsEmpty(m) && memPageOf(m) == page)
     return m.c;
 
   for (i = 0; i < reserveHead ; i++) {
@@ -93,7 +99,7 @@ Cell space_get(Address a) {
   if (memIsChanged(m)) {
     // move it to reserve
     assert(reserveHead < reserveSize);
-    reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF) ;
+    reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF) ;
     reserve[reserveHead++].c = m.c;
   }
 
@@ -101,33 +107,33 @@ Cell space_get(Address a) {
   return (mem[offset].c = mem0_get(a));
 }
 
-void space_set(Address a , Cell c, uint32 mem1admin) {
+void space_set(Address a, Cell c, uint32_t mem1admin) {
   Address offset = a & 0xFFF;
-  uint32 page    = a >> 12;
+  uint32_t page    = a >> 12;
   mem1admin = (mem1admin & 7) << 1;
   m = mem[offset];
-  if (memIsChanged(m) && memPageOf(a) != page)  {
+  if (memIsChanged(m) && memPageOf(m) != page)  {
     assert(reserveHead < reserveSize);
-    reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF);
-    reserve[reserveHead].c = c;
+    reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF);
+    reserve[reserveHead].c = m.c;
     reserveHead++;
   }
-  mem[offset].a = page << 4 | mem1admin | MEM1_CHANGED;
+  mem[offset].a = page << 4 | (mem1admin == DONTTOUCH ? (m.a & 0xF) : mem1admin) | MEM1_CHANGED;
   mem[offset].c = c;
-  geoalloc(&log, &logMax, &logSize, sizeof(Address), logSize + 1);
+  geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
   log[logSize - 1] = a;
 }
 
 
-void space_setAdmin(Address a, uint32 mem1admin) {
+void space_setAdmin(Address a, uint32_t mem1admin) {
   Address offset = a & 0xFFF;
-  uint32 page    = a >> 12;
+  uint32_t page    = a >> 12;
   mem1admin = (mem1admin & 7) << 1;
   m = mem[offset];
-  if (memIsChanged(m) && memPageOf(a) != page)  {
+  if (memIsChanged(m) && memPageOf(m) != page)  {
     assert(reserveHead < reserveSize);
-    reserve[reserveHead].a = ((m.a & 0xFFF0) <<< 8) | (offset << 4) | (m.a & 0xF);
-    reserve[reserveHead].c = c;
+    reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF);
+    reserve[reserveHead].c = m.c;
     reserveHead++;
   }
   mem[offset].a = page << 4 | mem1admin | MEM1_CHANGED;
@@ -142,12 +148,12 @@ void space_commit() {
   if (!logSize) return;
 
   qsort(log, logSize, sizeof(Address), _addressCmp);
-  for (i = 0; i < logSize, i++) {
+  for (i = 0; i < logSize; i++) {
     Address a = log[i];
     mem0_set(a, space_get(a));
     mem[a & 0xFFF].a &= 0xFFFE;
   }
-  zeroalloc(&log, &logMax, &logSize);
+  zeroalloc((char **)&log, &logMax, &logSize);
   reserveHead = 0;
 }
 
@@ -158,7 +164,7 @@ int space_init() {
     mem[i].a = MEM1_EMPTY;
   }
 
-  geoalloc(&log, &logMax, &logSize, sizeof(Address), 0);
+  geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), 0);
   
   return firstTime; // return !0 if very first start
 }

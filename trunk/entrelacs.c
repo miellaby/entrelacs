@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "_entrelacs.h"
 #include "mem0.h"
+#include "entrelacs/entrelacs.h"
 #include "space.h"
 #include "sha1.h"
 #define SUCCESS 0
@@ -9,12 +9,13 @@
 /*
  * Eve
  */
-const Arrow Eve = 0;
+#define EVE (0)
+const Arrow Eve = EVE;
 
 /*
  * _blobTag : A system defined tag-arrow used to store BLOB
  */
-static Arrow blobTag = Eve;
+static Arrow blobTag = EVE;
 #define BLOB_TAG "#BLOB"
 
 
@@ -55,14 +56,14 @@ static Arrow blobTag = Eve;
  * else whatever it is a stuffed cell or a used cell,
  * one simply increments its crossover counter
  */
-#define cell_cross(C) (cell_isZero(C) ? 0x1C000000 : (cell_isOvercrossed(C) ? 0xFC000000 :(C + 0x10000000))
+#define cell_cross(C) (cell_isZero(C) ? 0x1C000000 : (cell_isOvercrossed(C) ? 0xFC000000 : (C + 0x10000000)))
 
 /** change C cell into a freed cell.
  * if the cell is crossed over, it becomes a stuffed cell
  * else, it becomes a ZERO cell
  */
 // TBD: use mask to stuff
-#define cell_free(C) (cell_getCrossover(C) ? cell_build(cell_getCrossover(c), STUFFING, 0) : 0)
+#define cell_free(C) (cell_getCrossover(C) ? cell_build(cell_getCrossover(C), STUFFING, 0) : 0)
 
 /* ________________________________________
  * Cell unbuilding macros
@@ -77,12 +78,12 @@ static Arrow blobTag = Eve;
 #define cell_isZero(C) ((C) == 0)
 #define cell_isStuffed(C) (((C) & 0x0F000000) == 0x0C000000)
 #define cell_isFree(C) (cell_isZero(C) || cell_isStuffed(C))
-#define cell_isArrow(C) ((C) & 0x0F000000) >= 0x0E000000)
-#define cell_isTag(C) ((C) & 0x0F000000) == 0x0D000000)
-// #define cell_isBlob(C) ((C) & 0x0F000000) == 0x0C000000)
-#define cell_isFollower(C) ((C) & 0x0F000000) < 0x0C000000)
-#define cell_isRooted(C) ((C) & 0x0F000000) == 0x0F000000)
-#define cell_isOvercrossed(C) ((C) & 0xF0000000 == 0xF0000000)
+#define cell_isArrow(C) (((C) & 0x0F000000) >= 0x0E000000)
+#define cell_isTag(C) (((C) & 0x0F000000) == 0x0D000000)
+// #define cell_isBlob(C) (((C) & 0x0F000000) == 0x0C000000)
+#define cell_isFollower(C) (((C) & 0x0F000000) < 0x0C000000)
+#define cell_isRooted(C) (((C) & 0x0F000000) == 0x0F000000)
+#define cell_isOvercrossed(C) (((C) & 0xF0000000) == 0xF0000000)
 
 
 // The loose stack.
@@ -111,30 +112,30 @@ static looseStackRemove(Address a) {
  * Hash functions
  * One computes 3 kinds of hashcode.
  * * h1: the default cell address for a given arrow.
- *     h1 = hash(tail, head) % PRIM1 for a regular arrow
+ *     h1 = hash(tail, head) % PRIM0 for a regular arrow
  *     h1 = hashString(string) for a tag arrow
  * * h2: the probe offset when h1 cell is busy and one looks for a free cell nearby.
- *     h2 = hash(tail, head) % PRIM2 for a regular arrow
+ *     h2 = hash(tail, head) % PRIM1 for a regular arrow
  *  
  */
 
 /* hash function to get H1 from a regular arrow definition */
-uint32 hash(Arrow tail, Arrow head) {
+uint32_t hash(Arrow tail, Arrow head) {
   return (tail << 20) ^ (tail >> 4) ^ head;
 }
 
 /* hash function to get H3 from a cell caracteristics */
-uint32 hashChain(Address address, CellData cell) { // Data chain hash offset
+uint32_t hashChain(Address address, CellData cell) { // Data chain hash offset
   // This hash mixes the cell address and its content
   return (cell << 20) ^ (cell >> 4) ^ address;
 }
 
 /* hash function to get H1 from a tag arrow definition */
-uint32 hashString(char *s) { // simple string hash
-  uint32 hash = 5381;
+uint32_t hashString(char *s) { // simple string hash
+  uint32_t hash = 5381;
   int c;
 
-  while (c = *str++)
+  while (c = *s++)
     // 5 bits shift only because ASCII generally works within 5 bits
     hash = ((hash << 5) + hash) + c;
 
@@ -147,8 +148,8 @@ uint32 hashString(char *s) { // simple string hash
  * This function returns a string used to define a tag arrow.
  *
  */
-char* crypto(uint32 size, char* data, char output[20]) {
-  sha1(size, data, output);
+char* crypto(uint32_t size, char* data, char output[20]) {
+  sha1(data, size, output);
   return output;
 }
 
@@ -169,7 +170,7 @@ Arrow xl_Eve() { return Eve; }
  * except if locateOnly param set.
  */
 static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
-  uint32 h, h1, h2, h3;
+  uint32_t h, h1, h2, h3;
   Address a, next, stuff;
   Cell cell1, cell2;
 
@@ -180,8 +181,8 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
 
   // Compute hashs
   h = hash(tail, head);
-  h1 = h % PRIM1; // base address
-  h2 = h % PRIM2; // probe offset
+  h1 = h % PRIM0; // base address
+  h2 = h % PRIM1; // probe offset
   if (!h2) h2 = 2; // offset can't be 0 
 
   // One searches for an existing copy of this arrow
@@ -195,7 +196,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
     } else if (cell_isArrow(cell1) && cell_getData(cell1) == tail) {
       // good start
       // chain offset
-      h3 = hashChain(a, tail) % PRIM2;
+      h3 = hashChain(a, tail) % PRIM1;
       if (!h3) h3 = 1; // offset can't be 0
 
       shift(a, next, h3, a);
@@ -219,7 +220,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
 
   // h3 is the chain offset
   // it depends on the actual arrow address
-  h3 = hashChain(a, tail) % PRIM2;
+  h3 = hashChain(a, tail) % PRIM1;
   if (!h3) h3 = 1; // offset can't be 0
   shift(a, next, h3, next);
   cell2 = space_get(next);
@@ -234,7 +235,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
       space_set(a, cell_cross(cell1), DONTTOUCH);
       shift(a, a, h2, h1);
     }
-    h3 = hashChain(a, tail) % PRIM2; 
+    h3 = hashChain(a, tail) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
     shift(a, next, h3, next);
     cell2 = space_get(next);
@@ -256,9 +257,9 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
  * except if locateOnly param is set
  */
 static Arrow tag(char* str, int locateOnly) {
-  uint32 h, h1, h2, h3;
-  Address a, next, stuff;
-  Cell cell1, cell2, content;
+  uint32_t h, h1, h2, h3;
+  Address a, current, next, stuff;
+  Cell cell1, cell2, content, cell;
   unsigned i;
   char c, *p;
   if (!str) {
@@ -266,8 +267,8 @@ static Arrow tag(char* str, int locateOnly) {
   }
 
   h = hashString(str);
-  h1 = h % PRIM1;
-  h2 = h % PRIM2;
+  h1 = h % PRIM0;
+  h2 = h % PRIM1;
   if (!h2) h2 = 2; // offset can't be 0
 
   a = h1;
@@ -280,12 +281,12 @@ static Arrow tag(char* str, int locateOnly) {
     } else if (cell_isTag(cell1) && cell_getData(cell1) == h1) {
       // good start
       // now one must compare the whole string, char by char
-      h3 = hashChain(a, h1) % PRIM2; 
+      h3 = hashChain(a, h1) % PRIM1; 
       if (!h3) h3 = 1; // offset can't be 0
       p = str;
       shift(a, next, h3, a);
       cell = space_get(next);
-      i = 2; // The first byte is reserved for a ref counter.
+      i = 2; // The first content byte (cell_at_h3[1]) is reserved for a ref counter.
       while ((c = *p++) == ((char*)&cell)[i] && c != 0) {
         i++;
         if (i == 4) {
@@ -319,7 +320,7 @@ static Arrow tag(char* str, int locateOnly) {
   if (stuff) a = stuff;
 
   // h3 is the chain offset, h3 is not h1
-  h3 = hashChain(a, h1) % PRIM2; 
+  h3 = hashChain(a, h1) % PRIM1; 
   if (!h3) h3 = 1; // offset can't be 0
   shift(a, next, h3, next);
   cell2 = space_get(next);
@@ -334,7 +335,7 @@ static Arrow tag(char* str, int locateOnly) {
       space_set(a, cell_cross(cell1), DONTTOUCH);
       shift(a, a, h2, h1);
     }
-    h3 = hashChain(a, h1) % PRIM2;
+    h3 = hashChain(a, h1) % PRIM1;
     if (!h3) h3 = 1; // offset can't be 0
     shift(a, next, h3, next);
     cell2 = space_get(next);
@@ -390,7 +391,7 @@ static Arrow tag(char* str, int locateOnly) {
  * by creating the arrow singleton if not found,
  * except if locateOnly param is set
  */
-static Arrow blob(uint32 size, char* data, int locateOnly) {
+static Arrow blob(uint32_t size, char* data, int locateOnly) {
   char h[20];
   crypto(size, data, h);
 
@@ -403,17 +404,17 @@ static Arrow blob(uint32 size, char* data, int locateOnly) {
   return arrow(blobTag, t, locateOnly);
 }
 
-Arrow xl_arrow(tail, head) { return arrow(tail, head, 0); }
+Arrow xl_arrow(Arrow tail, Arrow head) { return arrow(tail, head, 0); }
 Arrow xl_tag(char* s) { return tag(s, 0);}
-Arrow xl_blob(uint32 size, char* data) { return blob(size, data, 0);}
+Arrow xl_blob(uint32_t size, char* data) { return blob(size, data, 0);}
 
-Arrow xl_arrowMaybe(tail, head) { return arrow(tail, head, 1); }
-Arrow xl_tagMaybe(char* s) { return tag(s, 1};}
-Arrow xl_blobMaybe(uint32 size, char* data) { return blob(size, data, 1);}
+Arrow xl_arrowMaybe(Arrow tail, Arrow head) { return arrow(tail, head, 1); }
+Arrow xl_tagMaybe(char* s) { return tag(s, 1);}
+Arrow xl_blobMaybe(uint32_t size, char* data) { return blob(size, data, 1);}
 
 Arrow xl_headOf(Arrow a) {
   Arrow tail = xl_tailOf(a);
-  uint32 h3 = hashChain(a, tail) % PRIM2;
+  uint32_t h3 = hashChain(a, tail) % PRIM1;
   if (!h3) h3 = 1; // offset can't be 0
   Address a_h3;
   shift(a, a_h3, h3, a);
@@ -427,8 +428,8 @@ Arrow xl_tailOf(Arrow a) {
 char* xl_tagOf(Arrow a) {
   Cell cell = space_get(a);
   assert(cell_isTag(cell));
-  uint32 h1 = cell_getData(cell);
-  uint32 h3 = hashChain(a, h1) % PRIM2;
+  uint32_t h1 = cell_getData(cell);
+  uint32_t h3 = hashChain(a, h1) % PRIM1;
   if (!h3) h3 = 1; // offset can't be 0
   Address next;
 
@@ -436,8 +437,8 @@ char* xl_tagOf(Arrow a) {
   cell = space_get(next);
   unsigned i = 2; // not 1, byte #1 contains ref counter
   char* tag =  NULL;
-  uint32 size = 0;
-  uint32 max = 0;
+  uint32_t size = 0;
+  uint32_t max = 0;
   geoalloc(&tag, &max, &size, sizeof(char), 1);
   while ((tag[size] = ((char*)&cell)[i])) {
     geoalloc(&tag, &max, &size, sizeof(char), size + 1);
@@ -455,8 +456,8 @@ char* xl_tagOf(Arrow a) {
   return tag;
 }
 
-char* xl_blobOf(Arrow a, uint32* lengthP) {
-  char* h = tagOf(xl_headOf(a));
+char* xl_blobOf(Arrow a, uint32_t* lengthP) {
+  char* h = xl_tagOf(xl_headOf(a));
   char* data = mem0_loadData(h, lengthP);
   free(h);
   return data;
@@ -502,8 +503,8 @@ static void connect(Arrow a, Arrow child) {
     // One doesn't attach back reference to tags. One only increments a ref counter.
     // If you want connectivity data, think on building pairs of tag.
     // the ref counter is located in the 1st byte of the h3-next cell content
-    uint32 h1 = cell_getData(cell);
-    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    uint32_t h1 = cell_getData(cell);
+    uint32_t h3 = hashChain(a, h1) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
     Address a_h3;
     shift(a, a_h3, h3, a);
@@ -526,7 +527,7 @@ static void connect(Arrow a, Arrow child) {
 
     // Children arrows are chained in the h3 jump list starting from a+h3.
     Arrow tail = xl_tailOf(a);
-    uint32 h3 = hashChain(a, tail) % PRIM2;
+    uint32_t h3 = hashChain(a, tail) % PRIM1;
     if (!h3) h3 = 1; // offset can't be 0
     Arrow current;
     shift(a, current, h3, a);
@@ -578,8 +579,8 @@ static void disconnect(Arrow a, Arrow child) {
   if (cell_isTag(cell)) { // parent arrow is a TAG
 
     // One decrements a ref counter in 1st data byte at a+h3 cell.
-    uint32 h1 = cell_getData(cell);
-    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    uint32_t h1 = cell_getData(cell);
+    uint32_t h3 = hashChain(a, h1) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
     Address  a_h3;
     shift(a, a_h3, h3, a);
@@ -599,11 +600,11 @@ static void disconnect(Arrow a, Arrow child) {
     }
     
   } else { //  ARROW, ROOTED, BLOB...
-    uint32 rooted = cell_isRooted(cell);
+    uint32_t rooted = cell_isRooted(cell);
  
     // One removes the arrow from its parent h3-chain of back-references.
     Arrow tail = xl_tailOf(a);
-    uint32 h3 = hashChain(a, tail) % PRIM2;
+    uint32_t h3 = hashChain(a, tail) % PRIM1;
     if (!h3) h3 = 1; // offset can't be 0
 
     // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
@@ -612,7 +613,7 @@ static void disconnect(Arrow a, Arrow child) {
     cell = space_get(current);
 
     Arrow previous;
-    uint32 stillRemaining = 0;
+    uint32_t stillRemaining = 0;
     while (cell_getJump(cell) != 0) {
       previous = current;
       jump(cell, previous, current, h3, a);
@@ -625,7 +626,7 @@ static void disconnect(Arrow a, Arrow child) {
     unsigned jump = cell_getJump(cell);
     
     // back-ref cell recycled either as a free or STUFFED cell
-    uint32 crossover = cell_getCrossover(cell);
+    uint32_t crossover = cell_getCrossover(cell);
     cell = (crossover ? cell_build(cell_getCrossover(cell), STUFFING, 0) : 0);
     space_set(current, cell, 0);
 
@@ -646,7 +647,7 @@ static void disconnect(Arrow a, Arrow child) {
       }
 
     } else { // generic case
-      uint32 previousCell = space_get(previous);
+      uint32_t previousCell = space_get(previous);
       unsigned previousJump = cell_getJump(previousCell);
       previousJump += jump;
       if (previousJump <= 15) {
@@ -669,7 +670,7 @@ void xl_childrenOf(Arrow a, XLCallBack cb, char* context) {
   Cell cell = space_get(a);
   if (cell_isArrow(cell)) {
     Arrow tail = cell_getData(cell);
-    uint32 h3 = hashChain(a, tail) % PRIM2; 
+    uint32_t h3 = hashChain(a, tail) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
       
     Address current;
@@ -713,13 +714,13 @@ void xl_unroot(Arrow a) {
 
   // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
   Arrow tail = cell_getData(cell);
-  uint32 h3 = hashChain(a, tail) % PRIM2;
+  uint32_t h3 = hashChain(a, tail) % PRIM1;
   if (!h3) h3 = 1; // offset can't be 0
   Address a_h3;
   shift(a, a_h3, h3, a);
-  cell headCell = space_get(a_h3);
+  Cell headCell = space_get(a_h3);
   // When the arrow is not referred, one switches on its LOOSE status.
-  uint32 loose = (cell_getJump(headCell) == 0);
+  uint32_t loose = (cell_getJump(headCell) == 0);
   space_set(a, cell_build(cell_getCrossover(cell), ARROW, tail), (loose ? MEM1_LOOSE : 0));
 
   if (loose) {
@@ -746,8 +747,8 @@ int xl_isLoose(Arrow a) {
     return 0; // rooted ==> not loose!
   } else if (cell_isTag(cell)) {
     // the ref counter is located in the 1st byte of the h3-next cell content
-    uint32 h1 = cell_getData(cell);
-    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    uint32_t h1 = cell_getData(cell);
+    uint32_t h3 = hashChain(a, h1) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
     Address  a_h3;
     shift(a, a_h3, h3, a);
@@ -757,7 +758,7 @@ int xl_isLoose(Arrow a) {
   } else {
     // the arrow is loose if h3-next cell jump list is empty.
     Arrow tail = cell_getData(cell);
-    uint32 h3 = hashChain(a, tail) % PRIM2;
+    uint32_t h3 = hashChain(a, tail) % PRIM1;
     if (!h3) h3 = 1; // offset can't be 0
     Address a_h3;
     shift(a, a_h3, h3, a);
@@ -771,15 +772,15 @@ int xl_equal(Arrow a, Arrow b) {
   return (a == b);
 }
 
-static void remove(Arrow a) {
+static void forget(Arrow a) {
   Cell cell = space_get(a);
   // As a matter of fact, this is exactly the same code for tag or arrow
   // I let the both cases for tracability
   if (cell_isTag(cell)) {
-    uint32 h1 = cell_getData(cell);
+    uint32_t h1 = cell_getData(cell);
     space_set(a, cell_free(cell), 0);
 
-    uint32 h3 = hashChain(a, h1) % PRIM2; 
+    uint32_t h3 = hashChain(a, h1) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
     Address  current;
     shift(a, current, h3, a);
@@ -796,7 +797,7 @@ static void remove(Arrow a) {
     Arrow tail = cell_getData(cell);
     space_set(a, cell_free(cell), 0);
 
-    uint32 h3 = hashChain(a, tail) % PRIM2; 
+    uint32_t h3 = hashChain(a, tail) % PRIM1; 
     if (!h3) h3 = 1; // offset can't be 0
     Address  current;
     shift(a, current, h3, a);
@@ -816,7 +817,7 @@ void xl_commit() {
   for (i = 0; i < looseStackSize ; i++) { // loose stack scanning
     Arrow a = looseStack[i];
     if (xl_isLoose(a)) { // a loose arrow is removed NOW
-      remove(a);
+      forget(a);
     }
   }
   zeroalloc(&looseStack, &looseStackMax, &looseStackSize);
@@ -827,8 +828,8 @@ void xl_commit() {
 void xl_init() {
   if (space_init()) { // very first start 
     // Eve
-    space_set(0, ARROW, 0, 0);
-    space_set(1, 0, 0, 0);
+    space_set(0, cell_build(0, XL_ARROW, 0), 0);
+    space_set(1, 0, 0);
     space_commit();
   }
   blobTag = xl_tag(BLOB_TAG);

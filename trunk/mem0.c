@@ -1,8 +1,9 @@
+#define MEM0_C
 #include <stdio.h>
 #include <stdlib.h>
-#include <cassert.h>
+#include <assert.h>
+#include <string.h>
 
-#define MEM0_C
 #include "mem0.h"
 
 static FILE* F = NULL;
@@ -27,11 +28,11 @@ int mem0_init() {
   if (env) {
     char* d = dirname(env);
     chdir(d);
-    F = fopen(env);
+    F = fopen(env, "wa");
     free(d);
   } else {
     chdir(PERSISTENCE_DIR);
-    F = fopen(PERSITENCE_FILE, "wa");
+    F = fopen(PERSISTENCE_FILE, "wa");
   }
   assert(F);
   fseek(F, 0, SEEK_END);
@@ -66,7 +67,7 @@ void mem0_saveData(char *h, size_t size, char* data) {
   fclose(fd);
 }
 
-char* mem0_loadData(size_t* sizeP) {
+char* mem0_loadData(char* h, size_t* sizeP) {
   *sizeP = 0;
 
   size_t size;
@@ -87,7 +88,7 @@ char* mem0_loadData(size_t* sizeP) {
   char *buffer = (char *)malloc(sizeof(char) * size);
   assert(buffer);
 
-  int rc = fread(buffer, size, 1, fd);
+  rc = fread(buffer, size, 1, fd);
   fclose(fd);
 
   assert(rc);

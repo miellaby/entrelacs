@@ -9,8 +9,16 @@ I'm going to remove this concept.
 
 // Je viens d'imaginer une façon excellente d'accélerer le parcours d'un cache a la recherche des modifications
 // on fait comme le petit jeu des enfants avec les bateaux en papier, c'est à dire: on stocke dans 8 bits à coté de chaque cellule modifiée l'adresse modulo 255 de la cellule modifiée suivante.
-// Le problème c'est de trouver la cellule modifiée qui précède celle qu'on modifie. Flute.
+// Le problème c'est de trouver la cellule modifiée qui précède celle qu'on modifie. Elle peut être n'importe où. Flute.
  
+// Once one decides not to use a traditional chain hashing designed table, several exicting alternatives come along.
+// First alternative: Open addressing consists in looking for an arrow at more than one physical location, starting from a so-called "open address". Double hashing improves the dispatching of physical locations of a considered open address so to prevent data "clustering".
+// Second alternative: The coalesced chaining. It's a sort of chained hashing, but the chaind list is design within the hash table.
+// Third and most well though approach (IMHO) is the Cuckoo hashing. It consists in lookup an item in no more than two locations (much more efficient than preceding design). But those locations are computed by two independant hash functions. Every time on inserts an item, one puts it at its frst location. If it's already fillen by an existing item, this conflicting item is moved to its alternate location, which causes a potential conflicting item to be moved in turn, and so one until there is an item whose alternate location is free (no more conflict).
+// However, the most important point of the future Entrelacs design is to merge atom raw data and arrows dictionnary within the same space. Cuckoo hashing requires to move whatevers exists in a targeted location; but how to move a piece of raw data without breaking the data string?
+// please note when one stumbles upon a piece of data, one can't know which data string it belongs to, and where the sequence starts. If one moves this piece of data away, one can't modify previous or next pieces to take into account this change.
+
+
 
 // About connectivity, garbage collector, new arrow, unrooted arrow
 
@@ -42,7 +50,7 @@ I'm going to remove this concept.
 
 /* Defining */
 Arrow string(char *);
-Arrow blob(char *, uint32 size);
+Arrow blob(char *, uint32_t size);
 Arrow arrow(Arrow, Arrow);
 
 /* Unbuilding */
