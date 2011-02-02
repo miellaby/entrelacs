@@ -53,8 +53,8 @@ This approach encompasses commonly used solutions like semantic planar graphs, r
    * http://en.wikipedia.org/wiki/Navigational_Database
    * http://en.wikipedia.org/wiki/Relational_database
    * http://en.wikipedia.org/wiki/Relational_model
-   * http://en.wikipedia.org/wiki/Operating_system
-   * http://en.wikipedia.org/wiki/Operating_system
+   * http://en.wikipedia.org/wiki/Graph_database
+   * http://en.wikipedia.org/wiki/Operating_system (regular model)
    * http://en.wikipedia.org/wiki/NoSQL
    * http://en.wikipedia.org/wiki/Tag_(metadata)
    * http://en.wikipedia.org/wiki/Semantic_Web
