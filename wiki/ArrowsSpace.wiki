@@ -10,6 +10,8 @@ The AS design also includes a _garbage collector_ algorithm. _Reference counters
 
 The AS is acceded through a RAM-based cache which leverages on all available memory levels of the hosting system. This cache is totally transparent, meaning the AS features what one calls _orthogonal persistence_.
 
+New: Here is a ArrowSpaceInterface to explain coders what the _arrows space_ is.
+
 ==== assimilation ====
 
 The _Arrows Space_ is filled by converting data into arrows. This conversion process is called _assimilation_. It takes place:
