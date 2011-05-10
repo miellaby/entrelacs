@@ -1,4 +1,4 @@
-#labels Deprecated
+#labels Deprecated,Featured
 <img align="right" width=194 height=150 src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows-logo-2.png/">
 
 The "Entrelacs project" aims to develop a revolutionary computing environment, the [EntrelacsSystem Entrelacs System], where the "arrow" supersedes the "bit" as the fundamentally smallest piece of information. By "arrow", one means an immutable and uniquely defined oriented link between two said "arrows".
