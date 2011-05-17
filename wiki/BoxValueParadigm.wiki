@@ -20,7 +20,7 @@ Why programmers/engineers never explore alternative design pattern? One may pres
 
 The box/value paradigm is so deeply rooted in our minds that no alternative has even been studied. And yet, this approach leads to issues.
 
-* Issue 1: Redundancy. The box/value paradigm lead to mapping a given concept several times. For example, if our data tree contains several references to the natural number 2, this number representation will be repeated as identical values in several boxes.
+ * *Redundancy*. The box/value paradigm lead to mapping a given concept several times. For example, if our data tree contains several references to the natural number 2, this number representation will be repeated as identical values in several boxes. Of course, it looks like a mandatory constraint at first glance, because that's how one usually maps a tree on a sheet of paper too. But it may be avoided.
 
 * Issue 2: Compartmenting.  ...
 
