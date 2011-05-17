@@ -1,0 +1,27 @@
+#summary Box/Value paradigm
+
+Computer sciences deal with [http://en.wikipedia.org/wiki/Data_structure data structure (w)].  Different kinds of data structures are suited to different kinds of applications.
+
+But how does one map such structures onto a physical support, like
+ * a sheet of paper,
+ * an hard drive,
+ * a memory bank ?
+
+For example, let's says we've got some statistics organized into a [http://en.wikipedia.org/wiki/Tree_(data_structure) tree (w)]. How can we get this tree stored on an hard drive?
+
+To do so, engineers are used to applying the box/value paradigm. They divide space into boxes, each box containing a value.
+ * Sometimes, a value is a sign. That is a binary representation of a natural number or any other concept mapped into a natural number.
+ * Sometimes, a value is a gathering of smaller values. In other words, its box is itself divided into smaller boxes by repeating the box/value paradigm.
+ * Sometimes, a value is actually (involved in) referencing an other box.
+
+In our example, the box/value paradigm leads us to put our data into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
+
+Why programmers/engineers never explore alternative design pattern? One may presume it's due how _writing_ works. _Writing_ is also based upon the box/value paradigm. Writing is indeed all about boxes (sentences, words...) until signs (letters or ideograms). Signs form references up to concepts. Boxes may also contain references to other boxes, like "the last chapter" in "please refer to the last chapter" sentence.
+
+The box/value paradigm is so deeply rooted in our minds that no alternative has even been studied. And yet, this approach leads to issues.
+
+* Issue 1: Redundancy. The box/value paradigm lead to mapping a given concept several times. For example, if our data tree contains several references to the natural number 2, this number representation will be repeated as identical values in several boxes.
+
+* Issue 2: Compartmenting.  ...
+
+* Issue 3: No meta ...
