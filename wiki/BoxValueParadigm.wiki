@@ -25,3 +25,7 @@ The box/value paradigm is so deeply rooted in our minds that no alternative has 
  * *Compartmenting*. The box/value paradigm leads to an heterogeneous set of information spaces. The operating system usually publishes the structure of the boxes it is responsible for, typically its file system. But the content of these boxes themselves depends on the applications which handle them. Neither an human user nor a software agent can fully browse and operate the whole content of a computer to create new information out of it.
 
  * *No meta*. Inside a box, one value may actually be a reference to an other box (though there is usually no way to know it) but it can't be a reference to _a given value in a given box_ concept because such a piece of information is not stored as is. This is eventually a very serious issue because a box/value based software stack can't process its own information at an higher level of abstraction, i.e. at a meta level.
+
+ * *duality*. The box/value paradigm is fundamentally dual. There are boxes on one side, and values in the other sides. This duality propagates itself in every layer of software within a computer. It is so deeply rooted in our every day's life that it looks wrongly natural, like the odd separation between end users and programmers. And yet, this dualy is most of the time nothing more than a useless curb on computers' abilities.
+
+_To be continued_
