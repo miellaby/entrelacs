@@ -4,58 +4,60 @@
 
 Computer sciences deal with [http://en.wikipedia.org/wiki/Data_structure data structure (w)].  Different kinds of data structures are suited to different kinds of applications.
 
-But how does one map such structures onto a physical support, like
+But how does one maps such structures onto a physical support, like
  * a sheet of paper,
  * an hard drive,
  * a memory bank ?
 
-For example, let's says we've got some statistics organized into a [http://en.wikipedia.org/wiki/Tree_(data_structure) tree (w)]. How can we get this tree stored on an hard drive?
+For example, let's says we've got a set of statistics organized in a [http://en.wikipedia.org/wiki/Tree_(data_structure) tree (w)]. How can we put our tree on an hard drive?
 
 ==The box/value paradigm==
-To do so, engineers are used to applying the box/value paradigm. They divide space into boxes, each box containing a value.
- * Sometimes, a value is a sign. That is a binary representation of a natural number or any other concept mapped into a natural number.
- * Sometimes, a value is a gathering of smaller values. In other words, its box is itself divided into smaller boxes by repeating the box/value paradigm.
- * Sometimes, a value is actually (involved in) referencing an other box.
+To do so, engineers are used to applying the _box/value paradigm_. They divide space into boxes, each box containing a value.
+ * Sometimes, a value is a sign. That is a binary representation of a natural number or any other concept mapped to a natural number.
+ * Sometimes, a value is a gathering of smaller values. In other words, its box is itself divided into smaller boxes by repeating the box/value paradigm at a upper scale.
+ * Sometimes, a value is actually (involved in) referencing an other box. 
 
-In our example, the box/value paradigm leads us to put our data into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
+In our example, the box/value paradigm leads us to put data into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
+
+==box/value paradigm = Writing==
+
+Programmers/engineers have never look for an other alternative. Why? 
+
+One may presume it's due to how _writing_ works. _Writing_ functioning is based on the box/value paradigm as well. It's all about boxes (sentences, words...) until signs (letters or ideograms). Signs typically form references up to concepts but they may also reference other boxes, like "the last chapter" in "please refer to the last chapter" sentence.
+
+The box/value paradigm is so deeply rooted in people minds that no real alternative has even been studied. And yet, this approach leads to big issues as explained further.
+
+==box/value paradigm = graph theory==
+The box/value paradigm is directly related to [http://en.wikipedia.org/wiki/Glossary_of_graph_theory graph theory (w)] whose fundamental statement is that a _graph_ consists of two types of elements, namely _vertices_ and _edges_. So do the box/value paradigm: boxes act as _vertices_ and contained references act as _edges_ linking these boxes to each others.
+
+Replacing a box/value system by a more flexible graph system like a object-oriented persistent environment or a [http://en.wikipedia.org/wiki/Triple_store triple store] actually doesn't solve any of the issues introduced herein. To say it clearly: *as long as an information model relays on a _graph_, it's only a variation of the _box/value_ paradigm.*
 
 ==Issues with the box/value paradigm==
 
-Why programmers/engineers never explore alternative design pattern? One may presume it's due to how _writing_ works. _Writing_ is also based upon the box/value paradigm. It's all about boxes (sentences, words...) until signs (letters or ideograms). Signs form references up to concepts. In Writing, boxes may also contain references to other boxes, like "the last chapter" in "please refer to the last chapter" sentence.
+ * *Redundancy*. The box/value paradigm leads to mapping a given concept several times. For example, if our data tree contains several references to the natural number 2, this number representation will be repeated as identical values in several boxes. Writing makes us think such a redundancy is a necessity while it's not. Quite the contrary, dispatching many representations of the same concept among the information space prevents software to exhibit a lot of useful behaviors. The issue is not so about room waste. It's about things one can't ask for a computer system without designing a very complex and very resource-costly piece of software, like getting all the occurrences of a given keyword in a system.
+   * Concrete example: You can't ask for your computer when and how it makes use of a given PI number approximation, or a said english word. Desktop search engines (like those directly included in proprietary computing systems) form a very partial solution to this problem, especially if we consider that found occurrences are most of the time meaningless without external knowledge of the context they're used in.
 
-The box/value paradigm is so deeply rooted in people minds that no real alternative has even been studied. And yet, this approach leads to issues.
+ * *Compartmenting*. The box/value paradigm leads to an heterogeneous set of information spaces. An operating system usually publishes the structure of boxes it is responsible for, typically its file system. But the content of these boxes itself depends on the applications which handle them. So do data in volatile memory. Neither an human user nor a software agent can fully browse and operate the whole content of a computer to build new information and get new behaviors.
+   * Concrete example: A simple picture manager is designed for picture files. It can't easily access pictures embedded inside other application files, like photo suite data bases, mail agent archives, and software inner resources. Most of all, no software today can easily access to pictures stored in volatile memory by other softwares at a given time without some complex frameworks.
 
- * *Redundancy*. The box/value paradigm leads to mapping a given concept several times. For example, if our data tree contains several references to the natural number 2, this number representation will be repeated as identical values in several boxes. Writing makes us think such a redundancy is a necessity, but it's not. Quite the contrary, dispatching many representations of the same concept among the information space prevents software to exhibit a lot of useful behaviors. The issue is not so about room waste. It's about things one can't ask for a computer system without a very complex and very resource-costly piece of software, like getting all the occurrences of a given keyword in a whole system.
-   * Concrete example: You can't ask your computer when and how it makes uses of a given PI number approximation, or a said english word. Desktop search engines (like those directly included in proprietary computing systems) form a very partial solution to this problem, especially if we consider found occurrences are most of the time meaningless outside the context they're used in.
+ * *duality*. The box/value paradigm is fundamentally dual. There are boxes on one side, and values in the other sides. This duality propagates itself to every layer of software within a computer. It is so deeply rooted in our every day's life that it looks wrongly natural, like the odd separation between end users and programmers. And yet, this duality is more than often an useless curb on computers' abilities.
+   * Concrete example: programmers on one side, and end-users on the other side. Fine? Think again.
 
- * *Compartmenting*. The box/value paradigm leads to an heterogeneous set of information spaces. The operating system usually publishes the structure of the boxes it is responsible for, typically its file system. But the content of these boxes themselves depends on the applications which handle them. So does data in volatile memory. Neither an human user nor a software agent can fully browse and operate the whole content of a computer to get new information and new behavior.
-    * Concrete example: A simple picture managers designed for files can't easily access pictures embedded inside other application files, like photo suite data bases, mail agent archives, and software inner resources. Most of all, no software today can easily access to pictures stored in volatile memory without an heavy work of integration and standardization.
-
- * *duality*. The box/value paradigm is fundamentally dual. There are boxes on one side, and values in the other sides. This duality propagates itself in every layer of software within a computer. It is so deeply rooted in our every day's life that it looks wrongly natural, like the odd separation between end users and programmers. And yet, this dualy is most of the time nothing more than a useless curb on computers' abilities.
-    * Concrete example: there are programmers on one side, and end-users on the other side. Fine? Think again.
-
- * *rigidity*. As values and boxes are most of the time gathered into larger boxes, the box/value storage has a very negative impact on information plasticity. Bringing changes to information continuously obliges to enlarge existing boxes, and shift data to get room. For example, existing computer applications are excessively complex just to get back a bit of this lost plasticity through costly [http://en.wikipedia.org/wiki/Serialization serialization and deserialization (w)] processes. And after all, whatever the amount of work put in software development, most information in a traditional computer system just can't be modified to better fit the end user needs.
-    * Concrete example: Think about how a software application can't be modified in any aspect other than those allowed by the developers.
+ * *rigidity*. As values and boxes are most of the time gathered into larger boxes, the box/value storage has a very negative impact on information plasticity. Bringing changes to information continuously obliges to enlarge existing boxes, and shift data to get room. For example, existing computer applications are excessively complex just to get back a bit of this lost plasticity through costly [http://en.wikipedia.org/wiki/Serialization serialization and deserialization (w)] processes. And after all, whatever the amount of work put in software development, a very large majority of information in a traditional computer system can't be modified to better fit the end user needs.
+   * Concrete example: a software application can't be modified in any other aspect than those anticipated by developers.
 
  * *opacity*
  the box/value paradigm implies that the meaning of a given value depends on the box it belongs to. In other words, the meaning of a value depends on its location in the underlying material. But as boxes boundaries are generally invisible to an external observer, the location of a value can't be characterized outside its native context.
-   * Concrete example: information buried in user files can't be browsed without dedicated softwares, software behavior can't be analysed and modified without source code, etc.
+   * Concrete example: information buried in user files can't be browsed without dedicated softwares. Software behavior also can't be analysed and modified without source code. Within a traditional system, this process is called data forensics and is considered as a kind of hacking.
 
  * *directed browsing*
-  A box/value based information storage only guarantees information may be browsed in one direction: from the higher boxes to the lower values. It can't be browsed in the opposite direction. One can't get all the boxes which refer to a given box. One can't get all the boxes which contain a given value. In most implementations, one even can't identify the upper box containing a a given value/smaller box without some external knowledge.
-   * Concrete example: In Linux file-systems, there is no efficient way  to know what directories links to a given file. Of course, it's even worse if one considers the weak and easily breakable links formed by all the file path strings within software and user resources, documents and settings.
+  A box/value based information storage only guarantees information may be browsed in one direction: from the higher boxes to the lower values. It can't easily be browsed in the opposite direction. One can't get all the references to a given box or a given value. In most implementations, one can't even characterize the upper box containing a a given value/box without some external knowledge.
+   * Concrete example: In Linux file-systems, there is no efficient way  to know which directories links to a given file. What's even worse is how weak are those links consisting in file path strings within application or user resources, documents and settings.
 
- * *No meta*. A value may be a reference to a box though there is often no way to know it. But a value can't refer to _a given value in a given box_ or _a given sub-box inside a given super-box_ concepts because such pieces of information are not explicitly stored as is. This is a very problematic issue as a box/value based software stack can't process its own information at an higher level of abstraction, i.e. at a meta level.
-   * Concrete example: Whatever the "meta-data" a file-system allows you to set, there is always things you can't easily express. Like a meta-data to a meta-data (like the date when I changed a file access policy).
+ * *No meta*. A value may be a reference to a box (though there is often no way to know it) but a value can't refer to _a given value in a given box_ or _a given sub-box inside a given super-box_ concepts because such pieces of information are not explicitly stored as is. This is a very problematic issue as a box/value based software stack can't handle its own information at an higher _level of abstraction_, i.e. at a _meta level_.
+   * Concrete example: Whatever the "meta-data" a file-system allows you to set, they won't allow you to manage meta-data to meta-data (e.g. the date when a file access policy has been changed).
 
- * *No constructive information addition*. A box/value based digital storage doesn't offer a straight forward way to define links between existing information components. In other words, a set of existing boxes and values can't be linked together in a explicit way. A considered application may create a side box to store existing references, but these references keep on being quickly broken as information evolves and they will be missed by basic storage browsing operators.
-   * Concrete example: Think about how a photo suite gets lost when one renames picture files within the underlying file system. Think about how  one cannot knows which software refers to a given file.
-
-==box/value paradigm = graph theory==
-The box/value paradigm is deeply related to [http://en.wikipedia.org/wiki/Glossary_of_graph_theory graph theory (w)] whose fundamental statement is that a _graph_ consists of two types of elements, namely _vertices_ and _edges_.
-
-_Graph theory_ is directly related to the box/value paradigm, as boxes act as _vertices_ and reference-type values act as _edges_ linking boxes to each others.
-
-To say it better: *as long as an information model is supported by graphs, it still relays on the _box/value_ paradigm.*
+ * *No way to enrich information*. A box/value based digital storage doesn't offer a direct way to link together a set of existing boxes and values. One may create a side box to store existing references, but these references keep on being broken as information evolves. Plus these side boxes are not taken into account by primary storage browsing operators.
+   * Concrete example: a photo suite gets lost when one renames managed picture files.  Whatever the work put into the design of such a manager, it won't be able to get strong reliable references to managed pictures. Any changes to the original files/structures will invalidate the references in the photo suite data base. More generally, there's no way to know which software or user content refers to a given file so to ensure files system consistency as such references consists in _file path strings_ buried in closed serialized files.
 
 ArticleCompleteness: 70%
