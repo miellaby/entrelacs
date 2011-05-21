@@ -1,1 +1,16 @@
 Actively rewritten. Draft [EntrelacsLanguageDraft here].
+The [EntrelacLanguage Entrelacs language] (EL) is a programing language designed to evaluate expressions in the form of arrow constructs within an [ArrowsSpace arrows space].
+
+To get the best benefits from this particular environment, EL source code looks like the continuation passing style (CPS) Abstract Syntax Tree of a translated functional language program.
+
+This makes EL goes a step further than traditional _homoiconicity_. An EL program can:
+
+* access itself at source level,
+* modify itself and other programs at source level,
+* make these changes persistent.
+
+In short, EL is fully reflexive. An EL based program gets:
+* the ability to access itself, aka _introspection_
+* the ability to modify itself, aka _intercession_
+
+It makes an _Entrelacs system_ an ideal platform for reflexive computing.
