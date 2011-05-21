@@ -1,6 +1,6 @@
 #summary The best Entrelacs system reference design consists in you, a pen, and a sheet of paper.
 
-The [EntrelacsParadigm] says "let's map information into arrows".
+The [ArrowParadigm Entrelacs paradigm] says "let's map information into arrows".
 
 Basically, one takes information to pieces until one gets a structure of oriented pairs of atomistic concepts. This is not really new as it's very similar with Lisp's s-expressions and list concept.
 
