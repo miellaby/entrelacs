@@ -21,22 +21,24 @@ An _arrow_ is:
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/></p>
 
 Each arrow is an oriented pair of arrows.
-  * the first arrow is the _tail_.
-  * the last arrow is the _head_.
-  * an arrow _goes out_ its tail.
-  * an arrow _comes into_ its head.
-  * from its tail point of view, an arrow is an _outgoing_ arrow.
-  * from its head point of view, an arrow is an _incoming_ arrow.
-  * Within an arrows structure, an arrow may have both incoming and outgoing arrows. These are its "children" arrows.
-  * Within an arrows structure, all children, grand children and so on, an arrow may have are its _"descendants"_.
+  * The first arrow is the _tail_.
+  * The last arrow is the _head_.
+  * Tail and head are _ends_.
+  * An arrow _goes out_ its tail.
+  * An arrow _comes into_ its head.
+  * From its tail point of view, an arrow is an _outgoing_ arrow.
+  * From its head point of view, an arrow is an _incoming_ arrow.
+  * Incoming and outgoing arrows are _children_.
+  * Children, children of children, and so on, are _descendants_.
+  * Ends, ends of ends, and so on, are _ancestors_.
 
 ==_Entrelacs_==
 
 An _entrelacs_ is a set of _intricated_ arrows forming an unique discrete construct. It means:
-  * any arrow from the set is the descendant of all the other arrows of the set. In other words: whatever A & B two arrows from the set, A is a descendant of B, and B is a descendant of A.
+  * any arrow from the set is the descendant/ancestor of all the other arrows of the set. In other words: whatever A & B two arrows from the set, A is a descendant/ancestor of B, and B is a descendant/ancestor of A.
   * one may characterize an entrelacs according to its topology, that is the number of arrows it contains and how these arrows are connected together.
 
-One considers *Entrelacs which are isomorph are equal*.
+One considers that *entrelacs which are isomorph are equal*.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this entrelacs is named _Eve_ (Eve has no ancestor but itself)</p>
 
@@ -76,13 +78,13 @@ Arrows uniqueness induces rooted arrows are likely ancestors of other  rooted ar
 
 An Entrelacs system garbage collector simply needs to reclaim storage resources of arrows which are neither a rooted arrow nor an ancestor of any remaining rooted arrow.
 
-==extension of the paradigm to any arrow-equivalent objects==
+==extension of the paradigm to arrow-equivalent complex objects==
 
 Though the _arrows paradigm_ only deals with _arrows_, it may handle raw data -like binary strings- as well. The point is that raw data are equivalent to natural numbers, which may in turn be seen as _Entrelacs_ as introduced before.
 
 So handling raw data within an arrows structure doesn't deny the _everything is an arrow_ credo since such _pieces of data_ correspond to arrows as well.
 
-Mathematically, one says there is an *isomorphism* between the set of _entrelacs_ and the set of natural numbers. See AtomEntrelacEquivalency for further reading.
+Mathematically, one says there is an *isomorphism* between the set of _entrelacs_ and the set of natural numbers.
 
 More generally, the arrow paradigm may be extended to take into consideration more complex information building blocks, like _tuples_ or _bags_.
 
@@ -92,6 +94,8 @@ For instance, by considering the "hello world" character string:
  * there can't be more than one copy of this string in the whole information space, 
  * this string may not be modified in place,
  * one may browse all the arrows connected to this string, i.e. its children arrows.
+
+See EntrelacEquivalences for further reading.
 
 ==arrows based knowledge representation==
 
