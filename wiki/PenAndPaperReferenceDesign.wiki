@@ -1,0 +1,34 @@
+#summary The best Entrelacs system reference design consists in you, a pen, and a sheet of paper.
+
+The [EntrelacsParadigm] says "let's map information into arrows".
+
+Basically, one takes information to pieces until one gets a structure of oriented pairs of atomistic concepts. This is not really new as it's very similar with Lisp's s-expressions and list concept.
+
+However, one only considers the pure mathematical object behind each atomistic concept and one handles as it is: unique. So one maps it onto one and only one discrete sign ([EntrelacsEquivalences that is a discrete arrows structure]) in the whole information space.
+
+For example, even if one represents some statistics which contains repeatedly  the natural number "2", one puts only once a sign to represent "2" on a physical support.
+
+Arrows are *singletons* as well. So one projects each relationship concept onto one and only one arrow, coming out a "tail" and going to a "head". The tail and head may be a previously projected discrete sign OR some previously projected arrow.
+
+You can experiment the arrow paradigm with a sheet of paper and a pencil. Please try. It's fun!
+
+ * First choose an interesting material, like some intricate set of predicates, says: "cows make milk", "babies drink milk", "cows drink water", "drink is a verb", "water boils at 100°C", etc.).
+ * Use words or numbers or littles doodles as signs to represent atomistic concepts.
+   * But remember, put each concept only once on your whole page.
+ * Then draw arrows between signs
+ * Then draw arrows between arrows, layer by layer, like "make->milk", "drink->water" ... then "cows->(make->milk)", and so on.
+ * But again, never do as with _Writing_, don't draw the (from "make" to "milk") arrow more than once! Your drawing is not an arrows structure if several arrows share the same ends ^(or several _entrelacs_ share the same topology)^.
+
+Once you finished, you may enjoy your work.
+* Check how any value, any edge and any subsequent link is connected to all the information it belongs to.
+* Notice how you can add more arrows, again and again, with no need to erase or modify anything already in place.
+
+That are arrows specific features.
+
+Now for poetry: Actually, you may replace signs by entrelacs, that is discrete closed structures of arrows. That means you may only see arrows on your page and yet still have stored workable information.
+
+So what have we done? Did we invent a new data structure? Not really. We rather map a data structure to a drawing, but in a radically different way than the one we're accustomed to. To do so, we used a pen and a paper sheet as a device to store arrows, namely an [ArrowsSpace arrows space].
+
+With some some self-discipline, a sheet of paper actually makes a quite good _arrow space_.
+
+Unfortunately, that's not so simple with computer hardware. So one must develop a simulated device (a software version of an [ArrowsSpace arrows space]) on top of an existing computer platform.
