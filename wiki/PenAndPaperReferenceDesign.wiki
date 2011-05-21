@@ -4,7 +4,7 @@ The [ArrowParadigm Entrelacs paradigm] says "let's map information into arrows".
 
 Basically, one takes information to pieces until one gets a structure of oriented pairs of atomistic concepts. This is not really new as it's very similar with Lisp's s-expressions and lists.
 
-However, one only considers the pure mathematical object behind each atomistic concept and one handles as it is: unique. So one maps each concept onto one and only one discrete sign ([EntrelacsEquivalences that is a discrete arrows structure]) in the whole information space.
+However, one only considers the pure mathematical object behind each atomistic concept and one handles it as it is: unique. So one maps each concept onto one and only one discrete sign ([EntrelacsEquivalences that is a discrete arrows structure]) in the whole information space.
 
 For example, even if one represents some statistics which contains repeatedly  the natural number "2", one puts only once a sign to represent "2" on a physical support.
 
