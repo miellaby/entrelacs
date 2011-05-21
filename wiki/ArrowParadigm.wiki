@@ -3,7 +3,7 @@
 
 =Introduction=
 
-The Entrelacs Manifesto proposes to model information by following the _*Entrelacs paradigm*_. It consists in handling information in the form of _arrows_ made constructs.
+The *Entrelacs Manifesto* proposes to follow the _*Entrelacs paradigm*_. It consists in modeling information in the form of _arrows_ made constructs.
 
 ==The arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
