@@ -6,7 +6,7 @@ Basically, one takes information to pieces until one gets a structure of oriente
 
 However, one only considers the pure mathematical object behind each atomistic concept and one handles it as it is: unique. So one maps each concept onto one and only one discrete sign ([EntrelacsEquivalences that is a discrete arrows structure]) in the whole information space.
 
-For example, even if one represents some statistics which contains repeatedly  the natural number "2", one puts only once a sign to represent "2" on a physical support.
+For example, even if one represents statistics which repeatedly contains 2 -the natural number-, one may only put one sign to represent 2 on a physical support.
 
 Arrows are *singletons* as well. So one projects each relationship concept onto one and only one arrow, coming out a "tail" and going to a "head". The tail and head may be a previously projected discrete sign OR some previously projected arrow.
 
