@@ -78,7 +78,9 @@ An Entrelacs system garbage collector simply needs to reclaim storage resources 
 
 ==extension of the paradigm to any arrow-equivalent objects==
 
-Though the _arrows paradigm_ only deals with _arrows, it may handle raw data -like a binary string- as well. The point is that raw data are equivalent to natural numbers, which may in turn be seen as _Entrelas_ as introduced before. So handling raw data within an arrows structure doesn't deny the _everything is an arrow_ credo since these _pieces of data_ correspond to arrows as well.
+Though the _arrows paradigm_ only deals with _arrows_, it may handle raw data -like binary strings- as well. The point is that raw data are equivalent to natural numbers, which may in turn be seen as _Entrelacs_ as introduced before.
+
+So handling raw data within an arrows structure doesn't deny the _everything is an arrow_ credo since such _pieces of data_ correspond to arrows as well.
 
 Mathematically, one says there is an *isomorphism* between the set of _entrelacs_ and the set of natural numbers. See AtomEntrelacEquivalency for further reading.
 
@@ -89,8 +91,8 @@ But these complex objects must be considered exactly in the same way as their ar
 For instance, by considering the "hello world" character string:
  * there can't be more than one copy of this string in the whole information space, 
  * this string may not be modified in place,
- * one can browse all the arrows connected to it, i.e. its children arrows.
+ * one may browse all the arrows connected to this string, i.e. its children arrows.
 
 ==arrows based knowledge representation==
 
-To get useful information structures with arrows, one can adapt many classical models and even invent new ones. See ArrowModeling for further readings.
+To get useful information structures with arrows, one may adapt many classical models and even invent new ones. See ArrowModeling for further readings.
