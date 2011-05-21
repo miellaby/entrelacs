@@ -32,18 +32,19 @@ Each arrow is an oriented pair of arrows.
 
 ==_Entrelacs_==
 
-An _entrelacs_ is an unique set of _intricated_ arrows. It means:
-  * any arrow from the set contains the whole set of arrows in its definition. In other words: whatever A & B two arrows from the set, A is an ancestor of B, and B is an ancestor of A.
-  * uniqueness : One distinguishes each entrelacs regarding its topology (how its arrows are connected to each other). *Entrelacs which are isomorph are equal*.
+An _entrelacs_ is a set of _intricated_ arrows forming an unique discrete construct. It means:
+  * any arrow from the set is the descendant of all the other arrows of the set. In other words: whatever A & B two arrows from the set, A is a descendant of B, and B is a descendant of A.
+  * one may characterize an entrelacs according to its topology, that is the number of arrows it contains and how these arrows are connected together.
+
+One considers *Entrelacs which are isomorph are equal*.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this entrelacs is named _Eve_ (Eve has no ancestor but itself)</p>
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png'/><br/>an arrow from _yin-yang_ to _triskel_ (two distinct entrelacs)</p>
 
-Entrelacs behave like atomistic pieces of data. Like _atoms_, they can't be divided in smaller isolated components and they got finished boundaries. And last but not least, one can *enumerate* them, like natural numbers.
+Entrelacs act as atomistic pieces of information. They got finished boundaries and one can't identify smaller isolated components in them. And last but not least, one can *enumerate* them!
 
 <img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
-==Entrelacs / raw data equivalency==
 
 ==arrow assimilation==
 
