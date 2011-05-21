@@ -17,18 +17,14 @@ You can experiment the arrow paradigm with a sheet of paper and a pencil. Please
    * But remember, put each concept only once on your whole page.
  * Then draw arrows between signs
  * Then draw arrows between arrows, layer by layer, like "make->milk", "drink->water" ... then "cows->(make->milk)", and so on.
- * But again, never do as with _Writing_, don't draw the (from "make" to "milk") arrow more than once! Your drawing is not an arrows structure if several arrows share the same ends ^(or several _entrelacs_ share the same topology)^.
+ * But again, never do as with _Writing_, don't draw the (from "make" to "milk") arrow more than once! A drawing is not an arrows structure if several arrows share the same ends (or several _entrelacs_ share the same topology).
 
-Once you finished, you may enjoy your work.
-* Check how any value, any edge and any subsequent link is connected to all the information it belongs to.
-* Notice how you can add more arrows, again and again, with no need to erase or modify anything already in place.
+Once finished, you may enjoy your work.
+ * Notice how any value, any edge and any subsequent link is connected to all the information it belongs to!
+ * Notice how you can add more arrows, again and again, with no need to erase or modify anything already in place!
 
-That are arrows specific features.
+Now for poetry: Actually, you may replace signs by _entrelacs_, that is discrete closed structures of arrows. That means you may only draw arrows on your page and yet still have stored workable information.
 
-Now for poetry: Actually, you may replace signs by entrelacs, that is discrete closed structures of arrows. That means you may only see arrows on your page and yet still have stored workable information.
+So what have we done? Did we invent a new data structure? Not really. We rather map a data structure to a drawing, but in a radically different way than the one we're accustomed to. To do so, we used a pen and a paper sheet as a device to store arrows, that is an [ArrowsSpace arrows space].
 
-So what have we done? Did we invent a new data structure? Not really. We rather map a data structure to a drawing, but in a radically different way than the one we're accustomed to. To do so, we used a pen and a paper sheet as a device to store arrows, namely an [ArrowsSpace arrows space].
-
-With some some self-discipline, a sheet of paper actually makes a quite good _arrow space_.
-
-Unfortunately, that's not so simple with computer hardware. So one must develop a simulated device (a software version of an [ArrowsSpace arrows space]) on top of an existing computer platform.
+With some some self-discipline, a sheet of paper actually makes a quite good _arrow space_. Unfortunately, that's not so simple with computer hardware. So one must develop a simulated device (a software version of an [ArrowsSpace arrows space]) on top of an existing computer platform.
