@@ -1,50 +1,57 @@
-#summary The "Arrows Space" (AS) is the main component of a working Entrelacs system.
+#summary The "Arrows Space" (AS) is the key component of an Entrelacs system.
+#labels a
+
 === introduction===
-As explained herein, the _"Arrows Space"_  (AS) is an orthogonally persistent storage space where each mathematically definable arrow is stored at most once.
+An _"Arrows Space"_ (AS) is a device to store arrows structures by following the [EntrelacsParadigm]. Though such a device could be a real computer hardware, one considers for now an AS as a simulated device, that is a piece of middleware on top of an existing operating system within a traditional platform.
 
-The AS also stores connectivity data needed to query the system for all known _children_ of a given arrow. See ArrowParadigm.
+Please note [PenAndPaperReferenceDesign a pen and a paper sheet] are enough to simulate a man-powered arrows space.
 
-The AS also manages the _root flag_ telling whether a given arrow is rooted. See ArrowParadigm.
+===summary of properties===
+ * An AS leverages on both persistent and volatile memory levels. It performs orthogonal persistence.
+ * An AS ensures each mathematically definable arrow is stored at most once.
+ * An AS also stores connectivity data which allows to retrieve the ends and the _children_ of every arrow.
+ * An AS also stores the _root flag_ of every arrow.
+ * An AS performs transparent _garbage collection_.
 
-The AS design also includes a _garbage collector_ algorithm. _Reference counters_ are updated on this purpose.
+New: Here is a ArrowSpaceInterface to explain coders what the _arrows space_ functioning.
 
-The AS is acceded through a RAM-based cache which leverages on all available memory levels of the hosting system. This cache is totally transparent, meaning the AS features what one calls _orthogonal persistence_.
-
-New: Here is a ArrowSpaceInterface to explain coders what the _arrows space_ is.
+===orthogonal persistence===
+The AS stores arrows in a mass storage device. But it accedes to this device through a massive RAM-based cache. Almost all fast-access volatile memory resources of the hosting system are used to cache arrows. This cache is totally transparent and flatten all the memory levels of traditional systems into a single one.
 
 ==== assimilation ====
 
 The _Arrows Space_ is filled by converting data into arrows. This conversion process is called _assimilation_. It takes place:
   * when data -like user inputs- come from the outside.
-  * when internal computation produces new arrows from the inside.
+  * when some internal computation produces new arrows.
 
-Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. One first assimilates entrelacs, then children arrows, then grand children, and so on up to the overall assimilated arrow.
+Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. One first assimilates entrelacs, then entrelacs' children arrows, then their grand children, and so on up to the overall assimilated arrow.
 
-To ensure each mathematically definable arrow is stored at most once, the assimilation process considers the whole computer storage space (hard disks) as a single giant content-indexed open-addressed hash table.
+To ensure each mathematically definable arrow is stored at most once, the assimilation process considers the whole mass storage space (hard disk) as a kind of giant content-indexed open-addressed hash-table.
 
 It's less complicate than it looks like. In short, assimilating an arrow consists in:
-  # deducing the arrow location from the arrow definition.
-  # looking for an existing copy at the expected location.
-  # putting the arrow definition here if missing.
+  # deducing every arrow default location from its own definition.
+  # looking for an existing copy at the default location.
+  # putting the arrow definition here if missing and if wanted.
+  # managing location conflicts by shifting default locations by reproducible offsets.
 
 ==== hash everything ====
 
 The first step of the assimilation process consists in computing a location in the AS.
 
 To do so, one compute an hash code from the considered arrow. The chosen hash function depends on what kind of arrow is assimilated.
-  * For an entrelacs, one hashes its raw data.
-  * For a regular arrow (ie. a link from a _tail_ to a _head_), one quickly makes an hash code out of the tail and head's already known ID.
+  * For raw data, one hashes its body.
+  * For a regular arrow, one gets an hash code by combining the ID of its ends.
 
 ==== open addressing ====
 
-The hash code is truncated modulo the space total size to obtain what one calls an "open address" hereafter. 
+The hash code is then truncated modulo the total space size so to obtain a so-called "open address"..
 
-From this _open_ address, one looks for a copy of the arrow in the storage space. This search process works as is:
-  * if one finds the expected arrow at the considered address, then the job is done.
-  * If one finds some thing which is not the expected arrow, then one looks at a nearby location by adding some offset to the considered address.
-  * If one finds an empty location, then one stores the arrow definition here.
+Looking for a copy of an arrow in the storage space is a search process which works as is:
+  * if one finds the expected arrow at its default address, done.
+  * If one finds nothing, done. There's no copy. But one may store the arrow definition here if asked.
+  * If one finds something else, then one looks at a nearby location by shifting the default address by some offset.
 
-This way to manage a storage space is called OpenAddressing. It's an usual strategy to manage hash conflicts within hash tables.
+This process is called OpenAddressing when applied to hash tables.
 
 ==== locations are ID ====
 The eventual location of an assimilated arrow becomes its internal (and public) ID.
@@ -53,25 +60,26 @@ This ID may be reused to define subsequent children arrows.
 
 ==== arrow types ====
 
-In the anticipated prototype, the AS can handle 3 types of arrows so far. 
-  * regular arrows : ie. pairs,
+The anticipated AS prototype can handle 3 types of arrows so far. 
+  * regular arrows : ie. reference pairs,
   * blobs : *large* binary Objects,
   * tags : *short* C-Like NULL-terminated char strings.
 
-  * Reminder: Despite Blobs and tags are raw binary objects, they are considered as entrelacs (reentrant intricate self-defined arrows structures), that is arrows as well.
-  * Note: the choice assimilating data into either tags or blogs mainly depends on data size.
+  * Reminder: Despite Blobs and tags are raw binary objects, they must be considered like _entrelacs_ (reentrant intricate self-defined arrows structures).
+
+Note the choice assimilating data into either tags or blogs mainly depends on data size.
 
 ==== stored definition ====
 
-  * a regular arrow is a pair of arrows. It is consequently stored as a pair of ID both pointing to a location of an already assimilated arrow in the AS.
-  * a blob is supposed to be long. That's why one stores its whole hash signature with its content in order to quickly recognize an already assimilated copy of it.
-  * a tag is short enough to be directly stored by dumping its content into the AS.
+  * a regular arrow is a pair of arrows. It is consequently stored as a pair of ID corresponding to each end location.
+  * a blob is supposed to be long-sized. That's why one stores its whole hash signature before its content in order to quickly recognize an existing copy.
+  * a tag is short enough to be directly stored as is.
 
 ==== hash function ====
 
 The hash function used to compute an assimilated arrow's open address depends of the arrow type:
   * For a _blob_, one uses a cryptographic unambiguous hash function (like SHA).
-  * For a _tag_, one uses a much simpler checksum-like hash function. As hash collisions are frequent, one must compare an assimilated tag with stored copies char by char to check if it has already been assimilated.
+  * For a _tag_, one uses a much simpler checksum. Collisions are frequent, so one must check a copy char by char.
   * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's already known ID. Such an hash can be deduced from a structure of pairs of entrelacs without even fetching every intermediate arrows of the structure.
 
 The overall hash function _h_ consequently verifies :
