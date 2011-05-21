@@ -2,7 +2,7 @@
 #labels a
 
 === introduction===
-An _"Arrows Space"_ (AS) is a device to store arrows structures by following the [EntrelacsParadigm]. Though such a device could be a real computer hardware, one considers for now an AS as a simulated device, that is a piece of middleware on top of an existing operating system within a traditional platform.
+An _"Arrows Space"_ (AS) is a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. Though such a device could be a real computer hardware, one considers for now an AS as a simulated device, that is a piece of middleware on top of an existing operating system within a traditional platform.
 
 Please note [PenAndPaperReferenceDesign a pen and a paper sheet] are enough to simulate a man-powered arrows space.
 
