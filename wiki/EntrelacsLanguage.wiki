@@ -1,6 +1,6 @@
 Actively rewritten. Draft [EntrelacsLanguageDraft here].
 
-The [EntrelacLanguage Entrelacs language] (EL) is a programing language designed to evaluate expressions in the form of arrow constructs within an [ArrowsSpace arrows space].
+The [EntrelacsLanguage Entrelacs language] (EL) is a programing language designed to evaluate expressions in the form of arrow constructs within an [ArrowsSpace arrows space].
 
 To get the best benefits from this particular environment, EL source code looks like the continuation passing style (CPS) Abstract Syntax Tree of a translated functional language program.
 
