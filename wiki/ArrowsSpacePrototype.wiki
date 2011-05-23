@@ -23,7 +23,7 @@ Reminder: Despite Blobs and tags are raw binary objects, they are considered lik
 The hash function used to compute an assimilated arrow's _open address_ depends of the arrow type:
   * For a _blob_, one uses a cryptographic unambiguous hash function (SHA).
   * For a _tag_, one uses a much simpler checksum. When comparing an assimilated tag with a potential copy, one must check every char of the string.
-  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's already respective hash. The hash function should be commutative (ToBeConfirmed), one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every ancestor arrows.
+  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's respective hash codes. The hash function should be commutative (ToBeConfirmed) so that one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every ancestor arrows.
 
 The overall hash function _h_ consequently verifies :
   * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
