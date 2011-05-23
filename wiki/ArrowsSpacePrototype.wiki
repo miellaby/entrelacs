@@ -1,0 +1,186 @@
+#summary More detailed description of the first ArrowsSpace prototype
+
+This page describes the first ArrowsSpace prototype.
+
+== Architecture overview ==
+
+The AS code takes place as a thread-safe library.
+
+An HTTP/REST server may be coded on top of the library so that clients may simultaneously browse and fill up the AS by connecting to the server.
+
+== Complex object support ==
+
+The anticipated AS prototype will handle 2 types of objects in addition to regular arrows (ie. reference pairs). That is:
+  * blobs : *large* binary strings,
+  * tags : *short* char strings (C-Like NULL-terminated).
+
+Reminder: Despite Blobs and tags are raw binary objects, they are considered like arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows).
+
+23/02/09: Still studied: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. 
+
+== hash function ==
+
+The hash function used to compute an assimilated arrow's _open address_ depends of the arrow type:
+  * For a _blob_, one uses a cryptographic unambiguous hash function (SHA).
+  * For a _tag_, one uses a much simpler checksum. When comparing an assimilated tag with a potential copy, one must check every char of the string.
+  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's already respective hash. The hash function should be commutative (ToBeConfirmed), one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every ancestor arrows.
+
+The overall hash function _h_ consequently verifies :
+  * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
+  * _h_(Tag) = checksum(Tag)
+  * _h_(Blob) = sha(Blob) (or any cryptographic hash function).
+
+== content storage policy ==
+
+A regular arrow is a pair of arrow references. It is consequently stored as a pair of AS address.
+
+Atomistic arrows (BLOB or TAG) are stored like any regular arrow directly into the AS. Data are taken into slices stored into several cells separated by some offset.
+
+A tag is short enough to be directly stored as is.
+
+A blob being very long, one stores its whole hash signature before its content in order to quickly recognize an existing copy.
+
+Data strings must not be mixed up with existing data. Some bits are needed to store an offset factor to jump over conflicting cells up to the next valid slice of string.
+
+== connectivity ==
+
+For each newly assimilated arrow _a_, one also attaches 2 back-references to its ends (head and tail) definition, that is:
+  * _a_ reference in a cell "after" _a.tail_ definition,
+  * _a_ reference in a cell "before" _a.head_ definition.
+
+These back-references form an index to browse all children arrows of a given arrow.
+
+See hereafter a better meaning of "after" and "before" expressions.
+
+== Storage needs overview ==
+
+For each arrow, one needs to store:
+  * the arrow definition
+     * tail and head of a pair
+     * C string of a tag
+     * crypto signature + raw data of a blob.
+  * its root flag (one bit)
+  * its connectivity data, that is:
+     * a list of back-references to incoming and outgoing children arrows
+     * a total reference counters for each stored arrow.
+
+Mass memory is operated as a single bank of storage units called _cells_.
+
+One cell :
+  * is identified by a cell address,
+  * and can store one cell address + few administrative bits.
+
+== cell categories ==
+
+As different kinds of data may be found in a cell, one needs to identify a cell content by few bit length value named "category" hereafter.
+
+Categories so far:
+  * PAIR = non-rooted regular arrow definition first storage cell
+  * ROOT = rooted regular arrow first storage cell
+  * BLOB = BLOB first storage cell
+  * TAG = TAG first storage cell
+  * REMAIN = remaining part of an arrow definition. Such a cell complete a "pair", "root", "blob", "tag" cell.
+  * CHILD = reference to a child incoming/outgoing arrow
+
+Restriction: Only regular arrows can be rooted, not blob or tag.
+
+A variable-width encoding helps sparing bits for other purposes:
+  * code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
+  * code 01 => PAIR + the 6 remaining bits store a "ref counter".
+  * etc.
+
+== Double Hashing to move apart related cells ==
+
+One could decide to reserve and fill up a set of consecutive cells to store several slices of a same arrow definition (blob, tag...). But this naive approach would lead to _data cluttering_.
+
+A better approach consists in separating data slices by a variable offset. This offset is computed to be different for each arrow in order to minimize collisions. This particular strategy is called DoubleHashing.
+
+Suggestion: truncating a bigger hash modulo twin prim numbers. H % p1 for the open address, H % p2 for the separation offset.
+
+== Coalesced Hashing ==
+
+So arrows, blobs and tags definition can't fit on a single cell. And one chooses to take them into slices and to dispatch them on many cells separated by a predictable offset.
+
+But there's a risk some cells needed to store our data are already used. One must jump over such busy cells when storing and retrieving data.
+
+Every cell consequently hosts a "jump factor" to jump over colliding cells following in a string sequence. This strategy is vaguely related to CoalescedHashing.
+
+The jump factor doesn't need to be a fully qualified cell address. It's only a count of the offset to shift until the next relevant cell.
+
+The jump factor max value is low, but so is the probability of many repeated *consecutive* collisions.
+
+Note coalesced hashing may not be needed for some data (children back references) as one might mix them with polluting data at the condition one consolidates the data.
+
+Note: The first values of the "jump factor" might actually corresponds to the number of valid bytes within the last cell of a string.
+
+ToBeConfirmed: Offsets are slightly different depending on usage (probing, back-refs dispatching, string slice dispatching) to avoid cluttering even more.
+
+Some misc candidate offsets:
+ * offset for probing = h % p2 (p2 = second twin prim number)
+ * offset between string slices = swapBytes(h) % p2
+ * offset between back-refs = neg(h) % p2
+
+Still studied: A cell could store more than one of addresses. Collocation for small object managed by flag bits.
+
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are pairs of pointers or binary raw data.||
+
+== Arrow typical footprint ==
+
+Finally, here is the ideal (no conflict) footprint of an arrow assimilated as _i_ (its ID). _i_ goes out a _tail_ arrow and comes into an _head_ arrow (two other ID). _i_ is also referred by several incoming or outgoing children arrows.
+{{{
+//  Cell# Flag     Content
+// [...]
+//  i-4o  0        0
+// [...]
+//  i-3o  IN       some incoming child id
+// [...]
+//  i-2o  IN       some incoming child id
+// [...]
+//  i-o   IN       some incoming child id
+// [...]
+//  i     PAIR     tail id
+// [...]
+//  i+o   REMAIN   head id
+// [...]
+//  i+2o  REMAIN   H(i) | children counter
+// [...]
+//  i+3o  OUT      some outgoing child id
+// [...]
+//  i+4o  OUT      some outgoing child id
+// [...]
+//  i+5o  OUT      some outgoing child id
+// [...]
+//  i+6o  0      0
+// [...]
+}}}
+
+== RAM Cache ==
+
+When needed, arrows climb up to a level 1 (RAM) memory device. This memory is used as a fine-grained cache of level 0 cells. 
+See ArrowsCache for further details.
+
+== Garbage Collector ==
+
+The AS features a garbage collection process which spares rooted arrows and all their "ancestors" and gets back resources used by no more rooted nor referred arrows.
+
+On this purpose, a reference counter is attached to every arrow. This counter is incremented each time a new arrow is incoming/outgoing  from/to the given arrow. It is decremented when such a child arrow is deleted by the garbage collector. When both an arrow is non-rooted and has 0 children, one can recycle its storage resources.
+
+The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatched on many transactions to avoid CPU overhead. Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
+
+Still studied: The children counter definition range is short. When it reaches its max value, one simply postulates one can't change it anymore. It means the corresponding arrow will never be deleted. (ToBeConfirmed)
+
+Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. See OpenAddressing for details.
+
+== more ==
+=== candidate hash functions so far ===
+For practical reasons, the hash function should be commutative on structure of pairs. To be done.
+
+     * key hash = f(tail, head) = ((head << 24) & tail) % P0
+     * drone hash = g(tail, head) = ((head << 24) & tail) % P1
+        * where P0 and P1 are twin prims near mem0 size 2^24
+     * BLOB hash = truncated SHA-2
+     * TAG hash = simpler checksum, like in http://www.cse.yorku.ca/~oz/hash.html
+
+== even more ==
+
+cf. InProgress
