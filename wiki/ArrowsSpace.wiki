@@ -54,7 +54,7 @@ Big steps of the assimilation process:
   # putting the arrow definition here if missing.
   # managing conflicts by shifting locations by some reproducible offsets. Note checking for an existing copy consequently requires probing.
 
-=== hash everything ===
+=== Hash everything !===
 
 The first step of an arrow assimilation process consists in computing a default location where to probe and store the arrow.
 
@@ -67,7 +67,7 @@ To do so, one computes an hash code from the considered arrow definition:
       * A good cryptographic function will also avoid _cluttering_.
     * For short binary objects, a simple *checksum function* may be used by assuming it's not too costly comparing the whole object data with every potential stored copy.
 
-==== OpenAddressing ====
+=== Open addressing ===
 
 Once truncated modulo the total mass storage space size, an hash code defines a valid default arrow location.
 
@@ -78,6 +78,6 @@ In case of conflict with existing content, one must shift the default location o
 
 This approach is called [OpenAddressing open adressing] when applied to hash tables. The default location is also named an _open address_ and the search process of an existing arrow is called _probing_.
 
-=== Anticipated prototype ===
+== Anticipated prototype ==
 
 cf. ArrowsSpacePrototype
