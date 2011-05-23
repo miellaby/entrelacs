@@ -17,22 +17,25 @@ One may simulate an _arrows space_ by hand with [PenAndPaperReferenceDesign a pe
 == middleware version ==
 A reasonable implementation of an AS consists in a piece of low-level software on top of existing volatile and mass storage devices within a traditional platform.
 
-==Summary of the middleware version requirements==
+== requirements summary ==
 One requires from an AS:
  * Orthogonal persistence
    The AS must leverage on all persistent and volatile physical memory levels and flatten them down to a single homogeneous space.
  * De-duplication
-   The AS must ensure each mathematically definable arrow which may come in is not stored more than once.
+   The AS must ensure each mathematically definable arrow which may come 
+in is not stored more than once.
  * Full connectivity
    The AS must store enough connectivity data to allow  the efficient retrieving of the ends and the _children_ of any arrow.
+
  * Garbage collection relatively to a _root_ referential
    * The AS must manage the _root_ boolean property of every stored arrow. The set of _rooted_ arrows forms an unique absolute referential.
    * The AS must preserve rooted arrows and their ancestors from deletion, while arrows which are neither a rooted arrow nor an ancestor of a rooted arrow must be transparently removed from the storage.
+
  * Binary strings and other complex objects native support
    * The AS should allow to natively store raw data (binary strings) as well. These objects must behave like their equivalent arrow made constructs (entrelacs).
    * The AS may allow to natively store tuples (ordered set of arrows). These objects must behave like equivalent arrow made constructs.
 
-==Programing Overview==
+==API overview==
 The ArrowSpaceInterface sums up the _arrows space_ behavior to traditional software developers.
 
 ==More about the AS middleware==
