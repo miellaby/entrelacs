@@ -122,8 +122,6 @@ Some misc candidate offsets:
 
 Still studied: A cell could store more than one of addresses. Collocation for small object managed by flag bits.
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are pairs of pointers or binary raw data.||
-
 == Arrow typical footprint ==
 
 Finally, here is the ideal (no conflict) footprint of an arrow assimilated as _i_ (its ID). _i_ goes out a _tail_ arrow and comes into an _head_ arrow (two other ID). _i_ is also referred by several incoming or outgoing children arrows.
