@@ -1,50 +1,73 @@
 #summary The "Arrows Space" (AS) is the key component of an Entrelacs system.
-#labels a
 
-=== introduction===
-An _"Arrows Space"_ (AS) is a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. Though such a device could be a real computer hardware, one considers for now an AS as a simulated device, that is a piece of middleware on top of an existing operating system within a traditional platform.
+== introduction ==
+An _"Arrows Space"_ (AS) designates a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm].
 
-Please note [PenAndPaperReferenceDesign a pen and a paper sheet] are enough to simulate a man-powered arrows space.
+Applied to data computing, such a device may be:
+ * either a simulated device on top of an existing regular mass storage device.
+ * or a real computer hardware.
+    * please note that in such an case, the arrows space would not necessary be a binary machine.
 
-===summary of properties===
- * An AS leverages on both persistent and volatile memory levels. It performs orthogonal persistence.
- * An AS ensures each mathematically definable arrow is stored at most once.
- * An AS also stores connectivity data which allows to retrieve the ends and the _children_ of every arrow.
- * An AS also stores the _root flag_ of every arrow.
- * An AS performs transparent _garbage collection_.
+== _man powered_ version ==
 
-New: Here is a ArrowSpaceInterface to explain coders what the _arrows space_ functioning.
+One may simulate an _arrows space_ by hand with [PenAndPaperReferenceDesign a pen and a paper sheet].
 
-===orthogonal persistence===
-The AS stores arrows in a mass storage device. But it accedes to this device through a massive RAM-based cache. Almost all fast-access volatile memory resources of the hosting system are used to cache arrows. This cache is totally transparent and flatten all the memory levels of traditional systems into a single one.
+== middleware version ==
+A reasonable implementation of an AS consists in a piece of low-level software on top of existing volatile and mass storage devices within a traditional platform.
 
-==== assimilation ====
+==Summary of the middleware version requirements==
+One requires from an AS:
+ * Orthogonal persistence
+   The AS must leverage on all persistent and volatile physical memory levels and flatten them down to a single homogeneous space.
+ * De-duplication
+   The AS must ensure each mathematically definable arrow which may come in is not stored more than once.
+ * Full connectivity
+   The AS must store enough connectivity data to allow  the efficient retrieving of the ends and the _children_ of any arrow.
+ * Garbage collection relatively to a _root_ referential
+   * The AS must manage the _root_ boolean property of every stored arrow. The set of _rooted_ arrows forms an unique absolute referential.
+   * The AS must preserve rooted arrows and their ancestors from deletion, while arrows which are neither a rooted arrow nor an ancestor of a rooted arrow must be transparently removed from the storage.
+   * The AS should allow to natively store raw data (binary strings) as well. These objects must behave like their equivalent arrow made constructs (entrelacs).
+   * The AS may allow to natively store tuples (ordered set of arrows). These objects must behave like equivalent arrow made constructs.
 
-The _Arrows Space_ is filled by converting data into arrows. This conversion process is called _assimilation_. It takes place:
+==Programing Overview==
+The ArrowSpaceInterface sums up the _arrows space_ behavior to traditional software developers.
+
+==More about the AS middleware==
+
+===Orthogonal persistence===
+The AS stores arrows into a mass storage device. But it accedes to this device through a massive RAM-based cache. Almost all fast-access volatile memory resources of the hosting system are used to cache arrows. This cache is totally transparent and flatten all the memory levels of traditional systems into a single one.
+
+=== Deduplication through assimilation ===
+
+The _Arrows Space_ is filled up by converting data into arrows. This conversion process is called _assimilation_. It takes place:
   * when data -like user inputs- come from the outside.
   * when some internal computation produces new arrows.
 
 Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. One first assimilates entrelacs, then entrelacs' children arrows, then their grand children, and so on up to the overall assimilated arrow.
 
-To ensure each mathematically definable arrow is stored at most once, the assimilation process considers the whole mass storage space (hard disk) as a kind of giant content-indexed open-addressed hash-table.
+To ensure each mathematically definable arrow is stored at most once, the assimilation process should operates the whole mass storage device  as a giant content-indexed open-addressed hash-table.
 
-It's less complicate than it looks like. In short, assimilating an arrow consists in:
-  # deducing every arrow default location from its own definition.
+Big steps of the assimilation process:
+  # hashing every arrow definition to get a default location.
   # looking for an existing copy at the default location.
-  # putting the arrow definition here if missing and if wanted.
-  # managing location conflicts by shifting default locations by reproducible offsets.
+  # putting the arrow definition here if missing.
+  # managing conflicts by shifting locations by some reproducible offsets. Note checking for an existing copy consequently requires probing.
 
-==== hash everything ====
+=== hash everything ===
 
-The first step of the assimilation process consists in computing a location in the AS.
+The first step of an arrow assimilation process consists in computing a default location where to probe and store the arrow.
 
-To do so, one compute an hash code from the considered arrow. The chosen hash function depends on what kind of arrow is assimilated.
-  * For raw data, one hashes its body.
-  * For a regular arrow, one gets an hash code by combining the ID of its ends.
+To do so, one computes an hash code from the considered arrow definition. As a regular arrow is a pair of ends. One gets an hash code by combining the ID of its both ends.
+
+Regarding raw data, the AS should hash the whole object body.
+* A cryptographic hash function should be used for very long binary objects. The hash code would be attached beside the object body so to avoid a full binary comparison when checking for an existing copy. A good cryptographic function will also avoid _cluttering_.
+* A simpler checksum function may be used for smaller binary objects at the condition that the assimilation process compares the whole object data with a potential stored copy.
 
 ==== open addressing ====
 
-The hash code is then truncated modulo the total space size so to obtain a so-called "open address"..
+A hash function result needed to be truncated modulo the total space size so to obtain a valid arrow location.
+
+This location is also named an "open address" as the AS must perform [OpenAddressing open adressing] in order to manage location conflicts.
 
 Looking for a copy of an arrow in the storage space is a search process which works as is:
   * if one finds the expected arrow at its default address, done.
