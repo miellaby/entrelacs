@@ -1,8 +1,8 @@
-#summary Some unique properties of the Entrelacs System.
+#summary About the unique "full abilities" of Entrelacs Systems.
 
 = Introduction =
 
-The ArrowParadigm encompasses commonly used information representation solutions like semantic planar graphs, relational data bases, frame-based (like object oriented) models. It brings to Entrelacs systems a lot of unique abilities no operating system / computing environment has ever shown.
+The ArrowParadigm encompasses commonly used information representation solutions like semantic planar graphs, relational data bases, frame-based (like object oriented) models. It brings to Entrelacs Systems a lot of unique abilities no operating system / computing environment has ever shown.
 
 = Entrelacs _"full abilities"_ =
 
