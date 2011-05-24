@@ -1,37 +1,35 @@
 #summary The "Arrows Space" (AS) is the key component of an Entrelacs system.
 
 == introduction ==
-An _"Arrows Space"_ (AS) designates a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm].
+An _"Arrows Space"_ (AS) designates a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. The AS is the key component of an _Entrelacs System_.
+
+Please note one may simulate an Arrows Space with [PenAndPaperReferenceDesign a pen and a paper sheet] .
+
+An AS might become a real computer hardware. If so, it would not necessarily be designed as a bank of buckets for binary words like all the other storage device so far.
+
+But for the moment, we will study the AS as a simulated device, that is a piece of software leveraging on traditional volatile and mass memory hardware.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are basically pairs of pointers||
 
-Applied to data computing, such a device may be:
- * either a simulated device on top of an existing regular mass storage device.
- * or a real computer hardware.
-    * please note that in such an case, the arrows space would not necessary be a binary machine.
+== AS requirements summary ==
+One requires from an AS
 
-== _man powered_ version ==
-
-One may simulate an _arrows space_ by hand with [PenAndPaperReferenceDesign a pen and a paper sheet].
-
-== middleware version ==
-A reasonable implementation of an AS consists in a piece of low-level software on top of existing volatile and mass storage devices within a traditional platform.
-
-== requirements summary ==
-One requires from an AS:
  * Orthogonal persistence
    The AS must leverage on all persistent and volatile physical memory levels and flatten them down to a single homogeneous space.
+
  * De-duplication
-   The AS must ensure each mathematically definable arrow which may come 
-in is not stored more than once.
+   The AS must ensure each mathematically definable arrow which may come  in is not stored more than once.
+
  * Full connectivity
    The AS must store enough connectivity data to allow  the efficient retrieving of the ends and the _children_ of any arrow.
 
  * Garbage collection relatively to a _root_ referential
+
    * The AS must manage the _root_ boolean property of every stored arrow. The set of _rooted_ arrows forms an unique absolute referential.
    * The AS must preserve rooted arrows and their ancestors from deletion, while arrows which are neither a rooted arrow nor an ancestor of a rooted arrow must be transparently removed from the storage.
 
  * Binary strings and other complex objects native support
+
    * The AS should allow to natively store raw data (binary strings) as well. These objects must behave like their equivalent arrow made constructs (entrelacs).
    * The AS may allow to natively store tuples (ordered set of arrows). These objects must behave like equivalent arrow made constructs.
 
