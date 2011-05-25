@@ -10,11 +10,11 @@ An HTTP/REST server is also planed on top of this library so that local or remot
 
 == Complex objects support ==
 
-The prototype will handle 2 types of objects in addition with regular arrows (ie. references pairs). That is:
+The prototype will handle several types of complex objects in addition with regular arrows (ie. references pairs). That is:
   * _blobs_, ie. *large* binary strings,
-  * _tags_, ie. *short* char strings (C-Like NULL-terminated),
-  * _tuple_, ie. an ordered set of n arrows (n >= 1)
-  * _small_, very short piece of raw data which fits in an arrow storage cell.
+  * _tags_, ie. *short* binary strings,
+  * _tuple_, ie. an ordered set of n (n >= 1) arrows
+  * _small_, a piece of raw data which is small enough to fit in an arrow storage cell.
 
 Reminder: Despite _blobs_, _tags_ and _smalls_ are raw binary objects, they are still treated like their equivalent arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows).
 
