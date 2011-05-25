@@ -44,34 +44,35 @@ The _Arrows Space_ is filled up by converting data into arrows. This conversion 
 
 Each new arrow is assimilated from its farthest ancestors, that is _entrelacs_. One first assimilates entrelacs, then entrelacs' children arrows, then their grand children, and so on up to the overall assimilated arrow.
 
-To ensure each mathematically definable arrow is stored at most once, the assimilation process should operates the whole mass storage device  as a giant content-indexed open-addressed hash-table.
+To ensure each mathematically definable arrow is stored at most once, the assimilation process may operate the whole mass storage device as a giant content-indexed open-addressed reentrant hash-table.
 
-Big steps of the assimilation process:
-  # hashing every arrow definition to get a default location.
-  # looking for an existing copy at the default location.
+Main steps of an arrow _assimilation_
+  # hashing the arrow definition to get a default location.
+  # looking for the existing singleton at the default location.
   # putting the arrow definition here if missing.
-  # managing conflicts through open addressing. See hereafter.
+  # managing conflicts through open addressing as seen hereafter.
 
 === Hash everything !===
 
-The first step of an arrow assimilation process consists in computing a default location where to probe and store the arrow.
+The first step of arrow assimilation process consists in computing a default location where to probe the arrow singleton and store it if missing.
 
-To do so, one computes an hash code from the considered arrow definition:
-
- * As a regular arrow is a pair of ends, one computes an hash code by combining its both ends addresses.
- * Regarding raw data, the AS should hash the whole object body.
-    * For very long binary objects, a *cryptographic hash function* should be used to get both a default location and an unique signature to be attached beside the object body.
-      * This signature avoids a full binary comparison when checking for a potential copy.
-      * A good cryptographic function will also avoid _cluttering_.
-    * For short binary objects, a simple *checksum function* may be used by assuming it's not too costly comparing the whole object data with every potential stored copy.
+To do so, one computes an hash code from the considered arrow definition.
+ * Concerning a regular arrow, since it's basically a pair of ends, one computes its default location by hashing its both ends addresses.
+ * Concerning raw data, the AS should hash the whole object body.
+    * For a very long binary object, a *cryptographic hash function* should be used to get both a default location and an unique signature
+      * The signature is stored previously to the object body.
+      * It avoids a full binary comparison to formally identify an already stored singleton.
+      * A good cryptographic function will also avoid _data cluttering_.
+    * For a short binary object, a simpler *checksum function* may be used.
+       * As this checksum can't unambiguously identify a present singleton, one must fully comparing the singleton data with the assimilated object.
 
 === Solve conflicts by Open Addressing ===
 
 Once truncated modulo the total mass storage space size, an hash code defines a valid default arrow location.
 
-In case of conflict with existing content, one shifts this default location of an arrow by some offset. If there's still a storage conflict, one shifts the storage location again, and so on.
+In case of conflict with existing unrelated arrows, one shifts this default location by some offset. If there's still a storage conflict, one shifts the location again, and so on.
 
-Checking for an existing copy of an arrow within the storage space consequently requires to search for the copy by starting from the arrow default location:
+Checking for an already stored singleton of an arrow consequently requires to search for the copy by starting from the arrow default location:
   * if one finds the expected arrow at the considered address ==> hit!
   * if one finds nothing ==> miss! The empty location may be used to store the missing arrow if asked.
   * if one finds something else, then one keeps on searching at a nearby location.
