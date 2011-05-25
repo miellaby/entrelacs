@@ -85,5 +85,4 @@ The AS stores arrows into a mass storage device. But it accedes to this device t
 
 == Anticipated prototype ==
 
-The 
-cf. ArrowsSpacePrototype
+All the strategies introduced above are applied to the currently designed [ArrowsSpacePrototype AS prototype]. See this page for more details.
