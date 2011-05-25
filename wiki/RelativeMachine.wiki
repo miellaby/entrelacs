@@ -1,4 +1,4 @@
-#summary Entrelacs Systems may also be called _Relative Machines_
+#summary Entrelacs Systems may also be called Relative Machines
 
 The key disruption brought by _Entrelacs System_ in [http://en.wikipedia.org/wiki/Cybernetics cybernetics (w)] consists in how the system can now handle information _relativity_ with no limitation.
 
