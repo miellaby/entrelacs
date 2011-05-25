@@ -4,45 +4,39 @@ This page describes the first ArrowsSpace prototype.
 
 == Architecture overview ==
 
-The AS code takes place as a thread-safe library.
+The ArrowsSpace software prototype consists in a thread-safe library (EntrelacsLibrary) providing operators to compose, root, and browse arrows in a single file on the host file system.
 
-An HTTP/REST server may be coded on top of the library so that clients may simultaneously browse and fill up the AS by connecting to the server.
+An HTTP/REST server is also planed on top of this library so that local or remote clients may simultaneously access a same AS.
 
-== Complex object support ==
+== Complex objects support ==
 
-The anticipated AS prototype will handle 2 types of objects in addition to regular arrows (ie. reference pairs). That is:
-  * blobs : *large* binary strings,
-  * tags : *short* char strings (C-Like NULL-terminated).
+The prototype will handle 2 types of objects in addition with regular arrows (ie. references pairs). That is:
+  * _blobs_, ie. *large* binary strings,
+  * _tags_, ie. *short* char strings (C-Like NULL-terminated).
 
-Reminder: Despite Blobs and tags are raw binary objects, they are considered like arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows).
+Reminder: Despite _blobs_ and _tags_ are raw binary objects, they are still considered and handled like arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows).
 
-23/02/09: Still studied: An additional "SMALL" cell flag might be used to store some very short piece of data as an atomistic arrow in a single storage cell. Work in progress. 
+23/02/09: Still studied: An additional _small_ native object for very short piece of data. It has to fit on a single storage cell.
 
-== hash function ==
+24/05/10: Work in progress. Tuples (a set of more than 2 references) may be natively stored in a optimized way as well.
 
-The hash function used to compute an assimilated arrow's _open address_ depends of the arrow type:
-  * For a _blob_, one uses a cryptographic unambiguous hash function (SHA).
-  * For a _tag_, one uses a much simpler checksum. When comparing an assimilated tag with a potential copy, one must check every char of the string.
-  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's respective hash codes. The hash function should be commutative (ToBeConfirmed) so that one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every ancestor arrows.
+== Content storage policy ==
 
-The overall hash function _h_ consequently verifies :
-  * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
-  * _h_(Tag) = checksum(Tag)
-  * _h_(Blob) = sha(Blob) (or any cryptographic hash function).
+The persistence file is operated as a bank of storage units called _cells_.
 
-== content storage policy ==
+One cell :
+  * is both identified and positioned by a cell address,
+  * can store one cell address and few additional data.
 
-A regular arrow is a pair of arrow references. It is consequently stored as a pair of AS address.
+A regular arrow being a pair of arrows, it is consequently stored as a pair of cell addresses into 2 or more cells.
 
-Atomistic arrows (BLOB or TAG) are stored like any regular arrow directly into the AS. Data are taken into slices stored into several cells separated by some offset.
+Atomistic arrows (blobs and tags) are also stored into cells like regular arrows. Data are taken into slices and stored in several cells separated by a predictable offset.
 
-A tag is short enough to be directly stored as is.
+Contrary to tags, blobs may be very long, so one stores its whole hash signature before its content in order to accelerate existing singleton identification.
 
-A blob being very long, one stores its whole hash signature before its content in order to quickly recognize an existing copy.
+Not date data strings must not be mixed up with existing data. One needs to jump over conflicting cells up to the next valid slice of string. Some bits are reserved to store an offset multiplier on this purpose.
 
-Data strings must not be mixed up with existing data. Some bits are needed to store an offset factor to jump over conflicting cells up to the next valid slice of string.
-
-== connectivity ==
+== Connectivity ==
 
 For each newly assimilated arrow _a_, one also attaches 2 back-references to its ends (head and tail) definition, that is:
   * _a_ reference in a cell "after" _a.tail_ definition,
@@ -52,23 +46,17 @@ These back-references form an index to browse all children arrows of a given arr
 
 See hereafter a better meaning of "after" and "before" expressions.
 
-== Storage needs overview ==
+== Overview of stored data ==
 
 For each arrow, one needs to store:
-  * the arrow definition
-     * tail and head of a pair
-     * C string of a tag
-     * crypto signature + raw data of a blob.
-  * its root flag (one bit)
+  * its definition, that is
+     * two arrow references for a pair
+     * a C string preceded by its (short) checksum for a tag
+     * a binary string preceded by its cryptographic signature for a blob.
+  * its root flag (one mutable bit)
   * its connectivity data, that is:
-     * a list of back-references to incoming and outgoing children arrows
-     * a total reference counters for each stored arrow.
-
-Mass memory is operated as a single bank of storage units called _cells_.
-
-One cell :
-  * is identified by a cell address,
-  * and can store one cell address + few administrative bits.
+     * a list of back-references to incoming and outgoing children
+     * a total children counter (TBC)
 
 == cell categories ==
 
@@ -88,6 +76,18 @@ A variable-width encoding helps sparing bits for other purposes:
   * code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
   * code 01 => PAIR + the 6 remaining bits store a "ref counter".
   * etc.
+
+== About hash functions ==
+
+One makes use of an hash function to compute an arrow's _open address_ depending on its type:
+  * For a _blob_, one uses a cryptographic unambiguous hash function (SHA).
+  * For a _tag_, one uses a simpler checksum. When comparing an assimilated tag with a potential copy, one must check every char of the string.
+  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's respective hash codes. The hash function should be commutative (ToBeConfirmed) so that one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every intermediate parent arrows.
+
+The overall hash function _h_ consequently verifies :
+  * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
+  * _h_(Tag) = checksum(Tag)
+  * _h_(Blob) = sha(Blob) (or any cryptographic hash function).
 
 == Double Hashing to move apart related cells ==
 
