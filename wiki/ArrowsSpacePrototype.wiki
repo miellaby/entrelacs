@@ -12,29 +12,39 @@ An HTTP/REST server is also planed on top of this library so that local or remot
 
 The prototype will handle 2 types of objects in addition with regular arrows (ie. references pairs). That is:
   * _blobs_, ie. *large* binary strings,
-  * _tags_, ie. *short* char strings (C-Like NULL-terminated).
+  * _tags_, ie. *short* char strings (C-Like NULL-terminated),
+  * _tuple_, ie. an ordered set of n arrows (n >= 1)
+  * _small_, very short piece of raw data which fits in an arrow storage cell.
 
-Reminder: Despite _blobs_ and _tags_ are raw binary objects, they are still considered and handled like arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows).
+Reminder: Despite _blobs_, _tags_ and _smalls_ are raw binary objects, they are still treated like their equivalent arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows).
 
-23/02/09: Still studied: An additional _small_ native object for very short piece of data. It has to fit on a single storage cell.
-
-24/05/10: Work in progress. Tuples (a set of more than 2 references) may be natively stored in a optimized way as well.
-
-== Content storage policy ==
+== Mass storage usage ==
 
 The persistence file is operated as a bank of storage units called _cells_.
 
 One cell :
-  * is both identified and positioned by a cell address,
-  * can store one cell address and few additional data.
+  * is identified and located by a cell address,
+  * may contain a pair of addresses and/or a couple of other things.
 
-A regular arrow being a pair of arrows, it is consequently stored as a pair of cell addresses into 2 or more cells.
+A regular arrow being a pair of arrows, it is consequently stored as a pair of addresses into a single cell.
 
-Atomistic arrows (blobs and tags) are also stored into cells like regular arrows. Data are taken into slices and stored in several cells separated by a predictable offset.
+Raw data (blobs and tags) are also stored into cells like regular arrows. They are taken into slices and stored in several cells separated by a predictable offset.
 
-Contrary to tags, blobs may be very long, so one stores its whole hash signature before its content in order to accelerate existing singleton identification.
+Note that contrary to tags, blobs may be very long, so one stores its unique hashed signature before its data in order to accelerate existing singleton identification.
 
-Not date data strings must not be mixed up with existing data. One needs to jump over conflicting cells up to the next valid slice of string. Some bits are reserved to store an offset multiplier on this purpose.
+Note data strings must not be mixed up with existing data. One needs to jump over conflicting cells up to the next valid slice of string. Some bits are reserved to store an offset multiplier on this purpose (namely _jump_).
+
+== Open Addressing ==
+
+One relays on OpenAddressing to manage conflicts within the storage space.
+  * When an object definition can't be stored at its expected location because of some already present content, one repeatedly shifts the storage location by a variable but predictable offset until one finds a free cell.
+  * When one looks for something, one starts a search from the object expected location, and one probes for the object until one reaches the object (hit!) or an empty cell (miss!).
+
+== Little thumbling algorithm ==
+
+An issue with Open Addressing is that one can't fully empty a cell without breaking one or several sequences of busy cells that one must go through to find existing content.
+
+A solution consists in incrementing a dedicated "more" counter on every cell visited from the default location up to its actual location. These counters are comparably decremented upon object removal. With this solution, probing doesn't fail until one gets a empty cell with a "more" counter set to zero.
 
 == Connectivity ==
 
@@ -58,31 +68,32 @@ For each arrow, one needs to store:
      * a list of back-references to incoming and outgoing children
      * a total children counter (TBC)
 
-== cell categories ==
+== Cell categories ==
 
-As different kinds of data may be found in a cell, one needs to identify a cell content by few bit length value named "category" hereafter.
+As different kinds of data may be found in a cell, one needs to identify a cell content by a few bit length value named "category" hereafter.
+  * A: Arrow
+  * I: Small (Integer)
+  * S: Tag (String)
+  * B: Blob
+  * T: Tuple
+  * R: Remaining
+  * L: Last remaining
+  * X: Redirection
 
-Categories so far:
-  * PAIR = non-rooted regular arrow definition first storage cell
-  * ROOT = rooted regular arrow first storage cell
-  * BLOB = BLOB first storage cell
-  * TAG = TAG first storage cell
-  * REMAIN = remaining part of an arrow definition. Such a cell complete a "pair", "root", "blob", "tag" cell.
-  * CHILD = reference to a child incoming/outgoing arrow
+R/L cells are used to store
+ * either the continuation of a B, S, or T definition
+ * or children list.
 
-Restriction: Only regular arrows can be rooted, not blob or tag.
+X contains addresses referring cells moved elsewhere because of extreme data cluttering.
 
-A variable-width encoding helps sparing bits for other purposes:
-  * code 1 =>REMAIN + the 7 remaining bits store an "Offset factor".
-  * code 01 => PAIR + the 6 remaining bits store a "ref counter".
-  * etc.
+== Hashing definitions ==
 
-== About hash functions ==
+One makes use of an hash function to compute an arrow's _open address_ out of its definition.
 
-One makes use of an hash function to compute an arrow's _open address_ depending on its type:
+The hash function is chosen after the type of arrow:
   * For a _blob_, one uses a cryptographic unambiguous hash function (SHA).
   * For a _tag_, one uses a simpler checksum. When comparing an assimilated tag with a potential copy, one must check every char of the string.
-  * For a regular arrow (linking a _tail_ to a _head_), one makes an hash out of the tail and head's respective hash codes. The hash function should be commutative (ToBeConfirmed) so that one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every intermediate parent arrows.
+  * For a regular arrow, one hashes the tail and head's respective hash codes. The hash function might be commutative (ToBeConfirmed) so that one may deduce an arrow hash code by combining its furthest ancestor hash codes rather than fetching every intermediate parent arrows.
 
 The overall hash function _h_ consequently verifies :
   * _h_(Pair) = some_math_of(h(tail(Pair)), h(head(Pair))) 
@@ -93,27 +104,24 @@ The overall hash function _h_ consequently verifies :
 
 One could decide to reserve and fill up a set of consecutive cells to store several slices of a same arrow definition (blob, tag...). But this naive approach would lead to _data cluttering_.
 
-A better approach consists in separating data slices by a variable offset. This offset is computed to be different for each arrow in order to minimize collisions. This particular strategy is called DoubleHashing.
+A better approach consists in separating data slices by a variable offset. This offset has to be different for each arrow in order to minimize collisions. This particular strategy is called DoubleHashing.
 
-Suggestion: truncating a bigger hash modulo twin prim numbers. H % p1 for the open address, H % p2 for the separation offset.
+Suggestion: truncating a bigger hash modulo 2 twin prim numbers. H % p1 for the open address, H % p2 for the separation offset.
+
 
 == Coalesced Hashing ==
 
-So arrows, blobs and tags definition can't fit on a single cell. And one chooses to take them into slices and to dispatch them on many cells separated by a predictable offset.
+Complex object (tuples, blobs, tags) definitions can't fit in a single cell. One takes them into slices and dispatches them into many cells separated by a predictable offset.
 
-But there's a risk some cells needed to store our data are already used. One must jump over such busy cells when storing and retrieving data.
+But there's a risk some cells are already used. One must jump over such busy cells when storing and retrieving data.
 
-Every cell consequently hosts a "jump factor" to jump over colliding cells following in a string sequence. This strategy is vaguely related to CoalescedHashing.
+Every cell consequently hosts a "jump factor" to jump over colliding cells. This strategy is vaguely related to CoalescedHashing.
 
-The jump factor doesn't need to be a fully qualified cell address. It's only a count of the offset to shift until the next relevant cell.
+The jump factor doesn't need to be a fully qualified cell address. It only counts the number of shift until the next relevant cell.
 
-The jump factor max value is low, but so is the probability of many repeated *consecutive* collisions.
+The jump factor max value is low, but so is the probability of many repeated *consecutive* collisions. In case of 
 
-Note coalesced hashing may not be needed for some data (children back references) as one might mix them with polluting data at the condition one consolidates the data.
-
-Note: The first values of the "jump factor" might actually corresponds to the number of valid bytes within the last cell of a string.
-
-ToBeConfirmed: Offsets are slightly different depending on usage (probing, back-refs dispatching, string slice dispatching) to avoid cluttering even more.
+There are 3 offset to shift from a given location functions used for probing, back-refs dispatching, string slice dispatching) to avoid cluttering even more.
 
 Some misc candidate offsets:
  * offset for probing = h % p2 (p2 = second twin prim number)
@@ -125,32 +133,6 @@ Still studied: A cell could store more than one of addresses. Collocation for sm
 == Arrow typical footprint ==
 
 Finally, here is the ideal (no conflict) footprint of an arrow assimilated as _i_ (its ID). _i_ goes out a _tail_ arrow and comes into an _head_ arrow (two other ID). _i_ is also referred by several incoming or outgoing children arrows.
-{{{
-//  Cell# Flag     Content
-// [...]
-//  i-4o  0        0
-// [...]
-//  i-3o  IN       some incoming child id
-// [...]
-//  i-2o  IN       some incoming child id
-// [...]
-//  i-o   IN       some incoming child id
-// [...]
-//  i     PAIR     tail id
-// [...]
-//  i+o   REMAIN   head id
-// [...]
-//  i+2o  REMAIN   H(i) | children counter
-// [...]
-//  i+3o  OUT      some outgoing child id
-// [...]
-//  i+4o  OUT      some outgoing child id
-// [...]
-//  i+5o  OUT      some outgoing child id
-// [...]
-//  i+6o  0      0
-// [...]
-}}}
 
 == RAM Cache ==
 
@@ -164,10 +146,6 @@ The AS features a garbage collection process which spares rooted arrows and all 
 On this purpose, a reference counter is attached to every arrow. This counter is incremented each time a new arrow is incoming/outgoing  from/to the given arrow. It is decremented when such a child arrow is deleted by the garbage collector. When both an arrow is non-rooted and has 0 children, one can recycle its storage resources.
 
 The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatched on many transactions to avoid CPU overhead. Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
-
-Still studied: The children counter definition range is short. When it reaches its max value, one simply postulates one can't change it anymore. It means the corresponding arrow will never be deleted. (ToBeConfirmed)
-
-Actually, there is a small difference between a deleted cell and an empty cell, because of the "open addressing" way to resolve conflicts. When deleted, a cell is loaded with a "stuffing" value which prevents the including "open block" to be cut. See OpenAddressing for details.
 
 == more ==
 === candidate hash functions so far ===
