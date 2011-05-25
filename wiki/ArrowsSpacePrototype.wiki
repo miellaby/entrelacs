@@ -128,7 +128,31 @@ Some misc candidate offsets:
  * offset between string slices = swapBytes(h) % p2
  * offset between back-refs = neg(h) % p2
 
-Still studied: A cell could store more than one of addresses. Collocation for small object managed by flag bits.
+== Cells usage summary ==
+
+Considering all the principles introduced above, here is the summary of cells usage.
+
+{{{
+ <more> A <tail@------> <head@------> <r><children> : an arrow
+ <more> I <data---------------------> <r><children> : a small
+ <more> T <checksum---> <r><children> <next-------> : a tuple
+ <more> R <end@-------> <end@-------> <next-------> : remaining of T
+ <more> L <end@-------> <end@-------> <size = 0/1 > : Last of T
+ <more> S <checksum---> <r><children> <next-------> : a tag
+ <more> B <checksum---> <r><children> <next-------> : a string
+ <more> R <slice--------------------> <next-------> : remaining of a S/B
+ <more> L <slice-of size-><nothing--> <size-------> : last of a S/B
+
+Related cells are linked together by the "next" muliplier. The next cell following a R cell is located at @cellR + ( cellR.next + 1) * offsetNext.
+
+The children list begins at @parent + parent.children * offsetChildren. It looks like:
+
+ <more> R <child@-----> <child@-----> <next-------> : children
+ <more> L <child@-----> <child@-----> <size = 0/1 > : last child(ren)
+
+Bounce!
+ <more> X <children@--> <next@------> <nothing----> : Redirection
+}}}
 
 == Arrow typical footprint ==
 
