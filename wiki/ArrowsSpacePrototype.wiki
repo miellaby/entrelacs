@@ -40,11 +40,11 @@ One relays on OpenAddressing to manage conflicts within the storage space.
   * When an object definition can't be stored at its expected location because of some already present content, one repeatedly shifts the storage location by a variable but predictable offset until one finds a free cell.
   * When one looks for something, one starts a search from the object expected location, and one probes for the object until one reaches the object (hit!) or an empty cell (miss!).
 
-== Little thumbling algorithm ==
+== Little Thumbling's algorithm ==
 
-An issue with Open Addressing is that one can't fully empty a cell without breaking one or several sequences of busy cells that one must go through to find existing content.
+An issue with Open Addressing is that one can't empty a cell without breaking one or several sequences of busy cells that one must normally go through to find existing content.
 
-A solution consists in incrementing a dedicated "more" counter on every cell visited from the default location up to its actual location. These counters are comparably decremented upon object removal. With this solution, probing doesn't fail until one gets a empty cell with a "more" counter set to zero.
+A solution consists in incrementing a dedicated "more" counter on every cell visited from the default location up to the actual location of a newly stored object. These counters are comparably decremented upon object removal. When probing, one knows one should keep on going if the empty cell has a "more" counter greater than zero.
 
 == Connectivity ==
 
@@ -132,31 +132,94 @@ Some misc candidate offsets:
 
 Considering all the principles introduced above, here is the summary of cells usage.
 
+===Cell structure per category===
+This is a 8 bytes cell proposal.
+
+====Definition starts=====
+
+ * Arrows and _smalls_ definitions
 {{{
- <more> A <tail@------> <head@------> <r><children> : an arrow
- <more> I <data---------------------> <r><children> : a small
- <more> T <checksum---> <r><children> <next-------> : a tuple
- <more> R <end@-------> <end@-------> <next-------> : remaining of T
- <more> L <end@-------> <end@-------> <size = 0/1 > : Last of T
- <more> S <checksum---> <r><children> <next-------> : a tag
- <more> B <checksum---> <r><children> <next-------> : a string
- <more> R <slice--------------------> <next-------> : remaining of a S/B
- <more> L <slice-of size-><nothing--> <size-------> : last of a S/B
-
-Related cells are linked together by the "next" muliplier. The next cell following a R cell is located at @cellR + ( cellR.next + 1) * offsetNext.
-
-The children list begins at @parent + parent.children * offsetChildren. It looks like:
-
- <more> R <child@-----> <child@-----> <next-------> : children
- <more> L <child@-----> <child@-----> <size = 0/1 > : last child(ren)
-
-Bounce!
- <more> X <children@--> <next@------> <nothing----> : Redirection
+        +---<category>
+        |
+ <more> A <--tail@------> <--head@------> <r><children> : an arrow
+ <more> I <--data-----------------------> <r><children> : a small
 }}}
+
+ * Complex objects definition starts
+{{{
+ <more> T <--checksum--------> <--jump--> <r><children> : a tuple
+ <more> S <--checksum--------> <--jump--> <r><children> : a tag
+ <more> B <--checksum--------> <--jump--> <r><children> : a string
+}}}
+
+====Sequences====
+ * Sequence of ends (for a tuple)
+{{{
+ <more> R <--end@-------> <--end@-------> <---jump----> : 2 ends of a tuple
+ <more> L <--end@-------> <--end@-------> <size = 0/1 > : Last ends of a tuple
+                                                           (size = 0 ==> 1 end only)
+}}}
+
+ * Sequence of slices (for blobs and tags)
+{{{
+ <more> R <-----slice------------------> <---jump----> : data slice of a blob/tag
+ <more> L <-----slice-----><--nothing--> <--size-----> : last data slice of blob/tag
+                                                          (last slice size stored in bytes)
+}}}
+
+ * Children list
+{{{
+ <more> R <--child@-----> <--child@-----> <---jump----> : 2 children
+ <more> L <--child@-----> <--child@-----> <size = 0/1 > : last 2 children
+                                                           (size = 0 ==> 1 child only)
+}}}
+ * Bounce! (extreme cluttering escape)
+{{{
+ <more> X <----moved@---> <--children@--> <nothing----> : Redirection
+}}}
+
+====Fields size====
+
+This is a 8 bytes cell proposal.
+ * _more_ counter : 5 bits
+ * _category_ : 3 bits
+ * _cell address_ (_tail@_, _head@_, _end@_, _moved@_, _children@_) : 3 bytes
+ * _jump_ multiplier : 1 byte
+ * _children_ multiplier : 7 bits
+ * _root flag (r)_ : 1 bit
+ * _size_ : 1 byte
+
+====Fields usage====
+
+ * _more_
+    The "more" counter of the Little Thumbling's algorithm.
+
+ * _category_
+    The category indicates the inner structure of a cell and give information about its content. Note R/L cells are used to store different kinds of sequence (children lists, big object slices list, tuple ends list).
+
+ * _jump_
+    The "jump" multiplier allows to jump over unwanted content in case of storage conflict. Cells belonging to the same object definition or the same children list are linked together by the "jump" multiplier of R, T, S, or B cell. The next cell in the sequence is located at {{{@cellR + ( jump + 1) * offsetNext}}}.
+
+ * _children_
+   Every cell containing the beginning of an arrow/object definition is also the first cell of a "children sequence", a list of cells separated by a dedicated "children offset". The "children" multiplier is an offset multiplier like _jump_ which allows jumping over unrelated content up to the first real children cell. The beginning of the children list of an arrow at _@parent_ is located at {{{@parent + children * offsetChildren(parent)}}}. Note that "children" to zero means the arrow has no child.
+
+ * _root bit_
+   The root flag as a mutable bit
+
+ * _size_
+   The last cell of an object definition (or a children list) may be partially full. The _size_ field allows to ignore stuffing value.
+
+===Bounce cell===
+
+In case of extreme data cluttering, a cell may be moved in a safer place and replaced by a bounce cell containing two full addresses.
+ * One to the moved cell,
+ * One to the children list (if the moved cell was a definition start)
 
 == Arrow typical footprint ==
 
 Finally, here is the ideal (no conflict) footprint of an arrow assimilated as _i_ (its ID). _i_ goes out a _tail_ arrow and comes into an _head_ arrow (two other ID). _i_ is also referred by several incoming or outgoing children arrows.
+
+|| To be done ||
 
 == RAM Cache ==
 
@@ -167,20 +230,17 @@ See ArrowsCache for further details.
 
 The AS features a garbage collection process which spares rooted arrows and all their "ancestors" and gets back resources used by no more rooted nor referred arrows.
 
-On this purpose, a reference counter is attached to every arrow. This counter is incremented each time a new arrow is incoming/outgoing  from/to the given arrow. It is decremented when such a child arrow is deleted by the garbage collector. When both an arrow is non-rooted and has 0 children, one can recycle its storage resources.
+When both an arrow is non-rooted and has 0 child, one can recycle its storage resources.
 
 The GC proceeds to-be-deleted arrows in an incremental way. Its job is dispatched on many transactions to avoid CPU overhead. Since arrows are not deleted immediately, they may be saved from deletion by being rooted or linked back. An additional check of deletion criteria is performed just before the actual deletion.
 
-== more ==
-=== candidate hash functions so far ===
-For practical reasons, the hash function should be commutative on structure of pairs. To be done.
+== Proposal of hash functions ===
+Suggestion: the arrow key hash function might be commutative on structure of pairs. To be done.
 
-     * key hash = f(tail, head) = ((head << 24) & tail) % P0
-     * drone hash = g(tail, head) = ((head << 24) & tail) % P1
-        * where P0 and P1 are twin prims near mem0 size 2^24
-     * BLOB hash = truncated SHA-2
-     * TAG hash = simpler checksum, like in http://www.cse.yorku.ca/~oz/hash.html
-
-== even more ==
-
-cf. InProgress
+     * arrow key hash = f(tail, head) = ((head << 24) ^ tail) % P0
+     * drone hash = g(tail, head) = ((head << 24) ^ tail) % P1
+        * where P0 and P1 are twin prims near mem0 size 2 ^ 24
+     * BLOB key hash = SHA-2 (truncated for key)
+     * TAG key hash = simpler checksum, like in http://www.cse.yorku.ca/~oz/hash.html
+     * sequence hash = (to be done)
+     * children hash = (to be done)
