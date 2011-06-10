@@ -11,80 +11,174 @@
  */
 #define EVE (0)
 const Arrow Eve = EVE;
+/*
+ * Cell category bits
+ */
+#define CATBITS_MASK   0x0700000000000000
+#define CATBITS_ARROW  0x0000000000000000
+#define CATBITS_TUPLE  0x0100000000000000
+#define CATBITS_SMALL  0x0200000000000000
+#define CATBITS_TAG    0x0300000000000000
+#define CATBITS_BLOB   0x0400000000000000
+#define CATBITS_CHAIN  0x0500000000000000
+#define CATBITS_LAST   0x0600000000000000
+#define CATBITS_SYNC   0x0700000000000000
 
 /*
- * _blobTag : A system defined tag-arrow used to store BLOB
+ * Reattachment cell type
  */
-static Arrow blobTag = EVE;
-#define BLOB_TAG "#BLOB"
+ #define REATTACHMENT_FIRST  0
+ #define REATTACHMENT_NEXT   1
+ #define REATTACHMENT_CHILD0 2
+
+/*
+ * ROOTBIT
+ */
+#define ROOTBIT_ROOTED 0x80
+#define ROOTBIT_UNROOTED 0
+ 
+/* ________________________________________
+ * Cell building macros
+ *
+ *   Cell structure overview:
+ *  ---------------------------
+ *
+ *   <-M-><-T-><----------------data--------------------> : a cell (64 bits)
+ *  with
+ *    M = "More" counter (5 bits)
+ *    T = Category ID (3 bits)
+ *    data = Cell content depending on category (56 bits)
+ *
+ *   Structure per category:
+ *  -------------------------
+ *
+ *         +---<category>
+ *         |
+ *   <-M-> 0 <----tail@----> <----head@----> <R><-C-> : an arrow
+ *   <-M-> 1 <--checksum----------> <--J---> <R><-C-> : a tuple
+ *   <-M-> 2 <--data-----------------------> <R><-C-> : a small
+ *   <-M-> 3 <--checksum----------> <--J---> <R><-C-> : a tag
+ *   <-M-> 4 <--checksum----------> <--J---> <R><-C-> : a blob
+ *   <-M-> 5 <--end@-------> <--end@-------> <--J---> : 2 ends of a tuple
+ *   <-M-> 6 <--end@-------> <--end@-------> <S= 0/1> : Tuple last 2 ends
+ *                                                       (size = 0 => 1 end only)
+ *   <-M-> 5 <-----slice-------------------> <--J---> : blob/tag slice
+ *   <-M-> 6 <-----slice---->    nothing     <slice-size> : blob/tag last slice 
+ *                                                         (size in bytes)
+ *   <-M-> 5 <--child@-----> <--child@-----> <--J---> : 2 children
+ *   <-M-> 6 <--child@-----> <--child@-----> <S= 0/1> : last 2 children
+ *                                                        (size = 0 => 1 child)
+ *   <-M-> 7 <--from@------> <--next@------> <Type>   : cell chain reattachment
+ *                                             Type = 0 : Jump chain reattachment
+ *                                             Type = 1 : Child0 chain reattachment
+ * with
+ *   R = Root flag (1 bit)
+ *   C = To first child jump, h-child multiplier (7 bits)
+ *   J = To next cell jump, h-sequence multiplier (1 byte)
+ *   tail@, head@, end@, child@, child0@, moved@ : Cell address (3 bytes)
+ *   data, slice = Data / data slice (6 bytes)
+ *   checksum = Long definition checksum (40 bits / 5 bytes)
+ */
+
+#define get_moreBits(CELL) ((CELL) & 0xF800000000000000)
 
 
+// This remaining part is useless as attributs are always zero when building: | ((rooted) << 7) | (child0)
+
+#define arrow_build(CELL, tail, head)  (get_moreBits(CELL) | CATBITS_ARROW | ((tail) << 32) | ((head) << 8))
+ 
+#define tuple_build(CELL, checksum, J) (get_moreBits(CELL) | CATBITS_TUPLE | ((cheksum) << 16) | ((J) << 8))
+
+#define small_build(CELL, data)        (get_moreBits(CELL) | CATBITS_SMALL | ((data) << 8))
+
+#define tag_build(CELL, checksum, J)   (get_moreBits(CELL) | CATBITS_TAG | ((cheksum) << 16) | ((J) << 8))
+
+#define blob_build(CELL, checksum, J)  (get_moreBits(CELL) | CATBITS_BLOB | ((cheksum) << 16) | ((J) << 8))
+
+#define refs_build(CELL, r0, r1, J)               (get_moreBits(CELL) | CATBITS_CHAIN | ((r0) << 32) | ((r1) << 8) | (J))
+
+#define lastRefs_build(CELL, r0, r1, S)           (get_moreBits(CELL) | CATBITS_LAST | ((r0) << 32) | ((r1) << 8) | (S))
+
+#define slice_build(CELL, data, J)                (get_moreBits(CELL) | CATBITS_CHAIN | ((data) << 8) | (J))
+
+#define lastSlice_build(CELL, data, S)            (get_moreBits(CELL) | CATBITS_LAST | ((data) << 8) | (S))
+
+#define sync_build(CELL, from, next, type)        (get_moreBits(CELL) | CATBITS_SYNC | ((from) << 32) | ((next) << 8) | (type))
+
+#define cell_setRootBit(cell, ROOTBIT) (((cell) & 0xFFFFFFFFFFFFFF7F) |  (ROOTBIT))
+
+#define cell_chain(cell, jump) (((cell) & 0xF8FFFFFFFFFFFF00) | CATBITS_CHAIN | (jump))
+
+#define cell_unchain(cell) (((cell) & 0xF8FFFFFFFFFFFF00) | CATBITS_LAST)
+
+#define cell_chainChild0(cell, jump) (((cell) & 0xF8FFFFFFFFFF00FF) | CATBITS_CHAIN | (jump) << 8)
+
+
+/*
+ * "More" counter management (all cells)
+ */
+
+#define cell_isOvermore(C) (((C) & 0xF800000000000000) == 0xF800000000000000)
+
+/** "more" a C cell.
+ * increments its more counter if not to the max
+ */
+#define cell_more(C) (cell_isOvermore(C) ? (C) : ((C) + 0x0800000000000000))
+/** "unmore" a C cell.
+ * decrements its more counter if not to the max
+ */
+#define cell_unmore(C) (cell_isOvermore(C) ? (C) : ((C) - 0x0800000000000000))
+
+/** change C cell into a freed cell.
+ */
+#define cell_free(C) (((C) & 0xFF00000000000000))
 
 /* ________________________________________
  * Cell administrative bits
  */
-#define ROOTED 0xF
-#define ARROW 0xE
-#define TAG 0xD
-// #define BLOB 0xC
-#define STUFFING 0xC
-#define MAX_JUMP 0xA
-#define MAX_CROSSOVER 0xF
+#define MAX_JUMP   0xFF
+#define MAX_CHILD0 0x7F
 
 /* Administrative bits of volatile memory cached cell
  */
 #define MEM1_LOOSE 0x1
 
-
-/* ________________________________________
- * Cell building macros
- *
- * Each cell (32 bits) is structured as follow
- *  Cell = <--X--><--J--><----------D----------> (32 bits)
- *  with
- *    X = Crossover (4 bits)
- *    J = Jump (4 bits) OR "Type ID"
- *    D = Data (24 bits)
- */
-
-/** build a cell from X, J and D parts
- */
-#define cell_build(X, J, D) (((X) << 28) | ((J) << 24) | D)
-
-/** "cross" a C cell.
- * if C cell is a zero cell then it becomes a a stuffed cell (crossover = 1)
- * else whatever it is a stuffed cell or a used cell,
- * one simply increments its crossover counter
- */
-#define cell_cross(C) (cell_isZero(C) ? 0x1C000000 : (cell_isOvercrossed(C) ? 0xFC000000 : (C + 0x10000000)))
-
-/** change C cell into a freed cell.
- * if the cell is crossed over, it becomes a stuffed cell
- * else, it becomes a ZERO cell
- */
-// TBD: use mask to stuff
-#define cell_free(C) (cell_getCrossover(C) ? cell_build(cell_getCrossover(C), STUFFING, 0) : 0)
-
 /* ________________________________________
  * Cell unbuilding macros
  */
-#define cell_getCrossover(C) ((C) >> 28)
-#define cell_getJump(C) (((C) >> 24) && 0xF)
-#define cell_getData(C) ((C) & 0x00FFFFFF)
+#define cell_getCatBits(C) ((C) & CATBITS_MASK)
+#define cell_getMore(C) ((C) >> 59)
+#define cell_getTail(C) (((C) & 0xFFFFFF00000000) >> 32)
+#define cell_getHead(C) (((C) & 0xFFFFFF00) >> 8)
+#define cell_getChecksum(C) (((C) & 0xFFFFFFFFFF0000) >> 16)
+#define cell_getSlice(C)    (((C) & 0xFFFFFFFFFFFF00) >> 8)
+#define cell_getRef0(C)    (((C) & 0xFFFFFF00000000) >> 32)
+#define cell_getRef1(C)    (((C) & 0xFFFFFF00) >> 8)
+#define cell_getChild0(C) ((C) & 0x7F)
+#define cell_getRootBit(C) ((C) & 0x80)
+#define cell_getJumpFirst(C) (((C) & 0xFF00) >> 8)
+#define cell_getJumpNext(C) ((C) & 0xFF)
+#define cell_getSize(C) ((C) & 0xFF)
+#define cell_getSyncType(C) ((C) & 0xFF)
+#define cell_getFrom(C) cell_getTail(C)
+#define cell_getNext(C) cell_getHead(C)
 
 /* ________________________________________
  * Cell testing macros
  */
-#define cell_isZero(C) ((C) == 0)
-#define cell_isStuffed(C) (((C) & 0x0F000000) == 0x0C000000)
-#define cell_isFree(C) (cell_isZero(C) || cell_isStuffed(C))
-#define cell_isArrow(C) (((C) & 0x0F000000) >= 0x0E000000)
-#define cell_isTag(C) (((C) & 0x0F000000) == 0x0D000000)
-// #define cell_isBlob(C) (((C) & 0x0F000000) == 0x0C000000)
-#define cell_isFollower(C) (((C) & 0x0F000000) < 0x0C000000)
-#define cell_isRooted(C) (((C) & 0x0F000000) == 0x0F000000)
-#define cell_isOvercrossed(C) (((C) & 0xF0000000) == 0xF0000000)
-
+#define more(C) ((C) & 0xF800000000000000)
+#define cell_isRooted(C) (cell_getRootBit(C))
+#define cell_isFree(C) (((C) & 0x07FFFFFFFFFFFFFF) == 0)
+#define cell_isPair(C) (cell_getCatBits(C) == CATBITS_ARROW)
+#define cell_isTuple(C) (cell_getCatBits(C) == CATBITS_TUPLE)
+// The next tricky macro returns !0 for any valid arrow address
+#define cell_isArrow(C) (((C) & 0x07FFFFFFFFFFFFFF) && cell_getCatBits(C) <= CATBITS_CHAIN)
+#define cell_isSmall(C) (cell_getCatBits(C) == CATBITS_SMALL)
+#define cell_isTag(C) (cell_getCatBits(C) == CATBITS_TAG)
+#define cell_isBlob(C) (cell_getCatBits(C) == CATBITS_BLOB)
+// The next trick returns !0 for entrelacs type arrows
+#define cell_isEntrelacs(C) ((cell_getCatBits(C) + 7) & 0x0300000000000000)
+#define cell_isSyncFrom(C, address, type) (cell_getCatBits(C) == CATBITS_SYNC && cell_getFrom(C) == (address) && cell_getSyncType(cell) == (type))
 
 // The loose stack.
 // This is a stack of all newly created arrows still in loose state.
@@ -98,7 +192,7 @@ static looseStackAdd(Address a) {
 }
 
 static looseStackRemove(Address a) {
-  if (!looseStackSize) return;
+  assert(!looseStackSize);
   if (looseStack[looseStackSize - 1] == a)
     looseStackSize--;
   else if (looseStackSize > 1 && looseStack[looseStackSize - 2] == a) {
@@ -111,25 +205,23 @@ static looseStackRemove(Address a) {
 /* ________________________________________
  * Hash functions
  * One computes 3 kinds of hashcode.
- * * h1: the default cell address for a given arrow.
- *     h1 = hash(tail, head) % PRIM0 for a regular arrow
- *     h1 = hashString(string) for a tag arrow
- * * h2: the probe offset when h1 cell is busy and one looks for a free cell nearby.
- *     h2 = hash(tail, head) % PRIM1 for a regular arrow
- *  
+ * * hashLocation: default cell address of an arrow.
+ *     hashLocation = hashArrow(tail, head) % PRIM0 for a regular arrow
+ *     hashLocation = hashString(string) for a tag arrow
+ * * hashProbe: probing offset when looking for a free cell nearby a conflict.
+ *     hProbe = hashArrow(tail, head) % PRIM1 for a regular arrow
+ * * hashChain: offset to separate chained cells
+ *       chained data slices (and tuple ends) are separated by JUMP * h3 cells
+ * * hashChild : offset to separate children cells
+ *       first child in parent children list is at @parent + cell.child0 * hChild
+ *       chained children cells are separated by JUMP * hChild cells
  */
 
 /* hash function to get H1 from a regular arrow definition */
-uint32_t hash(Arrow tail, Arrow head) {
+uint32_t hashArrow(Arrow tail, Arrow head) {
   return (tail << 20) ^ (tail >> 4) ^ head;
 }
-
-/* hash function to get H3 from a cell caracteristics */
-uint32_t hashChain(Address address, CellData cell) { // Data chain hash offset
-  // This hash mixes the cell address and its content
-  return (cell << 20) ^ (cell >> 4) ^ address;
-}
-
+ 
 /* hash function to get H1 from a tag arrow definition */
 uint32_t hashString(char *s) { // simple string hash
   uint32_t hash = 5381;
@@ -142,6 +234,16 @@ uint32_t hashString(char *s) { // simple string hash
   return hash;
 }
 
+/* hash function to get hashChain from a cell caracteristics */
+uint32_t hashChain(Address address, CellData cell) { // Data chain hash offset
+  // This hash mixes the cell address and its content
+  return ((cell & 0x00FFFFFFFFFF0000) << 8) ^ ((cell & 0x00FFFFFFFFFF0000) >> 16) ^ address;
+}
+
+/* hash function to get hashChild from a cell caracteristics */
+uint32_t hashChild(Address address, CellData cell) { // Data chain hash offset
+  return -hashChain(address, cell);
+}
 
 /* ________________________________________
  * The blob cryptographic hash computing fonction.
@@ -156,23 +258,91 @@ char* crypto(uint32_t size, char* data, char output[20]) {
 
 /* ________________________________________
  * Address shifting and jumping macros
- *
+ * N : new location
+ * H : current location
+ * O : offset
+ * S : start location
+ * J : Jump multiplier
+ * C : Cell
  */
-#define shift(H, N, O, S) (N = ((H + O) % SPACE_SIZE), assert(N != S))
-#define _jump(J, H, N, O, S) (N = ((H + O * J) % SPACE_SIZE), assert(N != S))
-#define jump(C, H, N, O, S) _jump(cell_getJump(C), H, N, O, S)
+#define shift(LOCATION, NEW, OFFSET) (NEW = (((LOCATION) + (OFFSET)) % (SPACE_SIZE)))
+
+#define growingShift(LOCATION, NEW, OFFSET, START) ((shift(LOCATION, NEW, OFFSET) == (START)) ? shift(LOCATION, NEW,( ++OFFSET ? OFFSET :( OFFSET = 1 ))) : NEW)
+ 
+#define jump(LOCATION, NEXT, JUMP, OFFSET, START) (NEXT = ((LOCATION + OFFSET * ( 1 + JUMP)) % SPACE_SIZE), assert(NEW != START))
+static Address jumpToFirst(Cell cell, Address address, Address offset) {
+   Adress next = address;
+   assert(cell_isArrow(cell));
+   Cell jump = cell_getJumpFirst(cell);
+   for (int i = 0; i <= jump; i++)
+     growingShift(next, next, offset, address);
+   
+   if (jump == MAX_JUMP) { // one needs to look for a reattachment (sync) cell
+     cell = space_get(next);
+	 int loopDetect = 10000;
+	 while (--loopDetect && !cell_isSyncFrom(cell, address, REATTACHMENT_FIRST)) {
+        growingShift(next, next, offset, address);
+		cell = space_get(next);
+	 }
+	 assert(loopDetect);
+     next = cell_getNext(cell);
+   }
+   return next;
+}
+
+static Address jumpToNext(Cell cell, Address address, Address offset) {
+   Adress next = address;
+   assert(cell_getCatBits(cell) == CATBITS_CHAIN);
+   Cell jump = cell_getJumpNext(cell);
+   for (int i = 0; i <= jump; i++)
+     growingShift(next, next, offset, address);
+   
+   if (jump == MAX_JUMP) { // one needs to look for a sync cell
+     cell = space_get(next);
+	 int loopDetect = 10000;
+	 while (--loopDetect && !cell_isSyncFrom(cell, address, REATTACHMENT_NEXT)) {
+	    growingShift(next, next, offset, address);
+        cell = space_get(next);
+	 }
+	 assert(loopDetect);
+     next = cell_getNext(cell);
+   }
+   return next;
+}
+
+static Address jumpToChild0(Cell cell, Address address, Address offset) {
+   Adress next = address;
+   assert(cell_isArrow(cell));
+   Cell jump = cell_getChild0(cell);
+   if (!jump) return (Address)0; // no child
+   
+   for (int i = 0; i < jump; i++)
+     growingShift(next, next, offset, address);
+   
+   if (jump == MAX_JUMP) { // one needs to look for a sync cell
+     cell = space_get(next);
+	 int loopDetect = 10000;
+	 while (--loopDetect && !cell_isSyncFrom(cell, address, REATTACHMENT_CHILD0)) {
+	    growingShift(next, next, offset, address);
+        cell = space_get(next);
+	 }
+	 assert(loopDetect);
+     next = cell_getNext(cell);
+   }
+   return next;
+}
 
 /** return Eve */ 
 Arrow xl_Eve() { return Eve; }
 
-/** retrieve tail->head arrow,
- * by creating the arrow singleton in the arrow space if not found.
- * except if locateOnly param set.
+/** retrieve tail->head arrow
+ * by creating the singleton if not found.
+ * except if locateOnly param is set.
  */
 static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
-  uint32_t h, h1, h2, h3;
-  Address a, next, stuff;
-  Cell cell1, cell2;
+  uint32_t hashArrow, hashLocation, hashProbe;
+  Address probeAddress, firstFreeCell, newArrow;
+  Cell cell;
 
   // Eve special case
   if (tail == Eve && head == Eve) {
@@ -180,216 +350,231 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   }
 
   // Compute hashs
-  h = hash(tail, head);
-  h1 = h % PRIM0; // base address
-  h2 = h % PRIM1; // probe offset
-  if (!h2) h2 = 2; // offset can't be 0 
+  hashArrow = hashArrow(tail, head);
+  hashLocation = hashArrow % PRIM0; // base address
+  hashProbe = hashArrow % PRIM1; // probe offset
+  if (!hashProbe) hashProbe = 1; // offset can't be 0 
 
-  // One searches for an existing copy of this arrow
-  stuff = Eve;
-  a = h1;
-  cell1 = space_get(a);
-  while (!cell_isZero(cell1)) {
-    if (cell_isStuffed(cell1)) {
-      if (stuff == Eve) 
-        stuff = a; // one remembers first stuffed cell while scannning
-    } else if (cell_isArrow(cell1) && cell_getData(cell1) == tail) {
-      // good start
-      // chain offset
-      h3 = hashChain(a, tail) % PRIM1;
-      if (!h3) h3 = 1; // offset can't be 0
-
-      shift(a, next, h3, a);
-      cell2 = space_get(next);
-      if (cell_getData(cell2) == head)
-        return a; // OK: arrow found!
-    }
-    // TBD:Bug here: I must not cross cell if I actually found the arrow
-    space_set(a, cell_cross(cell1), DONTTOUCH);
-    shift(a, a, h2, h1);
-    cell1 = space_get(a);
+  // Probe for an existing singleton
+  probeAddress = hashLocation;
+  firstFreeCell = Eve;
+  while (1) {
+     cell = space_get(probeAddress);
+     if (cell_isFree(cell))
+	    firstFreeCell = probeAddress;
+     else if (cell_isPair(cell) // TODO test in a single binary word comparison
+  	    && cell_getTail(cell) == tail
+	    && cell_getHead(cell) == head) {
+           return probeAddress; // OK: arrow found!
+     }
+     // Not the singleton
+		
+     if (!more(cell)) break; // Probing over. It's a miss.
+	 
+     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+	 // TODO: thinking about a probing limit
   }
+  // Miss
+  
+  if (locateOnly) // one only want to test for singleton existence in the arrows space
+    return Eve; // Eve means not found
 
-  if (locateOnly)
-    return Eve;
-
-  // miss, so let's put the arrow into the space
-  if (stuff) a = stuff;
-
-  // but we need 2 consecutive free cells in a chain!
-
-  // h3 is the chain offset
-  // it depends on the actual arrow address
-  h3 = hashChain(a, tail) % PRIM1;
-  if (!h3) h3 = 1; // offset can't be 0
-  shift(a, next, h3, next);
-  cell2 = space_get(next);
-
-  while (!cell_isFree(cell2)) {
-    // one stuffes/crosses unusable empty cell
-    space_set(a, cell_cross(cell1), DONTTOUCH);
-    shift(a, a, h2, h1);
-    cell1 = space_get(a);
-    while (!cell_isFree(cell1)) {
-      // one stuffes/crosses unusable empty cell
-      space_set(a, cell_cross(cell1), DONTTOUCH);
-      shift(a, a, h2, h1);
-    }
-    h3 = hashChain(a, tail) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-    shift(a, next, h3, next);
-    cell2 = space_get(next);
+  /* Create a singleton */
+  newArrow = firstFreeCell;
+  cell = space_get(newArrow);
+  cell = arrow_build(cell, tail, head);
+  space_set(newArrow, cell, MEM1_LOOSE);
+  
+  /* Now incremeting "more" counters in the probing path up to the new singleton
+  */
+  probeAddress = hashLocation;
+  while (probeAdress != newArrow) {
+     cell = space_get(probeAddress);
+     cell = cell_more(cell);
+     space_set(probeAddress, cell, DONTTOUCH);
+     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
   }
-
-  // (cell_isFree(cell1) && cell_isFree(cell2))
-  cell1 = cell_build(cell_getCrossover(cell1), ARROW, tail);
-  cell2 = cell_build(cell_getCrossover(cell2), 0, head);
-  space_set(a, cell1, MEM1_LOOSE);
-  space_set(next, cell2, 0);
-
-  // loose log
-  looseStackAdd(a);
-  return a;
+  
+  // record new arrow as loose arrow
+  looseStackAdd(newArrow);
+  return newArrow;
 }
 
-/** retrieve a tag arrow defined by str string,
- * by creating the arrow singleton if not found,
- * except if locateOnly param is set
+/** retrieve a tag arrow defined by str C string,
+ * by creating the singleton if not found.
+ * except if locateOnly param is set.
+ * FIXME : find a way to go out shift loop for chained cells
  */
-static Arrow tag(char* str, int locateOnly) {
-  uint32_t h, h1, h2, h3;
-  Address a, current, next, stuff;
-  Cell cell1, cell2, content, cell;
-  unsigned i;
+static Arrow tagOrBlob(int catBits, char* str, int locateOnly) {
+  uint32_t hashString, hashLocation, hashProbe, hashChain, checksum;
+  Address probeAddress, firstFreeCell, newArrow, current, next;
+  Cell cell, nextCell, content;
+  unsigned i, jump;
   char c, *p;
   if (!str) {
     return Eve;
   }
 
-  h = hashString(str);
-  h1 = h % PRIM0;
-  h2 = h % PRIM1;
-  if (!h2) h2 = 2; // offset can't be 0
-
-  a = h1;
-  stuff = Eve;
-  cell1 = space_get(a);
-  while (!cell_isZero(cell1)) {
-    if (cell_isStuffed(cell1)) {
-      if (stuff == Eve) 
-        stuff = a; // one remembers first stuffed cell while scannning
-    } else if (cell_isTag(cell1) && cell_getData(cell1) == h1) {
-      // good start
-      // now one must compare the whole string, char by char
-      h3 = hashChain(a, h1) % PRIM1; 
-      if (!h3) h3 = 1; // offset can't be 0
-      p = str;
-      shift(a, next, h3, a);
-      cell = space_get(next);
-      i = 2; // The first content byte (cell_at_h3[1]) is reserved for a ref counter.
-      while ((c = *p++) == ((char*)&cell)[i] && c != 0) {
-        i++;
-        if (i == 4) {
-          i = 1;
-          if (cell_getJump(cell) == 0) {
-            //i = 3;// useless
-            break;// the chain is over
-          }
-          jump(cell, next, next, h3, a);
-          cell = space_get(next);
+  hashString = hashString(str);
+  hashLocation = hashString % PRIM0;
+  hashProbe    = hashString % PRIM1;
+  checksum     = hashString & 0xFFFFFFFFFF;
+  if (!hashProbe) hashProbe = 1; // offset can't be 0
+ 
+  // Search for an existing singleton
+  probeAddress = hashLocation;
+  firstFreeCell = Eve;
+  while (1) {
+    cell = space_get(probeAddress);
+    if (cell_isFree(cell))
+	    firstFreeCell = probeAddress;
+    else if (cell_getCatBits(cell) == catBits
+  	     && cell_getChecksum(cell) == checksum) {
+        // chance we found it
+		// now comparing the whole string
+        hashChain = hashChain(probeAddress, cell) % PRIM1; 
+        if (!hashChain) hashChain = 1; // offset can't be 0
+        next = jumpToFirst(cell, probeAddress, hashChain, probeAddress);
+        p = str;
+        i = 1;
+  	    cell = space_get(next);
+	    while ((c = *p++) == ((char*)&cell)[i] && c != 0) {
+           i++;
+           if (i == 7) {
+              if (cell_getCatBits(cell) == CATBITS_LAST) {
+                 break ; // the chain is over
+              }
+              next = jumpToNext(cell, next, hashChain, probeAddress);
+              cell = space_get(next);
+              i = 1;
+            }
         }
-      }
-      if (!c && !((char*)&cell)[i])
-        return a; // found arrow
+        if (!c && !((char*)&cell)[i] && cell_getCatBits(cell) == CATBITS_LAST &&        cell_getSize(cell) = i)
+            return a; // found arrow
+    }
+    // Not the singleton
 
-      // One crosses the busy cell in order to prevent it to be zero-ed
-      // BUG TBD : one crosses only when creating the arrow
-      space_set(a, cell_cross(cell1), DONTTOUCH);
-      shift(a, a, h2, h1);
-
-      cell1 = space_get(a);
-    } // isTag
-
-  } // !zero
+    if (!more(cell)) break; // Miss
+	 
+    growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+  }
 
   if (locateOnly)
     return Eve;
 
-  // miss, so let's put the arrow into the space.
-  // but we need 2 consecutive free cells in a chain
-  if (stuff) a = stuff;
+  /* Create a missing singleton */
+  newArrow = firstFreeCell;
+  cell = space_get(newArrow);
+  cell = ( catBits == CATBITS_TAG
+			? tag_build(cell, checksum, 0 /* jump */)
+			: blob_build(cell, checksum, 0 /* jump */);
 
-  // h3 is the chain offset, h3 is not h1
-  h3 = hashChain(a, h1) % PRIM1; 
-  if (!h3) h3 = 1; // offset can't be 0
-  shift(a, next, h3, next);
-  cell2 = space_get(next);
-
-  while (!cell_isFree(cell2)) {
-    // one stuffes/crosses unusable empty cell one found
-    space_set(a, cell_cross(cell1), DONTTOUCH);
-    shift(a, a, h2, h1);
-    cell1 = space_get(a);
-    while (!cell_isFree(cell1)) {
-      // one crosses every cell on the way
-      space_set(a, cell_cross(cell1), DONTTOUCH);
-      shift(a, a, h2, h1);
-    }
-    h3 = hashChain(a, h1) % PRIM1;
-    if (!h3) h3 = 1; // offset can't be 0
-    shift(a, next, h3, next);
-    cell2 = space_get(next);
-  }
-  // 2 consecutive free cells in a h3 sequence found.
+  hashChain = hashChain(newArrow, cell) % PRIM1; 
+  if (!hashChain) hashChain = 1; // offset can't be 0
   
-  // Now, one writes the TAG definition
+  Address offset = hashChain;
+  growingShift(newArrow, next, offset, newArrow);
+  nextCell = space_get(next);
+  jump = 0;
+  while (!cell_isFree(nextCell)) {
+     jump++;
+     growingShift(next, next, offset, newArrow);
+	 nextCell = space_get(next);
+  }
+  
+  if (jump >= MAX_JUMP) {
+	Address sync = next;
+	Cell syncCell = nextCell;
+    syncCell = sync_build(syncCell, newArrow, 0, REATTACHMENT_FIRST);
+    space_set(sync, syncCell, 0);
+    offset = hashChain;
+    growingShift(next, next, offset, sync);
+	nextCell = space_get(next);
+    while (!cell_isFree(nextCell)) {
+       growingShift(next, next, hashChain, sync);
+	   nextCell = space_get(next);
+    }
+  	syncCell = sync_build(syncCell, newArrow, next, REATTACHMENT_FIRST);
+	space_set(sync, syncCell, 0);
 
-  // First H2, then all chars
-  cell1 = cell_build(cell_getCrossover(cell1), TAG, h2);
-  space_set(a, cell1, 0);
+	jump = MAX_JUMP;
+  }
+  cell = catBits == CATBITS_TAG
+      ? tag_build(cell, checksum, jump)
+	  : blob_build(cell, checksum, jump);
+  space_set(newArrow, cell, MEM1_LOOSE);
+  
   current = next;
-  cell1 = cell2;
-  // h3 already set
   p = str;
   i = 1;
   content = 0;
-  c = 0;  /* first byte = ref counter = 0 */
-  for (;;) {
+  c = 0;
+  while (1) {
+    c = *p++;
+      
     ((char*)&content)[i] = c; 
+    if (!c) break;
     i++;
-    if (i == 4) {
-      unsigned jump = 1;
-      shift(current, next, h3, a);
-      cell2 = space_get(next);
-      while (!cell_isFree(cell2)) {
+    if (i == 7) {
+	  Address offset = hashChain;
+      growingShift(current, next, offset, current);
+	  jump = 0;
+      nextCell = space_get(next);
+	  while (!cell_isFree(nextCell)) {
         jump++;
-        shift(next, next, h3, a);
-        cell2 = space_get(next);
+        growingShift(next, next, offset, current);
+     	nextCell = space_get(next);
       }
-      cell1 = cell_build(cell_getCrossover(cell1), jump && 15, content);
-      space_set(current, cell1, 0);
-      current = next;
-      cell1 = cell2;
+      if (jump >= MAX_JUMP) {
+	     Address sync = next;
+	     Cell syncCell = nextCell;
+  	     syncCell = sync_build(syncCell, current, 0, REATTACHMENT_NEXT); // 0 = jump sync
+         space_set(sync, syncCell, 0);
+
+		 offset = hashChain;
+         growingShift(next, next, offset, sync);
+         nextCell = space_get(next);
+         while (!cell_isFree(nextCell)) {
+           growingShift(next, next, offset, sync);
+           nextCell = space_get(next);
+         }
+  	     syncCell = sync_build(syncCell, current, next, REATTACHMENT_NEXT); // 0 = jump sync
+	     space_set(sync, syncCell, 0);
+
+	     jump = MAX_JUMP;
+      }
+	  cell = space_get(current);
+      cell = slice_build(cell, content, jump);
+      space_set(current, cell, 0);
       i = 1;
       content = 0;
+	  current = next;
     }
 
-    c = *p++;
-    if (!c) break;
   }
-  // useless : ((char*)&content)[i] = c; // 0 
-  cell1 = cell_build(cell_getCrossover(cell1), 0, content);
-  space_set(current, cell1, 0);
-
-  // loose log
-  looseStackAdd(a);
-
-  return a;
+  cell = space_get(current);
+  cell = lastSlice_build(cell, content, i /* size */);
+  space_set(current, cell, 0);
+  
+  
+  /* Now incremeting "more" counters in the probing path up to the new singleton
+  */
+  probeAddress = hashLocation;
+  while (probeAdress != newArrow) {
+     cell = space_get(probeAddress);
+     cell = cell_more(cell);
+     space_set(probeAddress, cell, DONTTOUCH);
+     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+  }
+  
+  // log loose arrow
+  looseStackAdd(newArrow);
+  return newArrow;
 }
 
 /** retrieve a blob arrow defined by 'size' bytes pointed by 'data',
- * by creating the arrow singleton if not found,
- * except if locateOnly param is set
+ * by creating the singleton if not found.
+ * except if locateOnly param is set.
  */
 static Arrow blob(uint32_t size, char* data, int locateOnly) {
   char h[20];
@@ -397,67 +582,87 @@ static Arrow blob(uint32_t size, char* data, int locateOnly) {
 
   // Prototype only: a BLOB is stored into a pair arrow from "blobTag" to the blog cryptographic hash. The blob data is stored separatly outside the arrows space.
   mem0_saveData(h, size, data);
-  // TO DO: remove the data when cell at h is recycled.
+  // TODO: remove the data when cell at h is recycled.
 
-  Arrow t = tag(h, locateOnly);
-  if (t == Eve) return Eve;
-  return arrow(blobTag, t, locateOnly);
+  return tagOrBlob(CATBITS_BLOB, h, locateOnly);
 }
 
 Arrow xl_arrow(Arrow tail, Arrow head) { return arrow(tail, head, 0); }
-Arrow xl_tag(char* s) { return tag(s, 0);}
+Arrow xl_tag(char* s) { return tagOrBlob(CATBITS_TAG, s, 0);}
 Arrow xl_blob(uint32_t size, char* data) { return blob(size, data, 0);}
 
 Arrow xl_arrowMaybe(Arrow tail, Arrow head) { return arrow(tail, head, 1); }
-Arrow xl_tagMaybe(char* s) { return tag(s, 1);}
+Arrow xl_tagMaybe(char* s) { return tagOrBlob(CATBITS_TAG, s, 1);}
 Arrow xl_blobMaybe(uint32_t size, char* data) { return blob(size, data, 1);}
 
 Arrow xl_headOf(Arrow a) {
-  Arrow tail = xl_tailOf(a);
-  uint32_t h3 = hashChain(a, tail) % PRIM1;
-  if (!h3) h3 = 1; // offset can't be 0
-  Address a_h3;
-  shift(a, a_h3, h3, a);
-  return (Arrow)cell_getData(space_get(a_h3));
+  if (a == Eve)
+     return Eve;
+  Cell cell = space_get(a);
+  if (!cell_isArrow(cell))
+     return -1; // Invalid id
+
+  if (catBits != CATBITS_ARROW)
+     return a; //TODO: Tuple
+
+  return (Arrow)cell_getHead(cell);
 }
 
 Arrow xl_tailOf(Arrow a) {
-  return (Arrow)cell_getData(space_get(a));
+  if (a == Eve) return Eve;
+  if (!cell_isArrow(cell))
+     return -1; // Invalid id
+
+  Cell cell = space_get(a);
+  Cell catBits = cell_getCatBits(cell);
+   
+  if (catBits != CATBITS_ARROW)
+     return a; // TODO: Tuple
+
+  return (Arrow)cell_getTail(cell);
 }
 
-char* xl_tagOf(Arrow a) {
-  Cell cell = space_get(a);
-  assert(cell_isTag(cell));
-  uint32_t h1 = cell_getData(cell);
-  uint32_t h3 = hashChain(a, h1) % PRIM1;
-  if (!h3) h3 = 1; // offset can't be 0
-  Address next;
+char* xl_tagOrBlobOf(Cell catBits, Arrow a) {
+  Address current = a;
+  Cell cell = space_get(current);
+  Cell _catBits = cell_getCatBits(cell);
+  if (_catBits != catBits)
+     return (char *)0; // Invalid Id
+  
+  uint32_t hashChain = hashChain(a, cell) % PRIM1;
+  if (!hashChain) hashChain = 1; // offset can't be 0
 
-  shift(a, next, h3, a);
-  cell = space_get(next);
-  unsigned i = 2; // not 1, byte #1 contains ref counter
+  current = jumpToFirst(cell, current, hashChain, a);
+  cell = space_get(current);
+  
+  unsigned i = 1;
   char* tag =  NULL;
   uint32_t size = 0;
   uint32_t max = 0;
   geoalloc(&tag, &max, &size, sizeof(char), 1);
+  //TODO:QUICKER COPY
   while ((tag[size] = ((char*)&cell)[i])) {
     geoalloc(&tag, &max, &size, sizeof(char), size + 1);
     i++;
-    if (i == 4) {
+    if (i == 7) {
       i = 1;
-      if (cell_getJump(cell) == 0) {
-        //i = 3;// useless
+      if (cell_getCatBits(cell) == CATBITS_LAST) {
+	    size -= (6 - cell_getSize(cell));
         break;// the chain is over
       }
-      jump(cell, next, next, h3, a);
-      cell = space_get(next);
+      current = jumpToNext(cell, current, hashChain, a);
+      cell = space_get(current);
     }
   }
   return tag;
 }
 
 char* xl_blobOf(Arrow a, uint32_t* lengthP) {
-  char* h = xl_tagOf(xl_headOf(a));
+  char* h = xl_tagOrBlobOf(CATBITS_BLOB, a);
+  if (!h) {
+     *lengthP = 0;
+	 return (char *)0;
+  }
   char* data = mem0_loadData(h, lengthP);
   free(h);
   return data;
@@ -471,235 +676,353 @@ enum e_xlType xl_typeOf(Arrow a) {
   if (a == Eve) return XL_EVE;
   
   Cell cell = space_get(a);
-  if (cell_isArrow(cell)) {
-    if (xl_headOf(a) == blobTag)
-      return XL_BLOB;
-    else
+  if (cell_isFree(cell))
+      return XL_UNDEF;
+
+  Cell catBits = cell_getCatBits(cell);
+  if (catBits == CATBITS_ARROW)
       return XL_ARROW;
-  }
-  else if (cell_isTag(cell))
-    return XL_TAG;
-  else
-    return XL_UNDEF;
+  else if (catBits == CATBITS_SMALL)
+      return XL_SMALL;
+  else if (catBits == CATBITS_BLOB)
+      return XL_BLOB;
+  else if (catBits == CATBITS_TAG)
+      return XL_TAG;
+  else if (catBits == CATBITS_TUPLE)
+      return XL_TUPLE;
+  else 
+      return XL_UNDEF;
 }
 
-/** connect a child arrow to its parent arrow
- * * if the parent arrow is a tag, one increments the ref counter at a+h3
- * * *  Exception: if the tag ref counter reached its max value, one can't move it anymore. It means the tag will never be removed from the storage.
- * * if the parent arrow is a pair, one add the child back-ref in the "h3 jump list" starting from a+h3
- * * * if the parent arrow was in LOOSE state (eg. a newly defined pair with no other child arrow), one connects the parent arrow to its head and tail (recursive calls) and one removes the LOOSE mem1 flag attached to 'a' cell
+
+/** connect a child arrow to its parent arrow "a"
+ * * one adds the child back-ref to the children list of "a"
+ * * if the parent arrow was loose (eg. disconnected & unrooted), one connects the parent arrow to its head and tail (recursive calls) and one removes the LOOSE mem1 flag attached to 'a' cell
+ *
+ * TODO : when adding a new cell, try to reduce jumpers from time to time
  */
 static void connect(Arrow a, Arrow child) {
   if (a == Eve) return; // One doesn't store Eve connectivity.
   Cell cell = space_get(a);
-  if (cell_isTag(cell)) {
-    if (space_getAdmin(a) == MEM1_LOOSE) {
-      // One removes the Mem1 LOOSE flag at "a" address.
-      space_set(a, cell, 0);
-      // (try to) remove 'a' from the loose log
-      looseStackRemove(a);
-    }
-
-    // One doesn't attach back reference to tags. One only increments a ref counter.
-    // If you want connectivity data, think on building pairs of tag.
-    // the ref counter is located in the 1st byte of the h3-next cell content
-    uint32_t h1 = cell_getData(cell);
-    uint32_t h3 = hashChain(a, h1) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-    Address a_h3;
-    shift(a, a_h3, h3, a);
-    cell = space_get(a_h3);
-    unsigned char c = ((char*)&cell)[1];
-    if (!(++c)) c = 255;// Max value reached.
-    ((char*)&cell)[1] = c;
-    space_set(a_h3, cell, 0);
-    
-  } else { //  ARROW, ROOTED, BLOB...
-    if (space_getAdmin(a) == MEM1_LOOSE) {
+  assert(cell_isArrow(cell));
+  Cell catBits = cell_getCatBits(cell);
+  
+  if (space_getAdmin(a) == MEM1_LOOSE) {
       // One removes the mem1 LOOSE flag attached to 'a' cell.
       space_set(a, cell, 0);
       // (try to) remove 'a' from the loose log
       looseStackRemove(a);
       // One recursively connects the parent arrow to its ancestors.
-      connect(xl_tailOf(a), a);
-      connect(xl_headOf(a), a);
-    }
-
-    // Children arrows are chained in the h3 jump list starting from a+h3.
-    Arrow tail = xl_tailOf(a);
-    uint32_t h3 = hashChain(a, tail) % PRIM1;
-    if (!h3) h3 = 1; // offset can't be 0
-    Arrow current;
-    shift(a, current, h3, a);
-    Cell cell = space_get(current);
-    while (cell_getData(cell) != 0 && cell_getJump(cell) != 0) {
-        jump(cell, current, current, h3, a);
-        cell = space_get(current);
-    }
-
-    if (cell_getData(cell) != 0) {
-      // if we went up to the h3/jump list end
-
-      // free cell search with jump computing
-      Arrow next;
-      Cell cell2;
-      unsigned jump = 1;
-      shift(current, next, h3, a);
-      cell2 = space_get(next);
-      while (!cell_isFree(cell2)) {
-        jump++;
-        shift(next, next, h3, a);
-        cell2 = space_get(next);
-      }
-      // TBD: what if jump > 15
-      assert(jump <= 15);
-      cell2 = cell_build(cell_getCrossover(cell2), 0, child);
-      space_set(next, cell2, 0);
-      cell = cell_build(cell_getCrossover(cell), jump && 15, cell_getData(cell));
-      space_set(current, cell, 0);
-    } else { // free cell found within the sequence.
-      cell = cell_build(cell_getCrossover(cell), cell_getJump(cell), child);
-      space_set(current, cell, 0);
-    }
-
+	  if (catBits == CATBITS_ARROW) {
+		connect(xl_tailOf(a), a);
+		connect(xl_headOf(a), a);
+	  } else if (catBits == CATBITS_TUPLE) {
+	    // TODO connect every end
+	  }
   }
-    
+  CellData data = (catBits == CATBITS_ARROW || catBits == CATBITS_SMALL)
+      ? cell_getData(cell)
+	  : cell_getChecksum(cell);
+	
+  uint32_t hashChild = hashChild(a, data) % PRIM1;
+  if (!hashChild) hashChild = 2; // offset can't be 0
+	
+  Address current = jumpToChild0(cell, a, hashChild, a);
+  if (current) {
+	cell = space_get(current);
+	while ((cell & 0xFFFFFF00000000) &&
+        	(cell & 0x000000FFFFFF00) &&
+		   cell_getCatBits(cell) != CATBITS_LAST) {
+		if (cell_getJumpNext(cell) ==  MAX_JUMP) {
+		   // jump == MAX ==> ref1 points to next
+		   current = cell_getRef1(cell);
+		} else {
+		   current = jumpToNext(cell, current, hashChain, a);
+		}
+		cell = space_get(current);
+    }
+	if (!(cell & 0xFFFFFF00000000)) {
+      // first ref bucket is empty
+      cell |= (child << 32);
+      space_set(current, cell, 0);
+	  return;
+    } else if (!(cell & 0xFFFFFF00)) {
+      // second ref bucket is empty
+	  cell |= (child << 8);
+      space_set(current, cell, 0);
+	  return;
+    }
+  } else
+     current = a;
+	 
+  // if no free cell in list
+  // free cell search and jump computing
+  Address next;
+  Cell nextCell;
+  Address offset = hashChild;
+  unsigned jump = 1;
+  growingShift(current, next, offset, current);
+  nextCell = space_get(next);
+  while (!cell_isFree(nextCell)) {
+      jump++;
+      growingShift(next, next, offset, current);
+      nextCell = space_get(next);
+  }
+  
+  if (current == a) {
+     if (jump >= MAX_CHILD0) {
+		Address sync = next;
+		Cell syncCell = nextCell;
+		syncCell = sync_build(syncCell, a, 0, REATTACHMENT_CHILD0);
+		space_set(sync, syncCell, 0);
+
+		offset = hashChild;
+        growingShift(next, next, offset, current);
+		nextCell = space_get(next);
+		while (!cell_isFree(nextCell)) {
+			growingShift(next, next, offset, current);
+			nextCell = space_get(next);
+		}
+		syncCell = sync_build(syncCell, a, next, REATTACHMENT_CHILD0);
+		space_set(sync, syncCell, 0);
+
+		nextCell = lastRefs_build(nextCell, child, 0, 0);
+
+		jump = MAX_CHILD0;
+     }		
+     space_set(next, nextCell, 0);
+     cell = cell_chainChild0(cell, jump);
+     space_set(a, cell, 0);
+  } else if (jump >= MAX_JUMP) {
+	 nextCell = lastRefs_build(nextCell, cell_getRef1(cell), child, 0);
+	 space_set(next, nextCell, 0);
+     
+	 // When jump = MAX_JUMP in a children cell, ref1 actually points to the next chained cell
+	 cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
+	 space_set(current, cell, 0);
+  } else {
+      // One add a new cell (a "last" chained cell)
+      nextCell = lastRefs_build(nextCell, child, 0, 0);
+      space_set(next, nextCell, 0);
+	  // One chain the previous last cell with this last celll
+      cell = cell_chain(cell, jump);
+      space_set(current, cell, 0);
+  }
 }
 
-/** disconnect a child arrow from its parent arrow
- * * if the parent arrow is a tag, one decrements the ref counter at a+h3
- * * *  Exception: if the tag ref counter reached its max value, one can't decrement it anymore. It means the tag will never be removed.
- * * if the parent arrow is a pair, one removes the child back-ref in the "h3 jump list" starting from a+h3
- * * * if the parent arrow is consequently unreferred (ie. a not rooted pair arrow with no more child arrow), the parent arrow is disconnected itself from its head and tail (recursive calls) and one raises the LOOSE mem1 flag attached to 'a' cell 
+
+/** disconnect a child arrow from its parent arrow.
+ * One removes the child back-ref from the "child0 jump list" of its parent.
+ * If the parent arrow gets unreferred (no child and unrooted), it is disconnected in turn from its head and tail (recursive calls) and it is recorded as a loose arrow 
  */
 static void disconnect(Arrow a, Arrow child) {
-  if (a == Eve) return; // One doesn't store Eve connectivity.
+    if (a == Eve) return; // One doesn't store Eve connectivity.
+    Cell cell = space_get(a);
+    assert(cell_isArrow(cell));
+    Cell catBits = cell_getCatBits(cell);
 
-  Cell cell = space_get(a);
-  if (cell_isTag(cell)) { // parent arrow is a TAG
-
-    // One decrements a ref counter in 1st data byte at a+h3 cell.
-    uint32_t h1 = cell_getData(cell);
-    uint32_t h3 = hashChain(a, h1) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-    Address  a_h3;
-    shift(a, a_h3, h3, a);
-    cell = space_get(a_h3);
-    unsigned char c = ((char*)&cell)[1];
-    if (c != 255) {
-      c--;// One decrements the tag ref counter only if not stuck to its max value.
-      ((char*)&cell)[1] = c; // reminder: cell[0] contains administrative bits.
-      space_set(a_h3, cell, 0);
-  
-      if (!c) { // HE! This tag is totally unreferred
-        // Let's switch on its LOOSE status.
-        space_setAdmin(a, MEM1_LOOSE);
-        // add 'a' to the loose log
-        looseStackAdd(a);
-      }
-    }
+    // compute hashChild
+	CellData data = (catBits == CATBITS_ARROW || catBits == CATBITS_SMALL)
+      ? cell_getData(cell)
+	  : cell_getChecksum(cell);
     
-  } else { //  ARROW, ROOTED, BLOB...
-    uint32_t rooted = cell_isRooted(cell);
- 
-    // One removes the arrow from its parent h3-chain of back-references.
-    Arrow tail = xl_tailOf(a);
-    uint32_t h3 = hashChain(a, tail) % PRIM1;
-    if (!h3) h3 = 1; // offset can't be 0
+	uint32_t hashChild = hashChild(a, data) % PRIM1;
+    if (!hashChild) hashChild = 2; // offset can't be 0
 
-    // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
-    Arrow current;
-    shift(a, current, h3, a);
-    cell = space_get(current);
+    // find the arrow in its parent child chain
+    Address current = jumpToChild0(cell, a, hashChild, a);
+	assert(current);
+	Adress previous = 0;
+	Cell childToRef0 = child << 32;
+	Cell childToRef1 = child << 8;
+	cell = space_get(current);
+    while ((cell & 0xFFFFFF00000000) != childToRef0 &&
+           (cell &       0xFFFFFF00) != childToRef1 &&
+		   cell_getCatBits(cell) != CATBITS_LAST) {
+		if (cell & 0xFFFFFFFFFFFF00)
+		    stillRemaining = 1;
 
-    Arrow previous;
-    uint32_t stillRemaining = 0;
-    while (cell_getJump(cell) != 0) {
-      previous = current;
-      jump(cell, previous, current, h3, a);
-      cell = space_get(current);
-      if (cell_getData(cell) == child) break;
-      stillRemaining = 1; // we found at least one back-ref which is not "child"
+		previous = current;			
+		if (cell_getJumpNext(cell) ==  MAX_JUMP) {
+		   // jump == MAX ==> ref1 points to next
+		   current = cell_getRef1(cell);
+		} else {
+		   current = jumpToNext(cell, current, hashChain, a);
+		}
+		cell = space_get(current);
     }
-
-    assert(cell_getData(cell) == child);
-    unsigned jump = cell_getJump(cell);
-    
-    // back-ref cell recycled either as a free or STUFFED cell
-    uint32_t crossover = cell_getCrossover(cell);
-    cell = (crossover ? cell_build(cell_getCrossover(cell), STUFFING, 0) : 0);
-    space_set(current, cell, 0);
-
-    // Now, one moves the jump amount of the erased cell to the previous cell in the chain
-    if (jump == 0) { // specific case when the erased cell is the last chained cell
-      cell = space_get(previous);
-      cell = cell_build(cell_getCrossover(cell), 0, cell_getData(cell));
-      space_set(previous, cell, 0);
-
-      if (!rooted && !stillRemaining) { // we removed the only remaining back-ref
-        // The parent arrow is unreferred. Let's switch on its LOOSE status.
-        space_setAdmin(a, MEM1_LOOSE);
-        // add 'a' to the loose log
-        looseStackAdd(a);
-        // One recursively disconnects the arrow from its ancestors.
-        disconnect(xl_tailOf(a), a);
-        disconnect(xl_headOf(a), a);
-      }
-
-    } else { // generic case
-      uint32_t previousCell = space_get(previous);
-      unsigned previousJump = cell_getJump(previousCell);
-      previousJump += jump;
-      if (previousJump <= 15) {
-        previousCell = cell_build(cell_getCrossover(previousCell), previousJump,
-                                  cell_getData(previousCell));
-        space_set(previous, previousCell, 0);
- 
-      } else { // Damned! I can't jump up to the next cell
-        // finally one just resets the back-ref in the freed cell
-        space_set(current, cell_build(crossover, jump, 0), 0);
-      }
+    // erase back-ref
+    if (childToRef0 == (cell & 0xFFFFFF00000000)) {
+      // empty out first ref bucket
+      cell &= 0xFF000000FFFFFFFF;
+    } else {
+  	  // empty out second ref
+	  assert(childToRef1 == (cell & 0xFFFFFF00));
+      cell &= 0xFFFFFFFF000000FF;
+	  cell &= (child << 8);
     }
+	   
+	if (cell & 0xFFFFFFFFFFFF00 & cell_getJumpNext(cell) != MAX_JUMP) {
+	   // still an other back-ref in this cell
+       space_set(current, cell, 0);
+	   // nothing more to do
+	   return;
+    }
+	
+	// The modified cell contains no more back-reference
+	// One removes the cell from the children list
+	
+    if (cell_getCatBits(cell) == CATBITS_LAST) {
+      // this is the last cell
+   
+      // freeing the whole cell
+	  cell_free(cell);
+      space_set(current, cell, 0);
 
+	  if (previous) {
+	      // Unchain previous cell (make it the last chained cell)
+	      cell = space_get(previous);
+          cell = cell_unchain(cell);
+          space_set(previous, cell, 0);
+      } else {
+	      // this is the first and last cell of its chain!
+          // so we've removed the last child from the list. The list is empty.
+          cell = space_get(a);
+		  cell = cell_chainChild0(cell, 0);
+	      if (cell_isRooted(cell)) {
+		     // the cell is still rooted
+		     space_set(a, cell, 0);
+	      } else {
+  		     // The parent arrow is unreferred
+		     // Let's switch on its LOOSE status.
+             space_set(a, cell, MEM1_LOOSE);
+             // And add it to the loose log
+             looseStackAdd(a);
+ 	         // One disconnects the arrow from its parents
+			 // 2 recursive calls
+             disconnect(xl_tailOf(a), a);
+             disconnect(xl_headOf(a), a);
+		  }
+      }
+    } else { // That's not the last cell
+	
+	  // Find the next cell
+      unsigned jump = cell_getJumpNext(cell);
+	  Address next = jumpToNext(cell, current, hashChain, a);
+		
+	  // Free the whole cell
+	  cell_free(cell);
+      space_set(current, cell, 0);
+
+      if (previous) {
+	      // Update previous chain jumper
+	      cell = space_get(previous);
+          unsigned previousJump = cell_getJumpNext(cell);
+		  if (previousJump == MAX_JUMP) {
+		     // There was already a deep link, one simply updates it
+		     cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
+             space_set(previous, cell, 0);
+		  } else {
+		     // one adds the jump amount of the removed cell to the previous cell jumper
+	         previousJump += jump; // note "jump" might be at max here
+             if (previousJump < MAX_JUMP) {
+			    // an easy one at last
+                cell = cell_chain(cell, previousJump);
+                space_set(previous, cell, 0);
+		     } else {
+			    // It starts to be tricky, one has to put a deep link into the previous cell.
+				// As one overwrites a child back-reference, one connects this child again. :(
+		        Arrow child1 = cell_getRef1(cell);
+                cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
+                space_set(previous, cell, 0);
+			    connect(a, child1);
+		     }
+		  }
+      } else {
+	      // This is the first cell of the children cells chain
+	      // one adds the jump amount to a.child0
+          cell = space_get(a);
+		  unsigned child0 = cell_getChild0(cell);
+		  child0 += jump;
+		  if (child0 < MAX_CHILD0) { 
+	    	cell = cell_chainChild0(cell, child0);
+            space_set(a, cell, 0);
+		  } else {
+		    cell = cell_chainChild0(cell, MAX_CHILD0);
+            space_set(a, cell, 0);
+			
+			// Oh my! We are almost got
+			// One reuses the freed cell and make it a reattachment cell
+ 		    
+			cell = space_get(current);
+		    cell = sync_build(cell, a, next, REATTACHMENT_CHILD0);
+		    space_set(current, cell, 0);		  
+          }
+	  }
+    }
   }
-    
 }
+
 
 void xl_childrenOf(Arrow a, XLCallBack cb, char* context) {
   Arrow child;
   Cell cell = space_get(a);
-  if (cell_isArrow(cell)) {
-    Arrow tail = cell_getData(cell);
-    uint32_t h3 = hashChain(a, tail) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-      
-    Address current;
-    shift(a, current, h3, a);
-    cell = space_get(current);
-    unsigned jump = cell_getJump(cell);
-    while (jump) {
-      _jump(jump, current, current, h3, a);
-      cell = space_get(current);
-      child = (Arrow)cell_getData(current);
-      if (cb(child, context)) break;
-      jump = cell_getJump(cell);
-    }
-  }  
+  if (!cell_isArrow(cell)) return; // invalid ID
+  // TODO one might call cb with a
+  
+  Cell catBits = cell_getCatBits(cell);
+
+  // compute hashChild
+  CellData data = (catBits == CATBITS_ARROW || catBits == CATBITS_SMALL)
+      ? cell_getData(cell)
+	  : cell_getChecksum(cell);
+    
+  uint32_t hashChild = hashChild(a, data) % PRIM1;
+  if (!hashChild) hashChild = 2; // offset can't be 0
+
+  Address current = jumpToChild0(cell, a, hashChild, a);
+  if (!current) return; // no child
+  cell = spaceget(current);
+   // For every cell but last
+  while (cell_getCatBits(cell) != CATBITS_LAST) {
+    Cell child = cell_getRef1(cell);
+	if (child && cb(child, context))
+	   return;
+    
+	if (cell_getJumpNext(cell) ==  MAX_JUMP) {
+		// jump == MAX ==> ref1 points to next
+        current = cell_getRef1(cell);
+	} else {
+	    child = cell_getRef2(cell);
+	    if (child && cb(child, context))
+  	        return;
+   		current = jumpToNext(cell, current, hashChain, a);
+	}
+	cell = space_get(current);
+  }
+  // Last cell
+  Cell child = cell_getRef1(cell);
+  if (child && cb(child, context)) return;
+  child = cell_getRef2(cell);
+  if (child && cb(child, context)) return;
 }
 
 /** root an arrow */
 Arrow xl_root(Arrow a) {  
   Cell cell = space_get(a);
   if (!cell_isArrow(cell) || cell_isRooted(cell)) return Eve;
-  Arrow tail = cell_getData(cell);
-
+  
   int loose = (space_getAdmin(a) == MEM1_LOOSE); // checked before set to zero hereafter
+  
   // change the arrow to ROOTED state + remove the Mem1 LOOSE state is any 
-  space_set(a, cell_build(cell_getCrossover(cell), ROOTED, tail), 0);
+  space_set(a, cell_setRootBit(cell, ROOTBIT_ROOTED), 0);
 
-  if (loose) { // if the arrow has just lost its LOOSE state, one connects it to its ancestor
-    connect(tail, a);
-    connect(xl_headOf(a), a);
+  if (loose) { // if the arrow has just lost its LOOSE state, one connects it to its parents
+    if (cell_isPair(cell)) {
+       connect(xl_tailOf(a), a);
+       connect(xl_headOf(a), a);
+	}
+	// TODO tuple case
     // (try to) remove 'a' from the loose log
     looseStackRemove(a);
   }
@@ -709,64 +1032,56 @@ Arrow xl_root(Arrow a) {
 /** unroot a rooted arrow */
 void xl_unroot(Arrow a) {
   Cell cell = space_get(a);
-  if (!cell_isRooted(cell)) return; // one can only unroot a rooted regular arrow
+  if (a == Eve) return; // stop dreaming
+  if (!cell_isArrow(cell) || !cell_isRooted(cell)) return Eve;
 
+  // change the arrow to UNROOTED state
+  cell = cell_setRootBit(cell, ROOTBIT_UNROOTED);
+  
+  // If this arrow has no child, it's in loose state
+  int loose = (cell_getChild0(cell);
 
-  // back-ref search loop, jumping from A+H3 (actually, A+H3 contains head)
-  Arrow tail = cell_getData(cell);
-  uint32_t h3 = hashChain(a, tail) % PRIM1;
-  if (!h3) h3 = 1; // offset can't be 0
-  Address a_h3;
-  shift(a, a_h3, h3, a);
-  Cell headCell = space_get(a_h3);
-  // When the arrow is not referred, one switches on its LOOSE status.
-  uint32_t loose = (cell_getJump(headCell) == 0);
-  space_set(a, cell_build(cell_getCrossover(cell), ARROW, tail), (loose ? MEM1_LOOSE : 0));
+  space_set(a, cell, loose ? MEM1_LOOSE : 0);
 
   if (loose) {
-    // If loose, one recusirvily disconnects the arrow from its ancestors.
-    disconnect(tail, a);
-    disconnect(cell_getData(headCell), a);
-    // loose log
+     // If loose, one disconnects the arrow from its parents.
+    if (cell_isPair(cell)) {
+       disconnect(cell_getTail(a), a);
+       disconnect(cell_getHead(a), a);
+	} // TODO Tuple case
+	// loose log
     looseStackAdd(a);
   }
+
+  return a;
 }
 
 /** return the root status */
 int xl_isRooted(Arrow a) {
-  return (cell_isRooted(space_get(a)));
+  Cell cell = space_get(a);
+  if (!cell_isArrow(cell)) return -1;
+  return (cell_isRooted(cell) ? 1 : 0);
 }
 
+/** return the loose status */
 int xl_isLoose(Arrow a) {
-  if (a == Eve) return 0;
   if (space_getAdmin(a) == MEM1_LOOSE) return 1;
-
-  Cell  cell = space_get(a);
+  
+  // Real loose test, herefater (dead code)
+  
+  Cell cell = space_get(a);
+  if (!cell_isArrow(cell)) return 0; // mmm might it happen?
 
   if (cell_isRooted(cell)) {
     return 0; // rooted ==> not loose!
-  } else if (cell_isTag(cell)) {
-    // the ref counter is located in the 1st byte of the h3-next cell content
-    uint32_t h1 = cell_getData(cell);
-    uint32_t h3 = hashChain(a, h1) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-    Address  a_h3;
-    shift(a, a_h3, h3, a);
-    cell = space_get(a_h3);
-    unsigned char c = ((char*)&cell)[1];
-    return (!c); // back-ref counter == 0 <==> loose!
-  } else {
-    // the arrow is loose if h3-next cell jump list is empty.
-    Arrow tail = cell_getData(cell);
-    uint32_t h3 = hashChain(a, tail) % PRIM1;
-    if (!h3) h3 = 1; // offset can't be 0
-    Address a_h3;
-    shift(a, a_h3, h3, a);
-    cell = space_get(a_h3);
-    return (!cell_getJump(cell)); // no jump ==> loose!
   }
+  
+  if (cell_getChild0(cell)) {
+    return 0;
+  }
+  
+  return 1; // Loose for sure.
 }
-
 
 int xl_equal(Arrow a, Arrow b) {
   return (a == b);
@@ -774,41 +1089,55 @@ int xl_equal(Arrow a, Arrow b) {
 
 static void forget(Arrow a) {
   Cell cell = space_get(a);
-  // As a matter of fact, this is exactly the same code for tag or arrow
-  // I let the both cases for tracability
-  if (cell_isTag(cell)) {
-    uint32_t h1 = cell_getData(cell);
-    space_set(a, cell_free(cell), 0);
+  Cell catBits = cell_getCatBits(cell);
+  // Compute hashs
+  Address hashArrow;
+  Address hashLocation; // base address
+  Address hashProbe; // probe offset
 
-    uint32_t h3 = hashChain(a, h1) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-    Address  current;
-    shift(a, current, h3, a);
-    cell = space_get(current);
-    while (1) {
-      unsigned jump = cell_getJump(cell);
-      space_set(current, cell_free(cell), 0);
-      if (!jump) break;
-      _jump(jump, current, current, h3, a);
-      cell = space_get(current);
-    }
-    
-  } else if (cell_isArrow(cell)) {
-    Arrow tail = cell_getData(cell);
+  if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB || catBits == CATBITS_TUPLE) {
+    Address current = a;
+  	Cell hashChain = hashChain(a, cell) % PRIM1; 
+    if (!hashChain) hashChain = 1; // offset can't be 0
+    Address next = jumpToFirst(cell, a, hashChain, a);
+    cell = space_get(next);
+	while (cell_getCatBits(cell) == CATBITS_CHAIN) {
+        space_set(current, cell_free(cell), 0);
+        next = jumpToNext(cell, next, hashChain, a);
+        cell = space_get(next);
+    }  
+	if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB) {
+	   char* str = xl_tagOrBlobOf(a);
+       hashArrow = hashString(str);
+	} else {
+	   // TODO Tuple
+	}
+    free(str);
+    space_set(current, cell_free(cell), 0);
+	
+  } else {
+    if (catBits == CATBITS_ARROW)) {
+       // Compute hashs
+       hashArrow = hashArrow(cell_getTail(cell), cell_getHead(cell));
+      if (!hashProbe) hashProbe = 1; // offset can't be 0 
+    } else {
+		assert(catBits == CATBITS_SMALL);
+	    // TODO
+	}
     space_set(a, cell_free(cell), 0);
+  }
 
-    uint32_t h3 = hashChain(a, tail) % PRIM1; 
-    if (!h3) h3 = 1; // offset can't be 0
-    Address  current;
-    shift(a, current, h3, a);
-    cell = space_get(current);
-    while (1) {
-      unsigned jump = cell_getJump(cell);
-      space_set(current, cell_free(cell), 0);
-      if (!jump) break;
-      _jump(jump, current, current, h3, a);
-      cell = space_get(current);
-    }
+  hashLocation = hashArrow % PRIM0; // base address
+  hashProbe = hashArrow % PRIM1; // probe offset
+  
+  /* Now decremeting "more" counters in the probing path up to the forgotten singleton
+  */
+  Cell probeAddress = hashLocation;
+  while (probeAdress != a) {
+     cell = space_get(probeAddress);
+     cell = cell_unmore(cell);
+     space_set(probeAddress, cell, DONTTOUCH);
+     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
   }
 }
 
@@ -828,11 +1157,13 @@ void xl_commit() {
 void xl_init() {
   if (space_init()) { // very first start 
     // Eve
-    space_set(0, cell_build(0, XL_ARROW, 0), 0);
-    space_set(1, 0, 0);
+	Cell cellEve = arrow_build(0, Eve, Eve);
+	cellEve = cell_setRootBit(cellEve, ROOTBIT_ROOTED);
+    space_set(Eve, cellEve, 0);
     space_commit();
   }
-  blobTag = xl_tag(BLOB_TAG);
 
   geoalloc(&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), 0);
 }
+
+// GLOBAL TODO: SMALL and TUPLE
