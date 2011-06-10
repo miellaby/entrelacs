@@ -3,7 +3,7 @@
 
 =Introduction=
 
-The *Entrelacs Manifesto* proposes to follow the _*Entrelacs paradigm*_. It consists in modeling information in the form of _arrows_ made constructs.
+The *Entrelacs Manifesto* proposes to follow the _*Entrelacs paradigm*_ which consists in modeling information in the form of _arrows_ made constructs.
 
 ==The arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
@@ -14,7 +14,7 @@ An _arrow_ is:
   * _a pair of arrows_: both ends of an arrow are not _nodes_. They are *arrows* as well. *An arrow made structure consequently doesn't belong to [http://en.wikipedia.org/wiki/Graph_theory graph theory].*
   *  _oriented_: the pair (A,B) is distinct from (B,A). Please note this point is not so critical as one might build oriented arrows by combining non-oriented arrows. 
   * _a singleton_: There is only one arrow (A,B) from A to B, whatever A and B two formerly defined arrows. The _entrelacs paradigm_ proposes to map this uniqueness to the information system. Each mathematically definable arrow can't be mapped more than once in the whole information space.
-  * _immutable_: An arrow is considered as a pure mathematical object. One can't "modify" a natural number like 2. It's the same thing for arrrows. One can't _modify_ them. But an _Entrelacs system_ may create new arrows and forget old ones.
+  * _immutable_: An arrow is considered as a pure mathematical object. One can't "modify" a natural number like 2. It's the same thing for arrrows. One can't _modify_ them. But an _Entrelacs system_ may assimilate new arrows and dismiss old ones.
   * _connected_: Within a managed arrows structure, a certain arrow may be connected to many children arrows. One must easily be able to browse all these children as it forms _emerging information_. It's the basis of a new kind of system abilities.
 
 ==Arrow connectivity and wording==
@@ -48,7 +48,7 @@ Entrelacs act as atomistic pieces of information. They got finished boundaries a
 
 <img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 
-==arrow assimilation==
+==The assimilation process==
 
 At each system iteration, system inputs (network events, user inputs, ...) are converted into arrows before being processed. This translation process is called "assimilation".
 
@@ -56,7 +56,7 @@ At each system iteration, system inputs (network events, user inputs, ...) are c
 
 "Assimilation" takes place at system boundaries. But it also deals with information produced by system processes, like when some software get a new number by adding two natural numbers.
 
-==immutability==
+==Immutability==
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align='right'/>
 
@@ -64,7 +64,7 @@ As one arrow might be the ancestor of many other arrows, it can't be modified on
 
 Modifying an existing arrow definition within the knowledge system consists in rooting the new updated arrow then un-rooting the existing definition. This process luckily recycles most of the arrow ancestors thanks to the arrow uniqueness rule of assimilation.
 
-==rooted arrows==
+==Rooting==
 
 The whole system knowledge might be represented with a single arrow whose definition would embed all known information.
 
@@ -78,7 +78,7 @@ Arrows uniqueness induces rooted arrows are likely ancestors of other  rooted ar
 
 An Entrelacs system garbage collector simply needs to reclaim storage resources of arrows which are neither a rooted arrow nor an ancestor of any remaining rooted arrow.
 
-==extension of the paradigm to arrow-equivalent complex objects==
+==More complex objects==
 
 Though the _arrows paradigm_ only deals with _arrows_, it may handle raw data -like binary strings- as well. The point is that raw data are equivalent to natural numbers, which may in turn be seen as _Entrelacs_ as introduced before.
 
@@ -97,6 +97,6 @@ For instance, by considering the "hello world" character string:
 
 See EntrelacEquivalences for further reading.
 
-==arrows based knowledge representation==
+==Knowledge representation with arrows==
 
 To get useful information structures with arrows, one may adapt many classical models and even invent new ones. See ArrowModeling for further readings.
