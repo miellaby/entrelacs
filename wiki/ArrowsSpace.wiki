@@ -5,9 +5,9 @@ An _"Arrows Space"_ (AS) designates a device to store arrows structures by follo
 
 Please note one may simulate an Arrows Space with [PenAndPaperReferenceDesign a pen and a paper sheet] .
 
-An AS might become a real computer hardware. If so, it would not necessarily be designed as a bank of buckets for binary words like all the other storage device so far.
+An AS might become a real computer hardware. If so, it would not necessarily be designed as a bank of buckets for binary words like all the other storage devices so far.
 
-But for the moment, we will study the AS as a simulated device, that is a piece of software leveraging on traditional volatile and mass memory hardware.
+But for the moment, we will study the AS as a simulated device, that is a piece of software leveraging on traditional volatile and mass memory hardwares.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are basically pairs of pointers||
 
@@ -30,7 +30,7 @@ One requires from an AS
  * Binary strings and other complex objects native support
    * The AS may allow raw data (binary strings) native storage.
    * The AS may allow tuples (ordered set of arrows) native storage.
-   * Though such objects must be treated like their equivalent arrow made constructs (entrelacs) in terms of uniqueness, immutability, connectivity...
+   * Though such objects must be treated like their equivalent arrow made constructs (entrelacs) in terms of uniqueness, immutability, and connectivity.
 
 ==API overview==
 The ArrowSpaceInterface sums up the _arrows space_ behavior to traditional software developers.
@@ -77,7 +77,7 @@ Checking for an already stored singleton of an arrow consequently requires to se
   * if one finds nothing ==> miss! The empty location may be used to store the missing arrow if asked.
   * if one finds something else, then one keeps on searching at a nearby location.
 
-This approach is called [OpenAddressing open adressing] when applied to hash tables. The default location is also named an _open address_ and the search process of an existing arrow is called _probing_.
+This approach is called [OpenAddressing open addressing] when applied to hash tables. The default location is also named an _open address_ and the search process of an existing arrow is called _probing_.
 
 
 === Perform Orthogonal Persistence ===
