@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-typedef uint32_t Cell;
-typedef uint32_t CellData;
-typedef CellData Address;
+typedef uint64_t Cell;
+typedef uint64_t CellData;
+typedef uint32_t Address;
 
 // initialization
 int mem0_init(); // return !0 if very first init

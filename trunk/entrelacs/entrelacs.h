@@ -19,17 +19,17 @@ void xl_init();
 Arrow xl_Eve();
 Arrow xl_arrow(Arrow, Arrow);
 Arrow xl_tag(char*);
-Arrow xl_blob(uint32_t, char*);
+Arrow xl_blob(uint32_t size, char*);
 
 /* Retrieving arrows if already handled by the system only
  * to query the system without storing probing arrows
  */
 Arrow xl_arrowMaybe(Arrow, Arrow);
 Arrow xl_tagMaybe(char*);
-Arrow xl_blobMaybe(uint32_t, char*);
+Arrow xl_blobMaybe(uint32_t size, char*);
 
 /* Unbuilding */
-enum e_xlType { XL_UNDEF=-1, XL_EVE=0, XL_ARROW=1, XL_TAG=2, XL_BLOB=3 } xl_typeOf(Arrow);
+enum e_xlType { XL_UNDEF=-1, XL_EVE=0, XL_ARROW=1, XL_TAG=2, XL_BLOB=3, XL_SMALL=4, XL_TUPLE=5 } xl_typeOf(Arrow);
 Arrow xl_headOf(Arrow);
 Arrow xl_tailOf(Arrow);
 char* xl_tagOf(Arrow); // to freed
