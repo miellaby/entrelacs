@@ -60,7 +60,7 @@ Thanks to "more" counters, one knows when one must keep on probing ("more" count
 
 == Complex object (binary strings) storage ==
 
-Small raw data (blob signatures and tags) are also stored into cells like regular arrows. But such an object definition can't fit in a single cell. The definition is consequently taken into slices and dispatched into several free cells separated by a predictable offset.
+Blob signatures and tags are also stored into cells like regular arrows. But such an object definition can't fit into a single cell. The definition is consequently taken into slices and dispatched into several free cells separated by a predictable offset.
 
 One also stores a checksum previous to the data string in order to accelerate singleton identification.
 
