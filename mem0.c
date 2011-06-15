@@ -3,13 +3,16 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-
+#include <unistd.h>
+#include <sys/stat.h>
 #include "mem0.h"
 
 static FILE* F = NULL;
 
 char* dirname(char* file) {
-  char* d = strdup(file);
+  
+  char* d = (char *)malloc(strlen(file) + 1);
+  strcpy(d, file);
   char* p = strrchr(d, '/');
   if (p == d)
     d[1] == '\0';
@@ -22,7 +25,7 @@ char* dirname(char* file) {
 
 int mem0_init() {
   char* env;
-  if (F) return;
+  if (F) return 0;
 
   env = getenv(PERSISTENCE_ENV);
   if (env) {
@@ -59,7 +62,7 @@ void mem0_saveData(char *h, size_t size, char* data) {
 
   char *dir = h + strlen(h) - 2;
   chdir(PERSISTENCE_DIR);
-  mkdir(dir) ;
+  mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ;
   chdir(dir);
   FILE* fd = fopen(h, "w");
   chdir("..");
