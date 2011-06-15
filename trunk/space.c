@@ -1,10 +1,12 @@
 #define SPACE_C
 #include <stdlib.h>
+#include <assert.h>
 
 #include "space.h"
 
 // The entrelacs space code.
 // It consists in a RAM cache in front of the memory 0 level storage.
+// Todo: Cuckoo hashing
 #define MEMSIZE 0x1000
 #define RESERVESIZE 256
 static const Address memSize = MEMSIZE ; // cache size (4096)
@@ -37,7 +39,7 @@ static size_t   logSize = 0;
 #define MEM1_EMPTY   0xE
 #define memPageOf(M) ((M).a >> 4) 
 #define memIsEmpty(M) ((M).a == MEM1_EMPTY) 
-#define memIsCHANGED(M) ((M).a & MEM1_CHANGED) 
+#define memIsChanged(M) ((M).a & MEM1_CHANGED) 
 
 
 // you don't want to know
@@ -67,7 +69,7 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
   return;
 }
 
-Cell space_getAdmin(Address a) {
+uint32_t space_getAdmin(Address a) {
   Address i;
   Address offset = a & 0xFFF;
   uint32_t  page   = a >> 12;
