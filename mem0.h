@@ -18,9 +18,14 @@ int mem0_init(); // return !0 if very first init
 
 #define _PRIM0 ((1 << 23) - 157)
 
+const Address PRIM0;
+const Address PRIM1;
+const Address SPACE_SIZE;
+#ifdef MEM0_C
 const Address PRIM0 = _PRIM0;
-const Address PRIM1 = ((1 << 23) - 159);
+const Address PRIM1 = (_PRIM0 - 2);
 const Address SPACE_SIZE = _PRIM0;
+#endif
 
 // Persistence file
 #define PERSISTENCE_DIR "~/.entrelacs"

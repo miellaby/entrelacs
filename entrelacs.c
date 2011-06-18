@@ -229,10 +229,27 @@ uint32_t hashString(char *s) { // simple string hash
   uint32_t hash = 5381;
   int c;
 
-  while (c = *s++)
+  while (c = *s) {
+    s++;
     // 5 bits shift only because ASCII generally works within 5 bits
     hash = ((hash << 5) + hash) + c;
+  }
+  
+  return hash;
+}
 
+/* hash function to get H1 from a binary tag arrow definition */
+uint32_t hashBString(char *s, uint32_t length) { // simple string hash
+  uint32_t hash = 5381;
+  int c;
+
+  while (length) {
+    length--;
+	c = *s++;
+    // 5 bits shift only because ASCII generally works within 5 bits
+    hash = ((hash << 5) + hash) + c;
+  }
+  
   return hash;
 }
 
@@ -576,6 +593,177 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
   return newArrow;
 }
 
+/** retrieve a tag arrow defined by str C string,
+ * by creating the singleton if not found.
+ * except if locateOnly param is set.
+ * FIXME : find a way to go out shift loop for chained cells
+ */
+Arrow btag(int length, char* str, int locateOnly) {
+  uint32_t hash, hashLocation, hashProbe, hChain;
+  uint32_t l;
+  CellData checksum;
+  Address probeAddress, firstFreeCell, newArrow, current, next;
+  Cell cell, nextCell, content;
+  unsigned i, jump;
+  char c, *p;
+  if (!str) {
+    return Eve;
+  }
+
+  hash = hashBString(str, length);
+  hashLocation = hash % PRIM0;
+  hashProbe    = hash % PRIM1;
+  if (!hashProbe) hashProbe = 1; // offset can't be 0
+
+  checksum = hash & 0xFFFFFFFFFFLLU;
+ 
+  // Search for an existing singleton
+  probeAddress = hashLocation;
+  firstFreeCell = Eve;
+  while (1) {
+    cell = space_get(probeAddress);
+    if (cell_isFree(cell))
+	    firstFreeCell = probeAddress;
+    else if (cell_getCatBits(cell) == CATBITS_TAG
+  	     && cell_getChecksum(cell) == checksum) {
+        // chance we found it
+		// now comparing the whole string
+        hChain = hashChain(probeAddress, cell) % PRIM1; 
+        if (!hChain) hChain = 1; // offset can't be 0
+        next = jumpToFirst(cell, probeAddress, hChain, probeAddress);
+        p = str;
+		l = length;
+        i = 1;
+  	    cell = space_get(next);
+	    if (l) { while ((c = *p++) == ((char*)&cell)[i] && --l) {
+		   if (++i == 7) {
+              if (cell_getCatBits(cell) == CATBITS_LAST) {
+                 break ; // the chain is over
+              }
+              next = jumpToNext(cell, next, hChain, probeAddress);
+              cell = space_get(next);
+              i = 1;
+            }
+        } }
+        if (!l && cell_getCatBits(cell) == CATBITS_LAST && cell_getSize(cell) == i)
+            return probeAddress; // found arrow
+    }
+    // Not the singleton
+
+    if (!more(cell)) break; // Miss
+	 
+    growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+  }
+
+  if (locateOnly)
+    return Eve;
+
+  /* Create a missing singleton */
+  newArrow = firstFreeCell;
+  cell = space_get(newArrow);
+  cell = tag_build(cell, checksum, 0 /* jump */);
+
+  hChain = hashChain(newArrow, cell) % PRIM1; 
+  if (!hChain) hChain = 1; // offset can't be 0
+  
+  Address offset = hChain;
+  growingShift(newArrow, next, offset, newArrow);
+  nextCell = space_get(next);
+  jump = 0;
+  while (!cell_isFree(nextCell)) {
+     jump++;
+     growingShift(next, next, offset, newArrow);
+	 nextCell = space_get(next);
+  }
+  
+  if (jump >= MAX_JUMP) {
+	Address sync = next;
+	Cell syncCell = nextCell;
+    syncCell = sync_build(syncCell, newArrow, 0, REATTACHMENT_FIRST);
+    space_set(sync, syncCell, 0);
+    offset = hChain;
+    growingShift(next, next, offset, sync);
+	nextCell = space_get(next);
+    while (!cell_isFree(nextCell)) {
+       growingShift(next, next, hChain, sync);
+	   nextCell = space_get(next);
+    }
+  	syncCell = sync_build(syncCell, newArrow, next, REATTACHMENT_FIRST);
+	space_set(sync, syncCell, 0);
+
+	jump = MAX_JUMP;
+  }
+  cell = tag_build(cell, checksum, jump);
+  space_set(newArrow, cell, MEM1_LOOSE);
+  
+  current = next;
+  p = str;
+  l = length;
+  i = 1;
+  content = 0;
+  c = 0;
+  if (l) { while (1) {
+    c = *p++;
+    ((char*)&content)[i] = c; 
+    if (!--l) break;
+    if (++i == 7) {
+	  
+	  Address offset = hChain;
+      growingShift(current, next, offset, current);
+	  jump = 0;
+      nextCell = space_get(next);
+	  while (!cell_isFree(nextCell)) {
+        jump++;
+        growingShift(next, next, offset, current);
+     	nextCell = space_get(next);
+      }
+      if (jump >= MAX_JUMP) {
+	     Address sync = next;
+	     Cell syncCell = nextCell;
+  	     syncCell = sync_build(syncCell, current, 0, REATTACHMENT_NEXT); // 0 = jump sync
+         space_set(sync, syncCell, 0);
+
+		 offset = hChain;
+         growingShift(next, next, offset, sync);
+         nextCell = space_get(next);
+         while (!cell_isFree(nextCell)) {
+           growingShift(next, next, offset, sync);
+           nextCell = space_get(next);
+         }
+  	     syncCell = sync_build(syncCell, current, next, REATTACHMENT_NEXT); // 0 = jump sync
+	     space_set(sync, syncCell, 0);
+
+	     jump = MAX_JUMP;
+      }
+	  cell = space_get(current);
+      cell = slice_build(cell, content, jump);
+      space_set(current, cell, 0);
+      i = 1;
+      content = 0;
+	  current = next;
+    }
+
+  } }
+  cell = space_get(current);
+  cell = lastSlice_build(cell, content, i /* size */);
+  space_set(current, cell, 0);
+  
+  
+  /* Now incremeting "more" counters in the probing path up to the new singleton
+  */
+  probeAddress = hashLocation;
+  while (probeAddress != newArrow) {
+     cell = space_get(probeAddress);
+     cell = cell_more(cell);
+     space_set(probeAddress, cell, DONTTOUCH);
+     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+  }
+  
+  // log loose arrow
+  looseStackAdd(newArrow);
+  return newArrow;
+}
+
 /** retrieve a blob arrow defined by 'size' bytes pointed by 'data',
  * by creating the singleton if not found.
  * except if locateOnly param is set.
@@ -593,10 +781,12 @@ static Arrow blob(uint32_t size, char* data, int locateOnly) {
 
 Arrow xl_arrow(Arrow tail, Arrow head) { return arrow(tail, head, 0); }
 Arrow xl_tag(char* s) { return tagOrBlob(CATBITS_TAG, s, 0);}
+Arrow xl_btag(uint32_t size, char* s) { return btag(size, s, 0);}
 Arrow xl_blob(uint32_t size, char* data) { return blob(size, data, 0);}
 
 Arrow xl_arrowMaybe(Arrow tail, Arrow head) { return arrow(tail, head, 1); }
 Arrow xl_tagMaybe(char* s) { return tagOrBlob(CATBITS_TAG, s, 1);}
+Arrow xl_btagMaybe(uint32_t size, char* s) { return btag(size, s, 1);}
 Arrow xl_blobMaybe(uint32_t size, char* data) { return blob(size, data, 1);}
 
 Arrow xl_headOf(Arrow a) {
@@ -627,12 +817,14 @@ Arrow xl_tailOf(Arrow a) {
   return (Arrow)cell_getTail(cell);
 }
 
-char* xl_tagOrBlobOf(Cell catBits, Arrow a) {
+static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   Address current = a;
   Cell cell = space_get(current);
   Cell _catBits = cell_getCatBits(cell);
-  if (_catBits != catBits)
+  if (_catBits != catBits) {
+     lengthP = 0;
      return (char *)0; // Invalid Id
+  }
   
   uint32_t hChain = hashChain(a, cell) % PRIM1;
   if (!hChain) hChain = 1; // offset can't be 0
@@ -659,11 +851,22 @@ char* xl_tagOrBlobOf(Cell catBits, Arrow a) {
       cell = space_get(current);
     }
   }
+  *lengthP = size;
   return tag;
 }
 
+char* xl_btagOf(Arrow a, uint32_t* lengthP) {
+  return tagOrBlobOf(CATBITS_TAG, a, lengthP);
+}
+
+char* xl_tagOf(Arrow a) {
+  uint32_t lengthP;
+  return tagOrBlobOf(CATBITS_TAG, a, &lengthP);
+}
+
 char* xl_blobOf(Arrow a, uint32_t* lengthP) {
-  char* h = xl_tagOrBlobOf(CATBITS_BLOB, a);
+  uint32_t hl;
+  char* h = tagOrBlobOf(CATBITS_BLOB, a, &hl);
   if (!h) {
      *lengthP = 0;
 	 return (char *)0;
@@ -1108,7 +1311,8 @@ static void forget(Arrow a) {
         cell = space_get(next);
     }  
 	if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB) {
-	   char* str = xl_tagOrBlobOf(catBits, a);
+	   uint32_t strl;
+	   char* str = tagOrBlobOf(catBits, a, &strl);
        hash = hashString(str);
        free(str);
 	} else {
