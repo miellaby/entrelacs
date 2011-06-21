@@ -38,20 +38,23 @@ int mem0_init() {
     F = fopen(PERSISTENCE_FILE, "wa");
   }
   assert(F);
-  fseek(F, 0, SEEK_END);
+ 
+  mem0_set(SPACE_SIZE -1, 0);
   return (ftell(F) > 0);
 }
 
 Cell mem0_get(Address r) {
    Cell result;
    fseek(F, r * sizeof(Cell), SEEK_SET);
-   fread(&result, sizeof(Cell), 1, F);
+   size_t read=fread(&result, sizeof(Cell), 1, F);
+   assert(read);
    return result;
 }
 
 void mem0_set(Address r, Cell v) {
    fseek(F, r * sizeof(Cell), SEEK_SET);
-   fwrite(&v, sizeof(Cell), 1, F);
+   size_t write=fwrite(&v, sizeof(Cell), 1, F);
+   assert(write);
    fflush(F);
 }
 
