@@ -8,6 +8,11 @@
 #include "mem0.h"
 
 static FILE* F = NULL;
+#ifndef PRODUCTION
+  #define DEBUG(w) w
+#else
+  #define DEBUG(w)
+#endif
 
 char* dirname(char* file) {
   
@@ -31,11 +36,11 @@ int mem0_init() {
   if (env) {
     char* d = dirname(env);
     chdir(d);
-    F = fopen(env, "wa");
+    F = fopen(env, "w+");
     free(d);
   } else {
     chdir(PERSISTENCE_DIR);
-    F = fopen(PERSISTENCE_FILE, "wa");
+    F = fopen(PERSISTENCE_FILE, "w+");
   }
   assert(F);
  
@@ -44,14 +49,18 @@ int mem0_init() {
 }
 
 Cell mem0_get(Address r) {
+   DEBUG(fprintf(stderr, "mem0_get@%012x \n", r));
+
    Cell result;
    fseek(F, r * sizeof(Cell), SEEK_SET);
    size_t read=fread(&result, sizeof(Cell), 1, F);
+   if (!read)
    assert(read);
    return result;
 }
 
 void mem0_set(Address r, Cell v) {
+   DEBUG(fprintf(stderr, "mem0_set@%012x %016llx\n", r, v));
    fseek(F, r * sizeof(Cell), SEEK_SET);
    size_t write=fwrite(&v, sizeof(Cell), 1, F);
    assert(write);
@@ -59,7 +68,6 @@ void mem0_set(Address r, Cell v) {
 }
 
 void mem0_saveData(char *h, size_t size, char* data) {
-
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size) return;
 
