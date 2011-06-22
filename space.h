@@ -1,7 +1,7 @@
 /* The entrelacs space API */
 
 #include "mem0.h"
-#define DONTTOUCH -1
+#define DONTTOUCH 0xFFFFFFFF
 int  space_init(); // return !0 if very first start
 void space_set(Address, Cell, uint32_t); // set
 Cell space_get(Address); // get address

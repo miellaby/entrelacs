@@ -1,8 +1,14 @@
 #define SPACE_C
 #include <stdlib.h>
 #include <assert.h>
-
 #include "space.h"
+
+#ifndef PRODUCTION
+#include "stdio.h"
+  #define DEBUG(w) w
+#else
+  #define DEBUG(w)
+#endif
 
 // The entrelacs space code.
 // It consists in a RAM cache in front of the memory 0 level storage.
@@ -85,21 +91,26 @@ uint32_t space_getAdmin(Address a) {
 }
 
 
-Cell space_get(Address a) {
+Cell space_get(Address a) { // FIXME One must move the cell from reverse to mem to make space_set(Admin) works as is
+  DEBUG((fprintf(stderr, "space_get@%06x = ", a)));
   Address i;
   Address offset = a & 0xFFF;
   uint32_t  page   = a >> 12;
   m = mem[offset];
-  if (!memIsEmpty(m) && memPageOf(m) == page)
+  if (!memIsEmpty(m) && memPageOf(m) == page) {
+    DEBUG((fprintf(stderr, "%016llx <HIT>\n", m.c)));
     return m.c;
-
+  }
   for (i = 0; i < reserveHead ; i++) {
-    if ((reserve[i].a >> 4) == a)
+    if ((reserve[i].a >> 4) == a) {
+      DEBUG((fprintf(stderr, "%016llx <RESERVE>\n", reserve[i].c)));
       return reserve[i].c;
+    }
   }
 
   if (memIsChanged(m)) {
     // move it to reserve
+    DEBUG((fprintf(stderr, "(with reserve move) ")));
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF) ;
     reserve[reserveHead++].c = m.c;
@@ -109,12 +120,14 @@ Cell space_get(Address a) {
   return (mem[offset].c = mem0_get(a));
 }
 
-void space_set(Address a, Cell c, uint32_t mem1admin) {
+void space_set(Address a, Cell c, uint32_t mem1admin) { // FIXME What if cell is in reserve?
+  DEBUG((fprintf(stderr, "space_set@%06x %016x %02x ", a, c, mem1admin)));
   Address offset = a & 0xFFF;
   uint32_t page    = a >> 12;
   mem1admin = (mem1admin & 7) << 1;
   m = mem[offset];
   if (memIsChanged(m) && memPageOf(m) != page)  {
+    DEBUG((fprintf(stderr, "(reserve move) ")));
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF);
     reserve[reserveHead].c = m.c;
@@ -124,21 +137,25 @@ void space_set(Address a, Cell c, uint32_t mem1admin) {
   mem[offset].c = c;
   geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
   log[logSize - 1] = a;
+  DEBUG((fprintf(stderr, "logSize=%d\n", logSize)));
 }
 
 
-void space_setAdmin(Address a, uint32_t mem1admin) {
+void space_setAdmin(Address a, uint32_t mem1admin) { // FIXME What if cell is in reserve?
+  DEBUG((fprintf(stderr, "space_setAdmin@%06x %02x ", a, mem1admin)));
   Address offset = a & 0xFFF;
   uint32_t page    = a >> 12;
   mem1admin = (mem1admin & 7) << 1;
   m = mem[offset];
   if (memIsChanged(m) && memPageOf(m) != page)  {
+    DEBUG((fprintf(stderr, "(reserve move) ")));
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF);
     reserve[reserveHead].c = m.c;
     reserveHead++;
   }
   mem[offset].a = page << 4 | mem1admin | MEM1_CHANGED;
+  DEBUG((fprintf(stderr, ".\n")));
 }
 
 static int _addressCmp(const void *a, const void *b) {
@@ -146,6 +163,7 @@ static int _addressCmp(const void *a, const void *b) {
 }
 
 void space_commit() {
+  DEBUG((fprintf(stderr, "space_commit (logSize = %d)\n", logSize)));
   Address i;
   if (!logSize) return;
 
@@ -157,6 +175,7 @@ void space_commit() {
   }
   zeroalloc((char **)&log, &logMax, &logSize);
   reserveHead = 0;
+  DEBUG((fprintf(stderr, "space_commit done\n")));
 }
 
 int space_init() {
