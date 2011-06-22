@@ -12,6 +12,7 @@ int main(int argc, char* argv[]) {
 	assert(0 == strcmp(output, "hello world"));
 	free(s1);
 	free(s2);
-	
+       xl_root(helloWorld);
+	xl_commit();
 	return 0;
 }

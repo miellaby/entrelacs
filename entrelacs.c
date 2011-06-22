@@ -593,7 +593,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
   
   current = next;
   p = str;
-  i = 1;
+  i = 0;
   content = 0;
   c = 0;
   while (1) {
@@ -602,7 +602,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
     ((char*)&content)[i] = c; 
     if (!c) break;
     i++;
-    if (i == 7) {
+    if (i == 6) {
 	  Address offset = hChain;
       growingShift(current, next, offset, current);
 	  jump = 0;
@@ -633,7 +633,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
 	  cell = space_get(current); DEBUG((show_cell(cell, 1)));
       cell = slice_build(cell, content, jump);
       space_set(current, cell, 0); DEBUG((fprintf(stderr, "SET@%06x ", current), show_cell(cell, 1)));
-      i = 1;
+      i = 0;
       content = 0;
 	  current = next;
     }
@@ -765,14 +765,14 @@ Arrow btag(int length, char* str, int locateOnly) {
   current = next;
   p = str;
   l = length;
-  i = 1;
+  i = 0;
   content = 0;
   c = 0;
   if (l) { while (1) {
     c = *p++;
     ((char*)&content)[i] = c; 
     if (!--l) break;
-    if (++i == 7) {
+    if (++i == 6) {
 	  
 	  Address offset = hChain;
       growingShift(current, next, offset, current);
@@ -904,7 +904,7 @@ static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   uint32_t max = 0;
   geoalloc((char**)&tag, &max, &size, sizeof(char), 1);
   //TODO:QUICKER COPY
-  while ((tag[size] = ((char*)&cell)[i])) {
+  while ((tag[size-1] = ((char*)&cell)[i])) {
     geoalloc((char**)&tag, &max, &size, sizeof(char), size + 1);
     i++;
     if (i == 7) {
