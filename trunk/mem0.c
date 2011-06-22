@@ -7,12 +7,13 @@
 #include <sys/stat.h>
 #include "mem0.h"
 
-static FILE* F = NULL;
 #ifndef PRODUCTION
   #define DEBUG(w) w
 #else
   #define DEBUG(w)
 #endif
+
+static FILE* F = NULL;
 
 char* dirname(char* file) {
   
