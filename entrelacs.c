@@ -112,7 +112,7 @@ const Arrow Eve = EVE;
 
 #define cell_unchain(cell) (((cell) & 0xF8FFFFFFFFFFFF00LLU) | CATBITS_LAST)
 
-#define cell_chainChild0(cell, jump) (((cell) & 0xFFFFFFFFFFFF00FFLLU) | (jump) << 8)
+#define cell_chainChild0(cell, jump) (((cell) & 0xFFFFFFFFFFFFFF80LLU) | (jump))
 
 
 /*
@@ -132,7 +132,7 @@ const Arrow Eve = EVE;
 
 /** change C cell into a freed cell.
  */
-#define cell_free(C) (((C) & 0xFF00000000000000LLU))
+#define cell_free(C) (((C) & 0xF800000000000000LLU))
 
 /* ________________________________________
  * Cell administrative bits
@@ -979,7 +979,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  * TODO : when adding a new cell, try to reduce jumpers from time to time
  */
 static void connect(Arrow a, Arrow child) {
-  DEBUG((fprintf(stderr, "connect a=%06x child=%06x\n", a, child)));
+  DEBUG((fprintf(stderr, "connect child=%06x to a=%06x\n", child, a)));
   if (a == Eve) return; // One doesn't store Eve connectivity.
   Cell cell = space_get(a); DEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
@@ -1107,6 +1107,7 @@ static void connect(Arrow a, Arrow child) {
  * If the parent arrow gets unreferred (no child and unrooted), it is disconnected in turn from its head and tail (recursive calls) and it is recorded as a loose arrow 
  */
 static void disconnect(Arrow a, Arrow child) {
+    DEBUG((fprintf(stderr, "disconnect child=%06x from a=%06x\n", child, a)));
     if (a == Eve) return; // One doesn't store Eve connectivity.
     Cell cell = space_get(a); DEBUG((show_cell(cell, 0)));
     assert(cell_isArrow(cell));
@@ -1167,7 +1168,7 @@ static void disconnect(Arrow a, Arrow child) {
       // freeing the whole cell
 	  cell_free(cell);
       space_set(current, cell, 0); DEBUG((show_cell(cell, 0)));
-
+	  
 	  if (previous) {
 	      // Unchain previous cell (make it the last chained cell)
 	      cell = space_get(previous); DEBUG((show_cell(cell, 0)));
@@ -1189,8 +1190,10 @@ static void disconnect(Arrow a, Arrow child) {
              looseStackAdd(a);
  	         // One disconnects the arrow from its parents
 			 // 2 recursive calls
-             disconnect(xl_tailOf(a), a);
-             disconnect(xl_headOf(a), a);
+			 if (cell_isPair(cell)) {
+               disconnect(xl_tailOf(a), a);
+               disconnect(xl_headOf(a), a);
+		     } // TODO tuple
 		  }
       }
     } else { // That's not the last cell
@@ -1338,8 +1341,8 @@ void xl_unroot(Arrow a) {
   if (loose) {
      // If loose, one disconnects the arrow from its parents.
     if (cell_isPair(cell)) {
-       disconnect(cell_getTail(a), a);
-       disconnect(cell_getHead(a), a);
+       disconnect(cell_getTail(cell), a);
+       disconnect(cell_getHead(cell), a);
 	} // TODO Tuple case
 	// loose log
     looseStackAdd(a);
@@ -1378,6 +1381,8 @@ int xl_equal(Arrow a, Arrow b) {
 }
 
 static void forget(Arrow a) {
+  DEBUG((fprintf(stderr, "forget a=%06x\n", a)));
+
   Cell cell = space_get(a); DEBUG((show_cell(cell, 0)));
   Cell catBits = cell_getCatBits(cell);
   // Compute hashs
