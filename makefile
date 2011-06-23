@@ -4,7 +4,10 @@ CPPFLAGS=-std=c99
 all: entrelacs.so
 
 test: testXYZ
+	rm entrelacs.dat
 	LD_LIBRARY_PATH=. ./testXYZ
+	od -t x1z -w8 entrelacs.dat
+
 
 
 entrelacs.so: mem0.o space.o sha1.o entrelacs.o
