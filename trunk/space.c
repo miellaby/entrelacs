@@ -134,15 +134,15 @@ Cell space_get(Address a) {
 }
 
 void space_set(Address a, Cell c, uint32_t mem1admin) { // FIXME What if cell is in reserve?
-  DEBUG((fprintf(stderr, "space_set@%06x : %016llx %02x ", a, c, mem1admin)));
+  DEBUG((fprintf(stderr, "space_set@%06x : %016llx A1=%01x ", a, c, mem1admin)));
   Address offset = a & 0xFFF;
   uint32_t page    = a >> 12;
-  mem1admin = (mem1admin & 7) << 1;
+  mem1admin = (mem1admin & 7) << 1; // Note one shift admin bits once left here
   m = mem[offset];
   if (memIsEmpty(m) || memPageOf(m) != page)  { // Uhh that's not fun
     for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
       if ((reserve[i].a >> 4) == a) {
-         DEBUG((fprintf(stderr, "(found in reserve) ")));
+         DEBUG((fprintf(stderr, "(found in reserve)\n")));
 		 // one changes data in the reserve cell
 		 if (mem1admin != DONTTOUCH)
   		     reserve[i].a = a << 4 | mem1admin | MEM1_CHANGED;
@@ -159,28 +159,43 @@ void space_set(Address a, Cell c, uint32_t mem1admin) { // FIXME What if cell is
        reserveHead++;
 	}
 	// No need to load the cell from mem0 since one overwrites it
-    m.a = 0; // mem1admin reseted.
+    m.a = 0; // previous mem1admin ignored.
   }
 
+  if (!memIsChanged(m)) { // Log it
+    geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
+    log[logSize - 1] = a;
+  }
+  
   mem[offset].a = page << 4 | (mem1admin == DONTTOUCH ? (m.a & 0xF) : mem1admin) | MEM1_CHANGED;
   mem[offset].c = c;
-  geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
-  log[logSize - 1] = a;
   DEBUG((fprintf(stderr, "logSize=%d\n", logSize)));
 }
 
 
 void space_setAdmin(Address a, uint32_t mem1admin) {
-  DEBUG((fprintf(stderr, "space_setAdmin@%06x %02x ", a, mem1admin)));
+  DEBUG((fprintf(stderr, "space_setAdmin@%06x : %01x ", a, mem1admin)));
   Address offset = a & 0xFFF;
   uint32_t page    = a >> 12;
+  m = mem[offset];
   if (!memIsEmpty(m) && memPageOf(m) == page) { // ideal case
+      if ((m.a >> 1 & 7) == mem1admin) {
+         DEBUG((fprintf(stderr, " nothing to do.\n")));
+	     return;
+	  }
+  
+      if (!memIsChanged(m)) { // Log it
+        geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
+        log[logSize - 1] = a;
+      }
       mem1admin = (mem1admin & 7) << 1;
       mem[offset].a = page << 4 | mem1admin | MEM1_CHANGED;
-      DEBUG((fprintf(stderr, " easy.\n")));
+	  // FIXME actually, one should distinguish between admin-changed cell and really modified cell
+      DEBUG((fprintf(stderr, " in cache.\n")));
   } else { // oww the pain
-       DEBUG((fprintf(stderr, " ==> space_set(space_get(...))\n", a, mem1admin)));
-      return space_set(a, space_get(a), mem1admin); // TODO Might be optimized
+      DEBUG((fprintf(stderr, " ==> space_set(space_get(...))\n", a, mem1admin)));
+	  if (space_getAdmin(a) != mem1admin)
+         return space_set(a, space_get(a), mem1admin); // TODO Might be optimized
   }
 }
 
