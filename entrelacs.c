@@ -987,7 +987,7 @@ static void connect(Arrow a, Arrow child) {
   
   if (space_getAdmin(a) == MEM1_LOOSE) {
       // One removes the mem1 LOOSE flag attached to 'a' cell.
-      space_set(a, cell, 0); DEBUG((show_cell(cell, 0)));
+      space_setAdmin(a, 0);
       // (try to) remove 'a' from the loose log
       looseStackRemove(a);
       // One recursively connects the parent arrow to its ancestors.
@@ -1184,7 +1184,7 @@ static void disconnect(Arrow a, Arrow child) {
 	      } else {
   		     // The parent arrow is unreferred
 		     // Let's switch on its LOOSE status.
-             space_set(a, cell, MEM1_LOOSE); DEBUG((show_cell(cell, 0)));
+             space_setAdmin(a, MEM1_LOOSE); DEBUG((show_cell(cell, 0)));
              // And add it to the loose log
              looseStackAdd(a);
  	         // One disconnects the arrow from its parents
