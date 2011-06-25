@@ -16,7 +16,7 @@
 static FILE* F = NULL;
 
 char* dirname(char* file) {
-  
+
   char* d = (char *)malloc(strlen(file) + 1);
   strcpy(d, file);
   char* p = strrchr(d, '/');
@@ -44,7 +44,7 @@ int mem0_init() {
     F = fopen(PERSISTENCE_FILE, "w+");
   }
   assert(F);
- 
+
   mem0_set(SPACE_SIZE -1, 0);
   return (ftell(F) > 0);
 }
@@ -78,7 +78,7 @@ void mem0_saveData(char *h, size_t size, char* data) {
   chdir(dir);
   FILE* fd = fopen(h, "w");
   chdir("..");
-  fwrite(data, size, 1, fd);  
+  fwrite(data, size, 1, fd);
   fclose(fd);
 }
 

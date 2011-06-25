@@ -18,7 +18,7 @@
 static const Address memSize = MEMSIZE ; // cache size (4096)
 static const Address reserveSize = RESERVESIZE ; // cache reserve size
 
-// The RAM cache : an n="size" array of record. Each record can carry one mem0 cell. 
+// The RAM cache : an n="size" array of record. Each record can carry one mem0 cell.
 static struct s_mem {
   unsigned short a; // <--page # (12 bits)--><--mem1admin (3 bits)--><--CHANGED (1 bit)-->
   Cell c;
@@ -43,9 +43,9 @@ static size_t   logSize = 0;
 
 #define MEM1_CHANGED 0x1
 #define MEM1_EMPTY   0xE
-#define memPageOf(M) ((M).a >> 4) 
-#define memIsEmpty(M) ((M).a == MEM1_EMPTY) 
-#define memIsChanged(M) ((M).a & MEM1_CHANGED) 
+#define memPageOf(M) ((M).a >> 4)
+#define memIsEmpty(M) ((M).a == MEM1_EMPTY)
+#define memIsChanged(M) ((M).a & MEM1_CHANGED)
 
 
 // you don't want to know
@@ -228,6 +228,6 @@ int space_init() {
   }
 
   geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), 0);
-  
+
   return firstTime; // return !0 if very first start
 }
