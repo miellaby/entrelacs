@@ -2,6 +2,7 @@
 #include <stdlib.h> // free & co
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
+#include <string.h>
 int main(int argc, char* argv[]) {
 	xl_init();
     char output[255];

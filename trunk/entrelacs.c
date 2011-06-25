@@ -132,7 +132,7 @@ const Arrow Eve = EVE;
 
 /** change C cell into a freed cell.
  */
-#define cell_free(C) (((C) & 0xF800000000000000LLU))
+#define cell_free(C) ((C) & 0xF800000000000000LLU)
 
 /* ________________________________________
  * Cell administrative bits
@@ -189,7 +189,7 @@ static Address  looseStackMax = 0;
 static Address  looseStackSize = 0;
 
 #ifndef PRODUCTION
-#define DEBUG(w) (w)
+#define DEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
 
 static void show_cell(Cell C, int ofSliceChain) {
    Cell catBits = cell_getCatBits(C);
@@ -1152,7 +1152,7 @@ static void disconnect(Arrow a, Arrow child) {
 	  cell &= (child << 8);
     }
 
-	if (cell & 0xFFFFFFFFFFFF00LLU & cell_getJumpNext(cell) != MAX_JUMP) {
+	if (cell & 0xFFFFFFFFFFFF00LLU) {
 	   // still an other back-ref in this cell
        space_set(current, cell, 0); DEBUG((show_cell(cell, 0)));
 	   // nothing more to do
@@ -1166,7 +1166,7 @@ static void disconnect(Arrow a, Arrow child) {
       // this is the last cell
 
       // freeing the whole cell
-	  cell_free(cell);
+	  cell = cell_free(cell);
       space_set(current, cell, 0); DEBUG((show_cell(cell, 0)));
 	  
 	  if (previous) {
@@ -1185,7 +1185,7 @@ static void disconnect(Arrow a, Arrow child) {
 	      } else {
   		     // The parent arrow is unreferred
 		     // Let's switch on its LOOSE status.
-             space_setAdmin(a, MEM1_LOOSE); DEBUG((show_cell(cell, 0)));
+             space_setAdmin(a, MEM1_LOOSE);
              // And add it to the loose log
              looseStackAdd(a);
  	         // One disconnects the arrow from its parents
@@ -1203,7 +1203,7 @@ static void disconnect(Arrow a, Arrow child) {
 	  Address next = jumpToNext(cell, current, hChild, a);
 
 	  // Free the whole cell
-	  cell_free(cell);
+	  cell = cell_free(cell);
       space_set(current, cell, 0); DEBUG((show_cell(cell, 0)));
 
       if (previous) {
