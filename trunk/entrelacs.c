@@ -455,8 +455,16 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
      }
      // Not the singleton
 
-     if (!more(cell)) break; // Probing over. It's a miss.
-
+     if (!more(cell)) {
+        while (firstFreeCell == Eve) {
+           growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+           cell = space_get(probeAddress); DEBUG((show_cell(cell, 0)));
+           if (cell_isFree(cell))
+               firstFreeCell = probeAddress;
+        }  
+        break; // Probing over. It's a miss.
+     }
+ 
      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
 	 // TODO: thinking about a probing limit
   }
@@ -475,6 +483,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   /* Now incremeting "more" counters in the probing path up to the new singleton
   */
   probeAddress = hashLocation;
+  hashProbe = hash % PRIM1; // reset hashProbe to default
   while (probeAddress != newArrow) {
      cell = space_get(probeAddress); DEBUG((show_cell(cell, 0)));
      cell = cell_more(cell);
@@ -544,8 +553,16 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
     }
     // Not the singleton
 
-    if (!more(cell)) break; // Miss
-
+    if (!more(cell)) {
+        while (firstFreeCell == Eve) {
+           growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+           cell = space_get(probeAddress); DEBUG((show_cell(cell, 0)));
+           if (cell_isFree(cell))
+               firstFreeCell = probeAddress;
+        }  
+        break; // Miss
+    }
+	
     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
   }
 
@@ -643,15 +660,16 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
 
   }
   cell = space_get(current); DEBUG((show_cell(cell, 1)));
-  cell = lastSlice_build(cell, content, i /* size */);
+  cell = lastSlice_build(cell, content, 1 + i /* size */);
   space_set(current, cell, 0); DEBUG((show_cell(cell, 1)));
 
 
   /* Now incremeting "more" counters in the probing path up to the new singleton
   */
   probeAddress = hashLocation;
+  hashProbe = hash % PRIM1;
   while (probeAddress != newArrow) {
-     cell = space_get(probeAddress); DEBUG((show_cell(cell, 1)));
+     cell = space_get(probeAddress); DEBUG((show_cell(cell, 0)));
      cell = cell_more(cell);
      space_set(probeAddress, cell, DONTTOUCH); DEBUG((show_cell(cell, 0)));
      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
@@ -719,8 +737,16 @@ Arrow btag(int length, char* str, int locateOnly) {
     }
     // Not the singleton
 
-    if (!more(cell)) break; // Miss
-
+    if (!more(cell)) {
+        while (firstFreeCell == Eve) {
+           growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+           cell = space_get(probeAddress); DEBUG((show_cell(cell, 0)));
+           if (cell_isFree(cell))
+               firstFreeCell = probeAddress;
+        }  
+        break; // Miss
+    }
+     
     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
   }
 
@@ -814,13 +840,14 @@ Arrow btag(int length, char* str, int locateOnly) {
 
   } }
   cell = space_get(current); DEBUG((show_cell(cell, 1)));
-  cell = lastSlice_build(cell, content, i /* size */);
+  cell = lastSlice_build(cell, content, 1 + i /* size */);
   space_set(current, cell, 0); DEBUG((show_cell(cell, 1)));
 
 
   /* Now incremeting "more" counters in the probing path up to the new singleton
   */
   probeAddress = hashLocation;
+  hashProbe = hash % PRIM1;
   while (probeAddress != newArrow) {
      cell = space_get(probeAddress); DEBUG((show_cell(cell, 1)));
      cell = cell_more(cell);
@@ -1149,7 +1176,6 @@ static void disconnect(Arrow a, Arrow child) {
   	  // empty out second ref
 	  assert(childToRef1 == (cell & 0xFFFFFF00LLU));
       cell &= 0xFFFFFFFF000000FFLLU;
-	  cell &= (child << 8);
     }
 
 	if (cell & 0xFFFFFFFFFFFF00LLU) {
@@ -1161,7 +1187,6 @@ static void disconnect(Arrow a, Arrow child) {
 
 	// The modified cell contains no more back-reference
 	// One removes the cell from the children list
-
     if (cell_getCatBits(cell) == CATBITS_LAST) {
       // this is the last cell
 
@@ -1256,7 +1281,9 @@ static void disconnect(Arrow a, Arrow child) {
 }
 
 
-void xl_childrenOf(Arrow a, XLCallBack cb, char* context) {
+void xl_childrenOf(Arrow a, XLCallBack cb, void* context) {
+  DEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
+
   Arrow child;
   Cell cell = space_get(a); DEBUG((show_cell(cell, 0)));
   if (!cell_isArrow(cell)) return; // invalid ID
@@ -1295,7 +1322,7 @@ void xl_childrenOf(Arrow a, XLCallBack cb, char* context) {
   // Last cell
   child = cell_getRef0(cell);
   if (child && cb(child, context)) return;
-  child= cell_getRef1(cell);
+  child = cell_getRef1(cell);
   if (child && cb(child, context)) return;
 }
 

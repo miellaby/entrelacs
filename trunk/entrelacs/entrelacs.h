@@ -31,7 +31,7 @@ Arrow xl_btagMaybe(uint32_t size, char*);
 Arrow xl_blobMaybe(uint32_t size, char*);
 
 /* Unbuilding */
-enum e_xlType { XL_UNDEF=-1, XL_EVE=0, XL_ARROW=1, XL_TAG=2, XL_BLOB=3, XL_SMALL=4, XL_TUPLE=5 } xl_typeOf(Arrow);
+enum e_xlType { XL_UNDEF=-1, XL_EVE=0, XL_ARROW=1, XL_TUPLE=2, XL_SMALL=3, XL_TAG=4, XL_BLOB=5 } xl_typeOf(Arrow);
 Arrow xl_headOf(Arrow);
 Arrow xl_tailOf(Arrow);
 char* xl_tagOf(Arrow); // to freed
@@ -55,8 +55,8 @@ int xl_equal(Arrow, Arrow); // returns !0 if arrows are equal
 //XLEnum xl_childrenOf(Arrow);
 //int  xl_next(XLEnum*, Arrow*);
 
-typedef int (*XLCallBack)(Arrow arrow, char* context);
-void xl_childrenOf(Arrow, XLCallBack, char*);
+typedef int (*XLCallBack)(Arrow arrow, void* context);
+void xl_childrenOf(Arrow, XLCallBack, void*);
 
 /* Program assimilation */
 Arrow xl_program(char*); // EL string
