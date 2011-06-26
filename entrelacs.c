@@ -1391,16 +1391,7 @@ static void forget(Arrow a) {
   Address hashProbe; // probe offset
 
   if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB || catBits == CATBITS_TUPLE) {
-    Address current = a;
-  	Cell hChain = hashChain(a, cell) % PRIM1;
-    if (!hChain) hChain = 1; // offset can't be 0
-    Address next = jumpToFirst(cell, a, hChain, a);
-    cell = space_get(next); DEBUG((show_cell(cell, 0)));
-	while (cell_getCatBits(cell) == CATBITS_CHAIN) {
-        space_set(current, cell_free(cell), 0); DEBUG((show_cell(cell, 0)));
-        next = jumpToNext(cell, next, hChain, a);
-        cell = space_get(next); DEBUG((show_cell(cell, 0)));
-    }
+    // Compute content hash
 	if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB) {
 	   uint32_t strl;
 	   char* str = tagOrBlobOf(catBits, a, &strl);
@@ -1409,19 +1400,36 @@ static void forget(Arrow a) {
 	} else {
 	   // TODO Tuple
 	}
-    space_set(current, cell_free(cell), 0); DEBUG((show_cell(cell_free(cell), 0)));
+
+    // Free chain
+  	Cell hChain = hashChain(a, cell) % PRIM1;
+    if (!hChain) hChain = 1; // offset can't be 0
+    Address next = jumpToFirst(cell, a, hChain, a);
+    cell = space_get(next); DEBUG((show_cell(cell, 0)));
+	while (cell_getCatBits(cell) == CATBITS_CHAIN) {
+        space_set(next, cell_free(cell), 0); DEBUG((show_cell(cell, 0)));
+        next = jumpToNext(cell, next, hChain, a);
+        cell = space_get(next); DEBUG((show_cell(cell, 0)));
+    }
+    assert(cell_getCatBits(cell) == CATBITS_LAST);
+    space_set(next, cell_free(cell), 0); DEBUG((show_cell(cell, 0)));
+    
 
   } else {
+    // Compute content hash
     if (catBits == CATBITS_ARROW) {
-       // Compute hashs
+       // Compute hash
        hash = hashArrow(cell_getTail(cell), cell_getHead(cell));
     } else {
 		assert(catBits == CATBITS_SMALL);
 	    // TODO
 	}
-    space_set(a, cell_free(cell), 0); DEBUG((show_cell(cell_free(cell), 0)));
   }
 
+  // Free definition start cell
+  space_set(a, cell_free(cell), 0); DEBUG((show_cell(cell_free(cell), 0)));
+
+    
   hashLocation = hash % PRIM0; // base address
   hashProbe = hash % PRIM1; // probe offset
   if (!hashProbe) hashProbe = 1; // offset can't be 0

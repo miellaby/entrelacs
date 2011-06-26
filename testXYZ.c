@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
 	assert(xl_isRooted(helloWorld));
 	xl_unroot(helloWorld);
 	assert(!xl_isRooted(helloWorld));
-	
+	xl_commit();
+
 	return 0;
 }
