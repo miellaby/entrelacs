@@ -499,7 +499,6 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
 /** retrieve a tag arrow defined by str C string,
  * by creating the singleton if not found.
  * except if locateOnly param is set.
- * FIXME : find a way to go out shift loop for chained cells
  */
 static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
   uint64_t hash;
@@ -683,7 +682,6 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
 /** retrieve a tag arrow defined by str C string,
  * by creating the singleton if not found.
  * except if locateOnly param is set.
- * FIXME : find a way to go out shift loop for chained cells
  */
 Arrow btag(int length, char* str, int locateOnly) {
   uint32_t hash, hashLocation, hashProbe, hChain;
