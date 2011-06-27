@@ -8,7 +8,6 @@ struct s_printArrowC { int size; int max; char* buffer; };
 
 int printArrow(Arrow a, void *ctx) {
     struct s_printArrowC *context = (struct s_printArrowC *)ctx;
-    fprintf(stderr, "Arrow %06x ", a);
     if (!context) { 
       struct s_printArrowC context0 = { 0, 0, NULL };
       geoalloc(&context0.buffer, &context0.max, &context0.size, sizeof(char), 1);
@@ -18,7 +17,13 @@ int printArrow(Arrow a, void *ctx) {
       return 0;
     }
 
-    char *s;
+
+	if (xl_isRooted(a)) {
+        int size = context->size;
+        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
+        sprintf(context->buffer + size - 1, "_");
+	}
+	
     enum e_xlType t = xl_typeOf(a);
     if (t == XL_TAG) {
         int l;
@@ -58,14 +63,16 @@ int main(int argc, char* argv[]) {
     xl_root(helloWorld);
 	xl_commit();
 	assert(xl_isRooted(helloWorld));
-    Arrow helloDude = xl_arrow(xl_tag("hello"), xl_tag("dude"));
-    xl_root(helloDude);
+	helloWorld = xl_arrow(xl_tag("hello"), xl_tag("world"));
+	assert(xl_isRooted(helloWorld));
+    Arrow helloWorldDude = xl_arrow(helloWorld, xl_tag("dude"));
+    xl_root(helloWorldDude);
     xl_childrenOf(xl_tag("hello"), printArrow, NULL);
     xl_unroot(helloWorld);
 	assert(!xl_isRooted(helloWorld));
     xl_childrenOf(xl_tag("hello"), printArrow, NULL);
-    xl_unroot(helloDude);
+    xl_unroot(helloWorldDude);
+	printArrow(helloWorldDude, NULL);
 	xl_commit();
-
 	return 0;
 }

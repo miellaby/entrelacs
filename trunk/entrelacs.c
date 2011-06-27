@@ -1019,8 +1019,8 @@ static void connect(Arrow a, Arrow child) {
       looseStackRemove(a);
       // One recursively connects the parent arrow to its ancestors.
 	  if (catBits == CATBITS_ARROW) {
-		connect(xl_tailOf(a), a);
-		connect(xl_headOf(a), a);
+		connect(cell_getTail(cell), a);
+		connect(cell_getHead(cell), a);
 	  } else if (catBits == CATBITS_TUPLE) {
 	    // TODO connect every end
 	  }
@@ -1205,19 +1205,19 @@ static void disconnect(Arrow a, Arrow child) {
           cell = space_get(a); DEBUG((show_cell(cell, 0)));
 		  cell = cell_chainChild0(cell, 0);
 	      if (cell_isRooted(cell)) {
-		     // the cell is still rooted
-		     space_set(a, cell, 0); DEBUG((show_cell(cell, 0)));
-	      } else {
+	         // the cell is still rooted
+			 space_set(a, cell, 0); DEBUG((show_cell(cell, 0)));
+		  } else {
   		     // The parent arrow is unreferred
 		     // Let's switch on its LOOSE status.
-             space_setAdmin(a, MEM1_LOOSE);
+			 space_set(a, cell, MEM1_LOOSE); DEBUG((show_cell(cell, 0)));
              // And add it to the loose log
              looseStackAdd(a);
  	         // One disconnects the arrow from its parents
 			 // 2 recursive calls
 			 if (cell_isPair(cell)) {
-               disconnect(xl_tailOf(a), a);
-               disconnect(xl_headOf(a), a);
+               disconnect(cell_getTail(cell), a);
+               disconnect(cell_getHead(cell), a);
 		     } // TODO tuple
 		  }
       }
@@ -1338,8 +1338,8 @@ Arrow xl_root(Arrow a) {
 
   if (loose) { // if the arrow has just lost its LOOSE state, one connects it to its parents
     if (cell_isPair(cell)) {
-       connect(xl_tailOf(a), a);
-       connect(xl_headOf(a), a);
+       connect(cell_getTail(cell), a);
+       connect(cell_getHead(cell), a);
 	}
 	// TODO tuple case
     // (try to) remove 'a' from the loose log
