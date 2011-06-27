@@ -12,15 +12,22 @@ Its language is as well:
   * a fully reflexive language
 
 = Machine State =
+The Entrelacs Machine is largely inspired by the 
+CaEK abstract machine of Flanagan et al. [1993]. This machine handles:
+ * expressions: lambda-expressions formulated as arrows structures.
+ * environments: sets of links between symbols (free variables) and values.
+ * closures: Functional values are converted into closures. A closure is a pair (expression, environment).
 
-The Machine state is defined by a single arrow _M_ which is made up of:
-  * _current_ : a "current" arrow
-  * _program_ : to-be-evaluated program
-  * _stack_ : a stack (as an arrow)
-  * _continuation_ : a continuation
+
+A Machine State is defined by a single arrow _M_ which is made up of:
+ * an _expression_,
+ * an _environment_,
+ * a _continuation chain_.
+
+All these components consist in arrows. A Machine State itself consists in a single arrow _M_.
 
 {{{
- M = (current ((stack program) continuation)))
+ M = (expression (environment continuation)) TBC
 }}}
 
 
