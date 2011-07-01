@@ -2,41 +2,237 @@
 
 = Introduction =
 
-The Entrelacs Abstract Machine evals programs made up of arrows.
+The second major component of an Entrelacs System beside the ArrowsSpace is a machine to eval programs directly stored as arrows structures. That is the _Entrelacs Abstract Machine_.
 
-Its language is as well:
-  * a functional language
-  * a stack based language
-  * a Call By Continuation style language
-  * a query language à la SQL
-  * a fully reflexive language
+This machine is designed in such a way that _homoiconity_ reachs its upper limit. In concrete terms, there is no difference between:
+ * source code
+ * CST (Concrete Syntax Tree)
+ * AST (Abstract Syntax Tree)
 
-= Machine State =
-The Entrelacs Machine is largely inspired by the 
-CaEK abstract machine of Flanagan et al. [1993]. This machine handles:
- * expressions: lambda-expressions formulated as arrows structures.
- * environments: sets of links between symbols (free variables) and values.
- * closures: Functional values are converted into closures. A closure is a pair (expression, environment).
+It implies meta-programs (programs that handle other programs) design is super easy. Moreover, a given program may easily fetch (introspection) and even modify (intercession) itself at source level and make these changes persistent.
 
+In addition, the whole machine state is stored as a single arrow that programs may fetch and edit. So programs may handle all the underlying machine components like:
+  * environments,
+  * continuations,
+  * closures,
+  * evaluated expression
+  * ...
 
-A Machine State is defined by a single arrow _M_ which is made up of:
- * an _expression_,
- * an _environment_,
- * a _continuation chain_.
+The Entrelacs Abstract Machine is largely inspired by the 
+CaEK abstract machine of Flanagan et al. [1993]. The only major difference is that programs are hold by arrows structures rather than textual source code. Serialized text representation of the Entrelacs Language will only be supported for communication purpose.
 
-All these components consist in arrows. A Machine State itself consists in a single arrow _M_.
+Last note: Experimental features (non trivial application) are tagged with #e# hashtag hereafter.
 
+= The Language =
 {{{
- M = (expression (environment continuation)) TBC
+a ::= any arrow
+x ::= an entrelacs arrow
+
+// trivial expression
+t ::=  	x // will be resolved as a variable
+        | ("get" c) // resolve any arrow as a variable #e#
+ 	| ("escape" c) // escape any arrow (no substitution) #e#
+ 	| ("lambda" (x s)) // lambda expression
+
+// serious expression
+s ::=	("let" ((x t) s)) // binding
+  	| ("let" ((x (t t)) s)) // application in binding
+  	| (t t) // application
+  	| ("let" ((x (t s)) s)) // serious in application in binding #e#
+  	| (t s) // serious in application #e#
+
+// program
+p ::= s
 }}}
 
 
-= Real reflexivity =
+= The Machine =
 
-Within a working Entrelacs systems, programs are directly stored as arrow structures (serialized text representation is only supported for communication purpose).
+== Variable & values ==
 
-All in all, there is no difference between a piece of source code, a Concrete Syntax Tree (CST) and even an Abstract Syntax Tree (AST) in Entrelacs! Moreover, the current machine state (M) can be fully acceded and modified by programs. Programs can browse (introspection) and modify (intercession) such arrows in order to modify themselves for real!  Programs can not only modify themselves but also store their changes.
+{{{
+<arrow> ::= any arrow
+<entrelacs> ::= any entrelacs arrow
+<escape> ::= ("escape" <arrow>) #e#
+<get> ::= ("get" <arrow>) #e#
+<lambda-expression> ::= ("lambda" (<arrow> <expression>))
+<trivial> ::= <entrelacs> | <lambda-expression>
+                       | <escape> | <get> #e#
+<application> ::= (<trivial> <trivial>)
+<serious-application> ::= (<trivial> <serious>) #e#
+<binding> ::= ("let" ((<variable> <trivial>) <serious>))
+<application-binding> ::= ("let" ((<variable> <application>) <serious>))
+<serious-application-binding> ::= ("let" ((<variable> <serious-application>) <serious>)) #e#
+<serious> ::= <binding> | <application-binding> | <binding>
+              | <serious-application-binding> | <serious-binding> #e#
+<expression> ::= <trivial> | <serious>
+<closure> ::= ((<variable> <expression>) <environment>)
+<program> ::= <expression>
+}}}
 
-= The language =
+== The Environment ==
 
-See EntrelacsLanguage.
+{{{
+<environment> ::= Eve | ((<variable> <value>) <environment>)
+/* ((<variable> <value>) ((<variable> <value>)... ((<variable> <value>) Eve) ... )) */
+}}}
+
+== The Continuation chain, aka stack ==
+
+{{{
+<continuation-stack> ::= Eve | (<frame> <continuation-stack>)
+/* (<frame> (<frame> ... (<frame> Eve) ... )) */
+<frame> ::= (<variable> (<expression> <environment>))
+}}}
+
+== The Machine State ==
+
+{{{
+<machine-state> := (<program> (<environment> <continuation-stack>))
+}}}
+
+== System functions ==
+Uncompleted list
+ * head
+ * tail
+ * childrenOf
+ * root
+ * unroot
+ * isRooted
+
+== system variables ==
+ * "@M" : get/set current <machine-state> 
+
+== Machine transitions ==
+
+=== the _resolve_ function ===
+
+{{{
+  Arrow resolve(Arrow trivial, Arrow environment)
+}}}
+
+Definition:
+{{{
+ * resolve(("escape" <a>), <e>) = <a> #e#
+ * resolve(("lambda" (<x> <s>)), <e>) = ((<x> <s>) <e>) /* closure */
+ * resolve("@M", <e>) = <machine-state>
+ * resolve(("get" <x>), <e>) = resolve(<x>, <e>) #e#
+ * resolve(<x>, ((<x> <value>) <e>)) = <value>
+ * resolve(<x>, Eve) = <x> (Note: c’est beaucoup mieux que Eve)
+ * resolve(<x>, ((<y> value>) <e>)) = resolve(<x>, <e>) /* x != y */
+}}}
+
+=== the _isTrivial_ function ===
+{{{
+   Boolean isTrivial(Arrow expression)
+}}}
+
+Definition:
+{{{
+ * isTrivial = 
+     isEntrelacs(exp)
+     || tail(exp) == "lambda"
+     || tail(exp) == "escape" #e#
+     || tail(exp) == "get" #e#
+}}}
+
+=== the eval function ===
+
+Pseudo-C algo:
+{{{
+Arrow eval(program) {
+  M = (program (Eve Eve))
+  M = transition(M);
+  while (head(head(M)) != Eve) {
+    M = transition(M)
+  }
+  p = tail(M)
+  e = tail(head(M))
+  return resolve(p, e)
+}}}
+
+=== the _transition_ function ===
+
+Pseudo-C algo:
+{{{
+Arrow transition(Arrow M) {
+  if (isTrivial(p)) { // Trivial expression
+     // p = v
+     k = tail(tail(M))
+     if (k == Eve) return // stop, program result = w
+     // k = ((x (ss ee)) kk)
+     w = resolve(p, e)
+     kk = head(k)
+     f = tail(k)
+     x = tail(f)
+     ss = tail(head(f))
+     ee = head(head(f))
+     M = (ss (((x w) ee) kk)) // unstack continuation, postponed let solved
+  } else if (tail(p)) == "let") { //let expression family
+     // p = (let ((x v) s))
+     v = head(tail(head(p))
+     x = tail(tail(head(p))
+
+     if (tail(x) == "get") { x = resolve(x); } #e#
+
+     // FIXME x == "@M" case
+
+     if (isTrivial(v)) { // Trivial let rule
+       // p = (let ((x t) s))
+       t = v
+       w = resolve(t, e)
+       s = head(head(p))
+       M = (s (((x w) e) k))
+     } else /* !isTrivial(v) */ { // Non trivial let rules
+       // p = (let ((x (t0 s1) s))
+       t0 = tail(v)
+       v1 = head(v)
+       if (!isTrivial(v1)) { // Very serious let rule #e#
+         pp = (let ((p s1) (let ((x (t0 ("get" p))) s)
+         M = (pp (e k))
+       } else /* isTrivial(v1)) */ { // Serious let rule
+         // p = (let ((x t) s)) where t = (t0 t1)
+         t1 = v1
+         t0 = tail(t)
+         t1 = head(t)
+         w = resolve(t1, e)
+         C = resolve(t0, e)
+         if (tail(C) == "operator") { // System call special case
+           cb = getPointer(head(C))
+           r = cb(w, e, k)
+           M = (s (((x r) e) k))
+         } else { // closure case
+           // C = ((y ss) ee)
+           ee = head(C)
+	   y = tail(tail(C))
+           ss = head(tail(C))
+ 	   M = (ss (((y w) ee) ((x (s e)) k))) // stacks up a continuation
+         }
+       }
+     }
+  } else if (!isTrivial(s = head(P))) { // Not trivial application #e#
+     // p = (t s)
+     pp = ("let" ((p s) (t ("get" p))
+     M = (pp (e k))
+
+  } else { // Trivial application rule
+     // p = (t0 t1)
+     // Stacking not needed
+     t0 = tail(p)
+     t1 = head(p)
+     w = resolve(t1, e)
+     C = resolve(t0, e)
+     if (tail(C) == "operator") { // System call case
+       cb = getCallBack(head(C))
+       r = cb(w, e, k)
+       M = (r (e k))
+     } else { // closure case
+       // C = ((x ss) ee)
+       x = tail(tail(C))
+       ss = head(tail(C))
+       ee = head(C)
+       M = (ss (((x w) ee) k))
+     }
+  }
+}
+}}}
