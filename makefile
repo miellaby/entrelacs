@@ -1,16 +1,19 @@
-CPPFLAGS=-std=c99
-.PHONY: clean all
+LDFLAGS+= -L. -Lsexpr/src
+CPPFLAGS+=-std=c99 -Isexpr/src
+.PHONY: clean all test.%
+TESTS= XYZ draft sexp
+all: libentrelacs.so
 
-all: entrelacs.so
 
-test: testXYZ
-	rm entrelacs.dat
-	LD_LIBRARY_PATH=. ./testXYZ
+test: $(TESTS:%=test%.o) $(TESTS:%=test%) $(TESTS:%=test.%)
+
+test.% : test%
+	[ -f entrelacs.dat ] && rm entrelacs.dat
+	LD_LIBRARY_PATH=. ./$+
 	od -t x1z -w8 entrelacs.dat
 
 
-
-entrelacs.so: mem0.o space.o sha1.o entrelacs.o
+libentrelacs.so: mem0.o space.o sha1.o entrelacs.o
 	$(LD) $(LDFLAGS) -shared -o $(@) mem0.o space.o sha1.o entrelacs.o -lc
 
 clean:
@@ -18,4 +21,10 @@ clean:
 
 *.o: *.h
 
-testXYZ: testXYZ.o entrelacs.so
+test%.o: test%.c
+
+testdraft: testdraft.o libentrelacs.so
+
+testXYZ: testXYZ.o libentrelacs.so
+
+testsexp: testsexp.o libentrelacs.so sexpr/src/libsexp.a

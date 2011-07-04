@@ -5,7 +5,8 @@
 /* ________________________________________
  * The Entrelacs C API*
  * ________________________________________
- * Note: Everything but the Arrow type is XL prefixed to prevent name conflicts with existing C libraries. Consider define macros in your project to unprefix things when possible.
+ * Note: Everything but the Arrow type is XL prefixed to prevent name conflicts with existing C libraries.
+ *       Consider define macros in your project to unprefix things when possible.
  */
 
 /* Arrow */
