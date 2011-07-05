@@ -8,9 +8,9 @@
 #include "mem0.h"
 
 #ifndef PRODUCTION
-  #define DEBUG(w) w
+  #define ONDEBUG(w) w
 #else
-  #define DEBUG(w)
+  #define ONDEBUG(w)
 #endif
 
 static FILE* F = NULL;
@@ -50,7 +50,7 @@ int mem0_init() {
 }
 
 Cell mem0_get(Address r) {
-   DEBUG(fprintf(stderr, "mem0_get@%012x \n", r));
+   ONDEBUG(fprintf(stderr, "mem0_get@%012x \n", r));
 
    Cell result;
    fseek(F, r * sizeof(Cell), SEEK_SET);
@@ -61,7 +61,7 @@ Cell mem0_get(Address r) {
 }
 
 void mem0_set(Address r, Cell v) {
-   DEBUG(fprintf(stderr, "mem0_set@%012x %016llx\n", r, v));
+   ONDEBUG(fprintf(stderr, "mem0_set@%012x %016llx\n", r, v));
    fseek(F, r * sizeof(Cell), SEEK_SET);
    size_t write=fwrite(&v, sizeof(Cell), 1, F);
    assert(write);

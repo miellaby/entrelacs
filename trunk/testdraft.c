@@ -3,7 +3,7 @@
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
-#include "space.h"
+
 struct s_printArrowC { int size; int max; char* buffer; };
 
 int printArrow(Arrow a, void *ctx) {
