@@ -61,6 +61,7 @@ void xl_childrenOf(Arrow, XLCallBack, void*);
 
 /* Program assimilation */
 Arrow xl_program(char*); // EL string
+char* xl_programOf(Arrow); // to be freed
 
 /* C hook assimilation */
 Arrow xl_operator(XLCallBack hook, char*); // operator arrow with hook

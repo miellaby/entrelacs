@@ -13,7 +13,7 @@ test.% : test%
 	od -t x1z -w8 entrelacs.dat
 
 
-libentrelacs.so: mem0.o space.o sha1.o entrelacs.o machine.o
+libentrelacs.so: mem0.o mem.o sha1.o space.o machine.o
 	$(LD) $(LDFLAGS) -shared -o $(@) $^ -lc -L sexpr/src -lsexp
 
 clean:
