@@ -1,7 +1,11 @@
+# Suggested call
+# CFLAGS=-DPRODUCTION make clean all
+# CFLAGS="-g -o2" make clean all
+
 LDFLAGS+= -L. -Lsexpr/src
 CPPFLAGS+=-std=c99 -Isexpr/src
 .PHONY: clean all test.%
-TESTS= XYZ draft sexp
+TESTS= draft space program
 all: libentrelacs.so
 
 
@@ -14,10 +18,10 @@ test.% : test%
 
 
 libentrelacs.so: mem0.o mem.o sha1.o space.o machine.o
-	$(LD) $(LDFLAGS) -shared -o $(@) $^ -lc -L sexpr/src -lsexp
+	$(LD) $(LDFLAGS) -o $(@) $^ -Lsexpr/src -lsexp -shared -lc
 
 clean:
-	rm *.o
+	-rm -f *.o $(TESTS:%=test%)
 
 *.o: *.h
 
@@ -25,6 +29,6 @@ test%.o: test%.c
 
 testdraft: testdraft.o libentrelacs.so
 
-testXYZ: testXYZ.o libentrelacs.so
+testspace: testspace.o libentrelacs.so
 
-testsexp: testsexp.o libentrelacs.so sexpr/src/libsexp.a
+testprogram: testprogram.o libentrelacs.so
