@@ -1,8 +1,10 @@
-#include "entrelacs/entrelacs.h"
 #include <stdlib.h> // free & co
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
+
+#include "entrelacs/entrelacs.h"
+#include "mem.h" // geoalloc
 
 struct s_printArrowC { int size; int max; char* buffer; };
 
