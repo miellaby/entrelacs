@@ -8,13 +8,13 @@ all: libentrelacs.so
 test: $(TESTS:%=test%.o) $(TESTS:%=test%) $(TESTS:%=test.%)
 
 test.% : test%
-	[ -f entrelacs.dat ] && rm entrelacs.dat
+	-[ -f entrelacs.dat ] && rm entrelacs.dat
 	LD_LIBRARY_PATH=. ./$+
 	od -t x1z -w8 entrelacs.dat
 
 
-libentrelacs.so: mem0.o space.o sha1.o entrelacs.o
-	$(LD) $(LDFLAGS) -shared -o $(@) mem0.o space.o sha1.o entrelacs.o -lc
+libentrelacs.so: mem0.o space.o sha1.o entrelacs.o machine.o
+	$(LD) $(LDFLAGS) -shared -o $(@) $^ -lc -L sexpr/src -lsexp
 
 clean:
 	rm *.o

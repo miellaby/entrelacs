@@ -214,10 +214,9 @@ static void show_cell(Cell C, int ofSliceChain) {
    static char* cats[] = { "Arrow", "Tuple", "Small", "Tag", "Blob", "Chain", "Last", "Sync" };
    char* cat = cats[catI];
 
-   if (cell_isFree(C))
-     fprintf(stderr, "FREE : ");
-
-   if (cell_isPair(C)) {
+   if (cell_isFree(C)) {
+     fprintf(stderr, "FREE (M=%02x)", more);
+   } else if (cell_isPair(C)) {
       fprintf(stderr, "M=%02x C=%1x tail@=%06x head@=%06x R=%1x C=%02x (%s)", more, catI, tail, head, rooted, child0, cat); // an arrow
    } else if (cell_isTuple(C) || cell_isTag(C) || cell_isBlob(C)) {
       fprintf(stderr, "M=%02x C=%1x checksum=%010llx J=%02x R=%1x C=%02x (%s)", more, catI, checksum, jumpFirst, rooted, child0, cat); // a tuple/tag/blob
@@ -228,7 +227,7 @@ static void show_cell(Cell C, int ofSliceChain) {
    } else if (catBits == CATBITS_CHAIN) {
       if (ofSliceChain) {
          fprintf(stderr, "M=%02x C=%1x slice=%012llx <%c%c%c%c%c%c> J=%02x (%s)", more, catI, slice,
-            (slice>>40)&0xFF, (slice>>32)&0xFF, (slice>>24)&0xFF, (slice>>16)&0xFF, (slice>>8)&0xFF, slice&0xFF,  jumpNext, cat); // Chained cell with slice
+            (int)(slice>>40)&0xFF, (int)(slice>>32)&0xFF, (int)(slice>>24)&0xFF, (int)(slice>>16)&0xFF, (int)(slice>>8)&0xFF, (int)slice&0xFF,  jumpNext, cat); // Chained cell with slice
       } else {
          fprintf(stderr, "M=%02x C=%1x ref0@=%06x ref1@=%06x J=%02x (%s)", more, catI, ref0, ref1, jumpNext, cat); // Chained cell with refs
       }
@@ -289,30 +288,32 @@ uint64_t hashArrow(Arrow tail, Arrow head) {
 /* hash function to get H1 from a tag arrow definition */
 uint64_t hashString(char *str) { // simple string hash
   uint64_t hash = 5381;
-  char *s= str;
+  char *s = str;
   int c;
 
-  while (c = *s) {
-    s++;
+  while (c = *s++) {
     // 5 bits shift only because ASCII generally works within 5 bits
     hash = ((hash << 5) + hash) + c;
   }
+
   DEBUG((fprintf(stderr, "hashString(\"%s\") = %016llx\n", str, hash)));
   return hash;
 }
 
 /* hash function to get H1 from a binary tag arrow definition */
-uint32_t hashBString(char *s, uint32_t length) { // simple string hash
-  uint32_t hash = 5381;
+uint64_t hashBString(char *buffer, uint32_t length) { // simple string hash
+  uint64_t hash = 5381;
   int c;
-
-  while (length) {
-    length--;
-	c = *s++;
+  char *p = buffer;
+  uint32_t l = length;
+  if (l && !p[l - 1]) l--; // ignoring trailing \0 like hashString
+  while (l--) { // all bytes but the last one
+	c = *p++;
     // 5 bits shift only because ASCII generally works within 5 bits
     hash = ((hash << 5) + hash) + c;
   }
 
+  DEBUG((fprintf(stderr, "hashBString(%d, \"%.*s\") = %016llx\n", length, length, buffer, hash)));
   return hash;
 }
 
@@ -684,7 +685,8 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
  * except if locateOnly param is set.
  */
 Arrow btag(int length, char* str, int locateOnly) {
-  uint32_t hash, hashLocation, hashProbe, hChain;
+  uint64_t hash;
+  Address hashLocation, hashProbe, hChain;
   uint32_t l;
   CellData checksum;
   Address probeAddress, firstFreeCell, newArrow, current, next;
@@ -831,7 +833,7 @@ Arrow btag(int length, char* str, int locateOnly) {
 	  cell = space_get(current); DEBUG((show_cell(cell, 1)));
       cell = slice_build(cell, content, jump);
       space_set(current, cell, 0); DEBUG((show_cell(cell, 1)));
-      i = 1;
+      i = 0;
       content = 0;
 	  current = next;
     }
@@ -847,7 +849,7 @@ Arrow btag(int length, char* str, int locateOnly) {
   probeAddress = hashLocation;
   hashProbe = hash % PRIM1;
   while (probeAddress != newArrow) {
-     cell = space_get(probeAddress); DEBUG((show_cell(cell, 1)));
+     cell = space_get(probeAddress); DEBUG((show_cell(cell, 0)));
      cell = cell_more(cell);
      space_set(probeAddress, cell, DONTTOUCH); DEBUG((show_cell(cell, 0)));
      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);

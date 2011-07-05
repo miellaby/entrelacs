@@ -31,10 +31,10 @@ Arrow arrowFromSexp(sexp_t* sx) {
 
 sexp_t *sexpFromArrow(Arrow a) {
    if (xl_typeOf(a) == XL_ARROW) {
-       sexp_t *sexpHead = new_sexp_list(sexpFromArrow(xl_headOf(a)));
-       sexp_t *sexpTail = new_sexp_list(sexpFromArrow(xl_tailOf(a)));
+       sexp_t *sexpHead = sexpFromArrow(xl_headOf(a));
+       sexp_t *sexpTail = sexpFromArrow(xl_tailOf(a));
        sexpTail->next = sexpHead;
-       return sexpHead;
+       return new_sexp_list(sexpTail);
    } else {
        uint32_t tagSize;
        char * tag = xl_btagOf(a, &tagSize);
@@ -45,8 +45,9 @@ sexp_t *sexpFromArrow(Arrow a) {
 }
 int printArrowAsSexp(Arrow a, void *ctx) {
    sexp_t* sx = sexpFromArrow(a);
-   char buffer[1024];
+   static char buffer[1024];
    print_sexp(buffer, 1024, sx);
+   fprintf(stderr, "child: %s\n", buffer);
    return 0;
 }
 
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
   
   xl_init();
   
-  fd = open("test.sexp",O_RDONLY);
+  fd = open("testrc",O_RDONLY);
   iow = init_iowrap(fd);
   sx = read_one_sexp(iow);
   
@@ -70,21 +71,18 @@ int main(int argc, char **argv) {
     Arrow command = xl_headOf(a);
     Arrow arg = xl_tailOf(a);
 
-    switch (command) {
-      root:
+    if (command == root) {
        xl_root(arg);
-       break;
-      unroot:
+       xl_commit();
+    } else if (command == unroot) {
        xl_unroot(arg);
-       break;
-      children:
+       xl_commit();
+    } else if (command == childrenOf) {
        xl_childrenOf(arg, printArrowAsSexp, NULL);
-       break;
-      default:
-       fprintf(stderr, "Unkown command %s\n", xl_tagOf(command));
+    } else {
+       fprintf(stderr, "Unknown command %s\n", xl_tagOf(command));
        assert(1);
     }
-    xl_commit();
     
     destroy_sexp(sx);
     sx = read_one_sexp(iow);
