@@ -155,20 +155,29 @@ Arrow eval(program) {
 
 Pseudo-C algo:
 {{{
+#define _(a,b) = arrow(a,b)
+
 Arrow transition(Arrow M) {
   if (isTrivial(p)) { // Trivial expression
      // p = v
      k = tail(tail(M))
      if (k == Eve) return // stop, program result = w
-     // k = ((x (ss ee)) kk)
-     w = resolve(p, e)
-     kk = head(k)
-     f = tail(k)
-     x = tail(f)
-     ss = tail(head(f))
-     ee = head(head(f))
-     M = (ss (((x w) ee) kk)) // unstack continuation, postponed let solved
-  } else if (tail(p)) == "let") { //let expression family
+     if (tail(k) == continuation) { //special system continuation #e#
+        // k = (continuation (<hook> <context>))
+        hook = castAsPointer(tail(head(k)))
+        context = castAsPointer(head(head(k))
+        M = hook(M, context)
+     } else {
+       // k = ((x (ss ee)) kk)
+       w = resolve(p, e)
+       kk = head(k)
+       f = tail(k)
+       x = tail(f)
+       ss = tail(head(f))
+       ee = head(head(f))
+       M = _(ss, _(_(_(x, w), ee), kk)) // unstack continuation, postponed let solved
+     }
+  } else if (tail(p)) == let) { //let expression family
      // p = (let ((x v) s))
      v = head(tail(head(p))
      x = tail(tail(head(p))
@@ -182,14 +191,14 @@ Arrow transition(Arrow M) {
        t = v
        w = resolve(t, e)
        s = head(head(p))
-       M = (s (((x w) e) k))
+       M = _(s, _(_(_(x, w), e), k))
      } else /* !isTrivial(v) */ { // Non trivial let rules
        // p = (let ((x (t0 s1) s))
        t0 = tail(v)
        v1 = head(v)
        if (!isTrivial(v1)) { // Very serious let rule #e#
-         pp = (let ((p s1) (let ((x (t0 ("get" p))) s)
-         M = (pp (e k))
+         pp = _(let, _(_(p, s1), _(let, _(_(x, _(t0, _(get, p))), s)
+         M = _(pp, _(e, k))
        } else /* isTrivial(v1)) */ { // Serious let rule
          // p = (let ((x t) s)) where t = (t0 t1)
          t1 = v1
@@ -198,22 +207,24 @@ Arrow transition(Arrow M) {
          w = resolve(t1, e)
          C = resolve(t0, e)
          if (tail(C) == "operator") { // System call special case
-           cb = getPointer(head(C))
-           r = cb(w, e, k)
-           M = (s (((x r) e) k))
+           // C = (operator (hook context))
+           hook = getPointer(tail(head(C)))
+           context = getPointer(head(head(C))
+           r = hook(w, context)
+           M = _(s, _(_(_(x, r), e), k))
          } else { // closure case
            // C = ((y ss) ee)
            ee = head(C)
 	   y = tail(tail(C))
            ss = head(tail(C))
- 	   M = (ss (((y w) ee) ((x (s e)) k))) // stacks up a continuation
+ 	   M = _(ss, _(_(_(y, w), ee), _(_(x, _(s, e)), k))) // stacks up a continuation
          }
        }
      }
   } else if (!isTrivial(s = head(P))) { // Not trivial application #e#
      // p = (t s)
-     pp = ("let" ((p s) (t ("get" p))
-     M = (pp (e k))
+     pp = _(let, _(_(p, s), _(t, _(get, p))
+     M = _(pp, _(e, k))
 
   } else { // Trivial application rule
      // p = (t0 t1)
@@ -222,16 +233,18 @@ Arrow transition(Arrow M) {
      t1 = head(p)
      w = resolve(t1, e)
      C = resolve(t0, e)
-     if (tail(C) == "operator") { // System call case
-       cb = getCallBack(head(C))
-       r = cb(w, e, k)
-       M = (r (e k))
+     if (tail(C) == operator) { // System call case
+       // C = (operator (hook context))
+       hook = getPointer(tail(head(C)))
+       context = getPointer(head(head(C))
+       r = hook(w, context)
+       M = _(r, _(e, k))
      } else { // closure case
        // C = ((x ss) ee)
        x = tail(tail(C))
        ss = head(tail(C))
        ee = head(C)
-       M = (ss (((x w) ee) k))
+       M = _(ss, _(_(_(x, w), ee), k))
      }
   }
 }
