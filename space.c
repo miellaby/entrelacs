@@ -1486,8 +1486,9 @@ void xl_commit() {
 }
 
 /** initialize the Entrelacs system */
-void xl_init() {
-  if (mem_init()) { // very first start
+int space_init() {
+  int rc = mem_init();
+  if (rc) { // very first start
     // Eve
 	Cell cellEve = arrow_build(0, Eve, Eve);
 	cellEve = cell_setRootBit(cellEve, ROOTBIT_ROOTED);
@@ -1496,6 +1497,7 @@ void xl_init() {
   }
 
   geoalloc((char**)&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), 0);
+  return rc;
 }
 
 // GLOBAL TODO: SMALL and TUPLE

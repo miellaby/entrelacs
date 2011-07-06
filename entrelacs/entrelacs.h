@@ -67,13 +67,17 @@ char* xl_programOf(Arrow); // to be freed
 Arrow xl_operator(XLCallBack hook, char*); // operator arrow with hook
 Arrow xl_continuation(XLCallBack hook, char*); // continuation arrow with hook
 
-/* Build an Entrelacs Machine */
-Arrow xl_machine(Arrow program, Arrow cc, Arrow current, Arrow stack);
+/* Run an Entrelacs Machine
+ * a vStack is a virtualization stack: vStack == (En (.. (E3 (E2 (E1 Eve)))))
+ * A machine handles information inside a construct of virtual spaces
+ * v(k, a) = // where k a stack and a an arrow
+ *   isEve(k) ? a :
+ *       isEntrelacs(a) ? arrow(tail(k), v(head(k), a)) :
+ *           arrow(v(k, head(a)), v(k, tail(a)))
+ */
+Arrow xl_run(Arrow rootStack, Arrow M); // M == (<program> (<environment> <continuation-stack>))
 
-/* Run an Entrelacs Machine */
-int   xl_run(Arrow M);
-
-/* Eval, ie. the program, continuation, machine and run sequence */
-int   xl_eval(char* programString, XLCallBack cb);
+/* Eval by building and run a machine */
+Arrow xl_eval(Arrow rootStack, Arrow program);
 
 #endif // entrelacs.h
