@@ -2,3 +2,6 @@
 (hello dude root)
 (world childrenOf)
 (hello childrenOf)
+(a? root)
+(? root)
+(a ? root)

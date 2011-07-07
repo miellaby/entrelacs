@@ -5,7 +5,7 @@
 LDFLAGS+= -L. -Lsexpr/src
 CPPFLAGS+=-std=c99 -Isexpr/src
 .PHONY: clean all test.%
-TESTS= draft space program
+TESTS= draft space program machine
 all: libentrelacs.so
 
 
