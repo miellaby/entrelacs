@@ -1,11 +1,12 @@
 #include <string.h>
 #include <assert.h>
 
+#include "space.h"
 #include "sexp.h"
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 
-static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, M = 0;
+static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, M = 0, arrow = 0;
 static Arrow arrowFromSexp(sexp_t* sx) {
   sexp_t* ssx;
   
@@ -122,7 +123,12 @@ static Arrow resolve(Arrow a, Arrow e, Arrow M) {
   Arrow x = a;
   if (type == XL_ARROW) {
     Arrow t = tailOf(a);
-    if (t == escape) {
+    if (t == arrow) {
+       Arrow t = headOf(a);
+       Arrow t1= tailOf(t);
+       Arrow t2 = tailOf(t);
+       return a(resolve(t1, e, M), resolve(t2, e, M));
+    } else if (t == escape) {
        return headOf(a);
     } else if (t == lambda) {
        return arrow(headOf(a), e);
@@ -147,7 +153,7 @@ static int isTrivial(Arrow s) {
   int type = typeOf(s);
   if (type != XL_ARROW) return 1; // true
   Arrow t = tailOf(s);
-  if (t == lambda || t == escape || t == get) return 1;
+  if (t == lambda || t == arrow || t == escape || t == get) return 1;
   return 0;
 }
 
@@ -163,7 +169,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      
      if (isEve(k)) return M; // stop, program result = w
      
-     if (tailOf(k) == continuation) { //special system continuation #e#
+     if (tail(k) == continuation) { //special system continuation #e#
         // k = (continuation (<hook> <context>))
         char *hooks = tagOf(tailOf(headOf(k)));
         char *contexts = tagOf(headOf(headOf(k)));
@@ -180,8 +186,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      } else {
        // k = ((x (ss ee)) kk)
        Arrow w = resolve(p, e, M);
-       Arrow kk = headOf(k);
-       Arrow f = tailOf(k);
+       Arrow kk = head(k);
+       Arrow f = tail(k);
        Arrow x = tail(f);
        Arrow ss = tail(head(f));
        Arrow ee = head(head(f));
@@ -314,4 +320,16 @@ void xl_init() {
   operator = tag("operator");
   continuation = tag("continuation");
   M = tag("@M");
+  arrow = tag("arrow");
+  
+  Arrow reserved = tag("reserved");
+  root(a(reserved,let));
+  root(a(reserved,get));
+  root(a(reserved,escape));
+  root(a(reserved,lambda));
+  root(a(reserved,operator));
+  root(a(reserved,continuation));
+  root(a(reserved,M));
+  root(a(reserved,arrow));
+  xl_commit();
 }
