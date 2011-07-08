@@ -17,7 +17,10 @@ int main(int argc, char **argv) {
   
   xl_init();
   char* str, programs[] = {
-    "(let (join (lambda x (lambda y (arrow (x y)))) (root join))",
+    //"(let ((gset (lambda (x (lambda (y (root (arrow (x y)))))))) (gset (escape gset) gset)))",
+    //"(let ((gget (lambda (x (childrenOf x (lambda c (isRooted (c (headOf(c) Eve)))))))) (root (arrow (espace gget) gget))))",
+    //"(let ((join (lambda (x (lambda (y (arrow (x y))))))) (root (arrow ((escape join) join)))))",
+    //"(childrenOf join (lambda a (isRooted a (a Eve))"
     NULL
   };
   Arrow root = xl_tag("root");

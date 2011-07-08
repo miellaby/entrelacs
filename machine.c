@@ -100,8 +100,7 @@ Arrow xl_operator(XLCallBack hookp, char* contextp) {
   snprintf(contexts, 64, "%p", contextp);
   Arrow hook = tag(hooks);
   Arrow context = tag(contexts);
-  Arrow hookAndContext = arrow(hook, context);
-  return arrow(operator, hookAndContext);
+  return a(operator, a(hook, context));
 }
 
 Arrow xl_continuation(XLCallBack hookp, char* contextp) {
@@ -111,8 +110,7 @@ Arrow xl_continuation(XLCallBack hookp, char* contextp) {
   snprintf(contexts, 64, "%p", contextp);
   Arrow hook = tag(hooks);
   Arrow context = tag(contexts);
-  Arrow hookAndContext = arrow(hook, context);
-  return arrow(continuation, hookAndContext);
+  return a(continuation, a(hook, context));
 }
 
 static Arrow resolve(Arrow a, Arrow e, Arrow M) {
@@ -167,7 +165,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
   if (isTrivial(p)) { // Trivial expression
      // p = v
      
-     if (isEve(k)) return M; // stop, program result = w
+     if (isEve(k)) return M; // stop, program result = resolve(v, e, M)
      
      if (tail(k) == continuation) { //special system continuation #e#
         // k = (continuation (<hook> <context>))
@@ -214,18 +212,38 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        return M;
        
      } else /* !isTrivial(v) */ { // Non trivial let rules
-       // p = (let ((x (t0 v1) s))
-       Arrow t0 = tail(v);
+       // p = (let ((x (v0 v1) s)) : application in let
+       Arrow v0 = tail(v);
        Arrow v1 = head(v);
 
-       if (!isTrivial(v1)) { // Very serious let rule #e#
+       if (!isTrivial(v0)) { // "tail nested applications in let" rule #e#
+         // p == (let ((x ((vv0 vv1) v1)) s))
+         Arrow vv0 = tail(v0);
+         if (vv0 == let) {
+            // error
+            M=a(a(escape, a(tag("illegal"), p)), Eve());
+            return M;
+         }
+         Arrow vv1 = head(v0);
+         // rewriting program to stage vv0, vv1, and (vv0 vv1) evaluation
+         // pp = (let (((p Eve) vv0) (let (((Eve p) vv1) (let ((p ((get (p Eve)) (get (Eve p)))) (let ((x ((get p) v1)))))))))))
+         Arrow pp = a(let, a(a(a(p, Eve()), vv0), a(let, a(a(a(Eve(), p), vv1), a(let, a(a(p, a(a(get, a(p, Eve())), a(get, a(Eve(), p)))), a(let, a(a(x, a(a(get, p), v1)), s))))))));
+         M = a(pp, a(e, k));
+         return M;
+         
+       } else if (!isTrivial(v1)) { // "head nested application in let" rule #e#
+         // p == (let ((x (t0 s1)) s))
+         Arrow t0 = v0;
          Arrow s1 = v1;
+         // rewriting program to sage v1 and (t0 v1) evaluation
+         // pp = (let ((p s1) (let ((x (t0 (get p))) s))))
          Arrow pp = a(let, a(a(p, s1), a(let, a(a(x, a(t0, a(get, p))), s))));
          M = a(pp, a(e, k));
          return M;
          
        } else /* isTrivial(v1)) */ { // Serious let rule
          // p = (let ((x t) s)) where t = (t0 t1)
+         Arrow t0 = v0;
          Arrow t1 = v1;
          Arrow w = resolve(t1, e, M);
          Arrow C = resolve(t0, e, M);
@@ -255,10 +273,22 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          }
        }
      }
-  } else if (!isTrivial(head(p))) { // Not trivial application #e#
+  } else if (!isTrivial(tail(p))) { // Not trivial function in application #e#
+     // p = (s v)
+     Arrow s = tail(p);
+     Arrow v = head(p);
+     // rewriting program with a let
+     // pp = (let ((p s) ((get p) v)))
+     Arrow pp = a(let, a(a(p, s), a(a(get, p), v)));
+     M = a(pp, a(e, k));
+     return M;
+
+  } else if (!isTrivial(head(p))) { // Not trivial parameter in application #e#
      // p = (t s)
      Arrow t = tail(p);
      Arrow s = head(p);
+     // rewriting program with a let
+     // pp = (let ((p s) (t (get p))))
      Arrow pp = a(let, a(a(p, s), a(t, a(get, p))));
      M = a(pp, a(e, k));
      return M;
