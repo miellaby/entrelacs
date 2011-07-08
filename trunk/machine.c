@@ -6,7 +6,7 @@
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 
-static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, selfM = 0, arrow = 0, systemEnvironment = 0;
+static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow arrowFromSexp(sexp_t* sx) {
   sexp_t* ssx;
@@ -98,20 +98,18 @@ static void machine_init();
 Arrow xl_operator(XLCallBack hookp, char* contextp) {
   char hooks[64];
   snprintf(hooks, 64, "%p", hookp);
-  char contexts[64];
-  snprintf(contexts, 64, "%p", contextp);
   Arrow hook = tag(hooks);
-  Arrow context = tag(contexts);
+  char contexts[64];
+  Arrow context = (contextp ? (snprintf(contexts, 64, "%p", contextp),  tag(contexts)) : Eve());
   return a(operator, a(hook, context));
 }
 
 Arrow xl_continuation(XLCallBack hookp, char* contextp) {
   char hooks[64];
   snprintf(hooks, 64, "%p", hookp);
-  char contexts[64];
-  snprintf(contexts, 64, "%p", contextp);
   Arrow hook = tag(hooks);
-  Arrow context = tag(contexts);
+  char contexts[64];
+  Arrow context = (contextp ? (snprintf(contexts, 64, "%p", contextp),  tag(contexts)) : Eve());
   return a(continuation, a(hook, context));
 }
 
@@ -123,10 +121,10 @@ static Arrow resolve(Arrow a, Arrow e, Arrow M) {
   Arrow x = a;
   if (type == XL_ARROW) {
     Arrow t = tailOf(a);
-    if (t == arrow) {
+    if (t == arrowOp) {
        Arrow t = headOf(a);
        Arrow t1= tailOf(t);
-       Arrow t2 = tailOf(t);
+       Arrow t2 = headOf(t);
        return a(resolve(t1, e, M), resolve(t2, e, M));
     } else if (t == escape) {
        return headOf(a);
@@ -144,7 +142,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow M) {
     Arrow bx = tailOf(b);
     if (bx == x)
       return headOf(b);
-    se = headOf(e);
+    se = headOf(se);
   }
   return a;
 }
@@ -153,7 +151,7 @@ static int isTrivial(Arrow s) {
   int type = typeOf(s);
   if (type != XL_ARROW) return 1; // true
   Arrow t = tailOf(s);
-  if (t == lambda || t == arrow || t == escape || t == get) return 1;
+  if (t == lambda || t == arrowOp || t == escape || t == get) return 1;
   return 0;
 }
 
@@ -392,7 +390,7 @@ static void machine_init() {
   operator = tag("operator");
   continuation = tag("continuation");
   selfM = tag("@M");
-  arrow = tag("arrow");
+  arrowOp = tag("arrow");
   
   Arrow reserved = tag("reserved");
   root(a(reserved, let));
@@ -402,7 +400,7 @@ static void machine_init() {
   root(a(reserved, operator));
   root(a(reserved, continuation));
   root(a(reserved, selfM));
-  root(a(reserved, arrow));
+  root(a(reserved, arrowOp));
   
   systemEnvironment = Eve();
   for (int i = 0; systemFns[i].s != NULL ; i++) {

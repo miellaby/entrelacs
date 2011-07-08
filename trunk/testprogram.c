@@ -4,11 +4,11 @@
 
 #include "entrelacs/entrelacs.h"
 
-static int print(Arrow arrow, void* context) {
+static Arrow print(Arrow arrow, void* context) {
   char* program = xl_programOf(arrow);
   fprintf(stderr, " %s\n", program);
   free(program);
-  return EXIT_SUCCESS;
+  return arrow;
 }
 
 int main(int argc, char **argv) {
