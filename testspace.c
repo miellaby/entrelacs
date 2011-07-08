@@ -8,7 +8,7 @@
 
 struct s_printArrowC { int size; int max; char* buffer; };
 
-int printArrow(Arrow a, void *ctx) {
+Arrow printArrow(Arrow a, void *ctx) {
     struct s_printArrowC *context = (struct s_printArrowC *)ctx;
     if (!context) { 
       struct s_printArrowC context0 = { 0, 0, NULL };
@@ -48,7 +48,7 @@ int printArrow(Arrow a, void *ctx) {
         geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
         sprintf(context->buffer + size - 1, ")");
     }
-    return 0;
+    return a;
 }
 
 int main(int argc, char* argv[]) {

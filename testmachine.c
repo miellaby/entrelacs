@@ -4,7 +4,7 @@
 
 #include "entrelacs/entrelacs.h"
 
-static int print(Arrow arrow, void* context) {
+static Arrow print(Arrow arrow, void* context) {
   char* program = xl_programOf(arrow);
   fprintf(stderr, " %s\n", program);
   free(program);
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
   
   xl_init();
   char *str, *programs[] = {
-    "(escape (+ 2 2))",
+    "(root (escape (+ 2 2)))",
     //"(let ((gset (lambda (x (lambda (y (root (arrow (x y)))))))) (gset (escape gset) gset)))",
     //"(let ((gget (lambda (x (childrenOf x (lambda c (isRooted (c (headOf(c) Eve)))))))) (root (arrow (espace gget) gget))))",
     //"(let ((join (lambda (x (lambda (y (arrow (x y))))))) (root (arrow ((escape join) join)))))",
