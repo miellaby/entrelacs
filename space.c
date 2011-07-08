@@ -224,16 +224,20 @@ static void show_cell(Cell C, int ofSliceChain) {
    } else if (catBits == CATBITS_SYNC) {
       fprintf(stderr, "M=%02x C=%1x from@=%06x next@=%06x T=%1x (%s)", more, catI, from, next, syncType, cat); // Sync cell
    } else if (catBits == CATBITS_CHAIN) {
+      static char c;
+#define charAt(SLICE, POS) ((c = ((char*)&SLICE)[POS]) ? c : '.')
       if (ofSliceChain) {
          fprintf(stderr, "M=%02x C=%1x slice=%012llx <%c%c%c%c%c%c> J=%02x (%s)", more, catI, slice,
-            (int)(slice>>40)&0xFF, (int)(slice>>32)&0xFF, (int)(slice>>24)&0xFF, (int)(slice>>16)&0xFF, (int)(slice>>8)&0xFF, (int)slice&0xFF,  jumpNext, cat); // Chained cell with slice
+           charAt(slice, 0), charAt(slice, 1), charAt(slice, 2), charAt(slice, 3), charAt(slice, 4), charAt(slice, 5), jumpNext, cat); // Chained cell with slice
       } else {
          fprintf(stderr, "M=%02x C=%1x ref0@=%06x ref1@=%06x J=%02x (%s)", more, catI, ref0, ref1, jumpNext, cat); // Chained cell with refs
       }
    } else if (catBits == CATBITS_LAST) {
+      static char c;
       if (ofSliceChain) {
          fprintf(stderr, "M=%02x C=%1x slice=%012llx <%c%c%c%c%c%c> S=%02x (%s)", more, catI, slice,
-            (int)(slice>>40)&0xFF, (int)(slice>>32)&0xFF, (int)(slice>>24)&0xFF, (int)(slice>>16)&0xFF, (int)(slice>>8)&0xFF, (int)slice&0xFF, size, cat); // Last chained cell with slice
+           charAt(slice, 0), charAt(slice, 1), charAt(slice, 2), charAt(slice, 3), charAt(slice, 4), charAt(slice, 5),
+           size, cat); // Last chained cell with slice
       } else {
          fprintf(stderr, "M=%02x C=%1x ref0@=%06x ref1@=%06x S=%02x (%s)", more, catI, ref0, ref1, size, cat); // Last chained cell with refs
       }
@@ -1342,12 +1346,15 @@ Arrow xl_root(Arrow a) {
 }
 
 /** unroot a rooted arrow */
-void xl_unroot(Arrow a) {
+Arrow xl_unroot(Arrow a) {
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
-  if (a == Eve) return; // stop dreaming
-  if (!cell_isArrow(cell) || !cell_isRooted(cell))
-      return;
-
+  if (a == Eve)
+      return Eve; // stop dreaming
+  if (!cell_isArrow(cell))
+      return Eve;
+  if (!cell_isRooted(cell))
+      return a;
+ 
   // change the arrow to UNROOTED state
   cell = cell_setRootBit(cell, ROOTBIT_UNROOTED);
 
@@ -1367,6 +1374,7 @@ void xl_unroot(Arrow a) {
 	// loose log
     looseStackAdd(a);
   }
+  return a;
 }
 
 /** return the root status */
@@ -1466,6 +1474,7 @@ static void forget(Arrow a) {
 }
 
 void xl_commit() {
+  ONDEBUG((fprintf(stderr, "xl_commit (looseStackSize = %d)\n", looseStackSize)));
   unsigned i;
   for (i = 0; i < looseStackSize ; i++) { // loose stack scanning
     Arrow a = looseStack[i];

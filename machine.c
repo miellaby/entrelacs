@@ -6,7 +6,8 @@
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 
-static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, M = 0, arrow = 0;
+static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, selfM = 0, arrow = 0, systemEnvironment = 0;
+
 static Arrow arrowFromSexp(sexp_t* sx) {
   sexp_t* ssx;
   
@@ -92,6 +93,7 @@ char* xl_programOf(Arrow a) { // returned value to be freed by the user
   
   return program;
 }
+static void machine_init();
 
 Arrow xl_operator(XLCallBack hookp, char* contextp) {
   char hooks[64];
@@ -116,7 +118,7 @@ Arrow xl_continuation(XLCallBack hookp, char* contextp) {
 static Arrow resolve(Arrow a, Arrow e, Arrow M) {
   int type = typeOf(a);
   if (type == XL_EVE) return Eve();
-  if (a == M) return M;
+  if (a == selfM) return M;
   
   Arrow x = a;
   if (type == XL_ARROW) {
@@ -326,6 +328,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
 }
 
 Arrow xl_run(Arrow rootStack, Arrow M) {
+  machine_init();
   M = transition(M);
   while (!isEve(head(head(M)))) {
     M = transition(M);
@@ -336,30 +339,78 @@ Arrow xl_run(Arrow rootStack, Arrow M) {
 }
 
 Arrow xl_eval(Arrow rootStack, Arrow program) {
-  M = a(program, Eve());
+  Arrow M = a(program, Eve());
   return xl_run(rootStack, M);
 }
 
-void xl_init() {
-  int rc = space_init();
+Arrow tailOfCB(Arrow arrow, void* context) {
+   return tail(arrow);
+}
 
+Arrow headOfCB(Arrow arrow, void* context) {
+   return head(arrow);
+}
+
+Arrow childrenOfCB(Arrow arrow, void* context) {
+   Arrow parent = tail(arrow);
+   Arrow C = head(arrow);
+   // C <=> ((x s) e) 
+   // M = (s (e Eve))
+   Arrow M = a(head(tail(C)), a(head(C), Eve()));
+   Arrow r = xl_run(Eve(), M);
+   return r;
+}
+
+Arrow rootCB(Arrow arrow, void* context) {
+   return root(arrow);
+}
+
+Arrow unrootCB(Arrow arrow, void* context) {
+   return unroot(arrow);
+}
+
+Arrow isRootedCB(Arrow arrow, void* context) {
+   return isRooted(arrow);
+}
+
+static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
+ {"tailOf", tailOfCB},
+ {"headOf", headOfCB},
+ {"childrenOf", childrenOfCB},
+ {"root", rootCB},
+ {"unroot", unrootCB},
+ {"isRooted", isRootedCB},
+ {NULL, NULL}
+};
+
+static void machine_init() {
+  if (let) return;
   let = tag("let");
   get = tag("get");
   escape = tag("escape");
   lambda = tag("lambda");
   operator = tag("operator");
   continuation = tag("continuation");
-  M = tag("@M");
+  selfM = tag("@M");
   arrow = tag("arrow");
   
   Arrow reserved = tag("reserved");
-  root(a(reserved,let));
-  root(a(reserved,get));
-  root(a(reserved,escape));
-  root(a(reserved,lambda));
-  root(a(reserved,operator));
-  root(a(reserved,continuation));
-  root(a(reserved,M));
-  root(a(reserved,arrow));
-  xl_commit();
+  root(a(reserved, let));
+  root(a(reserved, get));
+  root(a(reserved, escape));
+  root(a(reserved, lambda));
+  root(a(reserved, operator));
+  root(a(reserved, continuation));
+  root(a(reserved, selfM));
+  root(a(reserved, arrow));
+  
+  systemEnvironment = Eve();
+  for (int i = 0; systemFns[i].s != NULL ; i++) {
+    systemEnvironment= a(a(tag(systemFns[i].s), xl_operator(systemFns[i].fn, NULL)), systemEnvironment);
+  }
+  root(a(reserved, systemEnvironment));
+}
+
+void xl_init() {
+  int rc = space_init();
 }
