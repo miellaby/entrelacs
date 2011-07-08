@@ -122,9 +122,10 @@ Cell mem_get(Address a) {
 
   if (memIsChanged(m)) {
     // When replacing a modified cell, move it to reserve
-    ONDEBUG((fprintf(stderr, "(reserve move) ")));
+    Address moved = ((m.a & 0xFFF0) << 8) | offset;
+    ONDEBUG((fprintf(stderr, "(%06x moved in reserve) ", moved)));
     assert(reserveHead < reserveSize);
-    reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF) ;
+    reserve[reserveHead].a = (moved << 4) | (m.a & 0xF) ;
     reserve[reserveHead++].c = m.c;
   }
 
@@ -153,9 +154,10 @@ void mem_set(Address a, Cell c, uint32_t mem1admin) { // FIXME What if cell is i
     }
 	// no copy in the reserve, one puts the modified cell in mem0
     if (memIsChanged(m)) { // one replaces a modificied cell that one moves to reserve
-       ONDEBUG((fprintf(stderr, "(reserve move) ")));
+       Address moved = ((m.a & 0xFFF0) << 8) | offset;
+       ONDEBUG((fprintf(stderr, "(%06x moved in reserve) ", moved)));
        assert(reserveHead < reserveSize);
-       reserve[reserveHead].a = ((m.a & 0xFFF0) << 8) | (offset << 4) | (m.a & 0xF);
+       reserve[reserveHead].a = (moved << 4) | (m.a & 0xF);
        reserve[reserveHead].c = m.c;
        reserveHead++;
 	}

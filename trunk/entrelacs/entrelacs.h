@@ -41,7 +41,7 @@ char* xl_blobOf(Arrow, uint32_t*); // to freed
 
 /* Rooting */
 Arrow xl_root(Arrow);
-void  xl_unroot(Arrow);
+Arrow xl_unroot(Arrow);
 
 /* Transaction */
 void xl_commit(); //  Loose arrows are recycled here. Don't use them anymore.
@@ -56,7 +56,7 @@ int xl_equal(Arrow, Arrow); // returns !0 if arrows are equal
 //XLEnum xl_childrenOf(Arrow);
 //int  xl_next(XLEnum*, Arrow*);
 
-typedef int (*XLCallBack)(Arrow arrow, void* context);
+typedef Arrow (*XLCallBack)(Arrow arrow, void* context);
 void xl_childrenOf(Arrow, XLCallBack, void*);
 
 /* Program assimilation */
