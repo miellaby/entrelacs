@@ -984,19 +984,11 @@ enum e_xlType xl_typeOf(Arrow a) {
   if (cell_isFree(cell))
       return XL_UNDEF;
 
+  static enum e_xlType map[] = { XL_ARROW, XL_TUPLE, XL_SMALL, XL_TAG, XL_BLOB, XL_UNDEF, XL_UNDEF, XL_UNDEF};
+
   Cell catBits = cell_getCatBits(cell);
-  if (catBits == CATBITS_ARROW)
-      return XL_ARROW;
-  else if (catBits == CATBITS_SMALL)
-      return XL_SMALL;
-  else if (catBits == CATBITS_BLOB)
-      return XL_BLOB;
-  else if (catBits == CATBITS_TAG)
-      return XL_TAG;
-  else if (catBits == CATBITS_TUPLE)
-      return XL_TUPLE;
-  else
-      return XL_UNDEF;
+  int catI = catBits >> 56;
+  return map[catI];
 }
 
 
