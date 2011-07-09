@@ -6,7 +6,19 @@
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 
+#if !(defined PRODUCTION) || defined DEBUG_MACHINE
+#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
+#else
+#define ONDEBUG(w)
+#endif
 static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
+
+static Arrow printArrow(Arrow arrow, void* context) {
+  char* program = xl_programOf(arrow);
+  fprintf(stderr, "%s\n", program);
+  free(program);
+  return arrow;
+}
 
 static Arrow arrowFromSexp(sexp_t* sx) {
   sexp_t* ssx;
@@ -113,7 +125,7 @@ Arrow xl_continuation(XLCallBack hookp, char* contextp) {
   return a(continuation, a(hook, context));
 }
 
-static Arrow resolve(Arrow a, Arrow e, Arrow M) {
+static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
   int type = typeOf(a);
   if (type == XL_EVE) return Eve();
   if (a == selfM) return M;
@@ -125,7 +137,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow M) {
        Arrow t = headOf(a);
        Arrow t1= tailOf(t);
        Arrow t2 = headOf(t);
-       return a(resolve(t1, e, M), resolve(t2, e, M));
+       return a(_resolve(t1, e, M), _resolve(t2, e, M));
     } else if (t == escape) {
        return headOf(a);
     } else if (t == lambda) {
@@ -147,6 +159,15 @@ static Arrow resolve(Arrow a, Arrow e, Arrow M) {
   return a;
 }
 
+static Arrow resolve(Arrow a, Arrow e, Arrow M) {
+  ONDEBUG((fprintf(stderr, "resolve a="), printArrow(a, NULL), fprintf(stderr, " in e="), printArrow(e, NULL)));
+  Arrow w = _resolve(a, e, M);
+  ONDEBUG((fprintf(stderr, "resolved in w="), printArrow(w, NULL)));
+  return w;
+}
+
+
+
 static int isTrivial(Arrow s) {
   int type = typeOf(s);
   if (type != XL_ARROW) return 1; // true
@@ -157,6 +178,8 @@ static int isTrivial(Arrow s) {
 
 
 static Arrow transition(Arrow M) { // M = (p, (e, k))
+  ONDEBUG((fprintf(stderr, "transition M="), printArrow(M, NULL)));
+
   Arrow p = tailOf(M);
   Arrow ke = headOf(M);
   Arrow e = tailOf(ke);
@@ -175,11 +198,14 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
         char *context;
         int n = sscanf(hooks, "%p", &hook);
         assert(n == 1);
-        n = sscanf(contexts, "%p", &context);
-        assert(n == 1);
-        M = hook(M, context);
         free(hooks);
-        free(contexts);
+        if (contexts) {
+           n = sscanf(contexts, "%p", &context);
+           assert(n == 1);
+           free(contexts);
+        } else
+           context = NULL;
+        M = hook(M, context);
         return M;
      } else {
        // k = ((x (ss ee)) kk)
@@ -254,9 +280,14 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
            XLCallBack hook;
            char *context;
            int n = sscanf(hooks, "%p", &hook);
+           free(hooks);
            assert(n == 1);
-           n = sscanf(contexts, "%p", &context);
-           assert(n == 1);
+           if (contexts) {
+              n = sscanf(contexts, "%p", &context);
+              assert(n == 1);
+              free(contexts);
+           } else
+              context = NULL;
            Arrow r = hook(w, context);
            Arrow ne = a(a(x, r), e);
            M = a(s, a(ne, k));
@@ -308,8 +339,13 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        char *context;
        int n = sscanf(hooks, "%p", &hook);
        assert(n == 1);
-       n = sscanf(contexts, "%p", &context);
-       assert(n == 1);
+       free(hooks);
+       if (contexts) {
+          n = sscanf(contexts, "%p", &context);
+          assert(n == 1);
+          free(contexts);
+       } else
+          context = NULL;
        Arrow r = hook(w, context);
        M = a(r, a(e, k));
        return M;
@@ -337,7 +373,8 @@ Arrow xl_run(Arrow rootStack, Arrow M) {
 }
 
 Arrow xl_eval(Arrow rootStack, Arrow program) {
-  Arrow M = a(program, Eve());
+  machine_init();
+  Arrow M = a(program, a(systemEnvironment, Eve()));
   return xl_run(rootStack, M);
 }
 

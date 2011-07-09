@@ -1,13 +1,17 @@
 
 #define Eve() xl_Eve()
-#define arrow(A, B)  xl_arrow(A, B)
+#define arrow(T, H)  xl_arrow(T, H)
 #define tag(S) xl_tag(S)
-#define btag(N, S) xl_btag(N, S);
-#define blob(N, S) xl_blob(N, S);
+#define btag(N, S) xl_btag(N, S)
+#define blob(N, S) xl_blob(N, S)
 
-#define a(A, B) xl_arrow(A, B)
+#define t(S) xl_tag(S)
+#define a(T, H) xl_arrow(T, H)
+#define DEFTAG(V) Arrow V = xl_tag(#V)
+#define DEFA(T, H) Arrow T##_##H = a(T, H)
 
-#define arrowMaybe(A, B)  xl_arrowMaybe(A, B)
+
+#define arrowMaybe(T, H)  xl_arrowMaybe(T, H)
 #define tagMaybe(S) xl_tagMaybe(S)
 #define btagMaybe(N, S) xl_tagMaybe(N, S)
 #define blobMaybe(N, S) xl_blobMaybe(N, S)
