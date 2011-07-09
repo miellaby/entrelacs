@@ -13,9 +13,9 @@
 // The entrelacs space code.
 // It consists in a RAM cache in front of the memory 0 level storage.
 // Todo: Cuckoo hashing
-#define MEMSIZE 0x1000
-#define RESERVESIZE 256
-static const Address memSize = MEMSIZE ; // cache size (4096)
+#define MEMSIZE 0x2000
+#define RESERVESIZE 512
+static const Address memSize = MEMSIZE ; // cache size (8192)
 static const Address reserveSize = RESERVESIZE ; // cache reserve size
 
 // The RAM cache : an n="size" array of record. Each record can carry one mem0 cell.

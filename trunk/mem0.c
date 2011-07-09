@@ -55,7 +55,6 @@ Cell mem0_get(Address r) {
    Cell result;
    fseek(F, r * sizeof(Cell), SEEK_SET);
    size_t read=fread(&result, sizeof(Cell), 1, F);
-   if (!read)
    assert(read);
    return result;
 }

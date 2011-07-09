@@ -6,6 +6,12 @@
 #include "mem.h"
 #include "sha1.h"
 
+#ifndef PRODUCTION
+#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
+#else
+#define ONDEBUG(w)
+#endif
+
 /*
  * Eve
  */
@@ -187,8 +193,6 @@ static Address* looseStack = NULL;
 static Address  looseStackMax = 0;
 static Address  looseStackSize = 0;
 
-#ifndef PRODUCTION
-#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
 
 static void show_cell(Cell C, int ofSliceChain) {
    Cell catBits = cell_getCatBits(C);
@@ -248,9 +252,6 @@ static void show_cell(Cell C, int ofSliceChain) {
    fflush(stderr);
 }
 
-#else
-#define ONDEBUG(w)
-#endif
 
 static void looseStackAdd(Address a) {
   geoalloc((char**)&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), looseStackSize + 1);
@@ -1258,7 +1259,7 @@ static void disconnect(Arrow a, Arrow child) {
 	      // one adds the jump amount to a.child0
           cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
 		  unsigned child0 = cell_getChild0(cell);
-		  child0 += jump;
+		  child0 += 1 + jump; // reminder: +1 to jump over the removed cell
 		  if (child0 < MAX_CHILD0) {
 	    	cell = cell_chainChild0(cell, child0);
             mem_set(a, cell, 0); ONDEBUG((show_cell(cell, 0)));

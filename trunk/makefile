@@ -3,20 +3,22 @@
 # CFLAGS="-g -o2" make clean all
 .PHONY: clean all test.%
 
-
 LDFLAGS+= -L. -Lsexpr/src
 CPPFLAGS+=-std=c99 -Isexpr/src
-TESTS= draft space program machine
+TESTS= space program machine
 
 all: libentrelacs.so libentrelacs.a
 
 clean:
-	-rm -f *.o *.so test%.out
+	-rm -f *.o *.so $(TESTS:%=test%)
 
+draft: testdraft.o testdraft test.draft
 
-test: $(TESTS:%=test%.o) $(TESTS:%=test%) $(TESTS:%=test.%)
+tests: $(TESTS:%=test%.o) $(TESTS:%=test%)
 
-test.% : test%
+run: $(TESTS:%=run.test%)
+
+run.% : %
 	-[ -f entrelacs.dat ] && rm entrelacs.dat
 	LD_LIBRARY_PATH=. ./$<
 	od -t x1z -w8 entrelacs.dat
@@ -26,7 +28,6 @@ libentrelacs.a: mem0.o mem.o sha1.o space.o machine.o
 	
 libentrelacs.so: mem0.o mem.o sha1.o space.o machine.o
 	$(LD) $(LDFLAGS) -o $(@) $^ -lsexp -shared -lc
-
 
 *.o: *.h
 

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "entrelacs/entrelacs.h"
+#include "entrelacs/entrelacsm.h"
 #include "mem.h" // geoalloc
 
 struct s_printArrowC { int size; int max; char* buffer; };
@@ -51,30 +52,104 @@ Arrow printArrow(Arrow a, void *ctx) {
     return a;
 }
 
-int main(int argc, char* argv[]) {
-	xl_init();
-    char output[255];
-	Arrow helloWorld = xl_arrow(xl_tag("hello"), xl_tag("world"));
-	char *s1 = xl_tagOf(xl_tailOf(helloWorld));
-	char *s2 = xl_tagOf(xl_headOf(helloWorld));
-	snprintf(output, 255, "%s %s", s1, s2);
-    puts(output);
-	assert(0 == strcmp(output, "hello world"));
+int basic() {
+    DEFTAG(hello); // Arrow hello = xl_tag("hello");
+    DEFTAG(world);
+    DEFA(hello, world); // Arrow hello_world = xl_arrow(hello, world);
+    
+    // check arrow types
+    
+    // check regular arrows
+    assert(typeOf(hello_world) == XL_ARROW);
+    assert(tail(hello_world) == hello);
+    assert(head(hello_world) == world);
+    
+    // Check tags
+    assert(typeOf(hello) == XL_TAG && typeOf(world) == XL_TAG);
+	char *s1 = str(hello);
+	char *s2 = str(world);
+	assert(!strcmp("hello", s1) && !strcmp("world", s2));
 	free(s1);
 	free(s2);
-    xl_root(helloWorld);
-	xl_commit();
-	assert(xl_isRooted(helloWorld));
-	helloWorld = xl_arrow(xl_tag("hello"), xl_tag("world"));
-	assert(xl_isRooted(helloWorld));
-    Arrow helloWorldDude = xl_arrow(helloWorld, xl_tag("dude"));
-    xl_root(helloWorldDude);
-    xl_childrenOf(xl_tag("hello"), printArrow, NULL);
-    xl_unroot(helloWorld);
-	assert(!xl_isRooted(helloWorld));
-    xl_childrenOf(xl_tag("hello"), printArrow, NULL);
-    xl_unroot(helloWorldDude);
-	printArrow(helloWorldDude, NULL);
-	xl_commit();
+    
+    // check rooting
+    root(hello_world);
+	commit();
+
+    // check deduplication
+    Arrow original = hello_world;
+    {
+       DEFTAG(hello);
+       DEFTAG(world);
+       DEFA(hello, world);
+       assert(original == hello_world);
+    }
+    
+    // check rooting persistency
+    assert(isRooted(hello_world));
+    
+    // check arrow connection
+    DEFTAG(dude);
+    DEFA(hello, dude);
+    root(hello_dude);
+    
+    childrenOf(hello, printArrow, NULL);
+    
+    // check unrooting
+    unroot(hello_world);
+    assert(!isRooted(hello_world));
+    
+    // check Garbage Collection
+    commit();
+    assert(XL_UNDEF == typeOf(hello_world));
+    assert(XL_UNDEF == typeOf(world));
+    assert(XL_TAG == typeOf(hello));
+
+    // check arrow disconnection
+    childrenOf(hello, printArrow, NULL);
+    
+    unroot(hello_dude);
+	commit();
+}
+
+int stress() {
+    char buffer[50];
+    Arrow arrows[1000];
+    
+    // deduplication stress
+    for (int i = 0 ; i < 200; i++) {
+        snprintf(buffer, 50, "This is the tag #%d", i);
+        arrows[i] = tag(buffer);
+    }
+    for (int i = 0 ; i < 200; i++) {
+        snprintf(buffer, 50, "This is the tag #%d", i);
+        Arrow tagi = tag(buffer);
+        assert(arrows[i] == tagi);
+        root(tagi);
+    }
+    commit();
+    
+    // connectivity stress
+    DEFTAG(connectMe);
+    root(connectMe);
+    for (int i = 0 ; i < 200; i++) {
+        Arrow child = arrow(connectMe, arrows[i]);
+        root(child);
+    }
+    childrenOf(connectMe, printArrow, NULL);
+    commit();
+    // disconnectivity stress
+    for (int i = 0 ; i < 200; i++) {
+        Arrow child = arrow(connectMe, arrows[i]);
+        unroot(child);
+     //   unroot(arrows[i]);
+    }
+    childrenOf(connectMe, printArrow, NULL);
+}
+
+int main(int argc, char* argv[]) {
+    xl_init();
+    basic();
+    stress();
 	return 0;
 }
