@@ -379,11 +379,11 @@ Arrow xl_eval(Arrow rootStack, Arrow program) {
 }
 
 Arrow tailOfCB(Arrow arrow, void* context) {
-   return tail(arrow);
+   return a(escape, tail(arrow));
 }
 
 Arrow headOfCB(Arrow arrow, void* context) {
-   return head(arrow);
+   return a(escape, head(arrow));
 }
 
 Arrow childrenOfCB(Arrow arrow, void* context) {
@@ -393,19 +393,19 @@ Arrow childrenOfCB(Arrow arrow, void* context) {
    // M = (s (e Eve))
    Arrow M = a(head(tail(C)), a(head(C), Eve()));
    Arrow r = xl_run(Eve(), M);
-   return r;
+   return a(escape, r);
 }
 
 Arrow rootCB(Arrow arrow, void* context) {
-   return root(arrow);
+   return a(escape, root(arrow));
 }
 
 Arrow unrootCB(Arrow arrow, void* context) {
-   return unroot(arrow);
+   return a(escape, unroot(arrow));
 }
 
 Arrow isRootedCB(Arrow arrow, void* context) {
-   return isRooted(arrow);
+   return a(escape, isRooted(arrow));
 }
 
 static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
@@ -441,7 +441,8 @@ static void machine_init() {
   
   systemEnvironment = Eve();
   for (int i = 0; systemFns[i].s != NULL ; i++) {
-    systemEnvironment= a(a(tag(systemFns[i].s), xl_operator(systemFns[i].fn, NULL)), systemEnvironment);
+    Arrow op = a(tag(systemFns[i].s), xl_operator(systemFns[i].fn, NULL));
+    systemEnvironment= a(op, systemEnvironment);
   }
   root(a(reserved, systemEnvironment));
 }

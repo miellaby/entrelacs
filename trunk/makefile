@@ -1,6 +1,8 @@
-# Suggested call
+# Suggested calls:
 # CFLAGS=-DPRODUCTION make clean all
 # CFLAGS="-g -o2" make clean all
+# CFLAGS="-DPRODUCTION -DDEBUG_MACHINE -g o2" make clean all
+# make run.testmachine
 .PHONY: clean all test.%
 
 LDFLAGS+= -L. -Lsexpr/src
