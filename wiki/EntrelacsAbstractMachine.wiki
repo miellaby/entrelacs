@@ -2,26 +2,21 @@
 
 = Introduction =
 
-The second major component of an Entrelacs System beside the ArrowsSpace is a machine to eval programs directly stored as arrows structures. That is the _Entrelacs Abstract Machine_.
+The second major component of an Entrelacs System beside the ArrowsSpace is the _Entrelacs Abstract Machine_. It's a software machine which evals programs directly stored as arrows constructs.
 
-This machine is designed in such a way that _homoiconity_ reachs its upper limit. In concrete terms, there is no difference between:
- * source code
- * CST (Concrete Syntax Tree)
- * AST (Abstract Syntax Tree)
+Programs are defined according to the [EntrelacsLanguage Entrelacs Language]. This language is designed so that there is no difference between, source code, CST (Concrete Syntax Tree), and AST (Abstract Syntax Tree) in order to simplify meta-programming and persistent reflexivity.
 
-It implies meta-programs (programs that handle other programs) design is super easy. Moreover, a given program may easily fetch (introspection) and even modify (intercession) itself at source level and make these changes persistent.
-
-In addition, the whole machine state is stored as a single arrow that programs may fetch and edit. So programs may handle all the underlying machine components like:
+The machine state itself consists in an arrows construct that programs may fetch and edit. So running programs may handle all the underlying machine components like:
   * environments,
   * continuations,
   * closures,
   * evaluated expression
   * ...
 
-The Entrelacs Abstract Machine is largely inspired by the 
+Concretely, the _Entrelacs Machine_ is largely inspired by the 
 CaEK abstract machine of Flanagan et al. [1993]. The only major difference is that programs are hold by arrows structures rather than textual source code. Serialized text representation of the Entrelacs Language will only be supported for communication purpose.
 
-Last note: Experimental features (non trivial application) are tagged with #e# hashtag hereafter.
+_note: experimental features are tagged with #e# hereafter_
 
 = The Language =
 {{{
