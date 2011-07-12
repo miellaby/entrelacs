@@ -1,5 +1,5 @@
 #summary An introduction to Entrelacs
-#labels Featured,introduction
+#labels introduction
 <img align="left" src="http://entrelacs.googlecode.com/svn/trunk/doc/pictures/car.png"/>
 ===stupid, stupid computers!===
 
