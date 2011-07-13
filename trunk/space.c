@@ -6,6 +6,12 @@
 #include "mem.h"
 #include "sha1.h"
 
+#ifndef PRODUCTION
+#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
+#else
+#define ONDEBUG(w)
+#endif
+
 /*
  * Eve
  */
@@ -187,9 +193,6 @@ static Address* looseStack = NULL;
 static Address  looseStackMax = 0;
 static Address  looseStackSize = 0;
 
-#ifndef PRODUCTION
-#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
-
 static void show_cell(Cell C, int ofSliceChain) {
    Cell catBits = cell_getCatBits(C);
    int  catI = catBits >> 56;
@@ -247,10 +250,6 @@ static void show_cell(Cell C, int ofSliceChain) {
    fprintf(stderr, "\n");
    fflush(stderr);
 }
-
-#else
-#define ONDEBUG(w)
-#endif
 
 static void looseStackAdd(Address a) {
   geoalloc((char**)&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), looseStackSize + 1);
@@ -448,7 +447,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   // Probe for an existing singleton
   probeAddress = hashLocation;
   firstFreeCell = Eve;
-  while (1) {
+  while (1) {	 // TODO: thinking about a probing limit
      cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
      if (cell_isFree(cell))
 	    firstFreeCell = probeAddress;
@@ -460,23 +459,27 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
      // Not the singleton
 
      if (!more(cell)) {
-        while (firstFreeCell == Eve) {
-           growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
-           cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
-           if (cell_isFree(cell))
-               firstFreeCell = probeAddress;
-        }  
         break; // Probing over. It's a miss.
      }
  
      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
-	 // TODO: thinking about a probing limit
   }
   // Miss
 
   if (locateOnly) // one only want to test for singleton existence in the arrows space
     return Eve; // Eve means not found
 
+  if (firstFreeCell == Eve) {
+    while (1) {
+      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+      cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
+      if (cell_isFree(cell)) {
+        firstFreeCell = probeAddress;
+        break;
+      }
+    }
+  }
+   
   /* Create a singleton */
   newArrow = firstFreeCell;
   cell = mem_get(newArrow); ONDEBUG((show_cell(cell, 0)));
@@ -557,12 +560,6 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
     // Not the singleton
 
     if (!more(cell)) {
-        while (firstFreeCell == Eve) {
-           growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
-           cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
-           if (cell_isFree(cell))
-               firstFreeCell = probeAddress;
-        }  
         break; // Miss
     }
 	
@@ -571,6 +568,17 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
 
   if (locateOnly)
     return Eve;
+
+  if (firstFreeCell == Eve) {
+    while (1) {
+      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+      cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
+      if (cell_isFree(cell)) {
+        firstFreeCell = probeAddress;
+        break;
+      }
+    }
+  }
 
   /* Create a missing singleton */
   newArrow = firstFreeCell;
@@ -741,12 +749,6 @@ Arrow btag(int length, char* str, int locateOnly) {
     // Not the singleton
 
     if (!more(cell)) {
-        while (firstFreeCell == Eve) {
-           growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
-           cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
-           if (cell_isFree(cell))
-               firstFreeCell = probeAddress;
-        }  
         break; // Miss
     }
      
@@ -756,6 +758,17 @@ Arrow btag(int length, char* str, int locateOnly) {
   if (locateOnly)
     return Eve;
 
+  if (firstFreeCell == Eve) {
+    while (1) {
+      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+      cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
+      if (cell_isFree(cell)) {
+        firstFreeCell = probeAddress;
+        break;
+      }
+    }
+  }
+   
   /* Create a missing singleton */
   newArrow = firstFreeCell;
   cell = mem_get(newArrow); ONDEBUG((show_cell(cell, 1)));
@@ -783,7 +796,7 @@ Arrow btag(int length, char* str, int locateOnly) {
     growingShift(next, next, offset, sync);
 	nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 1)));
     while (!cell_isFree(nextCell)) {
-       growingShift(next, next, hChain, sync);
+       growingShift(next, next, offset, sync);
 	   nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 1)));
     }
   	syncCell = sync_build(syncCell, newArrow, next, REATTACHMENT_FIRST);
@@ -1036,7 +1049,7 @@ static void connect(Arrow a, Arrow child) {
         	(cell & 0x000000FFFFFF00LLU) &&
 		   cell_getCatBits(cell) != CATBITS_LAST) {
 		if (cell_getJumpNext(cell) ==  MAX_JUMP) {
-		   // jump == MAX ==> ref1 points to next
+		   // jump == MAX ==> "deep link": ref1 points to next
 		   current = cell_getRef1(cell);
 		} else {
 		   current = jumpToNext(cell, current, hChild, a);
@@ -1158,7 +1171,7 @@ static void disconnect(Arrow a, Arrow child) {
 
 		previous = current;
 		if (cell_getJumpNext(cell) ==  MAX_JUMP) {
-		   // jump == MAX ==> ref1 points to next
+		   // jump == MAX ==> "deep link": ref1 points to next
 		   current = cell_getRef1(cell);
 		} else {
 		   current = jumpToNext(cell, current, hChild, a);
@@ -1175,8 +1188,12 @@ static void disconnect(Arrow a, Arrow child) {
       cell &= 0xFFFFFFFF000000FFLLU;
     }
 
-	if (cell & 0xFFFFFFFFFFFF00LLU) {
-	   // still an other back-ref in this cell
+    if (cell_getCatBits(cell) == CATBITS_CHAIN && cell_getJumpNext(cell) == MAX_JUMP) { // "deep link" case
+      if (cell & 0xFFFFFF00000000LLU)
+        // still a back-ref in this "deep link" child chain cell
+        return;
+    } else if (cell & 0xFFFFFFFFFFFF00LLU) {
+	   // still an other back-ref in this child chain cell
        mem_set(current, cell, 0); ONDEBUG((show_cell(cell, 0)));
 	   // nothing more to do
 	   return;
@@ -1191,6 +1208,7 @@ static void disconnect(Arrow a, Arrow child) {
 	  cell = cell_free(cell);
       mem_set(current, cell, 0); ONDEBUG((show_cell(cell, 0)));
 	  
+      // FIXME detect a chain of deep links up to this last cell
 	  if (previous) {
 	      // Unchain previous cell (make it the last chained cell)
 	      cell = mem_get(previous); ONDEBUG((show_cell(cell, 0)));
@@ -1222,7 +1240,11 @@ static void disconnect(Arrow a, Arrow child) {
 
 	  // Find the next cell
       unsigned jump = cell_getJumpNext(cell);
-	  Address next = jumpToNext(cell, current, hChild, a);
+      Address next;
+      if (jump == MAX_JUMP)
+         next = cell_getRef1(cell);
+      else         
+	     next = jumpToNext(cell, current, hChild, a);
 
 	  // Free the whole cell
 	  cell = cell_free(cell);
@@ -1250,29 +1272,20 @@ static void disconnect(Arrow a, Arrow child) {
 		        Arrow child1 = cell_getRef1(cell);
                 cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
                 mem_set(previous, cell, 0); ONDEBUG((show_cell(cell, 0)));
-			    connect(a, child1); //FIXME No no! otherwise it may double connect child1 children
+			    connect(a, child1); // Q:may it connect 'a' to its parents twice? R: no. It's ok.
 		     }
 		  }
       } else {
 	      // This is the first cell of the children cells chain
 	      // one adds the jump amount to a.child0
           cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
-		  unsigned child0 = cell_getChild0(cell);
-		  child0 += jump;
-		  if (child0 < MAX_CHILD0) {
-	    	cell = cell_chainChild0(cell, child0);
+		  unsigned child0 = cell_getChild0(cell) + jump + 1; // don't forget + 1 to jump over freed cell
+		  if (child0 < MAX_CHILD0) { // an easy one: one updates child0
+            cell = cell_chainChild0(cell, child0);
             mem_set(a, cell, 0); ONDEBUG((show_cell(cell, 0)));
 		  } else {
-            // FIXME: What if there is already child0=MAX_CHILD0 and a REATTACHMENT cell there?
-            
-		    cell = cell_chainChild0(cell, MAX_CHILD0);
-            mem_set(a, cell, 0); ONDEBUG((show_cell(cell, 0)));
-
-			// Oh my! We are almost got
-			// One reuses the freed cell and make it a reattachment cell
-
-			cell = mem_get(current); ONDEBUG((show_cell(cell, 0)));
-		    cell = sync_build(cell, a, next, REATTACHMENT_CHILD0);
+            // One reuses the freed cell and convert it into a "deep link" cell
+            cell = refs_build(cell, 0, next, MAX_JUMP);
 		    mem_set(current, cell, 0); ONDEBUG((show_cell(cell, 0)));
           }
 	  }

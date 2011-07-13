@@ -14,7 +14,7 @@
 // It consists in a RAM cache in front of the memory 0 level storage.
 // Todo: Cuckoo hashing
 #define MEMSIZE 0x2000
-#define RESERVESIZE 512
+#define RESERVESIZE 1024
 static const Address memSize = MEMSIZE ; // cache size (8192)
 static const Address reserveSize = RESERVESIZE ; // cache reserve size
 
