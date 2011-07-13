@@ -1396,7 +1396,7 @@ Arrow xl_unroot(Arrow a) {
 int xl_isRooted(Arrow a) {
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (!cell_isArrow(cell)) return -1;
-  return (cell_isRooted(cell) ? 1 : 0);
+  return (cell_isRooted(cell) ? a : Eve);
 }
 
 /** return the loose status */
