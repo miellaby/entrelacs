@@ -11,6 +11,8 @@
 #else
 #define ONDEBUG(w)
 #endif
+#define dputs(S) ONDEBUG(fprintf(stderr, "%s\n", S))
+
 static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow printArrow(Arrow arrow, void* context) {
@@ -186,12 +188,14 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
   Arrow k = headOf(ke);
   
   if (isTrivial(p)) { // Trivial expression
-     // p = v
-     
+     // p == v
+     dputs("p == v");
+
      if (isEve(k)) return M; // stop, program result = resolve(v, e, M)
      
      if (tail(k) == continuation) { //special system continuation #e#
-        // k = (continuation (<hook> <context>))
+        // k == (continuation (<hook> <context>))
+        dputs("k == (continuation (<hook> <context>))");
         char *hooks = tagOf(tailOf(headOf(k)));
         char *contexts = tagOf(headOf(headOf(k)));
         XLCallBack hook;
@@ -208,7 +212,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
         M = hook(M, context);
         return M;
      } else {
-       // k = ((x (ss ee)) kk)
+       // k == ((x (ss ee)) kk)
+       dputs("k == ((x (ss ee)) kk)");
        Arrow w = resolve(p, e, M);
        Arrow kk = head(k);
        Arrow f = tail(k);
@@ -219,31 +224,36 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        return M;
      }
   } else if (tail(p) == let) { //let expression family
-     // p = (let ((x v) s))
+     // p == (let ((x v) s))
+     dputs("p == (let ((x v) s))");
      Arrow v = head(tail(head(p)));
      Arrow x = tail(tail(head(p)));
      Arrow s = head(head(p));
 
      if (tail(x) == get) {  // #e#
+       dputs("x == (get a)");
        x = resolve(x, e, M);
      }
 
      // FIXME x == "@M" case
 
      if (isTrivial(v)) { // Trivial let rule
-       // p = (let ((x t) s))
+       // p == (let ((x t) s))
+       dputs("p == (let ((x t) s))");
        Arrow t = v;
        Arrow w = resolve(t, e, M);
        M = a(s, a(a(a(x, w), e), k));
        return M;
        
      } else /* !isTrivial(v) */ { // Non trivial let rules
-       // p = (let ((x (v0 v1) s)) : application in let
+       // p == (let ((x (v0 v1) s)) : application in let
+       dputs("p == (let ((x (v0 v1) s))");
        Arrow v0 = tail(v);
        Arrow v1 = head(v);
 
        if (!isTrivial(v0)) { // "tail nested applications in let" rule #e#
          // p == (let ((x ((vv0 vv1) v1)) s))
+         dputs("p == (let ((x ((vv0 vv1) v1)) s))");
          Arrow vv0 = tail(v0);
          if (vv0 == let) {
             // error
@@ -259,6 +269,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          
        } else if (!isTrivial(v1)) { // "head nested application in let" rule #e#
          // p == (let ((x (t0 s1)) s))
+         dputs("p == (let ((x (t0 s1)) s))");
          Arrow t0 = v0;
          Arrow s1 = v1;
          // rewriting program to sage v1 and (t0 v1) evaluation
@@ -268,13 +279,15 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          return M;
          
        } else /* isTrivial(v1)) */ { // Serious let rule
-         // p = (let ((x t) s)) where t = (t0 t1)
+         // p == (let ((x t) s)) where t = (t0 t1)
+         dputs("p == (let ((x t) s)) where t = (t0 t1)");
          Arrow t0 = v0;
          Arrow t1 = v1;
          Arrow w = resolve(t1, e, M);
          Arrow C = resolve(t0, e, M);
          if (tail(C) == operator) { // System call special case
            // C = (operator (hook context))
+           dputs("C = (operator (hook context))");
            char* hooks = str(tail(head(C)));
            char* contexts = str(head(head(C)));
            XLCallBack hook;
@@ -294,7 +307,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
            return M;
            
          } else { // closure case
-           // C = ((y ss) ee)
+           // C == ((y ss) ee)
+           dputs("C == ((y ss) ee)");
            Arrow ee = head(C);
            Arrow y = tail(tail(C));
            Arrow ss = head(tail(C));
@@ -305,7 +319,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        }
      }
   } else if (!isTrivial(tail(p))) { // Not trivial function in application #e#
-     // p = (s v)
+     // p == (s v)
+     dputs("p == (s v)");
      Arrow s = tail(p);
      Arrow v = head(p);
      // rewriting program with a let
@@ -315,7 +330,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      return M;
 
   } else if (!isTrivial(head(p))) { // Not trivial parameter in application #e#
-     // p = (t s)
+     // p == (t s)
+     dputs("p == (t s)");
      Arrow t = tail(p);
      Arrow s = head(p);
      // rewriting program with a let
@@ -325,14 +341,16 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      return M;
 
   } else { // Trivial application rule
-     // p = (t0 t1)
+     // p == (t0 t1)
+     dputs("p == (t0 t1)");
      // Stacking not needed
      Arrow t0 = tail(p);
      Arrow t1 = head(p);
      Arrow w = resolve(t1, e, M);
      Arrow C = resolve(t0, e, M);
      if (tail(C) == operator) { // System call case
-       // C = (operator (hook context))
+       // C == (operator (hook context))
+       dputs("C == (operator (hook context))");
        char* hooks = str(tail(head(C)));
        char* contexts = str(head(head(C)));
        XLCallBack hook;
@@ -351,7 +369,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        return M;
        
      } else { // closure case
-       // C = ((x ss) ee)
+       // C == ((x ss) ee)
+       dputs("C == ((x ss) ee)");
        Arrow x = tail(tail(C));
        Arrow ss = head(tail(C));
        Arrow ee = head(C);
@@ -364,9 +383,10 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
 Arrow xl_run(Arrow rootStack, Arrow M) {
   machine_init();
   M = transition(M);
-  while (!isEve(head(head(M)))) {
+  while (!isEve(head(head(M))) || !isTrivial(tail(M))) {
     M = transition(M);
   }
+  dputs("finish");
   Arrow p = tail(M);
   Arrow e = tail(head(M));
   return resolve(p, e, M);
