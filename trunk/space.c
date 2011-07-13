@@ -6,12 +6,6 @@
 #include "mem.h"
 #include "sha1.h"
 
-#ifndef PRODUCTION
-#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
-#else
-#define ONDEBUG(w)
-#endif
-
 /*
  * Eve
  */
@@ -193,6 +187,8 @@ static Address* looseStack = NULL;
 static Address  looseStackMax = 0;
 static Address  looseStackSize = 0;
 
+#ifndef PRODUCTION
+#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
 
 static void show_cell(Cell C, int ofSliceChain) {
    Cell catBits = cell_getCatBits(C);
@@ -252,6 +248,9 @@ static void show_cell(Cell C, int ofSliceChain) {
    fflush(stderr);
 }
 
+#else
+#define ONDEBUG(w)
+#endif
 
 static void looseStackAdd(Address a) {
   geoalloc((char**)&looseStack, &looseStackMax, &looseStackSize, sizeof(Address), looseStackSize + 1);
@@ -409,7 +408,7 @@ static Address jumpToChild0(Cell cell, Address address, Address offset, Address 
    for (int i = 0; i < jump; i++)
      growingShift(next, next, offset, address);
 
-   if (jump == MAX_JUMP) { // one needs to look for a sync cell
+   if (jump == MAX_CHILD0) { // one needs to look for a sync cell
      cell = mem_get(next); ONDEBUG((show_cell(cell, 0)));
 	 int loopDetect = 10000;
 	 while (--loopDetect && !cell_isSyncFrom(cell, address, REATTACHMENT_CHILD0)) {
@@ -1251,7 +1250,7 @@ static void disconnect(Arrow a, Arrow child) {
 		        Arrow child1 = cell_getRef1(cell);
                 cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
                 mem_set(previous, cell, 0); ONDEBUG((show_cell(cell, 0)));
-			    connect(a, child1);
+			    connect(a, child1); //FIXME No no! otherwise it may double connect child1 children
 		     }
 		  }
       } else {
@@ -1259,11 +1258,13 @@ static void disconnect(Arrow a, Arrow child) {
 	      // one adds the jump amount to a.child0
           cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
 		  unsigned child0 = cell_getChild0(cell);
-		  child0 += 1 + jump; // reminder: +1 to jump over the removed cell
+		  child0 += jump;
 		  if (child0 < MAX_CHILD0) {
 	    	cell = cell_chainChild0(cell, child0);
             mem_set(a, cell, 0); ONDEBUG((show_cell(cell, 0)));
 		  } else {
+            // FIXME: What if there is already child0=MAX_CHILD0 and a REATTACHMENT cell there?
+            
 		    cell = cell_chainChild0(cell, MAX_CHILD0);
             mem_set(a, cell, 0); ONDEBUG((show_cell(cell, 0)));
 
