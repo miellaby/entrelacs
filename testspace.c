@@ -175,7 +175,7 @@ int stress() {
     }
     commit();
     
-    // connecting stress
+    // connection stress
     test_title("connection stress");
     DEFTAG(connectMe);
     root(connectMe);
@@ -190,7 +190,7 @@ int stress() {
     }
     childrenOf(connectMe, printArrow, NULL);
     
-    // disconnecting stress
+    // disconnection stress
     test_title("disconnection stress");
     for (int i = 0 ; i < 200; i++) {
         Arrow child = arrow(connectMe, tags[i]);
