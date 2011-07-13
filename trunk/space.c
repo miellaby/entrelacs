@@ -1219,6 +1219,7 @@ static void disconnect(Arrow a, Arrow child) {
           // so we've removed the last child from the list. The list is empty.
           cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
 		  cell = cell_chainChild0(cell, 0);
+          // FIXME: if cell.jump == MAX_CHILD0 there is a child0 reattachment cell to delete!
 	      if (cell_isRooted(cell)) {
 	         // the cell is still rooted
 			 mem_set(a, cell, 0); ONDEBUG((show_cell(cell, 0)));
@@ -1445,6 +1446,7 @@ static void forget(Arrow a) {
 	}
 
     // Free chain
+    // FIXME this code doesn't erase reattachment cells :(
   	Cell hChain = hashChain(a, cell) % PRIM1;
     if (!hChain) hChain = 1; // offset can't be 0
     Address next = jumpToFirst(cell, a, hChain, a);
