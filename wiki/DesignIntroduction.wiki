@@ -1,4 +1,4 @@
-#summary The anticipated Entrelacs prototype publishes API to interact and extend an Entrelacs abstract machine on top of an "Arrows space".
+#summary Overview of an Entrelacs System
 #labels Featured,Phase-Design
 
 Please find herein an overview of the EntrelacsSystem, which deals with _arrows_ in the way explained by the ArrowParadigm.
