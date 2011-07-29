@@ -1,6 +1,6 @@
 #summary More detailed description of the first ArrowsSpace prototype
 
-This page describes the first ArrowsSpace prototype.
+This page describes the first ArrowsSpace prototype. It takes place in the first [EntrelacsPrototypeArchitecture Entrelacs System prototype].
 
 == Architecture overview ==
 
