@@ -98,10 +98,11 @@ char* xl_programOf(Arrow a) { // returned value to be freed by the user
   
   CSTRING *s = NULL;
   print_sexp_cstr(&s, sx, 256);
-  
-  char *program = malloc(sizeof(char) * s->curlen); 
+  assert(s->curlen);
+  char *program = (char *)malloc(sizeof(char) * s->curlen + 1); 
   assert(program);
-  strcpy(program, s->base);
+  strncpy(program, s->base, s->curlen);
+  program[s->curlen] = '\0';
   
   sdestroy(s);
   

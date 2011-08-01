@@ -1,7 +1,7 @@
 # Suggested calls:
 # CFLAGS=-DPRODUCTION make clean all
 # CFLAGS="-g -o2" make clean all
-# CFLAGS="-DPRODUCTION -DDEBUG_MACHINE -g o2" make clean all
+# CFLAGS="-DPRODUCTION -DDEBUG_MACHINE -g -o2" make clean all
 # make tests
 # make run
 # CFLAGS="-g -o2" make clean.testmachine testmachine
