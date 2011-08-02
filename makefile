@@ -9,11 +9,14 @@
 
 .PHONY: clean all clean.% test.% run.% help
 
-LDFLAGS+=-L. -Lsexpr/src
-CPPFLAGS+=-std=c99 -Isexpr/src
-TARGETS=libentrelacs.so libentrelacs.a
-OBJECTS=mem0.o mem.o sha1.o space.o machine.o
-TESTS=space program machine
+SEXP_LIBPATH = sexpr/src
+SEXP_INCPATH = sexpr/src
+
+LDFLAGS += -L$(SEXP_LIBPATH)
+CPPFLAGS += -std=c99 -I$(SEXP_INCPATH)
+TARGETS = libentrelacs.so libentrelacs.a
+OBJECTS = mem0.o mem.o sha1.o space.o machine.o
+TESTS = space program machine
 
 all: $(TARGETS)
 
@@ -26,7 +29,7 @@ clean: $(TESTS:%=clean.test%)
 $(TESTS:%=clean.test%):
 	-rm $(@:clean.%=%) $(@:clean.%=%.o)
 
-tests: $(TESTS:%=test%.o) $(TESTS:%=test%)
+tests: all $(TESTS:%=test%.o) $(TESTS:%=test%)
 
 #$(TESTS:%=test%): libentrelacs.so
 $(TESTS:%=test%): libentrelacs.a sexpr/src/libsexp.a
