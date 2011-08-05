@@ -13,7 +13,7 @@
 #endif
 #define dputs(S) ONDEBUG(fprintf(stderr, "%s\n", S))
 
-static Arrow let = 0, get = 0, escape = 0, lambda = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
+static Arrow let = 0, escape = 0, resolveOp = 0, lambda = 0, lambdax = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow printArrow(Arrow arrow, void* context) {
   char* program = xl_programOf(arrow);
@@ -138,19 +138,22 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
     Arrow t = tailOf(a);
     if (t == arrowOp) {
        Arrow t = headOf(a);
-       Arrow t1= tailOf(t);
+       Arrow t1 = tailOf(t);
        Arrow t2 = headOf(t);
        return a(_resolve(t1, e, M), _resolve(t2, e, M));
     } else if (t == escape) {
        return headOf(a);
     } else if (t == lambda) {
        return arrow(headOf(a), e);
-    } else if (t == get) {
+    } else if (t == lambdax) {
+       return arrow(lambdax, arrow(headOf(a), e));
+    } else if (t == resolveOp) {
        x = headOf(a);
     } else {
       return a;
     }
   }
+  // environment matching loop
   Arrow se = e;
   while (!isEve(se)) {
     Arrow b = tailOf(se);
@@ -175,7 +178,7 @@ static int isTrivial(Arrow s) {
   int type = typeOf(s);
   if (type != XL_ARROW) return 1; // true
   Arrow t = tailOf(s);
-  if (t == lambda || t == arrowOp || t == escape || t == get) return 1;
+  if (t == lambda || t == lambdax || t == arrowOp || t == escape || t == resolveOp) return 1;
   return 0;
 }
 
@@ -231,8 +234,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      Arrow x = tail(tail(head(p)));
      Arrow s = head(head(p));
 
-     if (tail(x) == get) {  // #e#
-       dputs("x == (get a)");
+     if (tail(x) == resolveOp) {  // #e#
+       dputs("x == (resolve a)");
        x = resolve(x, e, M);
      }
 
@@ -263,8 +266,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          }
          Arrow vv1 = head(v0);
          // rewriting program to stage vv0, vv1, and (vv0 vv1) evaluation
-         // pp = (let (((p Eve) vv0) (let (((Eve p) vv1) (let ((p ((get (p Eve)) (get (Eve p)))) (let ((x ((get p) v1)))))))))))
-         Arrow pp = a(let, a(a(a(p, Eve()), vv0), a(let, a(a(a(Eve(), p), vv1), a(let, a(a(p, a(a(get, a(p, Eve())), a(get, a(Eve(), p)))), a(let, a(a(x, a(a(get, p), v1)), s))))))));
+         // pp = (let (((p Eve) vv0) (let (((Eve p) vv1) (let ((p ((resolve (p Eve)) (resolve (Eve p)))) (let ((x ((resolve p) v1)))))))))))
+         Arrow pp = a(let, a(a(a(p, Eve()), vv0), a(let, a(a(a(Eve(), p), vv1), a(let, a(a(p, a(a(resolveOp, a(p, Eve())), a(resolveOp, a(Eve(), p)))), a(let, a(a(x, a(a(resolveOp, p), v1)), s))))))));
          M = a(pp, a(e, k));
          return M;
          
@@ -273,9 +276,9 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          dputs("p == (let ((x (t0 s1)) s))");
          Arrow t0 = v0;
          Arrow s1 = v1;
-         // rewriting program to sage v1 and (t0 v1) evaluation
-         // pp = (let ((p s1) (let ((x (t0 (get p))) s))))
-         Arrow pp = a(let, a(a(p, s1), a(let, a(a(x, a(t0, a(get, p))), s))));
+         // rewriting program to stage s1 and (t0 s1) evaluation
+         // pp = (let ((p s1) (let ((x (t0 (resolve p))) s))))
+         Arrow pp = a(let, a(a(p, s1), a(let, a(a(x, a(t0, a(resolveOp, p))), s))));
          M = a(pp, a(e, k));
          return M;
          
@@ -284,7 +287,6 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          dputs("p == (let ((x t) s)) where t = (t0 t1)");
          Arrow t0 = v0;
          Arrow t1 = v1;
-         Arrow w = resolve(t1, e, M);
          Arrow C = resolve(t0, e, M);
          if (tail(C) == operator) { // System call special case
            // C = (operator (hook context))
@@ -302,14 +304,27 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
               free(contexts);
            } else
               context = NULL;
+           Arrow w = resolve(t1, e, M);
            Arrow r = hook(w, context);
            Arrow ne = a(a(x, r), e);
            M = a(s, a(ne, k));
            return M;
-           
          } else { // closure case
-           // C == ((y ss) ee)
-           dputs("C == ((y ss) ee)");
+           Arrow w;
+           if (tail(C) == lambdax) { // special closure where applied arrow is escaped by default (like let)
+             // C == (lambdax ((y ss) ee))
+             dputs("C == (lambdax ((y ss) ee))");
+             C = head(C);
+             if (tail(t1) == resolveOp) {
+                dputs("x == (resolve a)");
+                w = resolve(t1, e, M);
+             } else
+                w = t1; // Not resolving t1
+           } else {
+             // C == ((y ss) ee)
+             dputs("C == ((y ss) ee)");
+             w = resolve(t1, e, M);
+           }
            Arrow ee = head(C);
            Arrow y = tail(tail(C));
            Arrow ss = head(tail(C));
@@ -325,8 +340,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      Arrow s = tail(p);
      Arrow v = head(p);
      // rewriting program with a let
-     // pp = (let ((p s) ((get p) v)))
-     Arrow pp = a(let, a(a(p, s), a(a(get, p), v)));
+     // pp = (let ((p s) ((resolve p) v)))
+     Arrow pp = a(let, a(a(p, s), a(a(resolveOp, p), v)));
      M = a(pp, a(e, k));
      return M;
 
@@ -336,8 +351,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      Arrow t = tail(p);
      Arrow s = head(p);
      // rewriting program with a let
-     // pp = (let ((p s) (t (get p))))
-     Arrow pp = a(let, a(a(p, s), a(t, a(get, p))));
+     // pp = (let ((p s) (t (resolve p))))
+     Arrow pp = a(let, a(a(p, s), a(t, a(resolveOp, p))));
      M = a(pp, a(e, k));
      return M;
 
@@ -347,7 +362,6 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      // Stacking not needed
      Arrow t0 = tail(p);
      Arrow t1 = head(p);
-     Arrow w = resolve(t1, e, M);
      Arrow C = resolve(t0, e, M);
      if (tail(C) == operator) { // System call case
        // C == (operator (hook context))
@@ -365,18 +379,32 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
           free(contexts);
        } else
           context = NULL;
+       Arrow w = resolve(t1, e, M);
        Arrow r = hook(w, context);
        M = a(r, a(e, k));
        return M;
        
      } else { // closure case
-       // C == ((x ss) ee)
-       dputs("C == ((x ss) ee)");
+       Arrow w;
+       if (tail(C) == lambdax) { // special closure where applied arrow is escaped by default (like let)
+         // C == (lambdax ((y ss) ee))
+         dputs("C == (lambdax ((y ss) ee))");
+         C = head(C);
+         if (tail(t1) == resolveOp) {
+           dputs("x == (resolve a)");
+           w = resolve(t1, e, M);
+         } else
+           w = t1; // Not resolving t1 by default
+       } else {
+         // C == ((x ss) ee)
+         dputs("C == ((x ss) ee)");
+         w = resolve(t1, e, M);
+       }
        Arrow x = tail(tail(C));
        Arrow ss = head(tail(C));
        Arrow ee = head(C);
        M = a(ss, a(a(a(x, w), ee), k));
-       return M;
+       return M;   
      }
   }
 }
@@ -442,9 +470,10 @@ static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
 static void machine_init() {
   if (let) return;
   let = tag("let");
-  get = tag("get");
+  resolveOp = tag("resolve");
   escape = tag("escape");
   lambda = tag("lambda");
+  lambdax = tag("lambdax");
   operator = tag("operator");
   continuation = tag("continuation");
   selfM = tag("@M");
@@ -452,9 +481,10 @@ static void machine_init() {
   
   Arrow reserved = tag("reserved");
   root(a(reserved, let));
-  root(a(reserved, get));
+  root(a(reserved, resolveOp));
   root(a(reserved, escape));
   root(a(reserved, lambda));
+  root(a(reserved, lambdax));
   root(a(reserved, operator));
   root(a(reserved, continuation));
   root(a(reserved, selfM));
