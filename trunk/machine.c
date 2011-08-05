@@ -436,9 +436,17 @@ Arrow headOfCB(Arrow arrow, void* context) {
 }
 
 Arrow childrenOfCB(Arrow arrow, void* context) {
+   // usage: (childrenOf (parent closure))
+   // while returns (C (childn (... (C (child1 (C (child0 Eve)))) ... )))
+   // CPS operator waiting for a closure C in the form of (lambda x ...))
+   // C <=> ((x s) e) 
    Arrow parent = tail(arrow);
    Arrow C = head(arrow);
-   // C <=> ((x s) e) 
+   Arrow M = a(program, a(systemEnvironment, Eve()));
+   return xl_run(rootStack, M);
+
+  Arrow parent = tail(arrow);
+   Arrow C = head(arrow);
    // M = (s (e Eve))
    Arrow M = a(head(tail(C)), a(head(C), Eve()));
    Arrow r = xl_run(Eve(), M);
