@@ -22,6 +22,8 @@ int main(int argc, char **argv) {
     "(unroot (escape (+ 2 2)))",
     "(isRooted (escape (+ 2 2)))",
     "(let ((t (lambda (x (arrow (x 2))))) (t 3)))",
+    "(let ((set (lambdax (variable (lambda (value (root (arrow (variable value)))))))) (set set set)))",
+    "(let ((get (lambdax (x (childrenOf x (lambda child (if ((isRooted child) (headOf(child) Eve)))))))) (set get get)))",
     //"(let ((gset (lambda (x (lambda (y (root (arrow (x y)))))))) (gset (escape gset) gset)))",
     //"(let ((gget (lambda (x (childrenOf x (lambda c (isRooted (c (headOf(c) Eve)))))))) (root (arrow (espace gget) gget))))",
     //"(let ((join (lambda (x (lambda (y (arrow (x y))))))) (root (arrow ((escape join) join)))))",
