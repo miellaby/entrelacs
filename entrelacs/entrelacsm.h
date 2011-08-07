@@ -37,4 +37,5 @@
 #define isRooted(A) xl_isRooted(A)
 #define equal(A,B) xl_equal(A, B)
 
-#define childrenOf(A, CB, C) xl_childrenOf(A, CB, C)
+#define childrenOf(A) xl_childrenOf(A)
+#define childrenOfCB(A, CB, C) xl_childrenOfCB(A, CB, C)

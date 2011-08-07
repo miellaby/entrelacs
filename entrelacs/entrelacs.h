@@ -52,12 +52,16 @@ int xl_isRooted(Arrow); // returns !0 if rooted.
 int xl_equal(Arrow, Arrow); // returns !0 if arrows are equal
 
 /* Browsing */
-//typedef uint32_t XLEnum;
-//XLEnum xl_childrenOf(Arrow);
-//int  xl_next(XLEnum*, Arrow*);
+#define EOE ((XLEnum)0xFFFFFFF)
+typedef void* XLEnum;
+int    xl_enumNext(XLEnum);
+Arrow  xl_enumGet(XLEnum);
+void   xl_freeEnum(XLEnum);
+
+XLEnum xl_childrenOf(Arrow);
 
 typedef Arrow (*XLCallBack)(Arrow arrow, void* context);
-void xl_childrenOf(Arrow, XLCallBack, void*);
+void xl_childrenOfCB(Arrow, XLCallBack, void*);
 
 /* Program assimilation */
 Arrow xl_program(char*); // EL string
