@@ -435,18 +435,16 @@ Arrow headOfCB(Arrow arrow, void* context) {
    return a(escape, head(arrow));
 }
 
-Arrow childrenOf_CB(Arrow arrow, void* context) {
-   // usage: (childrenOf (parent closure))
-   // while returns (C (childn (... (C (child1 (C (child0 Eve)))) ... )))
-   // CPS operator waiting for a closure C in the form of (lambda x ...))
-   // C <=> ((x s) e) 
-   Arrow parent = tail(arrow);
-   Arrow C = head(arrow);
-   //Arrow M = a(program, a(systemEnvironment, Eve()));
-   // M = (s (e Eve))
-   Arrow M = a(head(tail(C)), a(head(C), Eve()));
-   Arrow r = xl_run(Eve(), M);
-   return a(escape, r);
+Arrow childrenOf_CB(Arrow arrow, void* context) { // warning: childrenOfCB already in use
+   // usage: (childrenOf parent)
+   XLEnum e = xl_childrenOf(arrow);
+   Arrow list = Eve();
+   while (xl_enumNext(e)) {
+      Arrow child = xl_enumGet(e);
+      list = a(child, list);
+   }
+   xl_freeEnum(e);
+   return a(escape, list);
 }
 
 Arrow rootCB(Arrow arrow, void* context) {
@@ -461,6 +459,13 @@ Arrow isRootedCB(Arrow arrow, void* context) {
    return a(escape, isRooted(arrow));
 }
 
+Arrow ifCB(Arrow arrow, void *context) {
+   if (isEve(arrow))
+      return xl_operator(tailOfCB, NULL);
+   else
+      return xl_operator(headOfCB, NULL);
+}
+
 static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
  {"tailOf", tailOfCB},
  {"headOf", headOfCB},
@@ -468,6 +473,7 @@ static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
  {"root", rootCB},
  {"unroot", unrootCB},
  {"isRooted", isRootedCB},
+ {"if", ifCB},
  {NULL, NULL}
 };
 
