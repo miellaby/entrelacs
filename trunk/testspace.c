@@ -110,7 +110,7 @@ int basic() {
     DEFA(hello, dude);
     root(hello_dude);
     
-    childrenOf(hello, printArrow, NULL);
+    childrenOfCB(hello, printArrow, NULL);
     
     // check unrooting
     test_title("check unrooting");
@@ -126,7 +126,7 @@ int basic() {
 
     // check arrow disconnection
     test_title("check arrow disconnection");
-    childrenOf(hello, printArrow, NULL);
+    childrenOfCB(hello, printArrow, NULL);
     
     unroot(hello_dude);
 	commit();
@@ -188,7 +188,7 @@ int stress() {
         Arrow child = arrow(connectMe, pairs[j]);
         root(child);
     }
-    childrenOf(connectMe, printArrow, NULL);
+    childrenOfCB(connectMe, printArrow, NULL);
     
     // disconnection stress
     test_title("disconnection stress");
@@ -200,7 +200,7 @@ int stress() {
         Arrow child = arrow(connectMe, pairs[j]);
         unroot(child);
     }
-    childrenOf(connectMe, printArrow, NULL);
+    childrenOfCB(connectMe, printArrow, NULL);
     
     // connecting stress (big depth)
     test_title("connecting stress (big depth)");

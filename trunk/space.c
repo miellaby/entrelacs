@@ -1294,7 +1294,7 @@ static void disconnect(Arrow a, Arrow child) {
 }
 
 
-void xl_childrenOf(Arrow a, XLCallBack cb, void* context) {
+void xl_childrenOfCB(Arrow a, XLCallBack cb, void* context) {
   ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
 
   Arrow child;
@@ -1337,6 +1337,153 @@ void xl_childrenOf(Arrow a, XLCallBack cb, void* context) {
   if (child && cb(child, context)) return;
   child = cell_getRef1(cell);
   if (child && cb(child, context)) return;
+}
+
+typedef struct iterator_s {
+    int type;
+    uint32_t hash;
+    Arrow parent;
+    Arrow current;
+    Address pos;
+    int rank;
+} iterator_t;
+
+static int xl_enumNextChildOf(XLEnum e) {
+  iterator_t *iteratorp = e;
+  
+  // iterate from current location stored in childrenOf iterator
+  Arrow    a = iteratorp->parent;
+  uint32_t hChild = iteratorp->hash;
+  Address pos = iteratorp->pos;
+  int     rank = iteratorp->rank;
+  
+  Cell cell;
+  Arrow child;
+  
+  if (pos == Eve) { // First call to "next" for this enumeration
+    cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+    pos = jumpToChild0(cell, a, hChild, a);
+    if (!pos) {
+       return 0; // no child
+    }
+  } else {
+    cell = mem_get(pos); ONDEBUG((show_cell(cell, 0)));
+    if (!rank) {
+  	  if (cell_getCatBits(cell) != CATBITS_LAST && cell_getJumpNext(cell) ==  MAX_JUMP) {
+		// jump == MAX ==> ref1 points to next
+        pos = cell_getRef1(cell);
+      } else {
+        Arrow child = cell_getRef1(cell);
+	    if (child) {
+          iteratorp->rank = 1;
+          iteratorp->current = child;
+	      return !0;
+        }
+   		pos = jumpToNext(cell, pos, hChild, a);
+      }
+    } else {
+       if (cell_getCatBits(cell) == CATBITS_LAST) {
+        return 0; // No more child
+      }
+      pos = jumpToNext(cell, pos, hChild, a);
+	  rank = 0;
+    }
+  } 
+  cell = mem_get(pos); ONDEBUG((show_cell(cell, 0)));
+  
+   // For every cell but last
+  while (cell_getCatBits(cell) != CATBITS_LAST) {
+    child = cell_getRef0(cell);
+	if (child) {
+         iteratorp->pos = pos;
+         iteratorp->rank = 0;
+         iteratorp->current = child;
+	     return !0;
+    }
+	if (cell_getJumpNext(cell) ==  MAX_JUMP) {
+		// jump == MAX ==> ref1 points to next
+        pos = cell_getRef1(cell);
+	} else {
+	    child = cell_getRef1(cell);
+	    if (child) {
+           iteratorp->pos = pos;
+           iteratorp->rank = 1;
+           iteratorp->current = child;
+	       return !0;
+        }   
+   		pos = jumpToNext(cell, pos, hChild, a);
+	}
+	cell = mem_get(pos); ONDEBUG((show_cell(cell, 0)));
+  }
+
+  // Last cell
+  iteratorp->pos = pos;
+  child = cell_getRef0(cell);
+
+  if (child) {
+      iteratorp->rank = 0;
+      iteratorp->current = child;
+	  return !0;
+  }
+
+  iteratorp->rank = 1;
+  child = cell_getRef1(cell);
+  if (child) {
+      iteratorp->current = child;
+	  return !0;
+  } else {
+      iteratorp->current = Eve;
+      return 0; // last iteration
+  }
+}
+  
+int xl_enumNext(XLEnum e) {
+  assert(e);
+  iterator_t *iteratorp = e;
+  assert(iteratorp->type == 0);
+  if (iteratorp->type == 0) {
+    return xl_enumNextChildOf(e);
+  }
+}
+
+Arrow xl_enumGet(XLEnum e) {
+  assert(e);
+  iterator_t *iteratorp = e;
+  assert(iteratorp->type == 0);
+  if (iteratorp->type == 0) {
+    return iteratorp->current;
+  }
+}
+
+void xl_freeEnum(XLEnum e) {
+   free(e);
+}
+
+XLEnum xl_childrenOf(Arrow a) {
+  ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
+
+  Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+  if (!cell_isArrow(cell)) return NULL; // invalid ID
+
+  Cell catBits = cell_getCatBits(cell);
+
+  // compute hashChild
+  CellData data = (catBits == CATBITS_ARROW || catBits == CATBITS_SMALL)
+      ? cell_getSmall(cell)
+	  : cell_getChecksum(cell);
+
+  uint32_t hChild = hashChild(a, data) % PRIM1;
+  if (!hChild) hChild = 2; // offset can't be 0
+
+  iterator_t *iteratorp = (iterator_t *)malloc(sizeof(iterator_t));
+  assert(iteratorp);
+  iteratorp->type = 0; // iterator type = childrenOf
+  iteratorp->hash = hChild;  // hChild
+  iteratorp->parent = a;   // parent arrow
+  iteratorp->current = Eve; // current child
+  iteratorp->pos = Eve; // current cell holding child back-ref
+  iteratorp->rank = 0; // position of child back-ref in cell : 0/1
+  return iteratorp;
 }
 
 /** root an arrow */

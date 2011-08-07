@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
        xl_commit();
     } else if (command == childrenOf) {
        fprintf(stderr, " ==> {\n");
-       xl_childrenOf(arg, print, NULL);
+       xl_childrenOfCB(arg, print, NULL);
        fprintf(stderr, "}\n");
     } else {
        fprintf(stderr, "Unknown command %s\n", xl_tagOf(command));
