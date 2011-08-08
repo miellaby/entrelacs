@@ -24,6 +24,9 @@ int main(int argc, char **argv) {
     "(let ((t (lambda (x (arrow (x 2))))) (t 3)))",
     "(childrenOf reserved)",
     "(let ((set (lambdax (variable (lambda (value (root (arrow (variable value)))))))) (set set set)))",
+    "(if Eve (escape (hello goodbye)))",
+    "(if world (escape (hello goodbye)))",
+    "(let ((crawl ((lambdax (list ((if list ((self (headOf list)) Eve))))))) (crawl (resolve Eve))))",
     // "(letr ((firstRooted (lambda (list (if (tail list) ((tail list) (firstRooted (head list))))))) \
        // (letr ((get (lambdax (variable \
             // (let ((links (childrenOf variable)) \
@@ -38,6 +41,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Evaluating %s ...\n", str);
 
     Arrow p = xl_program(str);
+    assert(!xl_isEve(p));
     print(p, NULL);
     Arrow r = xl_eval(xl_Eve(), p);
     
