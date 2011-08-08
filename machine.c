@@ -84,7 +84,9 @@ Arrow xl_program(char* program) { // EL string
      return Eve(); /* see sexp_errno */
   
   sexp_t *sx = pc->last_sexp;
-
+  if (sx == NULL)
+     return Eve(); /* No completed sexp */
+     
   Arrow a = arrowFromSexp(sx);
   
   destroy_continuation(pc);
@@ -95,7 +97,6 @@ Arrow xl_program(char* program) { // EL string
 
 char* xl_programOf(Arrow a) { // returned value to be freed by the user
   sexp_t *sx = sexpFromArrow(a);
-  
   CSTRING *s = NULL;
   print_sexp_cstr(&s, sx, 256);
   assert(s->curlen);
@@ -311,10 +312,18 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
            return M;
          } else { // closure case
            Arrow w;
-           if (tail(C) == lambdax) { // special closure where applied arrow is escaped by default (like let)
+           Arrow ee;
+           if (tail(C) == lambdax) { // special closure
              // C == (lambdax ((y ss) ee))
              dputs("C == (lambdax ((y ss) ee))");
+             
+             // special closure : C == ("lambdax" CC) w/ CC being a regular closure
              C = head(C);
+             // - applied arrow is escaped by default (like in let construct)
+             // - "self" --> CC added to closure environment (allows recursion)
+             ee = head(C);
+             ee = a(a(tag("self"), a(escape, C)), ee);
+             
              if (tail(t1) == resolveOp) {
                 dputs("x == (resolve a)");
                 w = resolve(t1, e, M);
@@ -322,10 +331,10 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
                 w = t1; // Not resolving t1
            } else {
              // C == ((y ss) ee)
+             ee = head(C);
              dputs("C == ((y ss) ee)");
              w = resolve(t1, e, M);
            }
-           Arrow ee = head(C);
            Arrow y = tail(tail(C));
            Arrow ss = head(tail(C));
            M = a(ss, a(a(a(y, w), ee), a(a(x, a(s, e)), k))); // stacks up a continuation
@@ -386,23 +395,32 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        
      } else { // closure case
        Arrow w;
+       Arrow ee;
        if (tail(C) == lambdax) { // special closure where applied arrow is escaped by default (like let)
          // C == (lambdax ((y ss) ee))
          dputs("C == (lambdax ((y ss) ee))");
+         
+         // special closure : C == ("lambdax" CC) w/ CC being a regular closure
          C = head(C);
+         // - applied arrow is escaped by default (like in let construct)
+         // - "self" --> CC added to closure environment (allows recursion)
+         ee = head(C);
+         ee = a(a(tag("self"), a(escape, C)), ee);
+
          if (tail(t1) == resolveOp) {
            dputs("x == (resolve a)");
            w = resolve(t1, e, M);
          } else
            w = t1; // Not resolving t1 by default
+
        } else {
          // C == ((x ss) ee)
          dputs("C == ((x ss) ee)");
+         ee = head(C);
          w = resolve(t1, e, M);
        }
        Arrow x = tail(tail(C));
        Arrow ss = head(tail(C));
-       Arrow ee = head(C);
        M = a(ss, a(a(a(x, w), ee), k));
        return M;   
      }
