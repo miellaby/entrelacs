@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     "(let ((x 3) (arrow (x 2))))",
     "(let ((x 3) (escape (arrow (x 2)))))",
     "(let ((x (lambda (y (arrow (y 3))))) (x 2)))",
+    "(load ((escape (x 3)) (arrow (x 2))))",
     // "(root (escape (+ 2 2)))",
     // "(isRooted (escape (+ 2 2)))",
     // "(unroot (escape (+ 2 2)))",

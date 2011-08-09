@@ -13,7 +13,7 @@
 #endif
 #define dputs(S) ONDEBUG(fprintf(stderr, "%s\n", S))
 
-static Arrow let = 0, escape = 0, var = 0, evalOp = 0, lambda = 0, lambdax = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
+static Arrow let = 0, load = 0, escape = 0, var = 0, evalOp = 0, lambda = 0, lambdax = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow printArrow(Arrow arrow, void* context) {
   char* program = xl_programOf(arrow);
@@ -217,6 +217,12 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
            context = NULL;
         M = hook(M, context);
         return M;
+     } else if (tail(k) == evalOp) { // #e# special "eval" continuation
+       // k == (eval kk)
+       Arrow kk = head(k);
+       Arrow w = resolve(p, e, M);
+       M = a(w, a(e, kk)); // unstack continuation and reinject evaluation result as input expression
+       
      } else {
        // k == ((x (ss ee)) kk)
        dputs("k == ((x (ss ee)) kk)");
@@ -226,15 +232,34 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        Arrow x = tail(f);
        Arrow ss = tail(head(f));
        Arrow ee = head(head(f));
-       if (x == let) { // #e : special posponed let
-          Arrow ss0 = tail(ss);
-          Arrow ss1 = head(ss);
-          M = a(ss0, a(ee, a(a(w, a(ss1, ee)), kk))); // continuation completed
+       if (isEve(x)) { // #e : variable name is Eve (let ((Eve a) s1))
+          dputs("variable name is Eve (let ((Eve a) s1))");
+          // ones loads the arrow directly into environment. It will be considered as a var->value binding
+          M = a(ss, a(a(w, ee), kk)); // unstack continuation, postponed let solved
        } else {
           M = a(ss, a(a(a(x, w), ee), kk)); // unstack continuation, postponed let solved
        }
        return M;
      }
+  } else if (tail(p) == load) { //load expression #e#
+     // p == (load (s0 s1))
+     Arrow s = head(p);
+     Arrow s0 = tail(s);
+     Arrow s1 = head(s);
+
+     // (load (s0 s1)) <==> (let ((Eve s0) s1))) : direct environment loading
+     // rewriting program as pp = (let ((Eve s0) s1))
+     Arrow pp = a(let, a(a(Eve(), s0), s1));
+     M = a(pp, a(e, k));
+     return M;
+ 
+  } else if (tail(p) == evalOp) { //eval expression
+     // p == (eval s)
+     Arrow s = head(p);
+
+     M = a(s, a(e, a(evalOp, k))); // stack an eval continuation
+     return M;
+
   } else if (tail(p) == let) { //let expression family
      // p == (let ((x v) s))
      dputs("p == (let ((x v) s))");
@@ -242,13 +267,6 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      Arrow x = tail(tail(head(p)));
      Arrow s = head(head(p));
 
-     if (tail(x) == evalOp) {  // #e#
-       dputs("x == (eval ss)");
-       Arrow ss = head(x);
-       // stacks up a continuation for evaluating what will be the variable to bound
-       M = a(ss, a(e, a(a(let, a(a(ss, s), e)), k)));
-       return M;
-     }
 
      // FIXME x == "@M" case
 
@@ -257,7 +275,11 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        dputs("p == (let ((x t) s))");
        Arrow t = v;
        Arrow w = resolve(t, e, M);
-       M = a(s, a(a(a(x, w), e), k));
+       if (isEve(x)) { // #e# direct environment load
+          M = a(s, a(a(w, e), k));
+       } else {
+          M = a(s, a(a(a(x, w), e), k));
+       }
        return M;
        
      } else /* !isTrivial(v) */ { // Non trivial let rules
@@ -289,17 +311,11 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          Arrow arg = v1;
          Arrow C = resolve(t0, e, M);
          
-       if (tail(C) != lambdax && !isTrivial(arg) || tail(C) == lambdax && tail(arg) == evalOp) { // "head nested application in let" rule #e#
-         Arrow s1;
-         if (tail(C) == lambdax) {
-           // p == (let ((x (t0 (eval s1)) s)) where t0 a lambdax closure
-           dputs("p == (let ((x (t0 (eval s1)))) s))");
-           s1 = head(arg);
-         } else {
-           // p == (let ((x (t0 s1)) s))
-           dputs("p == (let ((x (t0 s1)) s))");
-           s1 = arg;
-         }
+       if (tail(C) != lambdax && !isTrivial(arg)) { // "head nested application in let" rule #e#
+         // p == (let ((x (t0 s1)) s))
+         dputs("p == (let ((x (t0 s1)) s))");
+         Arrow s1 = arg;
+         
          // rewriting program to stage s1 and (t0 s1) evaluation
          // pp = (let ((p s1) (let ((x (t0 (var p))) s))))
          Arrow pp = a(let, a(a(p, s1), a(let, a(a(x, a(t0, a(var, p))), s))));
@@ -379,18 +395,11 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
   Arrow t0 = tail(p);
   Arrow arg = head(p);
   Arrow C = resolve(t0, e, M);
-  if (tail(C) != lambdax && !isTrivial(arg) || tail(C) == lambdax && tail(arg) == evalOp) { // Not trivial parameter in application #e#
-     Arrow s;
-     if (tail(C) == lambdax) {
-       // p == (t0 (eval s)) where t0 a lambdax closure
-       dputs("p == (t0 (eval s)) where t0 a lambdax closure");
-       s = head(arg);
-     } else {
-       // p == (t0 s)
-       dputs("p == (t0 s)");
-       s = arg;
-     }
-
+  if (tail(C) != lambdax && !isTrivial(arg)) { // Not trivial parameter in application #e#
+     // p == (t0 s)
+     dputs("p == (t0 s)");
+     Arrow s = arg;
+     
      // rewriting program with a let
      // pp = (let ((p s) (t0 (var p))))
      Arrow pp = a(let, a(a(p, s), a(t0, a(var, p))));
@@ -524,6 +533,7 @@ static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
 static void machine_init() {
   if (let) return;
   let = tag("let");
+  load = tag("load");
   var = tag("var");
   escape = tag("escape");
   evalOp = tag("eval");
@@ -536,6 +546,7 @@ static void machine_init() {
   
   Arrow reserved = tag("reserved");
   root(a(reserved, let));
+  root(a(reserved, load));
   root(a(reserved, var));
   root(a(reserved, escape));
   root(a(reserved, evalOp));
