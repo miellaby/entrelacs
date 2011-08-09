@@ -13,7 +13,7 @@
 #endif
 #define dputs(S) ONDEBUG(fprintf(stderr, "%s\n", S))
 
-static Arrow let = 0, escape = 0, resolveOp = 0, lambda = 0, lambdax = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
+static Arrow let = 0, escape = 0, var = 0, evalOp = 0, lambda = 0, lambdax = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow printArrow(Arrow arrow, void* context) {
   char* program = xl_programOf(arrow);
@@ -130,6 +130,7 @@ Arrow xl_continuation(XLCallBack hookp, char* contextp) {
 }
 
 static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
+  ONDEBUG((fprintf(stderr, "   _resolve a="), printArrow(a, NULL)));
   int type = typeOf(a);
   if (type == XL_EVE) return Eve();
   if (a == selfM) return M;
@@ -148,7 +149,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
        return arrow(headOf(a), e);
     } else if (t == lambdax) {
        return arrow(lambdax, arrow(headOf(a), e));
-    } else if (t == resolveOp) {
+    } else if (t == var) {
        x = headOf(a);
     } else {
       return a;
@@ -179,7 +180,7 @@ static int isTrivial(Arrow s) {
   int type = typeOf(s);
   if (type != XL_ARROW) return 1; // true
   Arrow t = tailOf(s);
-  if (t == lambda || t == lambdax || t == arrowOp || t == escape || t == resolveOp) return 1;
+  if (t == lambda || t == lambdax || t == arrowOp || t == escape || t == var) return 1;
   return 0;
 }
 
@@ -225,7 +226,13 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
        Arrow x = tail(f);
        Arrow ss = tail(head(f));
        Arrow ee = head(head(f));
-       M = a(ss, a(a(a(x, w), ee), kk)); // unstack continuation, postponed let solved
+       if (x == let) { // #e : special posponed let
+          Arrow ss0 = tail(ss);
+          Arrow ss1 = head(ss);
+          M = a(ss0, a(ee, a(a(w, a(ss1, ee)), kk))); // continuation completed
+       } else {
+          M = a(ss, a(a(a(x, w), ee), kk)); // unstack continuation, postponed let solved
+       }
        return M;
      }
   } else if (tail(p) == let) { //let expression family
@@ -235,9 +242,12 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      Arrow x = tail(tail(head(p)));
      Arrow s = head(head(p));
 
-     if (tail(x) == resolveOp) {  // #e#
-       dputs("x == (resolve a)");
-       x = resolve(x, e, M);
+     if (tail(x) == evalOp) {  // #e#
+       dputs("x == (eval ss)");
+       Arrow ss = head(x);
+       // stacks up a continuation for evaluating what will be the variable to bound
+       M = a(ss, a(e, a(a(let, a(a(ss, s), e)), k)));
+       return M;
      }
 
      // FIXME x == "@M" case
@@ -260,33 +270,45 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          // p == (let ((x ((vv0 vv1) v1)) s))
          dputs("p == (let ((x ((vv0 vv1) v1)) s))");
          Arrow vv0 = tail(v0);
-         if (vv0 == let) {
-            // error
-            M=a(a(escape, a(tag("illegal"), p)), Eve());
-            return M;
-         }
+         //What it is an error? I don't remember anymore
+         // if (vv0 == let) {
+            // // error
+            // M=a(a(escape, a(tag("illegal"), p)), Eve());
+            // return M;
+         // }
          Arrow vv1 = head(v0);
          // rewriting program to stage vv0, vv1, and (vv0 vv1) evaluation
-         // pp = (let (((p Eve) vv0) (let (((Eve p) vv1) (let ((p ((resolve (p Eve)) (resolve (Eve p)))) (let ((x ((resolve p) v1)))))))))))
-         Arrow pp = a(let, a(a(a(p, Eve()), vv0), a(let, a(a(a(Eve(), p), vv1), a(let, a(a(p, a(a(resolveOp, a(p, Eve())), a(resolveOp, a(Eve(), p)))), a(let, a(a(x, a(a(resolveOp, p), v1)), s))))))));
+         // pp = (let (((p Eve) vv0) (let (((Eve p) vv1) (let ((p ((var (p Eve)) (var (Eve p)))) (let ((x ((var p) v1)))))))))))
+         Arrow pp = a(let, a(a(a(p, Eve()), vv0), a(let, a(a(a(Eve(), p), vv1), a(let, a(a(p, a(a(var, a(p, Eve())), a(var, a(Eve(), p)))), a(let, a(a(x, a(a(var, p), v1)), s))))))));
          M = a(pp, a(e, k));
          return M;
          
-       } else if (!isTrivial(v1)) { // "head nested application in let" rule #e#
-         // p == (let ((x (t0 s1)) s))
-         dputs("p == (let ((x (t0 s1)) s))");
+       } else {
+         // p == (let ((x (t0 arg)) s)) where t0 should return a closure or such
          Arrow t0 = v0;
-         Arrow s1 = v1;
+         Arrow arg = v1;
+         Arrow C = resolve(t0, e, M);
+         
+       if (tail(C) != lambdax && !isTrivial(arg) || tail(C) == lambdax && tail(arg) == evalOp) { // "head nested application in let" rule #e#
+         Arrow s1;
+         if (tail(C) == lambdax) {
+           // p == (let ((x (t0 (eval s1)) s)) where t0 a lambdax closure
+           dputs("p == (let ((x (t0 (eval s1)))) s))");
+           s1 = head(arg);
+         } else {
+           // p == (let ((x (t0 s1)) s))
+           dputs("p == (let ((x (t0 s1)) s))");
+           s1 = arg;
+         }
          // rewriting program to stage s1 and (t0 s1) evaluation
-         // pp = (let ((p s1) (let ((x (t0 (resolve p))) s))))
-         Arrow pp = a(let, a(a(p, s1), a(let, a(a(x, a(t0, a(resolveOp, p))), s))));
+         // pp = (let ((p s1) (let ((x (t0 (var p))) s))))
+         Arrow pp = a(let, a(a(p, s1), a(let, a(a(x, a(t0, a(var, p))), s))));
          M = a(pp, a(e, k));
          return M;
          
        } else /* isTrivial(v1)) */ { // Serious let rule
          // p == (let ((x t) s)) where t = (t0 t1)
          dputs("p == (let ((x t) s)) where t = (t0 t1)");
-         Arrow t0 = v0;
          Arrow t1 = v1;
          Arrow C = resolve(t0, e, M);
          if (tail(C) == operator) { // System call special case
@@ -313,22 +335,18 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          } else { // closure case
            Arrow w;
            Arrow ee;
-           if (tail(C) == lambdax) { // special closure
+           if (tail(C) == lambdax) { // #e# special closure
              // C == (lambdax ((y ss) ee))
              dputs("C == (lambdax ((y ss) ee))");
              
              // special closure : C == ("lambdax" CC) w/ CC being a regular closure
-             C = head(C);
              // - applied arrow is escaped by default (like in let construct)
              // - "self" --> CC added to closure environment (allows recursion)
+             C = head(C);
              ee = head(C);
-             ee = a(a(tag("self"), a(escape, C)), ee);
-             
-             if (tail(t1) == resolveOp) {
-                dputs("x == (resolve a)");
-                w = resolve(t1, e, M);
-             } else
-                w = t1; // Not resolving t1
+             ee = a(a(tag("self"), a(lambdax, C)), ee);
+             w = t1; // t1 is NOT resolved
+
            } else {
              // C == ((y ss) ee)
              ee = head(C);
@@ -343,35 +361,48 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          }
        }
      }
+     }
   } else if (!isTrivial(tail(p))) { // Not trivial function in application #e#
      // p == (s v)
      dputs("p == (s v)");
      Arrow s = tail(p);
      Arrow v = head(p);
      // rewriting program with a let
-     // pp = (let ((p s) ((resolve p) v)))
-     Arrow pp = a(let, a(a(p, s), a(a(resolveOp, p), v)));
+     // pp = (let ((p s) ((var p) v)))
+     Arrow pp = a(let, a(a(p, s), a(a(var, p), v)));
      M = a(pp, a(e, k));
      return M;
 
-  } else if (!isTrivial(head(p))) { // Not trivial parameter in application #e#
-     // p == (t s)
-     dputs("p == (t s)");
-     Arrow t = tail(p);
-     Arrow s = head(p);
+  }
+
+  // p == (t0 arg) where t0 should return a closure or such
+  Arrow t0 = tail(p);
+  Arrow arg = head(p);
+  Arrow C = resolve(t0, e, M);
+  if (tail(C) != lambdax && !isTrivial(arg) || tail(C) == lambdax && tail(arg) == evalOp) { // Not trivial parameter in application #e#
+     Arrow s;
+     if (tail(C) == lambdax) {
+       // p == (t0 (eval s)) where t0 a lambdax closure
+       dputs("p == (t0 (eval s)) where t0 a lambdax closure");
+       s = head(arg);
+     } else {
+       // p == (t0 s)
+       dputs("p == (t0 s)");
+       s = arg;
+     }
+
      // rewriting program with a let
-     // pp = (let ((p s) (t (resolve p))))
-     Arrow pp = a(let, a(a(p, s), a(t, a(resolveOp, p))));
+     // pp = (let ((p s) (t0 (var p))))
+     Arrow pp = a(let, a(a(p, s), a(t0, a(var, p))));
      M = a(pp, a(e, k));
      return M;
 
   } else { // Trivial application rule
      // p == (t0 t1)
      dputs("p == (t0 t1)");
-     // Stacking not needed
-     Arrow t0 = tail(p);
      Arrow t1 = head(p);
-     Arrow C = resolve(t0, e, M);
+
+     // Continuation stacking not needed!
      if (tail(C) == operator) { // System call case
        // C == (operator (hook context))
        dputs("C == (operator (hook context))");
@@ -396,22 +427,17 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      } else { // closure case
        Arrow w;
        Arrow ee;
-       if (tail(C) == lambdax) { // special closure where applied arrow is escaped by default (like let)
+       if (tail(C) == lambdax) { // #e# special closure where applied arrow is not evaluated (like let)
          // C == (lambdax ((y ss) ee))
          dputs("C == (lambdax ((y ss) ee))");
          
          // special closure : C == ("lambdax" CC) w/ CC being a regular closure
-         C = head(C);
          // - applied arrow is escaped by default (like in let construct)
          // - "self" --> CC added to closure environment (allows recursion)
+         C = head(C);
          ee = head(C);
-         ee = a(a(tag("self"), a(escape, C)), ee);
-
-         if (tail(t1) == resolveOp) {
-           dputs("x == (resolve a)");
-           w = resolve(t1, e, M);
-         } else
-           w = t1; // Not resolving t1 by default
+         ee = a(a(tag("self"), a(lambdax, C)), ee);
+         w = t1; // t1 is NOT resolved
 
        } else {
          // C == ((x ss) ee)
@@ -498,8 +524,9 @@ static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
 static void machine_init() {
   if (let) return;
   let = tag("let");
-  resolveOp = tag("resolve");
+  var = tag("var");
   escape = tag("escape");
+  evalOp = tag("eval");
   lambda = tag("lambda");
   lambdax = tag("lambdax");
   operator = tag("operator");
@@ -509,8 +536,9 @@ static void machine_init() {
   
   Arrow reserved = tag("reserved");
   root(a(reserved, let));
-  root(a(reserved, resolveOp));
+  root(a(reserved, var));
   root(a(reserved, escape));
+  root(a(reserved, evalOp));
   root(a(reserved, lambda));
   root(a(reserved, lambdax));
   root(a(reserved, operator));
