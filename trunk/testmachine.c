@@ -17,16 +17,20 @@ int main(int argc, char **argv) {
   
   xl_init();
   char *str, *programs[] = {
-    "(root (escape (+ 2 2)))",
-    "(isRooted (escape (+ 2 2)))",
-    "(unroot (escape (+ 2 2)))",
-    "(isRooted (escape (+ 2 2)))",
-    "(let ((t (lambda (x (arrow (x 2))))) (t 3)))",
-    "(childrenOf reserved)",
-    "(let ((set (lambdax (variable (lambda (value (root (arrow (variable value)))))))) (set set set)))",
-    "(if Eve (escape (hello goodbye)))",
-    "(if world (escape (hello goodbye)))",
-    "(let ((crawl ((lambdax (list ((if list ((self (headOf list)) Eve))))))) (crawl (resolve Eve))))",
+    "(let ((x 3) (arrow (x 2))))",
+    "(let ((x 3) (escape (arrow (x 2)))))",
+    "(let ((x (lambda (y (arrow (y 3))))) (x 2)))",
+    // "(root (escape (+ 2 2)))",
+    // "(isRooted (escape (+ 2 2)))",
+    // "(unroot (escape (+ 2 2)))",
+    // "(isRooted (escape (+ 2 2)))",
+    // "(let ((t (lambda (x (arrow (x 2))))) (t 3)))",
+    // "(childrenOf reserved)",
+    // "(let ((set (lambdax (variable (lambda (value (root (arrow (variable value)))))))) (set set set)))",
+    // "(if Eve (escape (hello goodbye)))",
+    // "(if world (escape (hello goodbye)))",
+    //"((lambda (x (arrow (2 x)))) 4)",
+    //"(let ((crawl ((lambdax (list ((if list ((self (headOf list)) Eve))))))) (crawl Eve)))",
     // "(letr ((firstRooted (lambda (list (if (tail list) ((tail list) (firstRooted (head list))))))) \
        // (letr ((get (lambdax (variable \
             // (let ((links (childrenOf variable)) \
