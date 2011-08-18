@@ -12,8 +12,12 @@
 SEXP_LIBPATH = sexpr/src
 SEXP_INCPATH = sexpr/src
 
-LDFLAGS += -L$(SEXP_LIBPATH)
-CPPFLAGS += -std=c99 -I$(SEXP_INCPATH)
+LUUID_LIBPATH = /usr/lib
+LUUID_INCPATH = /usr/include
+
+LDFLAGS += -L$(SEXP_LIBPATH) -L$(LUUID_LIBPATH)
+CPPFLAGS += -std=c99 -I$(SEXP_INCPATH) -I$(LUUID_INCPATH)
+
 TARGETS = libentrelacs.so libentrelacs.a
 OBJECTS = mem0.o mem.o sha1.o space.o machine.o
 TESTS = space program machine
@@ -32,7 +36,7 @@ $(TESTS:%=clean.test%):
 tests: all $(TESTS:%=test%.o) $(TESTS:%=test%)
 
 #$(TESTS:%=test%): libentrelacs.so
-$(TESTS:%=test%): libentrelacs.a sexpr/src/libsexp.a
+$(TESTS:%=test%): libentrelacs.a sexpr/src/libsexp.a /usr/lib/libuuid.a
 
 run: $(TESTS:%=run.test%)
 

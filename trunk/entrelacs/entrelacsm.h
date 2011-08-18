@@ -39,3 +39,10 @@
 
 #define childrenOf(A) xl_childrenOf(A)
 #define childrenOfCB(A, CB, C) xl_childrenOfCB(A, CB, C)
+
+#define program(P) xl_program(P)
+#define programOf(P) xl_programOf(P)
+#define operator(H, C) xl_operator(H, C)
+#define continuation(H, C) xl_continuation(H, C)
+#define run(R,  M) xl_run(R,  M)
+#define eval(R, P) xl_eval(R, P)
