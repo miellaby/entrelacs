@@ -7,53 +7,51 @@
 #include "entrelacs/entrelacsm.h"
 #include "mem.h" // geoalloc
 
-
 #define test_title(T) fprintf(stderr, T "\n")
 
-struct s_printArrowC { int size; int max; char* buffer; };
+static struct s_buffer { int size; int max; char* buffer; } buffer = {0, 0, NULL} ;
 
-Arrow printArrow(Arrow a, void *ctx) {
-    struct s_printArrowC *context = (struct s_printArrowC *)ctx;
-    if (!context) { 
-      struct s_printArrowC context0 = { 0, 0, NULL };
-      geoalloc(&context0.buffer, &context0.max, &context0.size, sizeof(char), 1);
-      context0.buffer[0] = '\0';
-      printArrow(a, (void *)&context0);
-      fprintf(stderr, "%s\n", context0.buffer);
-      return 0;
-    }
-
+Arrow _printArrow(Arrow a) {
 
 	if (xl_isRooted(a)) {
-        int size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
-        sprintf(context->buffer + size - 1, "_");
+        int size = buffer.size;
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
+        sprintf(buffer.buffer + size - 1, "_");
 	}
 	
     enum e_xlType t = xl_typeOf(a);
     if (t == XL_TAG) {
         int l;
         char* s = xl_btagOf(a, &l);
-        int size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + l - 1 + 2);
-        sprintf(context->buffer + size - 1, "\"%s\"", s);
+        int size = buffer.size;
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + l - 1 + 2);
+        sprintf(buffer.buffer + size - 1, "\"%s\"", s);
         free(s);
     } else if (t == XL_ARROW) {
         int size;
-        size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
-        sprintf(context->buffer + size - 1, "(");
-        printArrow(xl_tailOf(a), (void *)context);
-        size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 2);
-        sprintf(context->buffer + size - 1, ", ");
-        printArrow(xl_headOf(a), (void *)context);
-        size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
-        sprintf(context->buffer + size - 1, ")");
+        size = buffer.size;
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
+        sprintf(buffer.buffer + size - 1, "(");
+        _printArrow(xl_tailOf(a));
+        size = buffer.size;
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 2);
+        sprintf(buffer.buffer + size - 1, ", ");
+        _printArrow(xl_headOf(a));
+        size = buffer.size;
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
+        sprintf(buffer.buffer + size - 1, ")");
     }
     return a;
 }
+
+Arrow printArrow(Arrow a, Arrow ctx) {
+    geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), 1);
+    buffer.buffer[0] = '\0';
+    _printArrow(a);
+    fprintf(stderr, "%s\n", buffer.buffer);
+    return 0;
+}
+
 
 int basic() {
     // assimilate arrows
@@ -110,7 +108,7 @@ int basic() {
     DEFA(hello, dude);
     root(hello_dude);
     
-    childrenOfCB(hello, printArrow, NULL);
+    childrenOfCB(hello, printArrow, Eve());
     
     // check unrooting
     test_title("check unrooting");
@@ -126,7 +124,7 @@ int basic() {
 
     // check arrow disconnection
     test_title("check arrow disconnection");
-    childrenOfCB(hello, printArrow, NULL);
+    childrenOfCB(hello, printArrow, Eve());
     
     unroot(hello_dude);
 	commit();
@@ -147,9 +145,9 @@ int stress() {
         if (i % 2) {
           int j = (i - 1) / 2; 
           pairs[j] = arrow(tags[i - 1], tags[i]);
-          printArrow(tailOf(pairs[j]), NULL);
-          printArrow(headOf(pairs[j]), NULL);
-          printArrow(pairs[j], NULL);
+          printArrow(tailOf(pairs[j]), Eve());
+          printArrow(headOf(pairs[j]), Eve());
+          printArrow(pairs[j], Eve());
        }
     }
     
@@ -184,11 +182,11 @@ int stress() {
         root(child);
     }
     for (int j = 0 ; j < 100; j++) {
-        printArrow(pairs[j], NULL);
+        printArrow(pairs[j], Eve());
         Arrow child = arrow(connectMe, pairs[j]);
         root(child);
     }
-    childrenOfCB(connectMe, printArrow, NULL);
+    childrenOfCB(connectMe, printArrow, Eve());
     
     // disconnection stress
     test_title("disconnection stress");
@@ -200,7 +198,7 @@ int stress() {
         Arrow child = arrow(connectMe, pairs[j]);
         unroot(child);
     }
-    childrenOfCB(connectMe, printArrow, NULL);
+    childrenOfCB(connectMe, printArrow, Eve());
     
     // connecting stress (big depth)
     test_title("connecting stress (big depth)");
@@ -222,7 +220,7 @@ int stress() {
     commit();
 
     assert(typeOf(loose) == XL_TAG);
-    printArrow(a, NULL);
+    printArrow(a, Eve());
 
     // disconnecting stress (big depth)
     test_title("disconnecting stress (big depth)");

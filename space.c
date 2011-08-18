@@ -905,6 +905,7 @@ Arrow xl_headOf(Arrow a) {
   if (a == Eve)
      return Eve;
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+  assert(cell_isArrow(cell));
   if (!cell_isArrow(cell))
      return -1; // Invalid id
 
@@ -918,6 +919,7 @@ Arrow xl_tailOf(Arrow a) {
   if (a == Eve)
      return Eve;
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+  assert(cell_isArrow(cell));
   if (!cell_isArrow(cell))
      return -1; // Invalid id
 
@@ -931,6 +933,11 @@ Arrow xl_tailOf(Arrow a) {
 
 static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   Address current = a;
+  if (a == Eve) {
+     lengthP = 0;
+     return (char *)0; // Invalid Id
+  }
+  
   Cell cell = mem_get(current); ONDEBUG((show_cell(cell, 1)));
   Cell _catBits = cell_getCatBits(cell);
   if (_catBits != catBits) {
@@ -1017,7 +1024,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  */
 static void connect(Arrow a, Arrow child) {
   ONDEBUG((fprintf(stderr, "connect child=%06x to a=%06x\n", child, a)));
-  if (a == Eve) return; // One doesn't store Eve connectivity.
+  if (a == Eve) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
   Cell catBits = cell_getCatBits(cell);
@@ -1294,8 +1301,12 @@ static void disconnect(Arrow a, Arrow child) {
 }
 
 
-void xl_childrenOfCB(Arrow a, XLCallBack cb, void* context) {
+void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
   ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
+
+  if (a == Eve) {
+     return; // Eve connectivity not traced
+  }
 
   Arrow child;
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
@@ -1462,6 +1473,10 @@ void xl_freeEnum(XLEnum e) {
 XLEnum xl_childrenOf(Arrow a) {
   ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
 
+  if (a == Eve) {
+     return NULL; // Eve connectivity not traced
+  }
+
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (!cell_isArrow(cell)) return NULL; // invalid ID
 
@@ -1488,6 +1503,10 @@ XLEnum xl_childrenOf(Arrow a) {
 
 /** root an arrow */
 Arrow xl_root(Arrow a) {
+  if (a == Eve) {
+     return Eve; // no
+  }
+
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (!cell_isArrow(cell) || cell_isRooted(cell)) return Eve;
 
@@ -1510,9 +1529,10 @@ Arrow xl_root(Arrow a) {
 
 /** unroot a rooted arrow */
 Arrow xl_unroot(Arrow a) {
-  Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (a == Eve)
       return Eve; // stop dreaming
+      
+  Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (!cell_isArrow(cell))
       return Eve;
   if (!cell_isRooted(cell))
@@ -1542,13 +1562,18 @@ Arrow xl_unroot(Arrow a) {
 
 /** return the root status */
 int xl_isRooted(Arrow a) {
+  if (a == Eve) return Eve;
+
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+  assert(cell_isArrow(cell));
   if (!cell_isArrow(cell)) return -1;
   return (cell_isRooted(cell) ? a : Eve);
 }
 
 /** return the loose status */
 int xl_isLoose(Arrow a) {
+  if (a == Eve) return 0;
+  
   if (mem_getAdmin(a) == MEM1_LOOSE) return 1;
 
   // Real loose test, herefater (dead code)

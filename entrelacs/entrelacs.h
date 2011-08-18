@@ -60,16 +60,16 @@ void   xl_freeEnum(XLEnum);
 
 XLEnum xl_childrenOf(Arrow);
 
-typedef Arrow (*XLCallBack)(Arrow arrow, void* context);
-void xl_childrenOfCB(Arrow, XLCallBack, void*);
+typedef Arrow (*XLCallBack)(Arrow arrow, Arrow context);
+void xl_childrenOfCB(Arrow, XLCallBack, Arrow context);
 
 /* Program assimilation */
 Arrow xl_program(char*); // EL string
 char* xl_programOf(Arrow); // to be freed
 
 /* C hook assimilation */
-Arrow xl_operator(XLCallBack hook, char*); // operator arrow with hook
-Arrow xl_continuation(XLCallBack hook, char*); // continuation arrow with hook
+Arrow xl_operator(XLCallBack hook, Arrow); // operator arrow with hook
+Arrow xl_continuation(XLCallBack hook, Arrow); // continuation arrow with hook
 
 /* Run an Entrelacs Machine
  * a vStack is a virtualization stack: vStack == (En (.. (E3 (E2 (E1 Eve)))))
