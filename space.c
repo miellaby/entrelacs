@@ -1390,10 +1390,13 @@ static int xl_enumNextChildOf(XLEnum e) {
           iteratorp->current = child;
 	      return !0;
         }
+        if (cell_getCatBits(cell) == CATBITS_LAST) {
+          return 0; // No more child
+        }
    		pos = jumpToNext(cell, pos, hChild, a);
       }
     } else {
-       if (cell_getCatBits(cell) == CATBITS_LAST) {
+      if (cell_getCatBits(cell) == CATBITS_LAST) {
         return 0; // No more child
       }
       pos = jumpToNext(cell, pos, hChild, a);

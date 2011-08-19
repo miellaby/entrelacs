@@ -23,6 +23,8 @@ int main(int argc, char **argv) {
     "(tailOf Eve)",
     "(tailOf (escape (1 2 3 4 5)))",
     "(headOf (escape (1 2 3 4 5)))",
+    "(root (arrow (hello world)))",
+    "(childrenOf (escape hello))",
     "(let ((x 3) (arrow (x 2))))",
     "(load ((escape (x 3)) (arrow (x 2))))",
     "(let ((x (headOf (escape (1 2 3 4 5)))) (arrow (x 2))))",
