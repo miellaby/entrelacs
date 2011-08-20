@@ -55,15 +55,17 @@ int main(int argc, char **argv) {
     "(childrenOf set)",
     "(let ((set (lambdax (variable (lambda (value (root (arrow (variable value)))))))) (set set set)))",
     "(commit Eve)",
-    "(childrenOf set)",
+    "(childrenOf (escape set))",
+    "(set)",
     "(let ((firstRootedp (escape (lambda (list (eval (if list (escape ((eval (if (isRooted (tailOf list)) (escape ((tailOf list) ((eval firstRootedp) (headOf list)))))) Eve)))))))) \
         (let ((firstRooted (eval firstRootedp)) \
-        (let ((get (lambdax (variable \
+        (let ((myGet (lambdax (variable \
             (let ((links (childrenOf variable)) \
                  (let ((link (firstRooted links)) \
-                          (headOf link)))))))) ((get set) get get)))))))",
+                          (headOf link)))))))) ((myGet set) myGet myGet)))))))",
     "(set join (lambda (x (lambda (y (arrow (x y)))))))",
-    "((get join) 2 3)",
+    "(join 2 3)",
+    "((myGet join) 2 3)",
     NULL
   };
   for (int i = 0; str = programs[i]; i++) {
