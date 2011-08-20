@@ -196,6 +196,19 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
       return headOf(b);
     se = headOf(se);
   }
+  
+  // global matching loop
+   XLEnum enu = childrenOf(x);
+   Arrow found = Eve();
+   while (xl_enumNext(enu) && isEve(found)) {
+      Arrow child = xl_enumGet(enu);
+      if (isRooted(child))
+         found = child;
+   }
+   xl_freeEnum(enu);
+   if (!isEve(found))
+      return headOf(found);
+  
   return a;
 }
 
@@ -436,7 +449,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      // p == (s (eval ss))
      dputs("     v == (eval ss) # an eval expression");
      Arrow ss = head(v);
-     M = a(ss, a(e, a(evalOp, a(a(p, a(a(var, p), e)), k)))); // stack an eval continuation
+     M = a(ss, a(e, a(evalOp, a(a(p, a(a(s, a(var, p)), e)), k)))); // stack an eval continuation
      return M;
   }
 
@@ -455,7 +468,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
   Arrow t = v; // v == t trivial
   
   if (!isTrivial(s)) { // Not trivial closure in application #e#
-    // simply rewriting program with an eval
+    // simply rewriting program with a let
     // pp = (let ((p s) ((var p) t)))
     if (tail(s) == let) { // let expression as closure argument #e#
        dputs("p == (s:(let ((x v) ss)) t)");
