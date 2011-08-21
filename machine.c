@@ -42,21 +42,11 @@ static Arrow arrowFromSexp(sexp_t* sx) {
      n = btag(sx->val_used, sx->val);
   }
   
-  a = n;
-  while (sx->next) {
-     sx = sx->next;
-     if (sx->list) { // list
-        n = arrowFromSexp(sx->list);
-     } else if (sx->ty == SEXP_VALUE && sx->aty == SEXP_BASIC
-                && sx->val_used == 4 && !strcmp("Eve", sx->val)) {
-        n = Eve();
-     } else {
-        n = btag(sx->val_used, sx->val);
-     }
-     a = arrow(a, n);
-  }
-  
-  return a;     
+  if (sx->next) {
+     a = arrowFromSexp(sx->next);
+     return arrow(n, a);
+  } else
+     return n;
 }
 
 static sexp_t *sexpFromArrow(Arrow a) {
@@ -176,11 +166,11 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
     } else if (t == escape) {
        return headOf(a);
     } else if (t == lambda) {
-       Arrow s = headOf(a);
-       return arrow(s, e);
+       Arrow xs = headOf(a);
+       return arrow(xs, e);
     } else if (t == lambdax) {
-       Arrow s = headOf(a);
-       return arrow(lambdax, arrow(s, e));
+       Arrow xs = headOf(a);
+       return arrow(lambdax, arrow(xs, e));
     } else if (t == var) {
        x = headOf(a);
     } else {
@@ -638,13 +628,31 @@ Arrow isRootedHook(Arrow M, Arrow context) {
 }
 
 Arrow ifHook(Arrow M, Arrow context) {
-   Arrow arrow = xl_argInMachine(M);
-   Arrow r;
-   if (isEve(arrow))
-      r = operator(headOfHook, Eve());
-   else
-      r = operator(tailOfHook, Eve());
-   return xl_reduceMachine(M, r);
+  // the ifHook performs some magic
+  Arrow body = xl_argInMachine(M);
+  Arrow condition = tail(body);
+  Arrow alternative = head(body);
+  Arrow branch;
+  if (isEve(condition))
+     branch = head(alternative);
+  else
+     branch = tail(alternative);
+  Arrow p = tail(M);
+  Arrow ek = head(M);
+  
+  if (tail(p) == let) {
+    // p == (let ((x (if arg)) s))
+    // rewritten in (let ((x branch) s))
+    Arrow x = tail(tail(head(p)));
+    Arrow s = head(head(p));
+    p = a(let, a(a(x, branch), s));
+    M = a(p, ek);                                      
+  } else {
+    // p == (if arg)
+    // rewritten in (branch)
+    M = a(branch, ek);
+  }
+  return M;
 }
 
 Arrow commitHook(Arrow M, Arrow context) {
