@@ -71,7 +71,7 @@ void mem0_saveData(char *h, size_t size, char* data) {
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size) return;
 
-  char *dir = h + strlen(h) - 2;
+  char *dir = h + strlen(h) - 2; // FIXME escape binary codes here and there
   chdir(PERSISTENCE_DIR);
   mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ;
   chdir(dir);

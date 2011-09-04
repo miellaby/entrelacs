@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include "entrelacs/entrelacs.h"
 #include "mem0.h"
 #include "mem.h"
@@ -695,7 +696,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
  * by creating the singleton if not found.
  * except if locateOnly param is set.
  */
-Arrow btag(int length, char* str, int locateOnly) {
+Arrow btagOrBlob(Cell catBits, int length, char* str, int locateOnly) {
   uint64_t hash;
   Address hashLocation, hashProbe, hChain;
   uint32_t l;
@@ -722,7 +723,7 @@ Arrow btag(int length, char* str, int locateOnly) {
     cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 1)));
     if (cell_isFree(cell))
 	    firstFreeCell = probeAddress;
-    else if (cell_getCatBits(cell) == CATBITS_TAG
+    else if (cell_getCatBits(cell) == catBits
   	     && cell_getChecksum(cell) == checksum) {
         // chance we found it
 		// now comparing the whole string
@@ -772,7 +773,9 @@ Arrow btag(int length, char* str, int locateOnly) {
   /* Create a missing singleton */
   newArrow = firstFreeCell;
   cell = mem_get(newArrow); ONDEBUG((show_cell(cell, 1)));
-  cell = tag_build(cell, checksum, 0 /* jump */);
+  cell = ( catBits == CATBITS_TAG
+			? tag_build(cell, checksum, 0 /* jump */)
+			: blob_build(cell, checksum, 0 /* jump */));
 
   hChain = hashChain(newArrow, cell) % PRIM1;
   if (!hChain) hChain = 1; // offset can't be 0
@@ -804,7 +807,9 @@ Arrow btag(int length, char* str, int locateOnly) {
 
 	jump = MAX_JUMP;
   }
-  cell = tag_build(cell, checksum, jump);
+  cell = ( catBits == CATBITS_TAG
+			? tag_build(cell, checksum, jump)
+			: blob_build(cell, checksum, jump));
   mem_set(newArrow, cell, MEM1_LOOSE); ONDEBUG((show_cell(cell, 0)));
 
   current = next;
@@ -888,17 +893,17 @@ static Arrow blob(uint32_t size, char* data, int locateOnly) {
   mem0_saveData(h, size, data);
   // TODO: remove the data when cell at h is recycled.
 
-  return tagOrBlob(CATBITS_BLOB, h, locateOnly);
+  return btagOrBlob(CATBITS_BLOB, 20, h, locateOnly);
 }
 
 Arrow xl_arrow(Arrow tail, Arrow head) { return arrow(tail, head, 0); }
 Arrow xl_tag(char* s) { return tagOrBlob(CATBITS_TAG, s, 0);}
-Arrow xl_btag(uint32_t size, char* s) { return btag(size, s, 0);}
+Arrow xl_btag(uint32_t size, char* s) { return btagOrBlob(CATBITS_TAG, size, s, 0);}
 Arrow xl_blob(uint32_t size, char* data) { return blob(size, data, 0);}
 
 Arrow xl_arrowMaybe(Arrow tail, Arrow head) { return arrow(tail, head, 1); }
 Arrow xl_tagMaybe(char* s) { return tagOrBlob(CATBITS_TAG, s, 1);}
-Arrow xl_btagMaybe(uint32_t size, char* s) { return btag(size, s, 1);}
+Arrow xl_btagMaybe(uint32_t size, char* s) { return btagOrBlob(CATBITS_TAG, size, s, 1);}
 Arrow xl_blobMaybe(uint32_t size, char* data) { return blob(size, data, 1);}
 
 Arrow xl_headOf(Arrow a) {
@@ -995,6 +1000,125 @@ char* xl_blobOf(Arrow a, uint32_t* lengthP) {
   return data;
 }
 
+static char* toFingerprints(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
+    int r;
+    int t = xl_typeOf(a);
+    switch(t) {
+        case XL_EVE: {
+            char *s = (char*)malloc(2);
+            assert(s);
+            strcpy(s, ".");
+            return s;
+        }
+        case XL_TAG : {
+            uint32_t length;
+            char* tag = xl_btagOf(a, &length);
+            char *s = malloc(1 + length) ;
+            assert(s);
+            s[0] = ':';
+            strcpy(s + 1, tag);
+            free(tag);
+            *l = length;
+            return s;
+        }
+        case  XL_ARROW : {
+            uint32_t l1, l2;
+            char *p1 = toFingerprints(xl_headOf(a), &l1);
+            char *p2 = toFingerprints(xl_tailOf(a), &l2);
+            char *s = malloc(10 + l1 + l2) ;
+            assert(s);
+            sprintf(s, ">%08x%s%s", l1, p1, p2);
+            free(p1);
+            free(p2);
+            *l = 9 + l1 + l2;
+            return s;
+        }
+        case XL_BLOB : {
+            uint32_t length;
+            char* h = tagOrBlobOf(CATBITS_BLOB, a, &length);
+            
+            char *s = malloc(4 + length);
+            assert(s);
+            sprintf(s, "#%02x%s", length, h);
+            free(h);
+            *l = 3 + length;
+            return s;
+        }
+        case XL_TUPLE :
+        case XL_SMALL :
+            assert(0);
+            return NULL; // Not yet supported TODO
+        default:
+            return NULL;
+    }
+}
+
+
+char* xl_toFingerprints(Arrow a) {
+    uint32_t l;
+    return toFingerprints(a, &l);
+}
+
+static Arrow fromFingerprints(char* ref, int limit) {
+    ONDEBUG((fprintf(stderr, "BEGIN fromFingerprints(%.*s)\n", limit == -1 ? strlen(ref) : limit, ref)));
+    Arrow a = Eve;
+    char c = ref[0];
+    switch (c) {
+        case '.': // Eve
+          break;
+          
+        case '#': { // BLOB
+          char* h;
+          if (limit == -1)
+             h = ref + 1;
+          else {
+             h = malloc(limit);
+             assert(h);
+             strncpy(h, ref + 1, limit - 1);
+          }
+          int hLength;
+          int r = sscanf(h, "%02x", &hLength);
+          assert(r == 1);
+          assert(limit == -1 || limit == hLength + 3);
+          a = btagOrBlob(CATBITS_BLOB, hLength, h + 2, 1);
+          if (limit != -1)
+            free(h);
+          break;
+        }
+        case ':': { // TAG
+          char* tagStr;
+          
+          if (ref[1] == '\0')
+            break;
+            
+          if (limit == -1) {
+            a = tagOrBlob(CATBITS_TAG, ref + 1, 1);
+          } else {
+            a = btagOrBlob(CATBITS_TAG, limit - 1, ref + 1, 1);
+          }
+          break;
+        }
+        case '>': { // ARROW
+          uint32_t limit;
+          int r = sscanf(ref + 1, "%8x", &limit);
+          assert(r == 1); // FIXME as many other assert, it will be replaced by a more resilient behavior
+          Arrow tail = fromFingerprints(ref + 9, limit);
+          Arrow head = fromFingerprints(ref + 9 + limit, -1);
+          a = arrow(tail, head, 1);
+          break;
+        }
+        default:
+          assert(0); // error TODO
+    }
+
+    ONDEBUG((fprintf(stderr, "END fromFingerprints(%.*s) = %06x\n", limit == -1 ? strlen(ref) : limit, ref, a)));
+    return a;
+}
+
+
+Arrow xl_fromFingerprints(char* ref) {
+   return fromFingerprints(ref, -1);
+}
 
 int xl_isEve(Arrow a) {
   return (a == Eve);
