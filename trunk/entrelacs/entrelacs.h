@@ -39,6 +39,12 @@ char* xl_tagOf(Arrow); // to freed
 char* xl_btagOf(Arrow, uint32_t*);
 char* xl_blobOf(Arrow, uint32_t*); // to freed
 
+/* Get/Set arrow fingerprints (identify any arrow uniquely in both space and time)
+ * Can be used for exchanging information between two spaces
+ */
+char* xl_toFingerprints(Arrow); // to freed
+Arrow xl_fromFingerprints(char*);
+
 /* Rooting */
 Arrow xl_root(Arrow);
 Arrow xl_unroot(Arrow);

@@ -20,7 +20,7 @@ CPPFLAGS += -std=c99 -I$(SEXP_INCPATH) -I$(LUUID_INCPATH)
 
 TARGETS = libentrelacs.so libentrelacs.a
 OBJECTS = mem0.o mem.o sha1.o space.o machine.o
-TESTS = space program machine
+TESTS = space fingerprints program machine
 
 all: $(TARGETS)
 

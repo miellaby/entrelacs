@@ -28,6 +28,9 @@
 #define str(A) xl_tagOf(A)
 #define nstr(A, N) xl_btagOf(A, N)
 
+#define toFingerprints(A) xl_toFingerprints(A)
+#define fromFingerprints(S) xl_fromFingerprints(S)
+
 #define root(A) xl_root(A)
 #define unroot(A) xl_unroot(A)
 

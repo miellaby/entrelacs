@@ -50,22 +50,39 @@ static Arrow arrowFromSexp(sexp_t* sx) {
 }
 
 static sexp_t *sexpFromArrow(Arrow a) {
-   if (isEve(a)) {
+   int t = typeOf(a);
+   
+   switch (t) {
+    case XL_EVE :
        return new_sexp_atom("Eve", 3, SEXP_BASIC);
-       
-   } else if (typeOf(a) == XL_ARROW) {
+
+    case XL_ARROW : {
        sexp_t *sexpHead = sexpFromArrow(headOf(a));
        sexp_t *sexpTail = sexpFromArrow(tailOf(a));
        sexpTail->next = sexpHead;
        return new_sexp_list(sexpTail);
-       
-   } else {
+    }
+    case XL_BLOB : {
+       char* fingerprint = toFingerprints(a);
+       sexp_t* sexp = new_sexp_atom(fingerprint, strlen(fingerprint), SEXP_DQUOTE);
+       free(fingerprint);
+       return sexp;
+    }
+    case XL_TAG : {
        uint32_t tagSize;
        char* tag = btagOf(a, &tagSize);
        sexp_t* sexp = new_sexp_atom(tag, tagSize, SEXP_DQUOTE);
        free(tag);
        return sexp;
-   }
+    }
+    case XL_TUPLE :
+    case XL_SMALL :
+       assert(0);
+       return NULL; // Not yet supported TODO
+       
+    default:
+       return NULL;
+  }
 }
 
 Arrow xl_program(char* program) { // EL string
