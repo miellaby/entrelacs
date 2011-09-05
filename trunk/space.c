@@ -336,8 +336,11 @@ uint32_t hashChild(Address address, CellData cell) { // Data chain hash offset
  * This function returns a string used to define a tag arrow.
  *
  */
-char* crypto(uint32_t size, char* data, char output[20]) {
-  sha1(data, size, output);
+char* crypto(uint32_t size, char* data, char output[41]) {
+  char h[20];
+  sha1(data, size, h);
+  sprintf(output,"%08x%08x%08x%08x%08x", *(uint32_t *)h, *(uint32_t *)(h + 4), *(uint32_t *)(h + 8), 
+     *(uint32_t *)(h + 12), *(uint32_t *)(h + 16));
   return output;
 }
 
@@ -544,7 +547,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
         p = str;
         i = 1;
   	    cell = mem_get(next); ONDEBUG((show_cell(cell, 1)));
-	    while ((c = *p++) == ((char*)&cell)[i] && c != 0) {
+	    while ((c = *p++) && c == ((char*)&cell)[i]) {
            i++;
            if (i == 7) {
               if (cell_getCatBits(cell) == CATBITS_LAST) {
@@ -555,7 +558,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
               i = 1;
             }
         }
-        if (!c && !((char*)&cell)[i] && cell_getCatBits(cell) == CATBITS_LAST && cell_getSize(cell) == i)
+        if (!c && cell_getCatBits(cell) == CATBITS_LAST && cell_getSize(cell) == i - 1)
             return probeAddress; // found arrow
     }
     // Not the singleton
@@ -630,9 +633,9 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
   c = 0;
   while (1) {
     c = *p++;
-
-    ((char*)&content)[i] = c;
     if (!c) break;
+    
+    ((char*)&content)[i] = c;
     i++;
     if (i == 6) {
 	  Address offset = hChain;
@@ -672,7 +675,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
 
   }
   cell = mem_get(current); ONDEBUG((show_cell(cell, 1)));
-  cell = lastSlice_build(cell, content, 1 + i /* size */);
+  cell = lastSlice_build(cell, content, i /* size */);
   mem_set(current, cell, 0); ONDEBUG((show_cell(cell, 1)));
 
 
@@ -705,7 +708,7 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, int locateOnly) {
   Cell cell, nextCell, content;
   unsigned i, jump;
   char c, *p;
-  if (!str) {
+  if (!length) {
     return Eve;
   }
 
@@ -886,14 +889,14 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, int locateOnly) {
  * except if locateOnly param is set.
  */
 static Arrow blob(uint32_t size, char* data, int locateOnly) {
-  char h[20];
+  char h[41];
   crypto(size, data, h);
 
   // Prototype only: a BLOB is stored into a pair arrow from "blobTag" to the blog cryptographic hash. The blob data is stored separatly outside the arrows space.
   mem0_saveData(h, size, data);
   // TODO: remove the data when cell at h is recycled.
 
-  return btagOrBlob(CATBITS_BLOB, 20, h, locateOnly);
+  return tagOrBlob(CATBITS_BLOB, h, locateOnly);
 }
 
 Arrow xl_arrow(Arrow tail, Arrow head) { return arrow(tail, head, 0); }
@@ -960,22 +963,24 @@ static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   char* tag =  NULL;
   uint32_t size = 0;
   uint32_t max = 0;
-  geoalloc((char**)&tag, &max, &size, sizeof(char), 1);
   //TODO:QUICKER COPY
-  while ((tag[size-1] = ((char*)&cell)[i])) {
+  while (1) {
     geoalloc((char**)&tag, &max, &size, sizeof(char), size + 1);
+    tag[size - 1] = ((char*)&cell)[i];
     i++;
     if (i == 7) {
-      i = 1;
       if (cell_getCatBits(cell) == CATBITS_LAST) {
-	    size -= (6 - cell_getSize(cell));
         break;// the chain is over
       }
       current = jumpToNext(cell, current, hChain, a);
       cell = mem_get(current); ONDEBUG((show_cell(cell, 1)));
+      i = 1;
     }
   }
-  *lengthP = size;
+  size -= (6 - cell_getSize(cell));
+  geoalloc((char**)&tag, &max, &size, sizeof(char), size + 1);
+  tag[size - 1] = 0;
+  *lengthP = size - 1;
   return tag;
 }
 
@@ -1013,18 +1018,18 @@ static char* toFingerprints(Arrow a, uint32_t *l) { // TODO: could be rewritten 
         case XL_TAG : {
             uint32_t length;
             char* tag = xl_btagOf(a, &length);
-            char *s = malloc(1 + length) ;
+            char *s = malloc(2 + length) ;
             assert(s);
             s[0] = ':';
             strcpy(s + 1, tag);
             free(tag);
-            *l = length;
+            *l = 1 + length;
             return s;
         }
         case  XL_ARROW : {
             uint32_t l1, l2;
-            char *p1 = toFingerprints(xl_headOf(a), &l1);
-            char *p2 = toFingerprints(xl_tailOf(a), &l2);
+            char *p1 = toFingerprints(xl_tailOf(a), &l1);
+            char *p2 = toFingerprints(xl_headOf(a), &l2);
             char *s = malloc(10 + l1 + l2) ;
             assert(s);
             sprintf(s, ">%08x%s%s", l1, p1, p2);

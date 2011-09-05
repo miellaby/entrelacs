@@ -51,8 +51,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "%s\n", f);
     assert(fromFingerprints(f) == hello_world);
     free(f);
-    
-    assert(0); // BLOB not ready yet
+        
     test_title("Blob fingerprints");
     Arrow someBlob = blobFromFile(__FILE__);
     
