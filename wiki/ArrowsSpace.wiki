@@ -18,7 +18,7 @@ One requires from an AS
    The AS must leverage on all persistent and volatile physical memory levels and flatten them down to a single homogeneous space.
 
  * De-duplication
-   The AS must ensure each mathematically definable arrow which may come  in is not stored more than once.
+   The AS must ensure each mathematically definable arrow is never stored more than once in the whole storage space.
 
  * Full connectivity
    The AS must store enough connectivity data to allow efficient retrieving of the ends and the _children_ of any arrow.
@@ -50,7 +50,7 @@ Main steps of an arrow _assimilation_
   # hashing the arrow definition to get a default location.
   # looking for the existing singleton at the default location.
   # putting the arrow definition here if missing.
-  # managing conflicts through open addressing as seen hereafter.
+  # managing conflicts through open addressing as introduced hereafter.
 
 === Hash everything !===
 
@@ -72,18 +72,17 @@ Once truncated modulo the total mass storage space size, an hash code defines a 
 
 In case of conflict with existing unrelated arrows, one shifts this default location by some offset. If there's still a storage conflict, one shifts the location again, and so on.
 
-Checking for an already stored singleton of an arrow consequently requires to search for the copy by starting from the arrow default location:
+Looking for an already stored arrow consequently requires searching in several locations starting from a default one:
   * if one finds the expected arrow at the considered address ==> hit!
-  * if one finds nothing ==> miss! The empty location may be used to store the missing arrow if asked.
+  * if one finds an empty location ==> it's a miss. This empty location will be used to store the missing arrow if needed.
   * if one finds something else, then one keeps on searching at a nearby location.
 
-This approach is called [OpenAddressing open addressing] when applied to hash tables. The default location is also named an _open address_ and the search process of an existing arrow is called _probing_.
+This approach is called [OpenAddressing open addressing] when applied to hash tables. The default storage location is named an _open address_ and the search process described above is called _probing_.
 
 
 === Perform Orthogonal Persistence ===
 
-The AS stores arrows into a mass storage device. But it accedes to this device through a massive RAM-based cache. Almost all fast-access volatile memory resources of the hosting system may be used to cache arrows. This cache has be totally transparent and must flatten all the memory levels of a traditional platform into a single one.
-
+As a whole, the AS is a single persistent memory device merging all the memory levels of the hosting system. In other words, the AS stores arrows into a mass storage device acceded through a massive RAM-based cache. This cache operates almost all the available fast-access volatile memory resources.
 
 == Anticipated prototype ==
 
