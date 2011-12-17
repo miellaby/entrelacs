@@ -19,8 +19,10 @@ LDFLAGS += -L$(SEXP_LIBPATH) -L$(LUUID_LIBPATH)
 CPPFLAGS += -std=c99 -I$(SEXP_INCPATH) -I$(LUUID_INCPATH)
 
 TARGETS = libentrelacs.so libentrelacs.a
-OBJECTS = mem0.o mem.o sha1.o space.o machine.o
+OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o
 TESTS = space fingerprints program machine
+
+PERSISTENCE_DIR=~/.entrelacs/
 
 all: $(TARGETS)
 
@@ -41,9 +43,9 @@ $(TESTS:%=test%): libentrelacs.a sexpr/src/libsexp.a /usr/lib/libuuid.a
 run: $(TESTS:%=run.test%)
 
 run.% : %
-	-[ -f entrelacs.dat ] && rm entrelacs.dat
+	-[ -f $(PERSISTENCE_DIR)entrelacs.dat ] && rm $(PERSISTENCE_DIR)entrelacs.dat
 	LD_LIBRARY_PATH=. ./$<
-	od -t x1z -w8 entrelacs.dat
+	od -t x1z -w8 $(PERSISTENCE_DIR)entrelacs.dat
 
 draft: testdraft.o testdraft run.testdraft
     

@@ -29,14 +29,22 @@ const Address PRIM1 = (_PRIM0 - 2);
 const Address SPACE_SIZE = _PRIM0;
 #endif
 
+
+extern char* mem0_dirPath;
+extern char* mem0_filePath;
+extern char* mem0_journalFilePath;
+
 // Persistence file
+#define PERSISTENCE_ENV "ENTRELACS"
 #define PERSISTENCE_DIR "~/.entrelacs"
 #define PERSISTENCE_FILE "entrelacs.dat"
-#define PERSISTENCE_ENV "ENTRELACS"
+#define PERSISTENCE_JOURNALFILE "entrelacs.journal"
+
 
 // mem0 accessors
 Cell mem0_get(Address);
 void mem0_set(Address, Cell);
+int  mem0_commit();
 
 // prototype only methods
 void   mem0_saveData(char *h, size_t size, char* data);
