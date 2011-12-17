@@ -39,7 +39,7 @@ static Arrow arrowFromSexp(sexp_t* sx) {
              && sx->val_used == 4 && !strcmp("Eve", sx->val)) {
      n = Eve();
   } else {
-     n = btag(sx->val_used, sx->val);
+     n = btag(sx->val_used - 1, sx->val); // One don't keep 0 terminator byte
   }
   
   if (sx->next) {
@@ -729,4 +729,5 @@ static void machine_init() {
 
 void xl_init() {
   int rc = space_init();
+  assert(rc >= 0);
 }

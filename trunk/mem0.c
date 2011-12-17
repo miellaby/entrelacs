@@ -1,112 +1,405 @@
 #define MEM0_C
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include "log.h"
 #include "mem0.h"
 
-#ifndef PRODUCTION
-  #define ONDEBUG(w) w
-#else
-  #define ONDEBUG(w)
-#endif
-
 static FILE* F = NULL;
+void _mem0_set(Address r, Cell v);
 
-char* dirname(char* file) {
+// =========
+// file path handling
+// =========
 
-  char* d = (char *)malloc(strlen(file) + 1);
-  strcpy(d, file);
-  char* p = strrchr(d, '/');
-  if (p == d)
-    d[1] == '\0';
-  else if (p)
+char* mem0_dirname(char* path) {
+  char* d = NULL;
+  if (path[0] == '~') {
+      asprintf(&d, "%s%s", getenv("HOME"), path + 1);
+  } else {
+      d = strdup(path);
+  }
+  assert(d);
+  size_t n = strlen(d);
+  if (n == 1 && *d == '/') return d; // special "/" case
+  char* p = strrchr(d, '/'); // find last '/' char
+  if (p == d) // special case: "/something" in root
+    p[1] == '\0';
+  else if (p) // /so/me/thing cases
     *p = '\0';
-  else
-    strcpy(d, ".");
+  else {
+    // "something" case: directory is "."
+    if (n > 0)
+        strcpy(d, ".");
+    else {
+        free(d);
+        d = strdup(".");
+        assert(d);
+    }
+  }
   return d;
 }
 
-int mem0_init() {
-  char* env;
-  if (F) return 0;
+char* mem0_basename(char* path) {
+  size_t n = strlen(path);
+  char* b = (char *)malloc(n + 1);
+  assert(b);
+  char* p = strrchr(path, '/'); // find last '/' char
+  if (p) // "/something" or "/some/thing" or even "/"
+    strcpy(b, p + 1);
+  else
+    strcpy(b, path); // other case: basename is path
+  return b;
+}
 
-  env = getenv(PERSISTENCE_ENV);
-  if (env) {
-    char* d = dirname(env);
-    chdir(d);
-    F = fopen(env, "w+");
-    free(d);
-  } else {
-    chdir(PERSISTENCE_DIR);
-    F = fopen(PERSISTENCE_FILE, "w+");
+char* mem0_path(char** target, char* prePath, char* postPath) {
+
+  char *translatedPrePath = NULL;
+  if (prePath[0] == '~') {
+      asprintf(&translatedPrePath, "%s%s", getenv("HOME"), prePath + 1);
+      assert(translatedPrePath);
+      prePath = translatedPrePath;
   }
-  assert(F);
 
-  mem0_set(SPACE_SIZE -1, 0);
-  return (ftell(F) > 0);
+  char *translatedPostPath = NULL;
+  if (postPath[0] == '~') {
+      asprintf(&translatedPostPath, "%s%s", getenv("HOME"), postPath + 1);
+      assert(translatedPostPath);
+      postPath = translatedPostPath;
+  } else if (!strcmp(postPath, ".")) {
+      postPath = "";
+  }
+
+  *target = NULL;
+
+  int prePathLength = strlen(prePath);
+  if (postPath[0] == '/') {
+      asprintf(target, "%s", postPath);
+  } else if (prePathLength && prePath[prePathLength - 1] == '/') {
+      asprintf(target, "%s%s", prePath, postPath);
+  } else {
+      asprintf(target, "%s/%s", prePath, postPath);
+  }
+  assert(*target);
+}
+
+// =============
+// journal
+// =============
+
+char* mem0_journalFilePath = NULL;
+static FILE* JOURNAL = NULL;
+static long journalEnd = 0;
+#define JOURNAL_READING 0
+#define JOURNAL_WRITING 1
+
+static void computeJournalFilePath() {
+    if (mem0_journalFilePath != NULL) return;
+
+    char* env = getenv(PERSISTENCE_ENV);
+    if (env) {
+       char* d = mem0_dirname(env);
+       char* b = mem0_basename(env);
+       if (strlen(b)) {
+         char* bDotJournal = NULL;
+         asprintf(&bDotJournal, "%s.journal", b);
+         assert(bDotJournal);
+         mem0_path(&mem0_journalFilePath, d, bDotJournal);
+         free(bDotJournal);
+       } else
+         mem0_path(&mem0_journalFilePath, d, PERSISTENCE_JOURNALFILE);
+       free(d);
+       free(b);
+    } else {
+       mem0_path(&mem0_journalFilePath, PERSISTENCE_DIR, PERSISTENCE_JOURNALFILE);
+    }
+    assert(mem0_journalFilePath);
+    DEBUGPRINTF("mem0_journalFilePath is '%s'", mem0_journalFilePath);
+}
+
+static int openJournal(int forWrite) {
+    computeJournalFilePath();
+    JOURNAL = fopen(mem0_journalFilePath, forWrite == JOURNAL_WRITING ? "wb" : "rb");
+    if (forWrite == JOURNAL_WRITING && !JOURNAL) {
+        perror("");
+        DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open journal for writing");
+    }
+    return (JOURNAL == NULL);
+}
+
+void mem0_initJournal() {
+    (void)openJournal(JOURNAL_WRITING);
+}
+
+void mem0_addToJournal(Address r, Cell v) {
+   size_t writen = fwrite(&r, sizeof(Address), 1, JOURNAL);
+   if (writen != 1) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write into journal");
+   }
+   writen = fwrite(&v, sizeof(Cell), 1, JOURNAL);
+   if (writen != 1) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write into journal");
+   }
+}
+
+int mem0_terminateJournal() {
+    // add terminator
+    mem0_addToJournal(0, 0);
+    mem0_addToJournal(0, 0);
+
+    if (fflush(JOURNAL)
+        /* || fsync(JOURNAL) */
+        || fclose(JOURNAL)) {
+        DPRINTF(LOG_FATAL, LOG_MEM0, "Can't terminate journal");
+    }
+    JOURNAL = NULL;
+    return 0;
+}
+
+void mem0_dismissJournal() {
+    // before removing the journal, one ensures persistence in disk
+    fflush(F);
+    /* fsync(F); */
+
+    if (!mem0_journalFilePath || unlink(mem0_journalFilePath)) {
+         DPRINTF(LOG_FATAL, LOG_MEM0, "Can't remove journal");
+    }
+}
+
+int mem0_openPreviousJournal() {
+    char check[2 * sizeof(Address) + 2 * sizeof(Cell)];
+
+    if (openJournal(JOURNAL_READING))
+        goto corrupted;
+
+    DPRINTF(LOG_WARN, LOG_MEM0, "Previous journal found");
+
+    fseek(JOURNAL, 0, SEEK_END);
+    DEBUGPRINTF("journal size is %ld", ftell(JOURNAL));
+
+    fseek(JOURNAL, - sizeof(check), SEEK_END);
+    journalEnd = ftell(JOURNAL);
+    DEBUGPRINTF("journal terminator at %ld", journalEnd);
+
+    size_t read = fread(&check, sizeof(check), 1, JOURNAL);
+    if (read != 1) {
+        DPRINTF(LOG_WARN, LOG_MEM0, "Journal last bytes reading failed. probably truncated file");
+        goto corrupted;
+    }
+
+    for (int i = 0; i < sizeof(check); i++) {
+        if (check[i]) {
+            DPRINTF(LOG_WARN, LOG_MEM0, "Journal is not properly terminated");
+            goto corrupted;
+        }
+    }
+    valid:
+        DPRINTF(LOG_WARN, LOG_MEM0, "Previous journal is validated");
+        return 0;
+
+    corrupted:
+        if (JOURNAL) {
+             fclose(JOURNAL);
+             JOURNAL = NULL;
+        }
+        if (mem0_journalFilePath)
+            unlink(mem0_journalFilePath);
+        return -1;
+}
+
+void mem0_recoverFromJournal() {
+    rewind(JOURNAL);
+    while (1) {
+        Address address;
+        Cell cell;
+        size_t addressRead = fread(&address, sizeof(Address), 1, JOURNAL);
+        size_t cellRead = fread(&cell, sizeof(Cell), 1, JOURNAL);
+        if (!(addressRead == 1 && cellRead == 1)) {
+            DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read Address/Cell pair from journal");
+        }
+        if (!address && !cell) break; // Terminator found
+        _mem0_set(address, cell);
+    }
+    fclose(JOURNAL);
+    JOURNAL = NULL;
+    mem0_dismissJournal();
+}
+
+// =========
+// mem0
+// =========
+
+char* mem0_filePath = NULL;
+char* mem0_dirPath = NULL;
+
+int mem0_init() {
+  if (F) {
+     DEBUGPRINTF("mem0_init as already been done");
+     return 0;
+  }
+
+  // compute mem0 file path
+  char* env = getenv(PERSISTENCE_ENV);
+  if (env) {
+    char* d = mem0_dirname(env);
+    char* b = mem0_basename(env);
+    mem0_path(&mem0_dirPath, PERSISTENCE_DIR, d);
+    if (!strlen(b)) {
+      mem0_path(&mem0_filePath, mem0_dirPath, PERSISTENCE_FILE);
+    } else {
+      mem0_path(&mem0_filePath, mem0_dirPath, b);
+    }
+    free(d);
+    free(b);
+  } else {
+    mem0_path(&mem0_dirPath, PERSISTENCE_DIR, ".");
+    mem0_path(&mem0_filePath, mem0_dirPath, PERSISTENCE_FILE);
+  }
+  DEBUGPRINTF("mem0_filePath is %s", mem0_filePath);
+
+  // open mem0 file (create it if non existant)
+  F = fopen(mem0_filePath, "w+b");
+  if (!F) {
+      perror("");
+      DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open persistence file '%s'", mem0_filePath);
+      return -1;
+  }
+
+  // set it up to its max size
+  _mem0_set(SPACE_SIZE - 1, 0);
+  if (ftell(F) <= 0) {
+      DPRINTF(LOG_FATAL, LOG_MEM0, "mem0 not writable?");
+  }
+
+  // recover from previous journal if any
+  if (!mem0_openPreviousJournal()) {
+      mem0_recoverFromJournal();
+  }
+  return 1;
 }
 
 Cell mem0_get(Address r) {
-   ONDEBUG(fprintf(stderr, "mem0_get@%012x \n", r));
-
+   DEBUGPRINTF("mem0_get@%012x ", r);
+   assert(!JOURNAL);
+   if (r >= SPACE_SIZE) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "mem0_get@%012x out of range", r);
+       return 0;
+   }
    Cell result;
    fseek(F, r * sizeof(Cell), SEEK_SET);
-   size_t read=fread(&result, sizeof(Cell), 1, F);
-   assert(read);
+   //DEBUGPRINTF("Moved to %ld", ftell(F));
+   size_t read = fread(&result, sizeof(Cell), 1, F);
+   if (read != 1) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read from mem0 @%012x", r);
+   }
    return result;
 }
 
-void mem0_set(Address r, Cell v) {
-   ONDEBUG(fprintf(stderr, "mem0_set@%012x %016llx\n", r, v));
+void _mem0_set(Address r, Cell v) {
+   DEBUGPRINTF("mem0_set@%012x %016llx", r, v);
+   if (r >= SPACE_SIZE) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "mem0_set@%012x out of range", r);
+       return;
+   }
+
    fseek(F, r * sizeof(Cell), SEEK_SET);
-   size_t write=fwrite(&v, sizeof(Cell), 1, F);
-   assert(write);
-   fflush(F);
+   size_t write = fwrite(&v, sizeof(Cell), 1, F);
+   if (write != 1) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write to mem0");
+   }
+}
+
+void mem0_set(Address r, Cell v) {
+    if (!JOURNAL) {
+        DEBUGPRINTF("First mem0_set() call since last commit. Journal begin.");
+        mem0_initJournal();
+    }
+    mem0_addToJournal(r, v);
 }
 
 void mem0_saveData(char *h, size_t size, char* data) {
+  DEBUGPRINTF("saving %ld bytes as '%s' hash", size, h);
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size) return;
 
-  char *dir = h + strlen(h) - 2; // FIXME escape binary codes here and there
+  char *dirname = h + strlen(h) - 2; // FIXME escape binary codes here and there
+  char *filename = h; // FIXME escape binary codes here and there
   chdir(PERSISTENCE_DIR);
-  mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ;
-  chdir(dir);
-  FILE* fd = fopen(h, "w");
+  mkdir(dirname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ;
+  chdir(dirname);
+  FILE* fd = fopen(filename, "w");
+  if (!fd) {
+     perror("");
+     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open blob file '%s' in '%s'", filename, dirname);
+  }
   chdir("..");
-  fwrite(data, size, 1, fd);
-  fclose(fd);
+  size_t written = fwrite(data, size, 1, fd);
+  if (written != 1) {
+     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write into blob file '%s'", filename);
+  }
+  int rc = fclose(fd);
+  if (rc) {
+     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't close loaded blob file '%s'", filename);
+  }
 }
 
 char* mem0_loadData(char* h, size_t* sizeP) {
   *sizeP = 0;
 
   size_t size;
-  char *dir = h + strlen(h) - 2;
+  char *filename = h;
+  char *dirname = h + strlen(h) - 2;
   chdir(PERSISTENCE_DIR);
-  int rc = chdir(dir);
-  if (rc) return NULL;
+  int rc = chdir(dirname);
+  if (rc) {
+     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't move into '%s' directory", dirname);
+  }
 
-  FILE* fd = fopen(h, "r");
+  FILE* fd = fopen(filename, "r");
   chdir("..");
-  if (!fd) return NULL;
+  if (!fd) {
+      perror("");
+      DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open blob file '%s' in '%s'", filename, dirname);
+  }
 
+  // retrieve file size
   fseek(fd, 0, SEEK_END);
   size = ftell(fd);
   rewind(fd);
-  assert(size);
+  if (!size) {
+      DPRINTF(LOG_FATAL, LOG_MEM0, "Blob file '%s' is truncated", filename);
+  }
 
   char *buffer = (char *)malloc(sizeof(char) * size);
   assert(buffer);
 
   rc = fread(buffer, size, 1, fd);
-  fclose(fd);
+  if (rc != 1) {
+       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read blob file '%s' content", filename);
+  }
 
-  assert(rc);
+  rc = fclose(fd);
+  if (rc) {
+      DPRINTF(LOG_FATAL, LOG_MEM0, "Can't close blob file '%s'", filename);
+  }
 
   *sizeP = size;
   return buffer;
+}
+
+int mem0_commit() {
+    if (JOURNAL) {
+        mem0_terminateJournal();
+        int rc = mem0_openPreviousJournal();
+        if (rc) {
+            DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read back the journal file!");
+        }
+        mem0_recoverFromJournal();
+    } else {
+        DEBUGPRINTF("Nothing to commit");
+    }
 }

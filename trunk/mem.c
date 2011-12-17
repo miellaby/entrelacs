@@ -212,11 +212,14 @@ void mem_commit() {
   if (!logSize) return;
 
   qsort(log, logSize, sizeof(Address), _addressCmp);
+
   for (i = 0; i < logSize; i++) {
     Address a = log[i];
     mem0_set(a, mem_get(a));
     mem[a & 0xFFF].a &= 0xFFFE;
   }
+  mem0_commit();
+
   zeroalloc((char **)&log, &logMax, &logSize);
   reserveHead = 0;
   ONDEBUG((fprintf(stderr, "mem_commit done\n")));
@@ -224,7 +227,8 @@ void mem_commit() {
 
 int mem_init() {
   ONDEBUG((fprintf(stderr, "mem_init (memSize = %d)\n", memSize)));
-  int firstTime = mem0_init();
+  int rc = mem0_init();
+  if (rc < 0) return rc;
   Address i;
   for (i = 0; i < memSize; i++) {
     mem[i].a = MEM1_EMPTY;
@@ -232,5 +236,5 @@ int mem_init() {
 
   geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), 0);
 
-  return firstTime; // return !0 if very first start
+  return rc; // return >0 if very first start, <0 if error otherwise 0
 }

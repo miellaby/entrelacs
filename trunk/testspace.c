@@ -13,18 +13,18 @@ static struct s_buffer { int size; int max; char* buffer; } buffer = {0, 0, NULL
 
 Arrow _printArrow(Arrow a) {
 
-	if (xl_isRooted(a)) {
+    if (xl_isRooted(a)) {
         int size = buffer.size;
         geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
         sprintf(buffer.buffer + size - 1, "_");
-	}
-	
+    }
+
     enum e_xlType t = xl_typeOf(a);
     if (t == XL_TAG) {
         int l;
         char* s = xl_btagOf(a, &l);
         int size = buffer.size;
-        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + l - 1 + 2);
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + l + 2);
         sprintf(buffer.buffer + size - 1, "\"%s\"", s);
         free(s);
     } else if (t == XL_ARROW) {
@@ -58,6 +58,7 @@ int basic() {
     test_title("assimilate arrows");
     DEFTAG(hello); // Arrow hello = xl_tag("hello");
     DEFTAG(world);
+    DEFTAG(more_bigger_string_11111111111111111111);
     DEFA(hello, world); // Arrow hello_world = xl_arrow(hello, world);
     
     // check regular arrows
@@ -95,13 +96,38 @@ int basic() {
     // check deduplication
     test_title("check deduplication");
     Arrow original = hello_world;
+    Arrow original_big_string = more_bigger_string_11111111111111111111;
     {
+       DEFTAG(more_bigger_string_11111111111111111111);
+       assert(original_big_string == more_bigger_string_11111111111111111111);
        DEFTAG(hello);
        DEFTAG(world);
        DEFA(hello, world);
        assert(original == hello_world);
     }
-    
+
+    // check btag/tag equivalency
+    test_title("check btag/tag equivalency");
+    {
+        Arrow helloB = btag(5, "hello");
+        Arrow worldB = btag(5, "world");
+        DEFA(helloB, worldB);
+        assert(original == helloB_worldB);
+   }
+
+    // check btag dedup
+    test_title("check btag dedup");
+    Arrow fooB = tag("headOf");
+    Arrow barB = tag("tailOf");
+    DEFA(fooB, barB);
+    Arrow originalB = fooB_barB;
+    {
+        Arrow fooB = btag(6, "headOf");
+        Arrow barB = btag(6, "tailOf");
+            DEFA(fooB, barB);
+            assert(originalB == fooB_barB);
+    }
+
     // check arrow connection
     test_title("arrow connection");
     DEFTAG(dude);
@@ -237,6 +263,7 @@ int stress() {
           unroot(pairs[j]);
         }
     }
+    unroot(connectMe);
     commit();
     
     return 0;
