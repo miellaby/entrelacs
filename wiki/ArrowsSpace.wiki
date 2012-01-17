@@ -1,15 +1,15 @@
 #summary The "Arrows Space" (AS) is the key component of an Entrelacs system.
 
 == introduction ==
-An _"Arrows Space"_ (AS) designates a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. The AS is the key component of an [DesignIntroduction Entrelacs System].
+An _"Arrows Space"_ (AS) designates a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. It's the key component of an [DesignIntroduction Entrelacs System].
 
 Please note one may simulate an Arrows Space with [PenAndPaperReferenceDesign a pen and a paper sheet] .
 
-An AS might become a real computer hardware. If so, it would not necessarily be designed as a bank of buckets for binary words like all the other storage devices so far.
+An AS might be designed as a dedicated computer hardware. If so, it would not necessarily consist in a bank of buckets like all other previous data storage.
 
-But for the moment, we will study the AS as a simulated device, that is a piece of software leveraging on traditional volatile and mass memory hardwares.
+But for the moment, we will study the AS as a simulated device, that is a piece of software leveraging on traditional volatile and mass memory hardware.
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are basically pairs of pointers||
+<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png'/><br/>AS artistic view.<br>Arrows are basically stored as pairs of pointers||
 
 == AS requirements summary ==
 One requires from an AS
@@ -50,7 +50,7 @@ Main steps of an arrow _assimilation_
   # hashing the arrow definition to get a default location.
   # looking for the existing singleton at the default location.
   # putting the arrow definition here if missing.
-  # managing conflicts through open addressing as introduced hereafter.
+  # managing conflicts through _open addressing_ as introduced hereafter.
 
 === Hash everything !===
 
@@ -59,12 +59,11 @@ The first step of arrow assimilation process consists in computing a default loc
 To do so, one computes an hash code from the considered arrow definition.
  * Concerning a regular arrow, since it's basically a pair of ends, one computes its default location by hashing its both ends addresses.
  * Concerning raw data, the AS should hash the whole object body.
-    * For a very long binary object, a *cryptographic hash function* should be used to get both a default location and an unique signature
-      * The signature is stored previously to the object body.
-      * It avoids a full binary comparison to formally identify an already stored singleton.
-      * A good cryptographic function will also avoid _data cluttering_.
-    * For a short binary object, a simpler *checksum function* may be used.
-       * As this checksum can't unambiguously identify a present singleton, one must fully comparing the singleton data with the assimilated object.
+    * For a very long binary object, a *cryptographic hash function* is used to get both a default location and an unique signature
+      * The signature is stored next to the object body so to quickly identify a singleton.
+      * A cryptographic hash also avoids _data cluttering_.
+    * For a shorter binary object, a simpler *checksum* is used.
+       * This checksum doesn't uniquely identify the singleton. One must fully compare the candidate singleton to the assimilated object.
 
 === Solve conflicts by Open Addressing ===
 
@@ -74,7 +73,7 @@ In case of conflict with existing unrelated arrows, one shifts this default loca
 
 Looking for an already stored arrow consequently requires searching in several locations starting from a default one:
   * if one finds the expected arrow at the considered address ==> hit!
-  * if one finds an empty location ==> it's a miss. This empty location will be used to store the missing arrow if needed.
+  * if one finds an empty location ==> miss! This empty location is used to store the missing arrow.
   * if one finds something else, then one keeps on searching at a nearby location.
 
 This approach is called [OpenAddressing open addressing] when applied to hash tables. The default storage location is named an _open address_ and the search process described above is called _probing_.
