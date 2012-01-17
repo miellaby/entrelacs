@@ -1,0 +1,26 @@
+#summary The Entrelacs first prototype stands as an HTTP/REST server.
+
+= Introduction =
+
+The Entrelacs system prototype stands as an HTTP/REST server which publishes Entrelacs arrows as HTTP resources.
+
+== Merging Entrelacs paradigm and RESTFUL modeling ==
+
+ * Entrelacs homoiconicity leads to *merge URI and resources into a single concept*. Entrelacs resources are actually URI.
+ * Regular arrows are compounded URI which contains enough information to deduce both ends URI.
+ * For every returned arrow, the server may also returns a temporary alternative location/URL. This URL is valid for a given HTTP client session. It is actually a representation of the ((session-uuid)->(target)) internal address.
+ * Root/unroot operators are naturally mapped to PUT/DELETE HTTP methods.
+ * GET methods are naturally involved in arrows fetching (connectivy network browsing).
+ * POST are naturally involved in function application. In short, it'a a way to run some code on server side.
+ * When the HTTP request body is not empty, it is seen as an addition to the request URI. The resulting requested arrow is the pair between the request URI/arrow and the request body.
+    * If the URI corresponds to (A->B) and the body to (C->D), then the actually requested resource is ((A->B)->(C->D))
+
+== Proxying by applying closure ==
+
+Entrelacs server also include an HTTP client. So it's super easy to define a closure which invoke an external resource.
+
+For example, one might leverage on a Entrelacs server as a programmable AJAX router (HTTP reverse-proxy).
+
+=== COMET with handballer or comparable HTTP-Turn server===
+
+By combining an Entrelacs server with a COMET-like server, one may easily hook a Javascript callback within a browser to a server side closure. Every time the closure is applied on server side, the Javascript callback is run on client side thanks to some HTTP-push based messaging. See [http://code.google.com/p/handballer HandBaller] for such a lightweight HTTP-push server.
