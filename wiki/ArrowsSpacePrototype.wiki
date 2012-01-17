@@ -274,5 +274,9 @@ Here are the hash functions currently used by the prototype.
 
 _To be confirmed. See [http://code.google.com/p/entrelacs/source/browse/trunk/space.c actual code].
 
-====Studied alternatives====
-Suggestion: the arrow key hash function might be commutative on structure of pairs. To be done.
+====Still studied alternatives/improvements to this proposal ====
+ * the arrow key hash function might be commutative on structure of pairs.
+ * About arrows back-reference (connectivity data).
+    * No real need to chain them as wrong back-reference are tolerable.
+    * They might be detached from arrow definition and be dispatched to some hash-based location. Thus it could merge connectivity data of several arrow, or at the contrary, it could split data into subsets.
+    * Typically, it would be better to directly fetch a subset of back-references for a given context, like fetching all outgoing arrows from A (context) whose head is B (parent target), that is the A->(B->*) matching pattern. More generally, it would be interesting to quickly fetch arrows by path patterns like (A->(B->(...->(E->*))))
