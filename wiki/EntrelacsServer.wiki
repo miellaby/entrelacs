@@ -63,7 +63,6 @@ By combining an Entrelacs server with a COMET-like server, one may easily hook a
   //A..D <==> ((A Eve) D)
   //A./D <==> (A (D Eve))
 }}}
-}}}
 
 === Alternative location syntax ===
 {{{
