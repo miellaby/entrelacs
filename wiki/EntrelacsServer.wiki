@@ -23,4 +23,102 @@ For example, one might leverage on a Entrelacs server as a programmable AJAX rou
 
 === COMET with handballer or comparable HTTP-Turn server===
 
-By combining an Entrelacs server with a COMET-like server, one may easily hook a Javascript callback within a browser to a server side closure. Every time the closure is applied on server side, the Javascript callback is run on client side thanks to some HTTP-push based messaging. See [http://code.google.com/p/handballer HandBaller] for such a lightweight HTTP-push server.
+By combining an Entrelacs server with a COMET-like server, one may easily hook a Javascript callback within a browser to a server side closure. Every time the closure is applied on server side, the Javascript callback is run on client side thanks to some HTTP-push messaging. See [http://code.google.com/p/handballer HandBaller] for such a lightweight HTTP-push server.
+
+=== URI syntax ===
+
+* Tag arrows (short string) are directly converted into URI by following standard URL encoding rule.
+{{{
+ "Hello World" <==> Hello%20World
+}}}
+
+* A Blob arrow is identified by its footprint (SHA) preceded by the $/ sequence. e.g.
+{{{
+    "Very ... long ... text" <==> $/some-footprint
+}}}
+
+
+* Compound arrows URI are obtained by the non-commutative non-associative {{{/tail.head}}} syntactic construct.
+
+{{{
+   ("Says" "Hello World") <==> /Says.Hello%20World
+
+   ((A B) (C D)) <==> //A.B./C.D
+}}}
+
+* Some syntactic shortcut are tolerated.
+   * Excessive dot component are considered as if a slash was missing next to the nearest previous slash.
+   * dot before a slash are optional.
+{{{
+   /A.B.C.D = //A.B.C.D = ///A.B.C.D <==> (((A B) C) D)
+   /A.B/C.D == /A.B./C.D == //A.B./C.D <==> ((A B) (C D))
+   /A/B.C.D == /A.//B.C.D == (A ((B C) D))
+   //A/B.C.D == //A./B.C.D == ((A (B C)) D)
+}}}
+
+* An empty end corresponds to Eve
+{{{
+  /D == /D. <==> (D Eve)
+  /.A <==>  (Eve A)
+  //A..D <==> ((A Eve) D)
+  //A./D <==> (A (D Eve))
+}}}
+}}}
+
+=== Alternative location syntax ===
+{{{
+   $.AEF03233
+}}}
+
+=== Arrow pattern matching ===
+
+*draft*
+
+When getting an arrow via the HTTP GET method AND when the requested arrow contains Eve in its definition, the server actually runs a pattern matching algorithm and returns the variable ancestor of any matching *rooted* arrow.
+
+{{{
+  HTTP GET /D <==> (D Eve) returns any arrow x where (D x) is rooted.
+  HTTP GET //A./D <==> (A (D Eve)) returns any arrow x where (A (D x)) rooted.
+  HTTP GET /A//./D <==> (A (Eve (D Eve))) return any arrow x of the form x = (y (D z)) where (A x) rooted.
+}}}
+
+alternative: one simply evaluates the requested Arrow, considered as an EntrelacsLanguage expression. Pattern matching might occur by submitting an expression in the form /match/A/B/C/D <==> (match (A (B (C (D Eve)))) where match is the operator corresponding to the algorithm bellow.
+
+note: the match operator is able to call the current continuation for every matching arrow. The server provides a default continuation which stores each result in a buffer. Then the servers return the arrows tuple as a M3U file (TODO: better MIME type welcomed).
+
+=== function application ===
+
+*draft*
+
+when posting an arrow via the HTTP POST method, the server firstly matches one or several arrows corresponding to the URI string via the pattern matching algorithm above. Then, it makes the EntrelacsMachine evaluate the application of the HTTP request body to the resulting arrow. When several arrows are matched, well...
+
+alternative: one simply evaluates the requested arrow, considered as the link from the URI-arrow to the body-arrow. The URI-arrow sub-expression must be evaluated as a closure. The URI-arrow might be a '/match/some/stuff' URI. If there is several matches, the operator will call the same continuation for each arrow.
+
+=== Returned URI ===
+
+*draft*
+
+The server returns one URI or a collection of URI as a M3U file (TODO: better format).
+
+When an URI length exceeds a certain max value, it is converted into a session-specific alternate URI.
+
+The Accept: header might force this default behavior so to get only fully qualified URI or only internal short-lived URI.
+
+=== Agent confining ===
+
+*draft*
+
+The default session might be confined to a session-attached sub context C such as HTTP PUT some-arrow would actually root C->some-arrow. HTTP GET/POST would not match global arrows. A HTTP login operator might help escape from the confined environment (killing the current session, unrooting anything attached, then creating a new session within the wider environment).
+
+=== match operator and closure registering hierarchy ===
+
+*draft*
+
+Actually, when no closure matches the requested arrow, the pattern matching algorithm would descend into URI path hierarchy and seek for a matching closure.
+{{{
+Says the scenario
+ match((a (b c))) :
+ a is not a closure litteral.
+ but if (a (b *)) matches a closure. One applies 'c' to it.
+ otherwise, if (a *) matches a closure. One applies (b c) to it.
+}}}
