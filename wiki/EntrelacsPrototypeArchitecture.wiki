@@ -1,42 +1,61 @@
 #summary Entrelacs Prototype architecture.
 
-Entrelacs might eventually become a real Operating System. But for the moment, the Entrelacs prototype stands as yet an other virtual machine on top of the existing software stack -typically a GNU/Linux system.
+Entrelacs might eventually become a real Operating System. But for the moment, the Entrelacs prototype stands as yet an other virtual machine on top of an existing software stack; typically a GNU/Linux system.
 
 Entrelacs prototype includes several nested components:
-  * The Entrelacs' prim engine also known as the EntrelacsAbstractMachine
-  * The Entrelacs' ArrowsSpace. 
+  * An [EntrelacsServer HTTP/REST server].
+  * The [EntrelacsAbstractMachine Entrelacs machine].
+  * The [ArrowsSpace Arrows Space]. 
 
-The architecture also defines 3 types of external agent:
-  * "arrow publisher"
-  * "arrow subscriber"
-  * "arrow operator"
+There are two public interfaces which gives access to both the ArrowsSpace and the EntrelacsAbstractMachine.
+  * The C API of the [EntrelacsLibrary entrelacs library]
+  * The HTTP/REST network API of the [EntrelacsServer].
 
-There are two public interfaces as well.
-  * C API : EntrelacsLibrary.
-  * network API, derived from HTTP : EntrelacsServer.
+In addition, a future API should permit the addition of native code to the Entrelacs machine. This API might been comprehended by the Entrelacs System itself, so rooting a particular arrow including a binary executable as a Blob might assimilate this binary as a system extension.
 
-==Arrows publishers, subscribers, operators==
+== Architecture of Entrelacs powered environments == 
 
-Arrow publishers, subscribers, and evaluators are external agents out of the system boundaries.
+This chapter introduces the different roles of _agents_ which may interact with the EntrelacsSystem.
 
-  * Arrow publishers convert system inputs (user actions, hardware events, or network inputs like incoming http requests, ...) into arrows submitted to the prim evaluation machine. Arrows are built into the "arrows space" on the fly. Each atomic input is separately committed.
-  * Arrow Subscribers convert back system outgoing arrows into a more useful output or behavior: network messages, graphical/textual feedback to the user, hardware commands. A subscriber only receives the subset of output arrows they've subscribed for. The subscription process is based upon arrow pattern matching.
-  * Arrow operators can be plugged into the prim engine evaluation process. When an operator callback is called, They can access and modify the current machine state. Operators typically compute and return a result (e.g. from "2 + 2" to "4").
+=== external, internal, or both ===
 
+One can distinguish _external_ and _internal_ agents.
+  * internal agents run within the system. Behavior is produced by evaluating [EntrelacsLanguage EL code] within the [EntrelacsAbstractMachine Entrelacs Machine].
+  * external agents are pieces of software/hardware out of the EntrelacsSystem boundaries. They may run next to the EntrelacsServer on the same hosting platform, or be located on a remote platform.
 
-One can build up a "proxy agent" by combining arrows Publishers and subscribers. Such an agent may represent an external agent to the system. Please remind external agents may be human (logged users) or digital (external software clients). One can say as well a complete communication channel (e.g. an user terminal) corresponds both to an arrows publisher and subscriber.
+However, most external agents are also internal as they also register system-side EL code to perform a part of their behavior.
 
-As a whole, the arrow subscribing/publishing logic is similar to a publish/subscribe messaging bus.
+Note: External agents are not subject to system reflexivity, in the same way an human brain can not deeply change other human organs.
 
-Arrows publishers, subscribers and evaluators are *not* powered by Entrelacs but the Linux host system. This implies agents are not subject to system reflexivity. Even if some theoreticians might disagree, I'd like to notice human brain can not deeply change other human organs neither.
+=== Arrows publishers, subscribers, evaluators ===
 
-The Entrelacs overall process is the following:
-  * an external event occures
-  * One publisher assimilates these data and submits an input arrow.
-  * The prim engine processes the input arrow (one may say it applies the behavior function to it). The input arrow evaluation may induce:
+The architecture suggests the following classification of agents.
+  * "evaluators",
+  * "publishers",
+  * "subscribers".
+
+An evaluator is an agent which defines a public function that other agents may invoke. The agent is called back when the function is applied. It may access and modify the current machine state and/or more basically return a result.
+
+Publishers and subscribers make use of the "publish" and "subscribe" native functions which implements a publish/subscribe messaging bus.
+
+  * _Publishers_ convert events into arrows and "submit" them to the bus.
+    * External publishers may assimilate user actions, hardware events, etc.
+    * Internal publishers may produce new arrows in response to previously bus-submitted arrow.
+  * _Subscribers_ register closures which are called back in response to arrows submitted on the bus. It will only receives a subset of bus-submitted thanks to a pattern matching mechanism.
+     * External subscribers will typically convert back _output arrows_ into comprehensible output or behavior: network messages, graphical/textual feedback, hardware actions, etc.
+     * Internal subscribers will rather produce system powered behavior in response to _input arrows_. 
+
+Note the combination of an external publisher and subscriber may form a complete "proxy agent", that is an agent which may act as a representative of a really external agent, like human users. An end-user "proxy agent" typically consists in a communication channel between users and the system, like a terminal.
+
+=== Sequence ===
+
+The Entrelacs overall interaction loop is the following.
+  * an external event occurs.
+  * A publisher processes this event, assimilates relevant data as an arrow, and submit it to the Entrelacs powered bus.
+  * The event arrow is applied to matching subscriber closures. The application is evaluated by the prim engine. The evaluation may induce:
      * persistent changes in the system knowledge,
-     * side effects due to "arrow operators",
-     * output arrows.
-  * Each output arrow is converted back into system output or behavior by one or several arrow subscribers.
+     * various effects due to "arrow evaluators",
+     * newly published arrows.
+  * Some published arrows are converted back into system output by one or several external subscribers.
 
-To be done: Memoization and cache explanation.
+Note: Most of this process is powered by the Entrelacs prim engine which performs transparent memoization.
