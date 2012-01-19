@@ -49,7 +49,7 @@ By combining an Entrelacs server with a COMET-like server, one may easily hook a
    ((A B) (C D)) <==> //A.B./C.D
 }}}
 
-* Some syntactic shortcut are tolerated.
+ * Some syntactic shortcut are tolerated.
    * Excessive dot component are considered as if a slash was missing next to the nearest previous slash.
    * dot before a slash are optional.
 {{{
