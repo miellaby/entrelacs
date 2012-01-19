@@ -138,7 +138,7 @@ When returned?
  * option 3: GET is for pattern matching only. See algorithm bellow. If pattern contains no jokers, GET pattern is equivalent to arrow fetching.
 
 
-=== pattern matching.
+=== pattern matching ===
 The pattern matching algorithm deals with an arrow made pattern and a closure. It calls the closure for any matching *rooted* arrow.
 
 {{{
