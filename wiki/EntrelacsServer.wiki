@@ -8,7 +8,8 @@ The Entrelacs system prototype stands as an HTTP/REST server which publishes Ent
 
  * Entrelacs homoiconicity leads to *merge URI and resources into a single concept*. Entrelacs resources are actually URI.
  * Regular arrows are compounded URI which contains enough information to deduce both ends URI.
- * For every returned arrow, the server may also returns a temporary alternative location/URL. This URL is valid for a given HTTP client session. It is actually a representation of the ((session-uuid)->(target)) internal address.
+ * For every returned arrow, the server may also returns a temporary alternative location/URL. This URL is valid for a given HTTP client session.
+   * It is actually a representation of the ((session-uuid)->(target)) internal address.
  * Root/unroot operators are naturally mapped to PUT/DELETE HTTP methods.
  * GET methods are naturally involved in arrows fetching (connectivy network browsing).
  * POST are naturally involved in function application. In short, it'a a way to run some code on server side.
@@ -26,6 +27,8 @@ For example, one might leverage on a Entrelacs server as a programmable AJAX rou
 By combining an Entrelacs server with a COMET-like server, one may easily hook a Javascript callback within a browser to a server side closure. Every time the closure is applied on server side, the Javascript callback is run on client side thanks to some HTTP-push messaging. See [http://code.google.com/p/handballer HandBaller] for such a lightweight HTTP-push server.
 
 === URI syntax ===
+
+* "arrow://" scheme. The scheme won't be cited in examples bellow.
 
 * Tag arrows (short string) are directly converted into URI by following standard URL encoding rule.
 {{{
@@ -50,7 +53,7 @@ By combining an Entrelacs server with a COMET-like server, one may easily hook a
    * Excessive dot component are considered as if a slash was missing next to the nearest previous slash.
    * dot before a slash are optional.
 {{{
-   /A.B.C.D = //A.B.C.D = ///A.B.C.D <==> (((A B) C) D)
+   A.B.C.D == /A.B.C.D == //A.B.C.D = ///A.B.C.D <==> (((A B) C) D)
    /A.B/C.D == /A.B./C.D == //A.B./C.D <==> ((A B) (C D))
    /A/B.C.D == /A.//B.C.D == (A ((B C) D))
    //A/B.C.D == //A./B.C.D == ((A (B C)) D)
@@ -64,16 +67,79 @@ By combining an Entrelacs server with a COMET-like server, one may easily hook a
   //A./D <==> (A (D Eve))
 }}}
 
-=== Alternative location syntax ===
+=== Qualified URL ===
+
+The straightforward way to build up an HTTP API valid URL from an arrow URI is:
 {{{
-   $.AEF03233
+   <system-base-url>/<arrow-path> <==> arrow://<arrow-path>
 }}}
 
-=== Arrow pattern matching ===
+=== Short URL as alternative location ===
 
-*draft*
+The system returns an alternate short URL for each completely defined arrow returned in HTTP response. Short URL is only valid in the current user agent session.
 
-When getting an arrow via the HTTP GET method AND when the requested arrow contains Eve in its definition, the server actually runs a pattern matching algorithm and returns the variable ancestor of any matching *rooted* arrow.
+Format is:
+{{{
+   <system-base-url>/$.AEF03233
+}}}
+
+=== Mixing Short URL and qualified URL
+
+It's possible to build up a valid API URL by mixing the short URL syntax and the URI path syntax. e.g.
+{{{
+   <system-base-url>///Some/Head/$.AEF03233 <==> ((Some Head) <arrow at .../$.AEF03233 URL>)
+}}}
+
+== HTTP/REST API ==
+It's *a draft*.
+
+=== Response format ===
+* When response is one arrow and its URI is too long.
+  * HTTP Redirection to a session-valid URL if needed.
+  * Response body is the URI.
+
+* When response is one arrow and its URI is short enough.
+     * HTTP redirection to the qualified URI/URL if needed.
+     * Response body is the URI
+     * Alternate-Location header points the session-valid URL.
+
+* When several arrows gathered in response.
+  * M3U mime type and file format.
+  * URL are session-valid URL only.
+      * Or URI. Accept Header may force returned syntax.
+  * _note: why not a single compound arrow_
+
+* When arrow is a blob.
+  * HTTP redirection to a session-valid URL.
+  * Response body is raw data.
+
+* Special arrow for MIME-typed file.
+  * ((mime-type "video/avi") $.XXXXXX) where $.XXXXXX points a blob.
+
+=== Alternative URL ===
+When returned?
+ * Among M3U file
+ * When explicitly requested,
+ * As a redirection when URI representation is too long
+ * As "Alternative Location"
+
+=== GET method ===
+
+ * option 1: GET is for one arrow fetching
+   * from alternative URL
+   * from blob footprints
+   * from URI. Useless except for the short URL.
+
+ * option 2: GET is more or less equivalent to POST, minus no body.
+   * One simply evaluates the provided arrow as EL code.
+   * Pattern matching is explicitly asked by submitting (match (some pattern)).
+   * An other operator "invoke" applies the arrow head to any closure matching the arrow tail. This operator call the current continuation for every matching arrow. The server provides a default continuation which output arrows in a buffer. Once evaluation is done, the buffer sent back the response.
+
+ * option 3: GET is for pattern matching only. See algorithm bellow. If pattern contains no jokers, GET pattern is equivalent to arrow fetching.
+
+
+=== pattern matching.
+The pattern matching algorithm deals with an arrow made pattern and a closure. It calls the closure for any matching *rooted* arrow.
 
 {{{
   HTTP GET /D <==> (D Eve) returns any arrow x where (D x) is rooted.
@@ -81,12 +147,9 @@ When getting an arrow via the HTTP GET method AND when the requested arrow conta
   HTTP GET /A//./D <==> (A (Eve (D Eve))) return any arrow x of the form x = (y (D z)) where (A x) rooted.
 }}}
 
-alternative: one simply evaluates the requested Arrow, considered as an EntrelacsLanguage expression. Pattern matching might occur by submitting an expression in the form /match/A/B/C/D <==> (match (A (B (C (D Eve)))) where match is the operator corresponding to the algorithm bellow.
+=== POST method ===
 
-note: the match operator is able to call the current continuation for every matching arrow. The server provides a default continuation which stores each result in a buffer. Then the servers return the arrows tuple as a M3U file (TODO: better MIME type welcomed).
-
-=== function application ===
-
+ * option 1: POST is for arrow evaluation.
 *draft*
 
 when posting an arrow via the HTTP POST method, the server firstly matches one or several arrows corresponding to the URI string via the pattern matching algorithm above. Then, it makes the EntrelacsMachine evaluate the application of the HTTP request body to the resulting arrow. When several arrows are matched, well...
