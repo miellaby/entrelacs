@@ -83,7 +83,7 @@ Format is:
    <system-base-url>/$.AEF03233
 }}}
 
-=== Mixing Short URL and qualified URL
+=== Mixing Short URL and qualified URL ===
 
 It's possible to build up a valid API URL by mixing the short URL syntax and the URI path syntax. e.g.
 {{{
