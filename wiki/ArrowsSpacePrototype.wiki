@@ -29,7 +29,7 @@ The prototype also allows to handle several types of complex objects in addition
 
 ===Reminder===
 
-Despite _blobs_, _tags_ and _smalls_ are raw binary objects, they are still treated like their equivalent arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows). Tuples are also managed as they were arrows structures. So we'll indifferently use the "arrow" term to designate all these objects.
+Despite _blobs_, _tags_ and _smalls_ being raw binary objects, they are still handled like their equivalent arrow constructs, namely _entrelacs_ (discrete reentrant structures of arrows). Tuples are also managed as they were arrows structures. So we indifferently use the "arrow" term herein to designate these objects as well.
 
 == Mass storage usage ==
 
