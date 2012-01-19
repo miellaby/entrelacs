@@ -28,20 +28,20 @@ By combining an Entrelacs server with a COMET-like server, one may easily hook a
 
 === URI syntax ===
 
-* "arrow://" scheme. The scheme won't be cited in examples bellow.
+ * "arrow://" scheme. The scheme won't be cited in examples bellow.
 
-* Tag arrows (short string) are directly converted into URI by following standard URL encoding rule.
+ * Tag arrows (short string) are directly converted into URI by following standard URL encoding rule.
 {{{
  "Hello World" <==> Hello%20World
 }}}
 
-* A Blob arrow is identified by its footprint (SHA) preceded by the $/ sequence. e.g.
+ * A Blob arrow is identified by its footprint (SHA) preceded by the $/ sequence. e.g.
 {{{
     "Very ... long ... text" <==> $/some-footprint
 }}}
 
 
-* Compound arrows URI are obtained by the non-commutative non-associative {{{/tail.head}}} syntactic construct.
+ * Compound arrows URI are obtained by the non-commutative non-associative {{{/tail.head}}} syntactic construct.
 
 {{{
    ("Says" "Hello World") <==> /Says.Hello%20World
@@ -59,7 +59,7 @@ By combining an Entrelacs server with a COMET-like server, one may easily hook a
    //A/B.C.D == //A./B.C.D == ((A (B C)) D)
 }}}
 
-* An empty end corresponds to Eve
+ * An empty end corresponds to Eve
 {{{
   /D == /D. <==> (D Eve)
   /.A <==>  (Eve A)
@@ -94,26 +94,26 @@ It's possible to build up a valid API URL by mixing the short URL syntax and the
 It's *a draft*.
 
 === Response format ===
-* When response is one arrow and its URI is too long.
+ * When response is one arrow and its URI is too long.
   * HTTP Redirection to a session-valid URL if needed.
   * Response body is the URI.
 
-* When response is one arrow and its URI is short enough.
+ * When response is one arrow and its URI is short enough.
      * HTTP redirection to the qualified URI/URL if needed.
      * Response body is the URI
      * Alternate-Location header points the session-valid URL.
 
-* When several arrows gathered in response.
+ * When several arrows gathered in response.
   * M3U mime type and file format.
   * URL are session-valid URL only.
       * Or URI. Accept Header may force returned syntax.
   * _note: why not a single compound arrow_
 
-* When arrow is a blob.
+ * When arrow is a blob.
   * HTTP redirection to a session-valid URL.
   * Response body is raw data.
 
-* Special arrow for MIME-typed file.
+ * Special arrow for MIME-typed file.
   * ((mime-type "video/avi") $.XXXXXX) where $.XXXXXX points a blob.
 
 === Alternative URL ===
