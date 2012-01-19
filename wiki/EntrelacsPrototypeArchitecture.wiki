@@ -38,14 +38,14 @@ An evaluator is an agent which defines a public function that other agents may i
 
 Publishers and subscribers make use of the "publish" and "subscribe" native functions which implements a publish/subscribe messaging bus.
 
-  * _Publishers_ convert events into arrows and "submit" them to the bus.
+  * A _Publisher_ converts events into arrows and "submit" them to the bus.
     * External publishers may assimilate user actions, hardware events, etc.
-    * Internal publishers may produce new arrows in response to previously bus-submitted arrow.
-  * _Subscribers_ register closures which are called back in response to arrows submitted on the bus. It will only receives a subset of bus-submitted arrows thanks to a pattern matching mechanism.
-     * External subscribers will typically convert back _output arrows_ into comprehensible output or behavior: network messages, graphical/textual feedback, hardware actions, etc.
-     * Internal subscribers will rather produce system powered behavior in response to _input arrows_. 
+    * Internal publishers may produce new arrows in response to previously bus-submitted arrows.
+  * A _Subscriber_ registers _closures_ which are applied to arrows submitted on the bus. One may subscribe to a subset of bus-submitted arrows thanks to a pattern matching mechanism.
+     * An external subscriber agent may typically convert back _output arrows_ into comprehensible output or behavior: network messages, graphical/textual feedback, hardware actions, etc.
+     * An internal subscriber may produce system behavior in response to _input arrows_.
 
-Note the combination of an external publisher and subscriber may form a complete "proxy agent", that is an agent which may act as a representative of a really external agent, like human users. An end-user "proxy agent" typically consists in a communication channel between users and the system, like a terminal.
+Note the combination of an external publisher and subscriber may form a complete "proxy agent", that is an agent which may act as a representative of a human or digital user. An end-user terminal or any other communication channel should be designed as a proxy agent.
 
 === Sequence ===
 
