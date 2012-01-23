@@ -1,21 +1,22 @@
 #summary Overview of an Entrelacs System
 #labels Featured,Phase-Design
 
-Please find herein an overview of the EntrelacsSystem, which deals with _arrows_ in the way explained by the ArrowParadigm.
+Please find herein an overview of an [EntrelacsSystem Entrelacs System] architecture.
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/mem0.png' align='right'>
-====arrows space====
-The most strategical component of the system is the [ArrowsSpace Arrows Space]. It's a place where one stores arrows.
+====Arrows space====
+A major component of such a system is the [ArrowsSpace Arrows Space].
 
-====primary abstract machine====
-The system dynamics is powered by the EntrelacsAbstractMachine, a software machine somehow similar to functional abstract machines modeled by programming language theory.
+It's simply a device to store arrows.
 
-====primary language====
-This top-level evaluation context interprets programs made out of arrows and "written" in the EntrelacsLanguage.
+====Primary machine and language====
+The system also provides a default evaluation machine, namely the [EntrelacsAbstractMachine Entrelacs abstract machine], which evaluates programs made in the [EntrelacsLanguage Entrelacs Language]. Naturally, both programs and machine states are made out of arrows.
 
-====First prototype====
+====System boundaries====
 
-The anticipated prototype will stand as a software server on top of a GNU/Linux platform. A COMET/REST protocol will allow network agents to interact with it. A C API will allow to program system extensions. See the EntrelacsPrototypeArchitecture for details.
+The currently developed prototype stands as a [EntrelacsServer software server] on top of a GNU/Linux hosting system.
+
+This server publishes A COMET/REST API for networked interaction. A C API is also planed to allow native code execution within the system. See the EntrelacsPrototypeArchitecture for details.
 
 ===Other questions?===
 See the [FAQ].
