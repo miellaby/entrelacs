@@ -1,4 +1,5 @@
-#summary The Entrelacs first prototype stands as an HTTP/REST server.
+#summary The Entrelacs first prototype stands as an HTTP/REST server
+
 
 = Introduction =
 
@@ -6,29 +7,61 @@ The Entrelacs system prototype stands as an HTTP/REST server which publishes Ent
 
 == Merging Entrelacs paradigm and RESTFUL modeling ==
 
- * Entrelacs homoiconicity leads to *merge URI and resources into a single concept*. Entrelacs resources are actually URI.
- * Regular arrows are compounded URI which contains enough information to deduce both ends URI.
- * For every returned arrow, the server may also returns a temporary alternative location/URL. This URL is valid for a given HTTP client session.
-   * It is actually a representation of the ((session-uuid)->(target)) internal address.
- * Root/unroot operators are naturally mapped to PUT/DELETE HTTP methods.
- * GET methods are naturally involved in arrows fetching (connectivy network browsing).
- * POST are naturally involved in function application. In short, it'a a way to run some code on server side.
- * When the HTTP request body is not empty, it is seen as an addition to the request URI. The resulting requested arrow is the pair between the request URI/arrow and the request body.
-    * If the URI corresponds to (A->B) and the body to (C->D), then the actually requested resource is ((A->B)->(C->D))
+=== Resources are URI, URI are resources, everything is arrow ===
+Entrelacs homoiconicity leads to *merge URI and resources into a single concept*.
+   * resources are actually URI.
+   * URI are actually resources.
+   * The only mutable property of such a resource is whether it's "rooted" in the system or not.
 
-== Proxying by applying closure ==
+=== URI/URL format ===
 
-Entrelacs server also include an HTTP client. So it's super easy to define a closure which invoke an external resource.
+   * Qualified URI
+     One proposes to map every arrow to an unique fully qualified URI which encodes its whole definition, e.g. arrow:// is Eve.
 
-For example, one might leverage on a Entrelacs server as a programmable AJAX router (HTTP reverse-proxy).
+   * Qualified URL
+     For a given system, a qualified URI can be directly converted into a qualified URL, and vice versa. For exemple, Eve may corresponds to the URL: http://some.entrelacs.server:8008//
+
+   * Temporary references
+     A system may also return a temporary reference to some arrow as a temporary URL. Temporary URL are only valid within a client session. e.g. a big binary datum may be referred as http://some.entrelacs.server:8008//$12AE44
+
+   * Partially qualified URL
+     Compound arrows may also be queried and retrieved as mixed URL. Such an URL embeds both ancestors qualified URIs and temporary references.
+
+Note:
+       * A temporary reference is actually a textual representation of the ((session-uuid)->(target)) arrow internal address within the ArrowsSpace.
+
+
+== HTTP methods mapping ==
+ * PUT is for "root"
+ * DELETE is for "unroot"
+ * GET is for "getting" an arrow.
+ * POST is for evaluating an EL expression on the server.
+
+Note:
+      * One doesn't really "get" an arrow. But one can use the HTTP GET method
+         * to assimilate a qualified URI and get back a temporary reference (for further purpose).
+         * to deconstruct a temporary reference. That is getting a fully or partially qualified URL.
+         * to get the content of a blob arrow.
+
+== HTTP request body ==
+
+When the HTTP request body is not empty, the considered arrow is the arrow from the request URI to the request body.
+    * the request body may be a file content if typed as is.
+    * or it may be a qualified URI, a reference URL, or a mix.
+
+For example, if the URI corresponds to (A->B) and the body to (C->D), then the actually requested resource is ((A->B)->(C->D))
+
+=== Proxying by applying closure ===
+
+The Entrelacs server also includes an HTTP client so one may define a closure to invoke an external resource. Think: programmable AJAX router.
 
 === COMET with handballer or comparable HTTP-Turn server===
 
 By combining an Entrelacs server with a COMET-like server, one may easily hook a Javascript callback within a browser to a server side closure. Every time the closure is applied on server side, the Javascript callback is run on client side thanks to some HTTP-push messaging. See [http://code.google.com/p/handballer HandBaller] for such a lightweight HTTP-push server.
 
-=== URI syntax ===
+=== URI path syntax ===
 
- * "arrow://" scheme. The scheme won't be cited in examples bellow.
+The "arrow://" scheme identifies a fully qualified URI. The scheme won't be cited in examples bellow.
 
  * Tag arrows (short string) are directly converted into URI by following standard URL encoding rule.
 {{{
@@ -74,68 +107,67 @@ The straightforward way to build up an HTTP API valid URL from an arrow URI is:
    <system-base-url>/<arrow-path> <==> arrow://<arrow-path>
 }}}
 
-=== Short URL as alternative location ===
+For example, the "/foo.bar" arrow might be get at http://some.entrelacs.server:8008//foo.bar
 
-The system returns an alternate short URL for each completely defined arrow returned in HTTP response. Short URL is only valid in the current user agent session.
+=== Temporary reference ===
 
-Format is:
+The system may return short temporary URL as arrow references. These URL is are valid in the current user agent session.
+
+Temporary reference format is:
 {{{
    <system-base-url>/$.AEF03233
 }}}
 
-=== Mixing Short URL and qualified URL ===
+=== Partially qualified URL ===
 
-It's possible to build up a valid API URL by mixing the short URL syntax and the URI path syntax. e.g.
+The client or the server may embed references inside the URI path syntax.
+ e.g.
 {{{
-   <system-base-url>///Some/Head/$.AEF03233 <==> ((Some Head) <arrow at .../$.AEF03233 URL>)
+   <system-base-url>///Some/Head/$.AEF03233 <==> (("Some" "Head") <arrow at .../$.AEF03233 URL>)
 }}}
 
-== HTTP/REST API ==
-It's *a draft*.
-
 === Response format ===
- * When response is one arrow and its URI is too long.
-  * HTTP Redirection to a session-valid URL if needed.
-  * Response body is the URI.
+Server returns arrows.
 
- * When response is one arrow and its URI is short enough.
-     * HTTP redirection to the qualified URI/URL if needed.
-     * Response body is the URI
-     * Alternate-Location header points the session-valid URL.
+By default, the server tries to return fully qualified URL.
 
- * When several arrows gathered in response.
-  * M3U mime type and file format.
-  * URL are session-valid URL only.
-      * Or URI. Accept Header may force returned syntax.
-  * _note: why not a single compound arrow_
+Exception 1: But if the fully qualified URL exceeds a maximal size, the server may return a temporary reference.
 
- * When arrow is a blob.
-  * HTTP redirection to a session-valid URL.
+Exception 2: When returned arrow is a blob.
+  * HTTP redirection to the reference URL.
   * Response body is raw data.
+
+This default behavior may be modified by providing the X-Level: request header.
+ * 0: Always return a temporary reference
+ * 1: return a pair of temporary references, if relevant, otherwise return a qualified URI.
+ * 2: return a pair of pair of temporary references, if relevant.
+
+Note: The Accept: header might be used. TBC.
+
+Additionally, the Alternate-Location: response header always points to a reference URL.
+
+
+== Dismissed proposals:
+
+ * Option: several arrows gathered in response.
+  * M3U file with corresponding mime type in response.
+  * _note: why not a single compound arrow_
 
  * Special arrow for MIME-typed file.
   * ((mime-type "video/avi") $.XXXXXX) where $.XXXXXX points a blob.
 
-=== Alternative URL ===
-When returned?
- * Among M3U file
- * When explicitly requested,
- * As a redirection when URI representation is too long
- * As "Alternative Location"
+ * option: GET may retrieve blob arrow by footprint
+   * Warning: May be considered as a security hole. TODO: the server asks for random range(s) of the file to check the client actually owns a copy of the blob.
 
-=== GET method ===
-
- * option 1: GET is for one arrow fetching
-   * from alternative URL
-   * from blob footprints
-   * from URI. Useless except for the short URL.
-
- * option 2: GET is more or less equivalent to POST, minus no body.
+ * option: GET is equivalent to POST, minus no body.
    * One simply evaluates the provided arrow as EL code.
-   * Pattern matching is explicitly asked by submitting (match (some pattern)).
-   * An other operator "invoke" applies the arrow head to any closure matching the arrow tail. This operator call the current continuation for every matching arrow. The server provides a default continuation which output arrows in a buffer. Once evaluation is done, the buffer sent back the response.
 
- * option 3: GET is for pattern matching only. See algorithm bellow. If pattern contains no jokers, GET pattern is equivalent to arrow fetching.
+ * option: pattern matching
+   * May be explicitly asked by submitting (match (some pattern)) EL code.
+   * or GET may be for pattern matching only. See algorithm bellow. If pattern contains no jokers, GET pattern is equivalent to arrow fetching.
+
+ * option: operator "invoke". it applies the arrow head to any closure matching the arrow tail. This operator call the current continuation for every matching arrow. The server provides a default continuation which output arrows in a buffer. Once evaluation is done, the buffer sent back the response.
+
 
 
 === pattern matching ===
@@ -149,22 +181,15 @@ The pattern matching algorithm deals with an arrow made pattern and a closure. I
 
 === POST method ===
 
- * option 1: POST is for arrow evaluation.
-*draft*
+POST is for arrow evaluation.
 
-when posting an arrow via the HTTP POST method, the server firstly matches one or several arrows corresponding to the URI string via the pattern matching algorithm above. Then, it makes the EntrelacsMachine evaluate the application of the HTTP request body to the resulting arrow. When several arrows are matched, well...
+One simply evaluates the requested arrow, considered as the link from the URI-arrow to the body-arrow. The URI-arrow sub-expression must be evaluated as a closure. The URI-arrow might be a '/match/some/stuff' URI. TBC: If there is several matches, the operator will call the same continuation for each arrow.
 
-alternative: one simply evaluates the requested arrow, considered as the link from the URI-arrow to the body-arrow. The URI-arrow sub-expression must be evaluated as a closure. The URI-arrow might be a '/match/some/stuff' URI. If there is several matches, the operator will call the same continuation for each arrow.
+option: when posting an arrow via the HTTP POST method, the server firstly matches one or several arrows corresponding to the URI string via the pattern matching algorithm above. TBC.
 
-=== Returned URI ===
+POST makes the EntrelacsMachine evaluate the application of the HTTP request body to the HTTP request URI. When several arrows are matched, well...
 
-*draft*
-
-The server returns one URI or a collection of URI as a M3U file (TODO: better format).
-
-When an URI length exceeds a certain max value, it is converted into a session-specific alternate URI.
-
-The Accept: header might force this default behavior so to get only fully qualified URI or only internal short-lived URI.
+   * The server returns one URI or a collection of URI as a M3U file (TODO: better format).
 
 === Agent confining ===
 
