@@ -1,11 +1,11 @@
 #summary The "Arrows Space" (AS) is the key component of an Entrelacs system.
 
 == introduction ==
-An _"Arrows Space"_ (AS) designates a device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. It's the key component of an [DesignIntroduction Entrelacs System].
+An _"Arrows Space"_ (AS) designates an abstract device to store arrows structures by following the [ArrowParadigm Entrelacs Paradigm]. It's the key component of an [DesignIntroduction Entrelacs System].
 
 Please note one may simulate an Arrows Space with [PenAndPaperReferenceDesign a pen and a paper sheet] .
 
-An AS might be designed as a dedicated computer hardware. If so, it would not necessarily consist in a bank of buckets like all other previous data storage.
+Maybe an AS will be designed as dedicated computer hardware one day. If so, it won't necessarily consist in a bank of buckets like other data storage so far.
 
 But for the moment, we will study the AS as a simulated device, that is a piece of software leveraging on traditional volatile and mass memory hardware.
 
