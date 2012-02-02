@@ -1,4 +1,5 @@
 #summary Box/Value paradigm
+<img src="https://docs.google.com/drawings/pub?id=16hKL4Dn_PaXxGWkkDIT46pV1xyLNL3Dcg7LEYsqLQqQ&w=480&h=360"></img>
 
 ==Introduction to the problem==
 
@@ -19,7 +20,6 @@ To do so, engineers are used to applying the _box/value paradigm_. They divide s
 
 In our example, the box/value paradigm leads us to put data into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
 
-<img src="https://docs.google.com/drawings/pub?id=16hKL4Dn_PaXxGWkkDIT46pV1xyLNL3Dcg7LEYsqLQqQ&amp;w=480&amp;h=360"/>
 
 ==box/value paradigm = Writing==
 
