@@ -2,14 +2,14 @@
 
 ==Introduction to the problem==
 
-Computer sciences deal with [http://en.wikipedia.org/wiki/Data_structure data structure (w)].  Different kinds of data structures are suited to different kinds of applications.
+Computer sciences deal with [http://en.wikipedia.org/wiki/Data_structure data structure]^W^.  Different kinds of data structures are suited to different kinds of applications.
 
 But how does one maps such structures onto a physical support, like
  * a sheet of paper,
  * an hard drive,
  * a memory bank ?
 
-For example, let's says we've got a set of statistics organized in a [http://en.wikipedia.org/wiki/Tree_(data_structure) tree (w)]. How can we put our tree on an hard drive?
+For example, let's says we've got a set of statistics organized in a [http://en.wikipedia.org/wiki/Tree_(data_structure) tree]^W^. How can we put our tree on an hard drive?
 
 ==The box/value paradigm==
 To do so, engineers are used to applying the _box/value paradigm_. They divide space into boxes, each box containing a value.
@@ -18,6 +18,8 @@ To do so, engineers are used to applying the _box/value paradigm_. They divide s
  * Sometimes, a value is actually (involved in) referencing an other box. 
 
 In our example, the box/value paradigm leads us to put data into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
+
+<img src="https://docs.google.com/drawings/pub?id=16hKL4Dn_PaXxGWkkDIT46pV1xyLNL3Dcg7LEYsqLQqQ&amp;w=480&amp;h=360"/>
 
 ==box/value paradigm = Writing==
 
