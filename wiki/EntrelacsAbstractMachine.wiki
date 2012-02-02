@@ -4,40 +4,67 @@
 
 The second major component of an Entrelacs System beside the ArrowsSpace is the _Entrelacs Abstract Machine_. It's a software machine which evals programs directly stored as arrows constructs.
 
-Programs are defined according to the [EntrelacsLanguage Entrelacs Language]. This language is designed so that there is no difference between, source code, CST (Concrete Syntax Tree), and AST (Abstract Syntax Tree) in order to simplify meta-programming and persistent reflexivity.
+Programs are defined according to the [EntrelacsLanguage Entrelacs Language] (EL). This language is designed so that there is no difference between, source code, CST (Concrete Syntax Tree), and AST (Abstract Syntax Tree). The objective is to simplify meta-programming and persistent reflexivity.
 
-The machine state itself consists in an arrows construct that programs may fetch and edit. So running programs may handle all the underlying machine components like:
+The machine state itself consists in an arrow construct which may be read and modified by the running program. A programs may consequently handle all the underlying machine state components like:
   * environments,
   * continuations,
   * closures,
   * evaluated expression
-  * ...
+  * etc.
 
-Concretely, the _Entrelacs Machine_ is largely inspired by the 
-CaEK abstract machine of Flanagan et al. [1993]. The only major difference is that programs are hold by arrows structures rather than textual source code. Serialized text representation of the Entrelacs Language will only be supported for communication purpose.
+It obviously implies that *the machine state itself takes part of the language definition*.
 
-_note: experimental features are tagged with #e# hereafter_
+== Sources and credits ==
+The _Entrelacs Machine_ described hereafter is largely inspired by the 
+[http://users.info.unicaen.fr/~karczma/TEACH/Doc/compi_cont.pdf "_CaEK_" abstract machine of Flanagan et al. (1993)].
+
+So the EL language is equivalent to the "Core Scheme in A-normal form" (_A(CS)_) very basic (no type) functional language introduced in this paper.
+
+The only thing to keep in mind is that programs and machine states are directly hold by arrows structures.
+
+Textual source code is reserved for communication purpose. The current prototype should be able to assimilate arrow in the form of s-expression or URI (see [EntrelacsServer] API).
+
+== Extensions to the very strict A(CS)_ language==
+
+The EL language brings modifications to the _A(CS)_ language. They are tagged with #e# hereafter.
+
+These extensions include:
+   * The possibility to eval few CS expression which are not in A-normal form -like (t s) expressions-. They are handled by rewriting them on the fly into their A-normal equivalent.
+   * Arrow casting and escaping. Any arrow may be seen as a variable symbol, or an expression, or a literal.
+   * Unbound variables are left as is. Evaluating "hello" returns "hello" if not a bound variable.
+   * Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound. 
+
+== Restrictions ==
+
+Functions are one-variable only.
 
 = The Language =
 {{{
-a ::= any arrow
-x ::= an entrelacs arrow
+x ::= any entrelacs arrow (Eve, tags, blobs)
+a ::= x | (a a) // any arrow
+
+// literals
+v ::=  x // entrelacs are resolved if bound, otherwise left as is
+       | ("escape" a) // escape any arrow (prevent expression evaluation) #e#
+       | ("get" a) // escape and cast any arrow as a variable + resolve it before evaluating the expression  #e#
 
 // trivial expression
-t ::=  	x // will be resolved as a variable
-        | ("get" c) // resolve any arrow as a variable #e#
- 	| ("escape" c) // escape any arrow (no substitution) #e#
- 	| ("lambda" (x s)) // lambda expression
+t ::=  	v
+ 	| ("lambda" (v s)) // lambda expression
 
-// serious expression
-s ::=	("let" ((x t) s)) // binding
-  	| ("let" ((x (t t)) s)) // application in binding
+// serious expression in A-normal form
+s ::=	("let" ((v t) s)) // binding
+  	| ("let" ((v (t t)) s)) // application in binding
   	| (t t) // application
-  	| ("let" ((x (t s)) s)) // serious in application in binding #e#
-  	| (t s) // serious in application #e#
 
-// program
-p ::= s
+// EL expression
+e ::=   s
+  	| ("let" ((x (t s)) s)) // serious exp in application in binding #e#
+  	| (t s) // serious exp in application #e#
+
+// EL program
+p ::= e
 }}}
 
 
@@ -75,7 +102,7 @@ p ::= s
 == The Continuation chain, aka stack ==
 
 {{{
-<continuation-stack> ::= Eve | (<frame> <continuation-stack>)
+<continuation-chain> ::= Eve | (<frame> <continuation-chain>)
 /* (<frame> (<frame> ... (<frame> Eve) ... )) */
 <frame> ::= (<variable> (<expression> <environment>))
 }}}
@@ -83,7 +110,7 @@ p ::= s
 == The Machine State ==
 
 {{{
-<machine-state> := (<program> (<environment> <continuation-stack>))
+<machine-state> := (<program> (<environment> <continuation-chain>))
 }}}
 
 == System functions ==
@@ -100,29 +127,35 @@ Uncompleted list
 
 == Machine transitions ==
 
-=== the _resolve_ function ===
+=== _resolve_ function ===
 
 {{{
   Arrow resolve(Arrow trivial, Arrow environment)
 }}}
 
-Definition:
+Pseudo pattern matching algo:
 {{{
- * resolve(("escape" <a>), <e>) = <a> #e#
- * resolve(("lambda" (<x> <s>)), <e>) = ((<x> <s>) <e>) /* closure */
- * resolve("@M", <e>) = <machine-state>
- * resolve(("get" <x>), <e>) = resolve(<x>, <e>) #e#
- * resolve(<x>, ((<x> <value>) <e>)) = <value>
- * resolve(<x>, Eve) = <x> (Note: c’est beaucoup mieux que Eve)
- * resolve(<x>, ((<y> value>) <e>)) = resolve(<x>, <e>) /* x != y */
+let resolve(t, e) =
+   match t with:
+     | ("lambda" (x s)) -> ((x s) e) /* closure */
+     | ("get" x) -> resolveVariable(x, e) #e#
+     | ("escape" a) -> a #e#
+     | "@M" -> current machine state #e#
+     | x -> resolveVariableIfBound(x, e)
+
+let resolveVariableIfBound(x, e) =
+   match e with:
+     | Eve -> x /* Miss: An unbound variable is left as is*/
+     | ((x value) head) -> value /* Hit */
+     | (tail head) -> resolveVariable(x, head) /* recursion */
 }}}
 
-=== the _isTrivial_ function ===
+=== _isTrivial_ function ===
 {{{
    Boolean isTrivial(Arrow expression)
 }}}
 
-Definition:
+Pseudo-C algo:
 {{{
  * isTrivial = 
      isEntrelacs(exp)
@@ -131,7 +164,7 @@ Definition:
      || tail(exp) == "get" #e#
 }}}
 
-=== the eval function ===
+=== _eval_ function ===
 
 Pseudo-C algo:
 {{{
@@ -146,7 +179,7 @@ Arrow eval(program) {
   return resolve(p, e)
 }}}
 
-=== the _transition_ function ===
+=== _transition_ function ===
 
 Pseudo-C algo:
 {{{
