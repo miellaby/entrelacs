@@ -33,7 +33,9 @@ These extensions include:
    * The possibility to eval few CS expression which are not in A-normal form -like (t s) expressions-. They are handled by rewriting them on the fly into their A-normal equivalent.
    * Arrow casting and escaping. Any arrow may be seen as a variable symbol, or an expression, or a literal.
    * Unbound variables are left as is. Evaluating "hello" returns "hello" if not a bound variable.
-   * Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound. 
+   * Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound.
+   * the "@M" keyword is bound to the current machine state
+   * a run keyword allows to replace the current machine state
 
 == Restrictions ==
 
@@ -67,10 +69,11 @@ e ::=   s
 p ::= e
 }}}
 
+Missing: operators and system continuations.
 
 = The Machine =
 
-== Variable & values ==
+== Trivial expressions ==
 
 {{{
 <arrow> ::= any arrow
@@ -80,6 +83,10 @@ p ::= e
 <lambda-expression> ::= ("lambda" (<arrow> <expression>))
 <trivial> ::= <entrelacs> | <lambda-expression>
                        | <escape> | <get> #e#
+}}}
+
+== Programs ==
+{{{
 <application> ::= (<trivial> <trivial>)
 <serious-application> ::= (<trivial> <serious>) #e#
 <binding> ::= ("let" ((<variable> <trivial>) <serious>))
@@ -88,24 +95,33 @@ p ::= e
 <serious> ::= <binding> | <application-binding> | <binding>
               | <serious-application-binding> | <serious-binding> #e#
 <expression> ::= <trivial> | <serious>
-<closure> ::= ((<variable> <expression>) <environment>)
 <program> ::= <expression>
 }}}
 
-== The Environment ==
+== Environment and closure ==
 
 {{{
+<variable> ::= <arrow>
+<value> ::= <arrow>
+
 <environment> ::= Eve | ((<variable> <value>) <environment>)
 /* ((<variable> <value>) ((<variable> <value>)... ((<variable> <value>) Eve) ... )) */
+
+<closure> ::= ((<variable> <expression>) <environment>)
 }}}
 
 == The Continuation chain, aka stack ==
 
 {{{
-<continuation-chain> ::= Eve | (<frame> <continuation-chain>)
+<continuation-chain> ::=
+      Eve
+    | (<"continuation" (<hook> <context>)) #e#
+    | (<frame> <continuation-chain>)
 /* (<frame> (<frame> ... (<frame> Eve) ... )) */
 <frame> ::= (<variable> (<expression> <environment>))
 }}}
+
+TODO: is not a frame actually a closure?
 
 == The Machine State ==
 
@@ -113,7 +129,7 @@ p ::= e
 <machine-state> := (<program> (<environment> <continuation-chain>))
 }}}
 
-== System functions ==
+== System functions and variables ==
 Uncompleted list
  * head
  * tail
@@ -121,11 +137,10 @@ Uncompleted list
  * root
  * unroot
  * isRooted
+ * run : replace the current machine state with the provided one.
+ * "@M" : current machine state 
 
-== system variables ==
- * "@M" : get/set current <machine-state> 
-
-== Machine transitions ==
+== Machine dynamics ==
 
 === _resolve_ function ===
 
@@ -151,17 +166,15 @@ let resolveVariableIfBound(x, e) =
 }}}
 
 === _isTrivial_ function ===
-{{{
-   Boolean isTrivial(Arrow expression)
-}}}
-
 Pseudo-C algo:
 {{{
- * isTrivial = 
-     isEntrelacs(exp)
+   Boolean isTrivial(Arrow expression) = {
+     return
+        isEntrelacs(exp)
      || tail(exp) == "lambda"
      || tail(exp) == "escape" #e#
      || tail(exp) == "get" #e#
+   }
 }}}
 
 === _eval_ function ===
@@ -177,6 +190,8 @@ Arrow eval(program) {
   p = tail(M)
   e = tail(head(M))
   return resolve(p, e)
+}
+
 }}}
 
 === _transition_ function ===
@@ -186,10 +201,14 @@ Pseudo-C algo:
 #define _(a,b) = arrow(a,b)
 
 Arrow transition(Arrow M) {
+  // match M to (p (e k))
+  p = tail(M)
+  e = tail(head(M))
+  k = head(head(M))
+
   if (isTrivial(p)) { // Trivial expression
      // p = v
-     k = tail(tail(M))
-     if (k == Eve) return // stop, program result = w
+     if (k == Eve) return // stop, program result = resolve(p, e)
      if (tail(k) == continuation) { //special system continuation #e#
         // k = (continuation (<hook> <context>))
         hook = castAsPointer(tail(head(k)))
@@ -212,8 +231,6 @@ Arrow transition(Arrow M) {
 
      if (tail(x) == "get") { x = resolve(x); } #e#
 
-     // FIXME x == "@M" case
-
      if (isTrivial(v)) { // Trivial let rule
        // p = (let ((x t) s))
        t = v
@@ -234,12 +251,19 @@ Arrow transition(Arrow M) {
          t1 = head(t)
          w = resolve(t1, e)
          C = resolve(t0, e)
-         if (tail(C) == "operator") { // System call special case
+         if (tail(C) == "operator") { // Operator call
            // C = (operator (hook context))
            hook = getPointer(tail(head(C)))
            context = getPointer(head(head(C))
            r = hook(w, context)
            M = _(s, _(_(_(x, r), e), k))
+         } else if (tail(C) == "continuation") { // System continuation call
+           // C = (continuation (hook context))
+           hook = getPointer(tail(head(C)))
+           context = getPointer(head(head(C))
+ 	   M = _(t, _(e, _(_(x, _(s, e)), k))) // polish the machine state
+           M = hook(M, context) // continuation operator does a transition by itself
+
          } else { // closure case
            // C = ((y ss) ee)
            ee = head(C)
@@ -258,10 +282,18 @@ Arrow transition(Arrow M) {
      // p = (t0 t1)
      // Stacking not needed
      t0 = tail(p)
+     C = resolve(t0, e)
+     if (tail(C) == continuation) { // System continuation call
+       // C = (continuation (hook context))
+       hook = getPointer(tail(head(C)))
+       context = getPointer(head(head(C))
+       M = hook(M, context)  // continuation operator does a transition by itself
+       return
+     }
+
      t1 = head(p)
      w = resolve(t1, e)
-     C = resolve(t0, e)
-     if (tail(C) == operator) { // System call case
+     if (tail(C) == operator) { // Operator call
        // C = (operator (hook context))
        hook = getPointer(tail(head(C)))
        context = getPointer(head(head(C))
@@ -277,3 +309,5 @@ Arrow transition(Arrow M) {
   }
 }
 }}}
+
+Note: the actual machine also features a lambdax construct. Works like lambda but parameter is not evaluated in application. Allows to make "let" like construct. TODO: convergence lambdax/system-cc
