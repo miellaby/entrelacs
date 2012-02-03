@@ -1,5 +1,4 @@
 #summary Box/Value paradigm
-<img src="https://docs.google.com/drawings/pub?id=16hKL4Dn_PaXxGWkkDIT46pV1xyLNL3Dcg7LEYsqLQqQ&w=480&h=360&ext=.png"></img>
 
 ==Introduction to the problem==
 
@@ -12,27 +11,36 @@ But how does one maps such structures onto a physical support, like
 
 For example, let's says we've got a set of statistics organized in a [http://en.wikipedia.org/wiki/Tree_(data_structure) tree]^W^. How can we put our tree on an hard drive?
 
-==The box/value paradigm==
-To do so, engineers are used to applying the _box/value paradigm_. They divide space into boxes, each box containing a value.
+==The box/value framework==
+
+<p align="center"><img src="https://docs.google.com/drawings/pub?id=16hKL4Dn_PaXxGWkkDIT46pV1xyLNL3Dcg7LEYsqLQqQ&w=480&h=360&ext=.png" title="box/value framework overview"></img><br />
+box/value framework overview </p><br /><br />
+
+
+To do so, engineers are used to relay on the _box/value framework_. They divide space into boxes, each box containing a value.
  * Sometimes, a value is a sign. That is a binary representation of a natural number or any other concept mapped to a natural number.
- * Sometimes, a value is a gathering of smaller values. In other words, its box is itself divided into smaller boxes by repeating the box/value paradigm at a upper scale.
+ * Sometimes, a value is a gathering of smaller values. In other words, its box is itself divided into smaller boxes by repeating the paradigm at a upper scale.
  * Sometimes, a value is actually (involved in) referencing an other box. 
 
-In our example, the box/value paradigm leads us to put data into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
+In our example, this approach leads to put nodes into boxes (one box per node) and to map the tree structure as a set of boxes which reference each others.
 
 
 ==box/value paradigm = Writing==
 
-Programmers/engineers have never look for an other alternative. Why? 
+Programmers/engineers have rarely look for an other alternative. Why? 
 
-One may presume it's due to how _writing_ works. _Writing_ functioning is based on the box/value paradigm as well. It's all about boxes (sentences, words...) until signs (letters or ideograms). Signs typically form references up to concepts but they may also reference other boxes, like "the last chapter" in "please refer to the last chapter" sentence.
+One may presume it's due to how _Writing_ functioning have forged our mind, as _Writing_ itself is a direct application of the box/value paradigm.
 
-The box/value paradigm is so deeply rooted in people minds that no real alternative has even been studied. And yet, this approach leads to big issues as explained further.
+Writing is indeed all about boxes (sentences, words...) until signs (letters or ideograms). Signs or sign combinations typically form physical representation of concepts. Signs may also reference other boxes within the same text like pointers or index do in a data structure.
+
+All in all, the box/value paradigm is deeply rooted in our minds. But when applied to data computing and knowledge representation, this approach unfortunately leads to big issues as explained further.
 
 ==box/value paradigm = graph theory==
-The box/value paradigm is directly related to [http://en.wikipedia.org/wiki/Glossary_of_graph_theory graph theory (w)] whose fundamental statement is that a _graph_ consists of two types of elements, namely _vertices_ and _edges_. So do the box/value paradigm: boxes act as _vertices_ and contained references act as _edges_ linking these boxes to each others.
+The box/value paradigm is directly related to [http://en.wikipedia.org/wiki/Glossary_of_graph_theory graph theory]^W^ whose fundamental statement is that a _graph_ consists of two types of elements, namely _vertices_ and _edges_. So does the box/value paradigm: boxes act as _vertices_ and contain references which act as _edges_ linking these boxes to each others.
 
-Replacing a box/value system by a more flexible graph system like a object-oriented persistent environment or a [http://en.wikipedia.org/wiki/Triple_store triple store] actually doesn't solve any of the issues introduced herein. To say it clearly: *as long as an information model relays on a _graph_, it's only a variation of the _box/value_ paradigm.*
+Replacing a box/value system by a more flexible graph system like an object-oriented persistent environment or a [http://en.wikipedia.org/wiki/Triple_store triple store] actually doesn't solve any of the issues introduced herein.
+
+To say it clearly: *as long as an information model relays on a _graph_, it's only a variation of the _box/value_ paradigm.*
 
 ==Issues with the box/value paradigm==
 
@@ -45,7 +53,7 @@ Replacing a box/value system by a more flexible graph system like a object-orien
  * *duality*. The box/value paradigm is fundamentally dual. There are boxes on one side, and values in the other sides. This duality propagates itself to every layer of software within a computer. It is so deeply rooted in our every day's life that it looks wrongly natural, like the odd separation between end users and programmers. And yet, this duality is more than often an useless curb on computers' abilities.
    * Concrete example: programmers on one side, and end-users on the other side. Fine? Think again.
 
- * *rigidity*. As values and boxes are most of the time gathered into larger boxes, the box/value storage has a very negative impact on information plasticity. Bringing changes to information continuously obliges to enlarge existing boxes, and shift data to get room. For example, existing computer applications are excessively complex just to get back a bit of this lost plasticity through costly [http://en.wikipedia.org/wiki/Serialization serialization and deserialization (w)] processes. And after all, whatever the amount of work put in software development, a very large majority of information in a traditional computer system can't be modified to better fit the end user needs.
+ * *rigidity*. As values and boxes are most of the time gathered into larger boxes, the box/value storage has a very negative impact on information plasticity. Bringing changes to information continuously obliges to enlarge existing boxes, and shift data to get room. For example, existing computer applications are excessively complex just to get back a bit of this lost plasticity through costly [http://en.wikipedia.org/wiki/Serialization serialization and deserialization]^W^ processes. And after all, whatever the amount of work put in software development, a very large majority of information in a traditional computer system can't be modified to better fit the end user needs.
    * Concrete example: a software application can't be modified in any other aspect than those anticipated by developers.
 
  * *opacity*
