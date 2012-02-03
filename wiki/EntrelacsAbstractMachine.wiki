@@ -88,10 +88,10 @@ Missing: operators and system continuations.
 
 == Programs ==
 {{{
-<application> ::= (<trivial> <trivial>)
 <binding> ::= ("let" ((<variable> <trivial>) <serious>))
 <application-binding> ::= ("let" ((<variable> <application>) <serious>))
-<serious> ::= <binding> | <application-binding> | <binding>
+<application> ::= (<trivial> <trivial>)
+<serious> ::= <binding> | <application-binding> | <application>
 <extensions> ::= ... see code ...
 <expression> ::= <trivial> | <serious> | <extensions>
 <program> ::= <expression>
