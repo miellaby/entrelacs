@@ -27,15 +27,16 @@ Textual source code is reserved for communication purpose. The current prototype
 
 == Extensions to the very strict A(CS)_ language==
 
-The EL language brings modifications to the _A(CS)_ language. They are tagged with #e# hereafter.
+The EL language brings few modifications to the _A(CS)_ language. Most of these experiments are not documented here. See source code.
 
 These extensions include:
-   * The possibility to eval few CS expression which are not in A-normal form -like (t s) expressions-. They are handled by rewriting them on the fly into their A-normal equivalent.
    * Arrow casting and escaping. Any arrow may be seen as a variable symbol, or an expression, or a literal.
+   * The possibility to eval expressions which are not in A-normal form.  They are mostly handled by rewriting rules.
    * Unbound variables are left as is. Evaluating "hello" returns "hello" if not a bound variable.
    * Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound.
+   * System continuations 
    * the "@M" keyword is bound to the current machine state
-   * a run keyword allows to replace the current machine state
+   * a run keyword allows to replace the current machine state. TODO.
 
 == Restrictions ==
 
@@ -60,10 +61,11 @@ s ::=	("let" ((v t) s)) // binding
   	| ("let" ((v (t t)) s)) // application in binding
   	| (t t) // application
 
+// not A-normal form expressions
+z :== ... see source code ...
+
 // EL expression
-e ::=   s
-  	| ("let" ((x (t s)) s)) // serious exp in application in binding #e#
-  	| (t s) // serious exp in application #e#
+e ::=   s | z
 
 // EL program
 p ::= e
@@ -78,23 +80,20 @@ Missing: operators and system continuations.
 {{{
 <arrow> ::= any arrow
 <entrelacs> ::= any entrelacs arrow
-<escape> ::= ("escape" <arrow>) #e#
-<var> ::= ("var" <arrow>) #e#
+<escape> ::= ("escape" <arrow>)
+<var> ::= ("var" <arrow>)
 <lambda-expression> ::= ("lambda" (<arrow> <expression>))
-<trivial> ::= <entrelacs> | <lambda-expression>
-                       | <escape> | <var> #e#
+<trivial> ::= <entrelacs> | <lambda-expression> | <escape> | <var>
 }}}
 
 == Programs ==
 {{{
 <application> ::= (<trivial> <trivial>)
-<serious-application> ::= (<trivial> <serious>) #e#
 <binding> ::= ("let" ((<variable> <trivial>) <serious>))
 <application-binding> ::= ("let" ((<variable> <application>) <serious>))
-<serious-application-binding> ::= ("let" ((<variable> <serious-application>) <serious>)) #e#
 <serious> ::= <binding> | <application-binding> | <binding>
-              | <serious-application-binding> | <serious-binding> #e#
-<expression> ::= <trivial> | <serious>
+<extensions> ::= ... see code ...
+<expression> ::= <trivial> | <serious> | <extensions>
 <program> ::= <expression>
 }}}
 
@@ -113,15 +112,17 @@ Missing: operators and system continuations.
 == The Continuation chain, aka stack ==
 
 {{{
-<continuation-chain> ::=
-      Eve
-    | (<"continuation" (<hook> <context>)) #e#
-    | (<frame> <continuation-chain>)
-/* (<frame> (<frame> ... (<frame> Eve) ... )) */
 <frame> ::= (<variable> (<expression> <environment>))
+/* TODO: is not a frame actually a closure? */
+
+<system-continuation> ::= <continuation (<hook> <context>) /* System continuation */
+
+<continuation-chain> ::= /* (<frame> (<frame> ... (<frame> Eve) ... )) */
+      Eve
+    | <system-continuation>
+    | (<frame> <continuation-chain>)
 }}}
 
-TODO: is not a frame actually a closure?
 
 == The Machine State ==
 
@@ -138,7 +139,7 @@ Uncompleted list
  * unroot
  * isRooted
  * run : replace the current machine state with the provided one.
- * "@M" : current machine state 
+ * "@M" : pseudo variable; return current machine state 
 
 == Machine dynamics ==
 
@@ -153,9 +154,9 @@ Pseudo pattern matching algo:
 let resolve(t, e) =
    match t with:
      | ("lambda" (x s)) -> ((x s) e) /* closure */
-     | ("var" x) -> resolveVariable(x, e) #e#
-     | ("escape" a) -> a #e#
-     | "@M" -> current machine state #e#
+     | ("var" x) -> resolveVariable(x, e)
+     | ("escape" a) -> a
+     | "@M" -> M (current machine state)
      | x -> resolveVariableIfBound(x, e)
 
 let resolveVariableIfBound(x, e) =
@@ -172,8 +173,8 @@ Pseudo-C algo:
      return
         isEntrelacs(exp)
      || tail(exp) == "lambda"
-     || tail(exp) == "escape" #e#
-     || tail(exp) == "var" #e#
+     || tail(exp) == "escape"
+     || tail(exp) == "var"
    }
 }}}
 
@@ -213,7 +214,7 @@ Arrow transition(Arrow M) {
      if (k == Eve) return // stop, program result = resolve(p, e)
 
 
-     if (tail(k) == continuation) { //special system continuation #e#
+     if (tail(k) == continuation) { //special system continuation
         // k = (continuation (<hook> <context>))
         hook = castAsPointer(tail(head(k)))
         context = head(head(k))
@@ -234,7 +235,7 @@ Arrow transition(Arrow M) {
      x = tail(tail(head(p))
 
      // when the var construct is used as first parameter of a let expression, it forces variable name resolution
-     if (tail(x) == "var") { x = resolve(x); } #e#
+     if (tail(x) == "var") { x = resolve(x); }
 
      if (isTrivial(v)) { // Trivial let rule
        // p = (let ((x t) s))
@@ -246,9 +247,8 @@ Arrow transition(Arrow M) {
        // p = (let ((x (t0 s1) s))
        t0 = tail(v)
        v1 = head(v)
-       if (!isTrivial(v1)) { // Very serious let rule #e#
-         pp = _(let, _(_(p, s1), _(let, _(_(x, _(t0, _(var, p))), s)
-         M = _(pp, _(e, k))
+       if (!isTrivial(v1)) { // Not A-normal form
+         ... see code ...
        } else /* isTrivial(v1)) */ { // Serious let rule
          // p = (let ((x t) s)) where t = (t0 t1)
          t1 = v1
@@ -258,7 +258,7 @@ Arrow transition(Arrow M) {
            // C = (operator (hook context))
            hook = getPointer(tail(head(C)))
            context = head(head(C))
-           // M = _(t, _(e, _(_(x, _(s, e)), k))) // polish the machine state
+           // M = _(t, _(e, _(_(x, _(s, e)), k))) // polish the machine state. TODO
            M = hook(M, context) // operator performs the transition by itself
 
          } else { // closure case
@@ -272,12 +272,10 @@ Arrow transition(Arrow M) {
          }
        }
      }
-  } else if (!isTrivial(s = head(P))) { // Not trivial application #e#
-     // p = (t s)
-     pp = _(let, _(_(p, s), _(t, _(var, p))
-     M = _(pp, _(e, k))
+  } else if (!isTrivial(s = head(P))) { // Not A-normal form
+     ... see code ...
 
-  } else { // Trivial application rule
+  } else { // application rule
      // p = (t0 t1)
      // Stacking not needed
      t0 = tail(p)
@@ -309,17 +307,20 @@ The actual machine also features
     * It stacks an "eval" continuation so that:
     * the machine evaluates the "eval parameter" as en EL expression.
     * the machine then evaluates the result as an EL program. 
+    * p=(eval s)
+       * ==> M=(s (e (eval k)))
     * p=(let ((x (eval ss) s))
        * ==> M=(ss (e (eval ((x (s e)) k))))
     * p=(s (eval ss))
        * ==> M=(ss (e (eval ((p ((s (var p)) e)) k))))
  * Few language extensions are rewritten with "eval"
-    * p == (let ((x v:(let ...)) s))
+    * p == (let ((x v) s)) where v=(let ...)
        * ==> pp=(let ((x (eval (escape v))) s))
-    * p == (s v)
-       * ==> pp=(s (eval (escape v))) if v a let expression 
- * (let ((Eve binding) exp)) directly puts _binding_ into environment
- * p=(load (s0 s1)) <==> p=(let ((Eve s0) s1)))
+    * p == (s v) where v=(let ...)
+       * ==> pp=(s (eval (escape v)))
+ * Direct load of binding 
+    * (let ((Eve binding) exp)) means that  _binding_ is directly put into environment (as a var->value arrow)
+    * p=(load (s0 s1)) <==> p=(let ((Eve s0) s1)))
  * p == (let ((x (v0 v1)) s)) ==> pp = (let ((p v0) (let ((x ((var p) v1)) s))))
  * a lambdax construct.
    * defines special closure : C == ("lambdax" CC) with CC a regular closure
