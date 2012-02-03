@@ -31,7 +31,7 @@ The EL language brings few modifications to the _A(CS)_ language. Most of these 
 
 These extensions include:
    * Arrow casting and escaping. Any arrow may be seen as a variable symbol, or an expression, or a literal.
-   * The possibility to eval expressions which are not in A-normal form.  They are mostly handled by rewriting rules.
+   * ~~Experimental: The possibility to eval expressions which are not in A-normal form.~~
    * Unbound variables are left as is. Evaluating "hello" returns "hello" if not a bound variable.
    * Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound.
    * System continuations 
@@ -313,17 +313,15 @@ The actual machine also features
        * ==> M=(ss (e (eval ((x (s e)) k))))
     * p=(s (eval ss))
        * ==> M=(ss (e (eval ((p ((s (var p)) e)) k))))
- * Few language extensions are rewritten with "eval"
-    * p == (let ((x v) s)) where v=(let ...)
-       * ==> pp=(let ((x (eval (escape v))) s))
-    * p == (s v) where v=(let ...)
-       * ==> pp=(s (eval (escape v)))
+ * ~~Few language extensions are rewritten with "eval"~~ bad idea
  * Direct load of binding 
     * (let ((Eve binding) exp)) means that  _binding_ is directly put into environment (as a var->value arrow)
     * p=(load (s0 s1)) <==> p=(let ((Eve s0) s1)))
- * p == (let ((x (v0 v1)) s)) ==> pp = (let ((p v0) (let ((x ((var p) v1)) s))))
+ * ~~p == (let ((x (v0 v1)) s)) ==> pp = (let ((p v0) (let ((x ((var p) v1)) s))))~~ no
  * a lambdax construct.
    * defines special closure : C == ("lambdax" CC) with CC a regular closure
-  *  special closure application parameter is not evaluated.
-  * Allows to make "let" like construct.
-  * TODO: convergence lambdax/system-cc
+   *  special closure where application argument is not evaluated.
+   * Allows to make constructs like "let", "if".
+
+==A normalization==
+An higher functional language might be interpreted by performing A-normalization and various optimization of code to obtain the corresponding optimized A-normal form to be evaluated by the Abstract Machine above.
