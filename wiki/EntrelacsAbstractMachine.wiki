@@ -19,9 +19,9 @@ It obviously implies that *the machine state itself takes part of the language d
 The _Entrelacs Machine_ described hereafter is largely inspired by the 
 [http://users.info.unicaen.fr/~karczma/TEACH/Doc/compi_cont.pdf "_CaEK_" abstract machine of Flanagan et al. (1993)].
 
-So the EL language is equivalent to the "Core Scheme in A-normal form" (_A(CS)_) very basic (no type) functional language introduced in this paper.
+So the EL language is roughly equivalent to the "Core Scheme in A-normal form" language introduced in this paper (aka _A(CS)_).
 
-The only thing to keep in mind is that programs and machine states are directly hold by arrows structures.
+In short, it's a very basic (not typed) functional language. The only thing to keep in mind is that programs and machine states are directly hold by arrows structures.
 
 Textual source code is reserved for communication purpose. The current prototype should be able to assimilate arrow in the form of s-expression or URI (see [EntrelacsServer] API).
 
@@ -49,7 +49,7 @@ a ::= x | (a a) // any arrow
 // literals
 v ::=  x // entrelacs are resolved if bound, otherwise left as is
        | ("escape" a) // escape any arrow (prevent expression evaluation) #e#
-       | ("get" a) // escape and cast any arrow as a variable + resolve it before evaluating the expression  #e#
+       | ("var" a) // escape and cast any arrow as a variable #e#
 
 // trivial expression
 t ::=  	v
@@ -79,10 +79,10 @@ Missing: operators and system continuations.
 <arrow> ::= any arrow
 <entrelacs> ::= any entrelacs arrow
 <escape> ::= ("escape" <arrow>) #e#
-<get> ::= ("get" <arrow>) #e#
+<var> ::= ("var" <arrow>) #e#
 <lambda-expression> ::= ("lambda" (<arrow> <expression>))
 <trivial> ::= <entrelacs> | <lambda-expression>
-                       | <escape> | <get> #e#
+                       | <escape> | <var> #e#
 }}}
 
 == Programs ==
@@ -153,7 +153,7 @@ Pseudo pattern matching algo:
 let resolve(t, e) =
    match t with:
      | ("lambda" (x s)) -> ((x s) e) /* closure */
-     | ("get" x) -> resolveVariable(x, e) #e#
+     | ("var" x) -> resolveVariable(x, e) #e#
      | ("escape" a) -> a #e#
      | "@M" -> current machine state #e#
      | x -> resolveVariableIfBound(x, e)
@@ -173,7 +173,7 @@ Pseudo-C algo:
         isEntrelacs(exp)
      || tail(exp) == "lambda"
      || tail(exp) == "escape" #e#
-     || tail(exp) == "get" #e#
+     || tail(exp) == "var" #e#
    }
 }}}
 
@@ -208,11 +208,15 @@ Arrow transition(Arrow M) {
 
   if (isTrivial(p)) { // Trivial expression
      // p = v
+
+     // if no more continuation
      if (k == Eve) return // stop, program result = resolve(p, e)
+
+
      if (tail(k) == continuation) { //special system continuation #e#
         // k = (continuation (<hook> <context>))
         hook = castAsPointer(tail(head(k)))
-        context = castAsPointer(head(head(k))
+        context = head(head(k))
         M = hook(M, context)
      } else {
        // k = ((x (ss ee)) kk)
@@ -229,7 +233,8 @@ Arrow transition(Arrow M) {
      v = head(tail(head(p))
      x = tail(tail(head(p))
 
-     if (tail(x) == "get") { x = resolve(x); } #e#
+     // when the var construct is used as first parameter of a let expression, it forces variable name resolution
+     if (tail(x) == "var") { x = resolve(x); } #e#
 
      if (isTrivial(v)) { // Trivial let rule
        // p = (let ((x t) s))
@@ -242,30 +247,24 @@ Arrow transition(Arrow M) {
        t0 = tail(v)
        v1 = head(v)
        if (!isTrivial(v1)) { // Very serious let rule #e#
-         pp = _(let, _(_(p, s1), _(let, _(_(x, _(t0, _(get, p))), s)
+         pp = _(let, _(_(p, s1), _(let, _(_(x, _(t0, _(var, p))), s)
          M = _(pp, _(e, k))
        } else /* isTrivial(v1)) */ { // Serious let rule
          // p = (let ((x t) s)) where t = (t0 t1)
          t1 = v1
          t0 = tail(t)
-         t1 = head(t)
-         w = resolve(t1, e)
          C = resolve(t0, e)
          if (tail(C) == "operator") { // Operator call
            // C = (operator (hook context))
            hook = getPointer(tail(head(C)))
-           context = getPointer(head(head(C))
-           r = hook(w, context)
-           M = _(s, _(_(_(x, r), e), k))
-         } else if (tail(C) == "continuation") { // System continuation call
-           // C = (continuation (hook context))
-           hook = getPointer(tail(head(C)))
-           context = getPointer(head(head(C))
- 	   M = _(t, _(e, _(_(x, _(s, e)), k))) // polish the machine state
-           M = hook(M, context) // continuation operator does a transition by itself
+           context = head(head(C))
+           // M = _(t, _(e, _(_(x, _(s, e)), k))) // polish the machine state
+           M = hook(M, context) // operator performs the transition by itself
 
          } else { // closure case
            // C = ((y ss) ee)
+           t1 = head(t)
+           w = resolve(t1, e)
            ee = head(C)
 	   y = tail(tail(C))
            ss = head(tail(C))
@@ -275,7 +274,7 @@ Arrow transition(Arrow M) {
      }
   } else if (!isTrivial(s = head(P))) { // Not trivial application #e#
      // p = (t s)
-     pp = _(let, _(_(p, s), _(t, _(get, p))
+     pp = _(let, _(_(p, s), _(t, _(var, p))
      M = _(pp, _(e, k))
 
   } else { // Trivial application rule
@@ -283,24 +282,15 @@ Arrow transition(Arrow M) {
      // Stacking not needed
      t0 = tail(p)
      C = resolve(t0, e)
-     if (tail(C) == continuation) { // System continuation call
-       // C = (continuation (hook context))
-       hook = getPointer(tail(head(C)))
-       context = getPointer(head(head(C))
-       M = hook(M, context)  // continuation operator does a transition by itself
-       return
-     }
-
-     t1 = head(p)
-     w = resolve(t1, e)
      if (tail(C) == operator) { // Operator call
        // C = (operator (hook context))
        hook = getPointer(tail(head(C)))
-       context = getPointer(head(head(C))
-       r = hook(w, context)
-       M = _(r, _(e, k))
+       context = head(head(C))
+       M = hook(M, context)  // operator performs the transition by itself
      } else { // closure case
        // C = ((x ss) ee)
+       t1 = head(p)
+       w = resolve(t1, e)
        x = tail(tail(C))
        ss = head(tail(C))
        ee = head(C)
@@ -310,4 +300,29 @@ Arrow transition(Arrow M) {
 }
 }}}
 
-Note: the actual machine also features a lambdax construct. Works like lambda but parameter is not evaluated in application. Allows to make "let" like construct. TODO: convergence lambdax/system-cc
+=== Differences with actual code ===
+
+Last update: 02/2012
+
+The actual machine also features
+ * (eval p)
+    * It stacks an "eval" continuation so that:
+    * the machine evaluates the "eval parameter" as en EL expression.
+    * the machine then evaluates the result as an EL program. 
+    * p=(let ((x (eval ss) s))
+       * ==> M=(ss (e (eval ((x (s e)) k))))
+    * p=(s (eval ss))
+       * ==> M=(ss (e (eval ((p ((s (var p)) e)) k))))
+ * Few language extensions are rewritten with "eval"
+    * p == (let ((x v:(let ...)) s))
+       * ==> pp=(let ((x (eval (escape v))) s))
+    * p == (s v)
+       * ==> pp=(s (eval (escape v))) if v a let expression 
+ * (let ((Eve binding) exp)) directly puts _binding_ into environment
+ * p=(load (s0 s1)) <==> p=(let ((Eve s0) s1)))
+ * p == (let ((x (v0 v1)) s)) ==> pp = (let ((p v0) (let ((x ((var p) v1)) s))))
+ * a lambdax construct.
+   * defines special closure : C == ("lambdax" CC) with CC a regular closure
+  *  special closure application parameter is not evaluated.
+  * Allows to make "let" like construct.
+  * TODO: convergence lambdax/system-cc
