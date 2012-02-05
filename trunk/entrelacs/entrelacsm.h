@@ -13,7 +13,7 @@
 
 #define arrowMaybe(T, H)  xl_arrowMaybe(T, H)
 #define tagMaybe(S) xl_tagMaybe(S)
-#define btagMaybe(N, S) xl_tagMaybe(N, S)
+#define btagMaybe(N, S) xl_btagMaybe(N, S)
 #define blobMaybe(N, S) xl_blobMaybe(N, S)
 
 #define typeOf(A)    xl_typeOf(A)

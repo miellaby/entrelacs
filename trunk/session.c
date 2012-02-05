@@ -1,20 +1,12 @@
-#include "entrelacs.h"
-#include "entrelacsm.h"
+#include "entrelacs/entrelacs.h"
+#include "entrelacs/entrelacsm.h"
 #include <uuid/uuid.h>
 
-static session = NULL;
+static Arrow session = EVE;
 
-static Arrow uuid() {
-   uuid_t uu;
-   uuid_generate(uu);
-   char s[37];
-   uuid_unparse(s,uu);
-   return xl_tag(s);
-}
-
-Arrow xls_newSession(Arrow agent) {
+Arrow xls_session(Arrow agent, Arrow uuid) {
    if (!session) session = tag("session");
-   Arrow s = a(session, a(agent, uuid()));
+   Arrow s = a(session, a(agent, uuid));
    root(s);
    return s;
 }
@@ -28,11 +20,11 @@ void xls_release(Arrow s, Arrow a) {
 }
 
 void xls_resetSession(Arrow s) {
-   Arrow prec = NULL;
+   Arrow prec = EVE;
    XLEnum e = xl_childrenOf(s);
    while (xl_enumNext(e)) {
       Arrow child = xl_enumGet(e);
-      if (prec) unroot(prec);
+      unroot(prec); // only works if not Eve
       prec = child;
    }
    if (prec) unroot(prec);
@@ -70,15 +62,15 @@ Arrow xls_blob(Arrow s, uint32_t size, char* pointer) {
 
 Arrow xls_arrowMaybe(Arrow s, Arrow t, Arrow h) {
     Arrow a = arrowMaybe(headOf(t), headOf(h));
-    if (xl_isEve(a)) return Eve;
+    if (xl_isEve(a)) return xl_Eve();
     a = a(s, a);
     root(a);
     return a;
 }
 
 Arrow xls_tagMaybe(Arrow s, char* string) {
-    Arrow tag = tagMaybe(string);
-    if (xl_isEve(a)) return Eve;
+    Arrow a = tagMaybe(string);
+    if (xl_isEve(a)) return xl_Eve();
     a = a(s, a);
     root(a);
     return a;
@@ -86,7 +78,7 @@ Arrow xls_tagMaybe(Arrow s, char* string) {
 
 Arrow xls_btagMaybe(Arrow s, uint32_t size, char* pointer) {
     Arrow a = btagMaybe(size, pointer);
-    if (xl_isEve(a)) return Eve;
+    if (xl_isEve(a)) return xl_Eve();
     a = a(s, a);
     root(a);
     return a;
@@ -94,7 +86,7 @@ Arrow xls_btagMaybe(Arrow s, uint32_t size, char* pointer) {
 
 Arrow xls_blobMaybe(Arrow s, uint32_t size, char* pointer) {
     Arrow a = blobMaybe(size, pointer);
-    if (xl_isEve(a)) return Eve;
+    if (xl_isEve(a)) return xl_Eve();
     a = a(s, a);
     root(a);
     return a;
@@ -154,8 +146,8 @@ XLEnum xls_childrenOf(Arrow s, Arrow a) {
     return xl_childrenOf(headOf(a));
 }
 
-void xls_childrenOfCB(Arrow s, Arrow a, XLCallBack cb, void* ctx) {
-    return xl_childrenOfCB(headOf(a), cb, ctx);
+void xls_childrenOfCB(Arrow s, Arrow a, XLCallBack cb, Arrow context) {
+    return xl_childrenOfCB(headOf(a), cb, context);
 }
 
 
@@ -171,14 +163,14 @@ char* xls_programOf(Arrow s, Arrow a) {
 
 
 
-Arrow xls_operator(XLCallBack hook, char* ctx) {
-   Arrow a = a(s, xl_operator(hook, ctx));
+Arrow xls_operator(Arrow s, XLCallBack hook, Arrow context) {
+   Arrow a = a(s, xl_operator(hook, context));
    root(a);
    return a;
 }
 
-Arrow xls_continuation(XLCallBack hook, char* ctx) {
-   Arrow a = a(s, xl_continuation(hook, ctx));
+Arrow xls_continuation(Arrow s, XLCallBack hook, Arrow context) {
+   Arrow a = a(s, xl_continuation(hook, context));
    root(a);
    return a;
 }
@@ -190,7 +182,7 @@ Arrow xls_run(Arrow s, Arrow rootStack, Arrow M) {
 }
 
 Arrow xls_eval(Arrow s, Arrow rootStack, Arrow program) {
-   Arrow a = a(s, xl_eval(headOf(rootStack), headOf(M)));
+   Arrow a = a(s, xl_eval(headOf(rootStack), headOf(program)));
    root(a);
    return a;
 }

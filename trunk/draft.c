@@ -8,7 +8,7 @@ I'm going to remove this concept.
 
 
 // Je viens d'imaginer une façon excellente d'accélerer le parcours d'un cache a la recherche des modifications
-// on fait comme le petit jeu des enfants avec les bateaux en papier, c'est à dire: on stocke dans 8 bits à coté de chaque cellule modifiée l'adresse modulo 255 de la cellule modifiée suivante.
+// on fait comme le petit jeu des enfants avec les bateaux en papier, c'est �  dire: on stocke dans 8 bits �  coté de chaque cellule modifiée l'adresse modulo 255 de la cellule modifiée suivante.
 // Le problème c'est de trouver la cellule modifiée qui précède celle qu'on modifie. Elle peut être n'importe où. Flute.
  
 // Once one decides not to use a traditional chain hashing designed table, several exicting alternatives come along.
@@ -22,9 +22,10 @@ I'm going to remove this concept.
 
 // About connectivity, garbage collector, new arrow, unrooted arrow
 
-// A freshly defined arrow won't be connected with child arrows at first.
-// It stays in a "loose state" as long as it doesn't take part of a rooted arrow definition. All in all, such an arrow got the same status as a bound-to-be-recycled non-connected arrow.
-// the connection process takes place while rooting a loose arrow
+// A freshly assimilated arrow is not connected with its parents at first.
+// It stays in a "loose state" as long as it doesn't take part of any rooted arrow definition.
+// All in all, such an arrow got the same status as a bound-to-be-recycled non-connected arrow.
+// the connection process starts by rooting a loose arrow
 // root(a) ==> if (loose(a)) { unloose(a); connect(headOf(a),a) ; connect(tailOf(a),a); }
 // connect(a,child) ==>
 //       - add child back-ref to h3 based a sequence.
@@ -39,88 +40,7 @@ I'm going to remove this concept.
 //
 
 // Prototype constraints
-// Cell size: 32 bits
+// Cell size: 64 bits
 // Address range: 0-2^24
-// Only regular arrows can be rooted
-// Blob are stored as a file in a traditional system while the #BLOB->SHA arrow is stored in the space.
-// Tags connectivity can't be queried. Build regular arrows out of tags to leverage on Entrelacs connectivity system.
-
-/* API */
-
-
-/* Defining */
-Arrow string(char *);
-Arrow blob(char *, uint32_t size);
-Arrow arrow(Arrow, Arrow);
-
-/* Unbuilding */
-Arrow headOf(Arrow);
-Arrow tailOf(Arrow);
-char* stringOf(Arrow);
-char* blobOf(Arrow, long*);
-
-
-/* Rooting */
-Arrow root(Arrow);
-void unroot(Arrow);
-int rooted(Arrow); // returns 0 if rooted.
-
-/* Transaction */
-void commit(); // Arrow may be unvalidated
-
-/* Browsing */
-FuzzyEnum incomingsOf(Arrow);
-FuzzyEnum outgoingsOf(Arrow);
-Arrow next(*FuzzyEnum);
-
-int (SimpleCallBack*)(Arrow arrow, char* context);
-void incomingsCB(Arrow, SimpleCallBack);
-void outgoingsCB(Arrow, SimpleCallBack);
-
-
-// The Stack & Call By Continuation style "Entrelacs Language"
-// Abstract Machine State Arrow = ( current, ( (stack program ), continuation ) )
-int (CallBack*)(Arrow M);
-Arrow continuation(CallBack);
-Arrow program(char*);
-Arrow machine(Arrow program, Arrow cc, Arrow current, Arrow stack);
-int   run(Arrow M);
-int   eval(char* programString, Callback cb);
-
-
-// Extending the browse language with your own operators:
-// ----------------------------------------
-Arrow (OperatorCallBack*)(Arrow M);
-Arrow operator(OperatorCallBack continuation);
-// and don't forget link your operator to a term and root the link!
-
-
-// exemple:
-// return sumCB(Arrow M) { 
-//   Arrow current = tailOf(M);
-//   Arrow stack = tailOf(tailOf(headOf(M)));
-//   Arrow cc = headOf(headOf(M));
-//   current = string(i2s( s2i(stringOf(current)) + s2i(tailOf(stack)))));
-//   stack = headOf(stack);
-//   cc = headOf(m->cc);
-//   return machine(program, cc, current, stack);
-// }
-// Arrow sum = root(arrow(string("sum"),operator(sumCB)));
-//
-// usage: "$sum:2,2" or "2,$sum:2" or "2,2<$sum:>"
-//
-//
-// other exemple: 
-// int myOwnBranch(Arrow m) { 
-//   m->cc = tailOf(m->cc);
-//   if (m->current == Eve) 
-//       m->cc = tailOf(m->cc);
-//   return 0;
-// }
-
-
-// ----------------------------------------
-/* Internal */
-uint16   _transactionId;
-Arrow* _dirtyArrows; // arrows to submit to garbage collector (new/unrooted)
-
+// Blobs are stored as files in a traditional system. A blob arrow is actually equivalent to a tag arrow but the string stored in the tag is a cryptographic hash which uniquely identifies the blob.
+// A newly assimilated arrow is not connected to its parents until it's rooted or it becomes an ancestor of a newly assimilated rooted arrow.
