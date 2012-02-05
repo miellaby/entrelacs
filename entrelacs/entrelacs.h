@@ -10,6 +10,9 @@
 
 #include <stdint.h>
 
+/** Eve. */
+#define EVE (0)
+
 /** Arrow ID. */
 typedef uint32_t Arrow; ///< ArrowId = SpatialRef (may be enforced by a transaction ID in a near future)
 
