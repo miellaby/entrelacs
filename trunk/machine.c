@@ -12,7 +12,9 @@
 #endif
 #define dputs(S) ONDEBUG(fprintf(stderr, "%s\n", S))
 
-static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, evalOp = 0, lambda = 0, lambdax = 0, operator = 0, continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
+static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0,
+   evalOp = 0, lambda = 0, lambdax = 0, operator = 0,
+   continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow printArrow(Arrow arrow) {
   char* program = programOf(arrow);
@@ -601,6 +603,10 @@ Arrow xl_reduceMachine(Arrow M, Arrow r) {
   return M;
 }
 
+Arrow runHook(Arrow M, Arrow context) {
+   return xl_argInMachine(M);
+}
+
 Arrow tailOfHook(Arrow M, Arrow context) {
    Arrow arrow = xl_argInMachine(M);
    Arrow r = tail(arrow);
@@ -680,6 +686,7 @@ Arrow commitHook(Arrow M, Arrow context) {
 }
 
 static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
+ {"run", runHook},
  {"tailOf", tailOfHook},
  {"headOf", headOfHook},
  {"childrenOf", childrenOfHook},
