@@ -14,3 +14,6 @@ run a program in a virtualization stack
 *   isEve(k) ? a :
 *       isEntrelacs(a) ? arrow(tail(k), v(head(k), a)) :
 *           arrow(v(k, head(a)), v(k, tail(a)))
+
+the virtualization stack won't be reflexive-able. Out of machine state.
+

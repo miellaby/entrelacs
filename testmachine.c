@@ -17,6 +17,8 @@ int main(int argc, char **argv) {
   
   xl_init();
   char *str, *programs[] = {
+    "(run Eve)",
+    "(@M)",
     "(undefinedThing Eve)",
     "(arrow x 2)",
     "(headOf Eve)",
