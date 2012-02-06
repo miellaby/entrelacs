@@ -17,6 +17,8 @@ int main(int argc, char **argv) {
   
   xl_init();
   char *str, *programs[] = {
+      "(let ((x 1) (let ((y x) y))))",
+      "((lambda x x) let (myHeadOf lambda x headOf x) myHeadOf escape 1 2 3 4 5)",
     "(run Eve)",
     "(@M)",
     "(undefinedThing Eve)",

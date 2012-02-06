@@ -346,11 +346,9 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      Arrow v0 = tail(v);
      if (v0 == let) { // let expression as application closure in containing let #e#
          dputs("     v == let expression");
-         // rewriting program with an eval
-         // pp = (let ((x (eval (escape v))) s))
-         // shortcut: it leads to the following machine state
-         // M = (v (e (eval ((x (s e)) k))))
-         M = a(v, a(e, a(evalOp, a(a(x, a(s, e)), k))));
+         // stack up a continuation
+         // M = (v (e ((x (s e)) k)))
+         M = a(v, a(e, a(a(x, a(s, e)), k)));
          return M;
      }
        
@@ -364,20 +362,7 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          return M;
      }
 
-     int lambdaxSpecial = (isTrivial(v0) && tail(resolve(v0, e, M)) == lambdax);
 
-     if (!lambdaxSpecial && !isTrivial(v1)) { // non trivial argument in application in let expression #e#
-       // p == (let ((x v:(t0 v1)) s)) where v1 not trivial
-       dputs("p == (let ((x v:(v0 v1)) s)) where v1 not trivial");
-       
-       // rewriting program to stage v1 and (v0 v1) evaluation
-       // pp = (let ((p v1) (let ((x (v0 (var p))) s))))
-       // TODO use (headOf v) instead of p as variable name
-       Arrow pp = a(let, a(a(p, v1), a(let, a(a(x, a(v0, a(var, p))), s))));
-       M = a(pp, ek);
-       return M;
-     }
-     
      if (!isTrivial(v0)) { // non trivial closure in application in let expression #e#
          // p == (let ((x v:(v0 v1)) s)) where v0 not trivial
          dputs("p == (let ((x v:(v0 v1)) s)) where v0 not trivial");
@@ -387,6 +372,20 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          Arrow pp = a(let, a(a(p, v0), a(let, a(a(x, a(a(var, p), v1)), s))));
          M = a(pp, ek);
          return M;
+     }
+
+     int lambdaxSpecial = (isTrivial(v0) && tail(resolve(v0, e, M)) == lambdax);
+
+     if (!lambdaxSpecial && !isTrivial(v1)) { // non trivial argument in application in let expression #e#
+       // p == (let ((x v:(t0 v1)) s)) where v1 not trivial
+       dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
+       
+       // rewriting program to stage v1 and (v0 v1) evaluation
+       // pp = (let ((p v1) (let ((x (v0 (var p))) s))))
+       // TODO use (headOf v) instead of p as variable name
+       Arrow pp = a(let, a(a(p, v1), a(let, a(a(x, a(v0, a(var, p))), s))));
+       M = a(pp, ek);
+       return M;
      }
       
      // p == (let ((x (t0 t1)) s)) where t0 is a closure or equivalent
@@ -443,14 +442,20 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
   dputs("p == (s v)");
   Arrow s = tail(p);
   Arrow v = head(p);
-   
+
+  if (!isTrivial(s)) { // Not trivial closure in application #e#
+    dputs("p == (s v) where s is an application or such");
+    // rewriting rule: pp = (let ((p s) ((var p) v)))
+    // ==> M = (s (e ((p (((var p) v) e)) k)))
+    M = a(s, a(e, a(a(p, a(a(a(var, p), v), e)), k)));
+    return M;
+  }
+
   if (tail(v) == let) { // let expression as application argument #e#
-    dputs("    p == (s v:(let ((x vv) ss))");
-    // rewriting program with an eval
-    // pp = (s (eval (escape v)))
-    Arrow pp = a(s, a(evalOp, a(escape, v)));
-    // TODO shortcut
-    M = a(pp, ek);
+      dputs("    p == (s v:(let ((x vv) ss))");
+    // rewriting rule: pp = (let ((p v) (s (var p))))
+    // ==> M = (v (e ((p ((s (var p)) e)) k))))
+    M = a(v, a(e, a(a(p, a(a(s, a(var, p)), e)), k)));
     return M;
   }
 
@@ -462,35 +467,20 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      return M;
   }
 
-  int lambdaxSpecial = (isTrivial(s) && tail(resolve(s, e, M)) == lambdax);
+  int lambdaxSpecial = (tail(resolve(s, e, M)) == lambdax);
   
   if (!lambdaxSpecial && !isTrivial(v)) { // Not trivial argument in application #e#
     dputs("    v == something not trivial");
-    // simply rewriting program with a let
-    // pp = (let ((p v) (s (var p))))
-    Arrow pp = a(let, a(a(p, v), a(s, a(var, p))));
-    M = a(pp, ek);
+    // rewriting rule: pp = (let ((p v) (s (var p))))
+    // ==> M = (v (e ((p ((s (var p)) e)) k))))
+    M = a(v, a(e, a(a(p, a(a(s, a(var, p)), e)), k)));
     return M;
   }
 
   dputs("    v == t trivial");
   Arrow t = v; // v == t trivial
-  
-  if (!isTrivial(s)) { // Not trivial closure in application #e#
-    // simply rewriting program with a let
-    // pp = (let ((p s) ((var p) t)))
-    if (tail(s) == let) { // let expression as closure argument #e#
-       dputs("p == (s:(let ((x v) ss)) t)");
-       // shortcut: the rewriting rule leads to the following machine state
-       M = a(s, a(e, a(evalOp, a(a(p, a(a(a(var, p), t), e)), k)))); // stack an eval continuation
-       return M; 
-    }
+
     
-    dputs("p == (s v) where s is an application or such");
-    Arrow pp = a(let, a(a(p, s), a(a(var, p), v)));
-    M = a(pp, ek);
-    return M;
-  }
 
   // Really trivial application
   
