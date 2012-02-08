@@ -42,22 +42,26 @@ Arrow blobFromFile(char *f) {
 int main(int argc, char* argv[]) {
     xl_init();
     // assimilate arrows
-    test_title("Simple fingerprints");
     DEFTAG(hello); // Arrow hello = xl_tag("hello");
     DEFTAG(world);
     DEFA(hello, world); // Arrow hello_world = xl_arrow(hello, world);
-    char *f = toFingerprints(hello_world);
-    assert(f);
-    fprintf(stderr, "%s\n", f);
-    assert(fromFingerprints(f) == hello_world);
-    free(f);
-        
-    test_title("Blob fingerprints");
-    Arrow someBlob = blobFromFile(__FILE__);
-    
-    f = toFingerprints(someBlob);
-    assert(f);
-    fprintf(stderr, "%s\n", f);
-    assert(fromFingerprints(f) == someBlob);
-	return 0;
+
+    test_title("check /hello.world URI");
+    {
+        char *a = uriOf(hello_world);
+        assert(a);
+        fprintf(stderr, "%s\n", a);
+        assert(uri(a) == hello_world);
+        free(a);
+    }
+
+    test_title("check Blob URI");
+    {
+        Arrow someBlob = blobFromFile(__FILE__);
+        char* a = uriOf(someBlob);
+        assert(a);
+        fprintf(stderr, "%s\n", a);
+        assert(uri(a) == someBlob);
+    }
+    return 0;
 }

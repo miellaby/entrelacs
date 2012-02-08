@@ -6,9 +6,9 @@
 #include "entrelacs/entrelacsm.h"
 
 static Arrow print(Arrow arrow, Arrow context) {
-  char* program = programOf(arrow);
-  fprintf(stderr, " %s\n", program);
-  free(program);
+  char* uri = uriOf(arrow);
+  fprintf(stderr, "%s\n", uri);
+  free(uri);
   return arrow;
 }
 
@@ -27,24 +27,31 @@ int main(int argc, char **argv) {
   while (fgets(buffer, 1024, fd)) {
     fprintf(stderr, "%s", buffer);
 
-    Arrow a = program(buffer);
+    Arrow a = uri(buffer);
+    fprintf(stderr, " => ");
+    print(a, NULL);
     Arrow command = head(a);
     Arrow arg = tail(a);
 
     if (command == root) {
-       fprintf(stderr, "rooting\n");
+       fprintf(stderr, "rooting ");
+       print(arg, NULL);
        root(arg);
        commit();
     } else if (command == unroot) {
-       fprintf(stderr, "unrooting\n");
+       fprintf(stderr, "unrooting ");
+       print(arg, NULL);
        unroot(arg);
        commit();
     } else if (command == childrenOf) {
+       fprintf(stderr, "childrenOf ");
+       print(arg, NULL);
        fprintf(stderr, " ==> {\n");
        childrenOfCB(arg, print, Eve());
        fprintf(stderr, "}\n");
     } else {
-       fprintf(stderr, "Unknown command %s\n", str(command));
+       fprintf(stderr, "Unknown command: ");
+       print(command, NULL);
        assert(1);
     }
   }

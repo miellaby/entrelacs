@@ -1,7 +1,8 @@
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "space.h"
-#include "sexp.h"
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 
@@ -17,114 +18,19 @@ static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0,
    continuation = 0, selfM = 0, arrowOp = 0, systemEnvironment = 0;
 
 static Arrow printArrow(Arrow arrow) {
-  char* program = programOf(arrow);
-  fprintf(stderr, "%s\n", program);
-  free(program);
+  char* uri = uriOf(arrow);
+  fprintf(stderr, "%s\n", uri);
+  free(uri);
   return arrow;
 }
 
 static Arrow printArrowC(Arrow arrow) {
-  char* program = programOf(arrow);
-  fprintf(stderr, "%s", program);
-  free(program);
+  char* uri = uriOf(arrow);
+  fprintf(stderr, "%s", uri);
+  free(uri);
   return arrow;
 }
 
-static Arrow arrowFromSexp(sexp_t* sx) {
-  sexp_t* ssx;
-  
-  Arrow a, n;
-  
-  if (sx->list) {
-     n = arrowFromSexp(sx->list);
-  } else if (sx->ty == SEXP_VALUE && sx->aty == SEXP_BASIC
-             && sx->val_used == 4 && !strcmp("Eve", sx->val)) {
-     n = Eve();
-  } else {
-     n = btag(sx->val_used - 1, sx->val); // One don't keep 0 terminator byte
-  }
-  
-  if (sx->next) {
-     a = arrowFromSexp(sx->next);
-     return arrow(n, a);
-  } else
-     return n;
-}
-
-static sexp_t *sexpFromArrow(Arrow a) {
-   int t = typeOf(a);
-   
-   switch (t) {
-    case XL_EVE :
-       return new_sexp_atom("Eve", 3, SEXP_BASIC);
-
-    case XL_ARROW : {
-       sexp_t *sexpHead = sexpFromArrow(headOf(a));
-       sexp_t *sexpTail = sexpFromArrow(tailOf(a));
-       sexpTail->next = sexpHead;
-       return new_sexp_list(sexpTail);
-    }
-    case XL_BLOB : {
-       char* fingerprint = toFingerprints(a);
-       sexp_t* sexp = new_sexp_atom(fingerprint, strlen(fingerprint), SEXP_DQUOTE);
-       free(fingerprint);
-       return sexp;
-    }
-    case XL_TAG : {
-       uint32_t tagSize;
-       char* tag = btagOf(a, &tagSize);
-       sexp_t* sexp = new_sexp_atom(tag, tagSize, SEXP_DQUOTE);
-       free(tag);
-       return sexp;
-    }
-    case XL_TUPLE :
-    case XL_SMALL :
-       assert(0);
-       return NULL; // Not yet supported TODO
-       
-    default:
-       return NULL;
-  }
-}
-
-Arrow xl_program(char* program) { // EL string
-
-  if (!program || !program[0]) return Eve(); /* null or empty string: return Eve */  
-
-  pcont_t *pc = NULL;
-  
-  pc = cparse_sexp(program, strlen(program), pc);
-  
-  if (pc == NULL)
-     return Eve(); /* see sexp_errno */
-  
-  sexp_t *sx = pc->last_sexp;
-  if (sx == NULL)
-     return Eve(); /* No completed sexp */
-     
-  Arrow a = arrowFromSexp(sx);
-  
-  destroy_continuation(pc);
-  destroy_sexp(sx);
-  
-  return a;
-}
-
-
-char* xl_programOf(Arrow p) { // returned value to be freed by the user
-  sexp_t *sx = sexpFromArrow(p);
-  CSTRING *s = NULL;
-  print_sexp_cstr(&s, sx, 256);
-  assert(s->curlen);
-  char *program = (char *)malloc(sizeof(char) * s->curlen + 1); 
-  assert(program);
-  strncpy(program, s->base, s->curlen);
-  program[s->curlen] = '\0';
-  
-  sdestroy(s);
-  
-  return program;
-}
 static void machine_init();
 
 Arrow xl_operator(XLCallBack hookp, Arrow context) {
@@ -374,9 +280,9 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
          return M;
      }
 
-     int lambdaxSpecial = (isTrivial(v0) && tail(resolve(v0, e, M)) == lambdax);
+     int resolvedTail = tail(resolve(v0, e, M));
 
-     if (!lambdaxSpecial && !isTrivial(v1)) { // non trivial argument in application in let expression #e#
+     if (resolvedTail != lambdax && !isTrivial(v1)) { // non trivial argument in application in let expression #e#
        // p == (let ((x v:(t0 v1)) s)) where v1 not trivial
        dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
        
@@ -466,10 +372,8 @@ static Arrow transition(Arrow M) { // M = (p, (e, k))
      M = a(ss, a(e, a(evalOp, a(a(p, a(a(s, a(var, p)), e)), k)))); // stack an eval continuation
      return M;
   }
-
-  int lambdaxSpecial = (tail(resolve(s, e, M)) == lambdax);
-  
-  if (!lambdaxSpecial && !isTrivial(v)) { // Not trivial argument in application #e#
+  Arrow resolvedTail = tail(resolve(s, e, M));
+  if (resolvedTail != lambdax && !isTrivial(v)) { // Not trivial argument in application #e#
     dputs("    v == something not trivial");
     // rewriting rule: pp = (let ((p v) (s (var p))))
     // ==> M = (v (e ((p ((s (var p)) e)) k))))
@@ -553,6 +457,7 @@ Arrow xl_eval(Arrow rootStack, Arrow program) {
   Arrow M = a(program, a(systemEnvironment, Eve()));
   return run(rootStack, M);
 }
+
 
 Arrow xl_argInMachine(Arrow M) {
   Arrow p = tailOf(M);
@@ -646,13 +551,14 @@ Arrow ifHook(Arrow M, Arrow context) {
   Arrow condition = tail(body);
   Arrow alternative = head(body);
   Arrow branch;
+  Arrow p = tail(M);
+  Arrow ek = head(M);
+  Arrow e = tail(ek);
   if (isEve(condition))
      branch = head(alternative);
   else
      branch = tail(alternative);
-  Arrow p = tail(M);
-  Arrow ek = head(M);
-  
+
   if (tail(p) == let) {
     // p == (let ((x (if arg)) s))
     // rewritten in (let ((x branch) s))

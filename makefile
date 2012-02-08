@@ -8,17 +8,12 @@
 # make run.testmachine
 
 .PHONY: clean all clean.% test.% run.% help
-
-SEXP_LIBPATH = sexpr/src
-SEXP_INCPATH = sexpr/src
-
-LDFLAGS += -L$(SEXP_LIBPATH)
-CPPFLAGS += -std=c99 -I$(SEXP_INCPATH)
+CPPFLAGS += -std=c99
 
 TARGETS = libentrelacs.so libentrelacs.a
 # entrelacsd
 OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o
-TESTS = space fingerprints program machine
+TESTS = space uri script machine
 
 PERSISTENCE_FILE=/var/tmp/entrelacs_test.dat
 
@@ -36,7 +31,7 @@ $(TESTS:%=clean.test%):
 tests: all $(TESTS:%=test%.o) $(TESTS:%=test%)
 
 #$(TESTS:%=test%): libentrelacs.so
-$(TESTS:%=test%): libentrelacs.a sexpr/src/libsexp.a
+$(TESTS:%=test%): libentrelacs.a
 
 run: $(TESTS:%=run.test%)
 
@@ -45,7 +40,7 @@ run.%: %
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	od -t x1z -w8 $(PERSISTENCE_FILE)
 
-entrelacsd: mongoose.o session.o server.o libentrelacs.a $(SEXP_LIBPATH)/libsexp.a
+entrelacsd: mongoose.o session.o server.o libentrelacs.a
 
 draft: testdraft.o testdraft run.testdraft
     
@@ -53,9 +48,6 @@ libentrelacs.a: $(OBJECTS)
 	ar rvs $(@) $^
 	
 libentrelacs.so: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $(@) $^ -lsexp -shared -lc
+	$(LD) $(LDFLAGS) -o $(@) $^ -shared -lc
 
 *.o: *.h
-
-
-
