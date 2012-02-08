@@ -61,6 +61,7 @@ int basic() {
     DEFTAG(more_bigger_string_11111111111111111111);
     DEFA(hello, world); // Arrow hello_world = xl_arrow(hello, world);
     
+
     // check regular arrows
     test_title("check regular arrows");
     assert(typeOf(hello_world) == XL_ARROW);
@@ -80,7 +81,7 @@ int basic() {
     test_title("check rooting");
     root(hello_world);
     assert(isRooted(hello_world));
-    
+
     // check GC
     test_title("check GC");
 	DEFTAG(loose);
@@ -104,6 +105,13 @@ int basic() {
        DEFTAG(world);
        DEFA(hello, world);
        assert(original == hello_world);
+    }
+
+    // check uri assimilation
+    test_title("check URI assimilation");
+    {
+        Arrow uri = uri("/hello.world");
+        assert(uri == hello_world);
     }
 
     // check btag/tag equivalency
@@ -162,110 +170,126 @@ int stress() {
     char buffer[50];
     Arrow tags[1000];
     Arrow pairs[500];
-    
+    Arrow big;
+
     // deduplication stress
     test_title("deduplication stress");
-    for (int i = 0 ; i < 200; i++) {
-        snprintf(buffer, 50, "This is the tag #%d", i);
-        tags[i] = tag(buffer);
-        if (i % 2) {
-          int j = (i - 1) / 2; 
-          pairs[j] = arrow(tags[i - 1], tags[i]);
-          printArrow(tailOf(pairs[j]), Eve());
-          printArrow(headOf(pairs[j]), Eve());
-          printArrow(pairs[j], Eve());
-       }
-    }
-    
-    for (int i = 0 ; i < 200; i++) {
-        snprintf(buffer, 50, "This is the tag #%d", i);
-        Arrow tagi = tag(buffer);
-        assert(tags[i] == tagi);
-        if (i % 2) {
-          int j = (i - 1) / 2; 
-          Arrow pairj = arrow(tags[i - 1], tags[i]);
-          assert(pairs[j] == pairj);
+    {
+        for (int i = 0 ; i < 200; i++) {
+            snprintf(buffer, 50, "This is the tag #%d", i);
+            tags[i] = tag(buffer);
+            if (i % 2) {
+                int j = (i - 1) / 2;
+                pairs[j] = arrow(tags[i - 1], tags[i]);
+                printArrow(tailOf(pairs[j]), Eve());
+                printArrow(headOf(pairs[j]), Eve());
+                printArrow(pairs[j], Eve());
+            }
+        }
+
+        for (int i = 0 ; i < 200; i++) {
+            snprintf(buffer, 50, "This is the tag #%d", i);
+            Arrow tagi = tag(buffer);
+            assert(tags[i] == tagi);
+            if (i % 2) {
+                int j = (i - 1) / 2;
+                Arrow pairj = arrow(tags[i - 1], tags[i]);
+                assert(pairs[j] == pairj);
+            }
         }
     }
-    
+
     // rooting stress (also preserve this material from GC for further tests)
     test_title("rooting stress");
-    for (int i = 0 ; i < 200; i++) {
-        root(tags[i]);
-        if (i % 2) {
-          int j = (i - 1) / 2; 
-          root(pairs[j]);
+    {
+        for (int i = 0 ; i < 200; i++) {
+            root(tags[i]);
+            if (i % 2) {
+                int j = (i - 1) / 2;
+                root(pairs[j]);
+            }
         }
+        commit();
     }
-    commit();
-    
+
+    DEFTAG(connectMe);
+
     // connection stress
     test_title("connection stress");
-    DEFTAG(connectMe);
-    root(connectMe);
-    for (int i = 0 ; i < 200; i++) {
-        Arrow child = arrow(connectMe, tags[i]);
-        root(child);
+    {
+        root(connectMe);
+        for (int i = 0 ; i < 200; i++) {
+            Arrow child = arrow(connectMe, tags[i]);
+            root(child);
+        }
+        for (int j = 0 ; j < 100; j++) {
+            printArrow(pairs[j], Eve());
+            Arrow child = arrow(connectMe, pairs[j]);
+            root(child);
+        }
+        childrenOfCB(connectMe, printArrow, Eve());
     }
-    for (int j = 0 ; j < 100; j++) {
-        printArrow(pairs[j], Eve());
-        Arrow child = arrow(connectMe, pairs[j]);
-        root(child);
-    }
-    childrenOfCB(connectMe, printArrow, Eve());
-    
+
     // disconnection stress
     test_title("disconnection stress");
-    for (int i = 0 ; i < 200; i++) {
-        Arrow child = arrow(connectMe, tags[i]);
-        unroot(child);
+    {
+        for (int i = 0 ; i < 200; i++) {
+            Arrow child = arrow(connectMe, tags[i]);
+            unroot(child);
+        }
+        for (int j = 0 ; j < 100; j++) {
+            Arrow child = arrow(connectMe, pairs[j]);
+            unroot(child);
+        }
+        childrenOfCB(connectMe, printArrow, Eve());
     }
-    for (int j = 0 ; j < 100; j++) {
-        Arrow child = arrow(connectMe, pairs[j]);
-        unroot(child);
-    }
-    childrenOfCB(connectMe, printArrow, Eve());
-    
+
     // connecting stress (big depth)
     test_title("connecting stress (big depth)");
-    Arrow loose = tag("save me!");
-    Arrow a  = loose;
-    for (int i = 0 ; i < 2; i++) {
-        if (i % 2)
-            a = arrow(a, tags[i]);
-        else
-            a = arrow(tags[i], a);
-    }
-    for (int j = 0 ; j < 100; j++) {
-        if (j % 2)
-            a = arrow(a, pairs[j]);
-        else
-            a = arrow(pairs[j], a);
-    }
-    root(a);
-    commit();
+    {
+        Arrow loose = tag("save me!");
+        big = loose;
+        for (int i = 0 ; i < 2; i++) {
+            if (i % 2)
+                big = arrow(big, tags[i]);
+            else
+                big = arrow(tags[i], big);
+        }
+        for (int j = 0 ; j < 100; j++) {
+            if (j % 2)
+                big = arrow(big, pairs[j]);
+            else
+                big = arrow(pairs[j], big);
+        }
+        root(big);
+        commit();
 
-    assert(typeOf(loose) == XL_TAG);
-    printArrow(a, Eve());
+        assert(typeOf(loose) == XL_TAG);
+        printArrow(big, Eve());
+    }
 
     // disconnecting stress (big depth)
     test_title("disconnecting stress (big depth)");
-    unroot(a);
-    commit();
-    assert(typeOf(loose) == XL_UNDEF);
+    {
+        unroot(big);
+        commit();
+        assert(isEve(tagMaybe("save me!")));
 
-    // unrooting stress
-    test_title("unrooting stress");
-    for (int i = 0 ; i < 200; i++) {
-        unroot(tags[i]);
-        if (i % 2) {
-          int j = (i - 1) / 2; 
-          unroot(pairs[j]);
+        // unrooting stress
+        test_title("unrooting stress");
+        for (int i = 0 ; i < 200; i++) {
+            unroot(tags[i]);
+            if (i % 2) {
+                int j = (i - 1) / 2;
+                unroot(pairs[j]);
+            }
         }
+        unroot(connectMe);
+
+        commit();
     }
-    unroot(connectMe);
-    commit();
-    
+
+
     return 0;
 }
 

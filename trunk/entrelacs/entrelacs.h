@@ -25,13 +25,15 @@ Arrow xl_arrow(Arrow, Arrow); ///< assimilate a pair of arrows, returning the co
 Arrow xl_tag(char*); ///< assimilate a C string, returning the corresponding tag arrow.
 Arrow xl_btag(uint32_t size, char*); ///< assimilate a piece of data, returning the corresponding tag arrow.
 Arrow xl_blob(uint32_t size, char*); ///< assimilate a piece of data, returning a blob arrow.
+Arrow xl_uri(char*); ///< assimilate an arrow URI, returning an arrow
 
 /* Probe arrows without creating them if not known by the system.
  */
-Arrow xl_arrowMaybe(Arrow, Arrow); ///< return a previously assimilated pair of arrows, Eve otherwise.
-Arrow xl_tagMaybe(char*); ///< return a previously assimilated C string, Eve otherwise.
-Arrow xl_btagMaybe(uint32_t size, char*); ///< return a previously assimilated piece of data, Eve otherwise.
-Arrow xl_blobMaybe(uint32_t size, char*); ///< return a previously assimilated piece of data, Eve otherwise.
+Arrow xl_arrowMaybe(Arrow, Arrow); ///< return the arrow corresponding to a previously assimilated pair of arrows, Eve otherwise.
+Arrow xl_tagMaybe(char*); ///< return the arrow corresponding to a previously assimilated C string, Eve otherwise.
+Arrow xl_btagMaybe(uint32_t size, char*); ///< return the arrow corresponding to a previously assimilated piece of data, Eve otherwise.
+Arrow xl_blobMaybe(uint32_t size, char*); ///< return the arrow corresponding to a previously assimilated piece of data, Eve otherwise.
+Arrow xl_uriMaybe(char*); ///< return the arrow corresponding to a previously assimilated URI, Eve otherwise.
 
 /* Unbuilding */
 typedef enum e_xlType {
@@ -50,15 +52,9 @@ Arrow xl_tailOf(Arrow); ///< return arrow tail.
 char* xl_tagOf(Arrow);  ///< retrieve a tag arrow as a C string. @return pointer to freed.
 char* xl_btagOf(Arrow, uint32_t*); /// retrieve a tag arrow as a piece of binary data. @return pointer to freed.
 char* xl_blobOf(Arrow, uint32_t*); /// retrieve a blob arrow as a piece of binary data. @return pointer to freed.
+char* xl_uriOf(Arrow); ///< Retrieve an arrow definition in URI notation. @return pointer to freed.
 
-/** Get an arrow fingerprint. Fingerprints are universal and unique identifier for arrows.
- * Can be used for exchanging information between two unrelated entrelacs systems.
- */
-char* xl_toFingerprints(Arrow); // to freed
 
-/** return an arrow from its fingerprint.
- */
-Arrow xl_fromFingerprints(char*);
 
 /* Rooting */
 Arrow xl_root(Arrow); ///< root an arrow.
@@ -84,10 +80,6 @@ XLEnum xl_childrenOf(Arrow); ///< return all known children of an arrow as an en
 
 typedef Arrow (*XLCallBack)(Arrow arrow, Arrow context); ///< generic callback type for arrow fetching
 void xl_childrenOfCB(Arrow, XLCallBack, Arrow context); ///< apply a given function to each children of an arrow
-
-/* Program assimilation */
-Arrow xl_program(char*); ///< return an AST-like arrow by assimilating a piece of EL code as a C string
-char* xl_programOf(Arrow); ///< convert any arrow as a piece of EL code. @return heap allocated string to be freed
 
 /* C hook assimilation */
 Arrow xl_operator(XLCallBack hook, Arrow); ///< assimilate a C implemented operator.

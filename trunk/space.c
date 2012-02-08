@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 #include "entrelacs/entrelacs.h"
 #include "mem0.h"
 #include "mem.h"
@@ -1002,52 +1003,103 @@ char* xl_blobOf(Arrow a, uint32_t* lengthP) {
   return data;
 }
 
-static char* toFingerprints(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
+// URL-encode input buffer into destination buffer.
+// 0-terminate the destination buffer.
+static void percent_encode(const char *src, size_t src_len, char *dst, size_t* dst_len_p) {
+  static const char *dont_escape = "_-,;~()";
+  static const char *hex = "0123456789abcdef";
+  static size_t i, j;
+  for (i = j = 0; i < src_len; i++, src++, dst++, j++) {
+    if (isalnum(*(const unsigned char *) src) ||
+        strchr(dont_escape, * (const unsigned char *) src) != NULL) {
+      *dst = *src;
+    } else {
+      dst[0] = '%';
+      dst[1] = hex[(* (const unsigned char *) src) >> 4];
+      dst[2] = hex[(* (const unsigned char *) src) & 0xf];
+      dst += 2;
+      j += 2;
+    }
+  }
+
+  *dst = '\0';
+  *dst_len_p = j;
+}
+
+
+// URL-decode input buffer into destination buffer.
+// 0-terminate the destination buffer.
+static void percent_decode(const char *src, size_t src_len, char *dst, size_t* dst_len_p) {
+  static size_t i, j;
+  int a, b;
+  #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
+
+  for (i = j = 0; i < src_len ; i++, j++) {
+      if (src[i] == '%' &&
+              isxdigit(a = src[i + 1]) &&
+              isxdigit(b = src[i + 2])) {
+          a = tolower(a);
+          b = tolower(b);
+          dst[j] = (char) ((HEXTOI(a) << 4) | HEXTOI(b));
+          i += 2;
+      } else {
+          dst[j] = src[i];
+      }
+  }
+
+  dst[j] = '\0'; // Null-terminate the destination
+  *dst_len_p = j;
+}
+
+
+static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
     int r;
     int t = xl_typeOf(a);
     switch(t) {
         case XL_EVE: {
-            char *s = (char*)malloc(2);
+            char *s = (char*)malloc(1);
             assert(s);
-            strcpy(s, ".");
+            s[0] = 0;
+            *l = 0;
             return s;
         }
-        case XL_TAG : {
-            uint32_t length;
-            char* tag = xl_btagOf(a, &length);
-            char *s = malloc(2 + length) ;
-            assert(s);
-            s[0] = ':';
-            strcpy(s + 1, tag);
+        case XL_TAG: {
+            uint32_t tagLength;
+            char* tag = xl_btagOf(a, &tagLength);
+            char *uri = malloc(3 * tagLength + 1) ;
+            assert(uri);
+            percent_encode(tag, tagLength, uri, l);
             free(tag);
-            *l = 1 + length;
-            return s;
+            uri = realloc(uri, 1 + *l);
+            return uri;
         }
-        case  XL_ARROW : {
+        case XL_ARROW: {
             uint32_t l1, l2;
-            char *p1 = toFingerprints(xl_tailOf(a), &l1);
-            char *p2 = toFingerprints(xl_headOf(a), &l2);
-            char *s = malloc(10 + l1 + l2) ;
-            assert(s);
-            sprintf(s, ">%08x%s%s", l1, p1, p2);
-            free(p1);
-            free(p2);
-            *l = 9 + l1 + l2;
-            return s;
+            char *tailUri = toURI(xl_tailOf(a), &l1);
+            char *headUri = toURI(xl_headOf(a), &l2);
+            char *uri = malloc(2 + l1 + l2 + 1) ;
+            assert(uri);
+            sprintf(uri, "/%s.%s", tailUri, headUri);
+            free(tailUri);
+            free(headUri);
+            *l = 2 + l1 + l2;
+            return uri;
         }
-        case XL_BLOB : { // FIXME : fingerprint is supposed to be the crypto hash
-            uint32_t length;
-            char* h = tagOrBlobOf(CATBITS_BLOB, a, &length);
+        case XL_BLOB: {
+            uint32_t hLength, codeLength;
+            char* h = tagOrBlobOf(CATBITS_BLOB, a, &hLength);
             
-            char *s = malloc(4 + length);
-            assert(s);
-            sprintf(s, "#%02x%s", length, h); // FIXME length up to 255 max? WTF?
+            char *uri = malloc(2 + 3 * hLength + 1);
+            assert(uri);
+            uri[0] = '$';
+            uri[1] = 'H';
+            percent_encode(h, hLength, uri + 2, &codeLength);
             free(h);
-            *l = 3 + length;
-            return s;
+            *l = 2 + codeLength + 1;
+            return uri;
         }
-        case XL_TUPLE :
-        case XL_SMALL :
+        case XL_TUPLE:
+        case XL_SMALL:
             assert(0);
             return NULL; // Not yet supported TODO
         default:
@@ -1056,70 +1108,109 @@ static char* toFingerprints(Arrow a, uint32_t *l) { // TODO: could be rewritten 
 }
 
 
-char* xl_toFingerprints(Arrow a) {
+char* xl_uriOf(Arrow a) {
     uint32_t l;
-    return toFingerprints(a, &l);
+    return toURI(a, &l);
 }
 
-static Arrow fromFingerprints(char* ref, int limit) {
-    ONDEBUG((fprintf(stderr, "BEGIN fromFingerprints(%.*s)\n", limit == -1 ? strlen(ref) : limit, ref)));
+static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
+    ONDEBUG((fprintf(stderr, "BEGIN fromURI(%s)\n", uri)));
     Arrow a = Eve;
-    char c = ref[0];
-    switch (c) {
-        case '.': // Eve
-          break;
-          
-        case '#': { // BLOB FIXME : fingerprint is supposed to be the crypto hash
-          char* h;
-          if (limit == -1)
-             h = ref + 1;
-          else {
-             h = malloc(limit);
-             assert(h);
-             strncpy(h, ref + 1, limit - 1);
-          }
-          int hLength;
-          int r = sscanf(h, "%02x", &hLength);
-          assert(r == 1);
-          assert(limit == -1 || limit == hLength + 3);
-          a = btagOrBlob(CATBITS_BLOB, hLength, h + 2, 1);
-          if (limit != -1)
+
+    char c = uri[0];
+    if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
+        *uriEnd = uri;
+    } else switch (c) {
+    case '.': // Eve
+        *uriEnd = uri;
+        break;
+    case '$': {
+        if (uri[1] == 'H') {
+            unsigned char c;
+            uint32_t uriLength = 2;
+            uint32_t hLength;
+
+            while ((c = uri[uriLength]) > 32 && c != '.' && c != '/')
+                uriLength++;
+            assert(uriLength);
+
+            char *h = malloc(uriLength /* + 1  useless, there's room */);
+            percent_decode(uri + 2, uriLength - 2, h, &hLength);
+            a = btagOrBlob(CATBITS_BLOB, hLength, h, locateOnly);
             free(h);
-          break;
-        }
-        case ':': { // TAG
-          char* tagStr;
-          
-          if (ref[1] == '\0')
+            *uriEnd = uri + uriLength;
             break;
-            
-          if (limit == -1) {
-            a = tagOrBlob(CATBITS_TAG, ref + 1, 1);
-          } else {
-            a = btagOrBlob(CATBITS_TAG, limit - 1, ref + 1, 1);
-          }
-          break;
+        } else {
+            assert(0); // error TODO
         }
-        case '>': { // ARROW
-          uint32_t limit;
-          int r = sscanf(ref + 1, "%8x", &limit);
-          assert(r == 1); // FIXME as many other assert, it will be replaced by a more resilient behavior
-          Arrow tail = fromFingerprints(ref + 9, limit);
-          Arrow head = fromFingerprints(ref + 9 + limit, -1);
-          a = arrow(tail, head, 1);
-          break;
+     }
+    case '/': { // ARROW
+        char *tailUriEnd, *headUriEnd;
+        Arrow tail, head;
+        tail = fromUri(uri + 1, &tailUriEnd, locateOnly);
+        if (locateOnly && tailUriEnd != (char*)uri + 1 && tail == Eve) {
+            break;
         }
-        default:
-          assert(0); // error TODO
+        char* headURIStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
+        head = fromUri(headURIStart, &headUriEnd, locateOnly);
+        if (locateOnly && headUriEnd != headURIStart && head == Eve) {
+            // FIXME "/." == Eve == should not be considered as unknown
+            break;
+        }
+        a = arrow(tail, head, locateOnly);
+        *uriEnd = headUriEnd;
+        break;
+    }
+    default: { // TAG
+        unsigned char c;
+        uint32_t uriLength = 0;
+        uint32_t tagLength;
+
+        while ((c = uri[uriLength]) > 32  && c != '.' && c != '/')
+            uriLength++;
+        assert(uriLength);
+
+        char *tagStr = malloc(uriLength + 1);
+        percent_decode(uri, uriLength, tagStr, &tagLength);
+        a = btagOrBlob(CATBITS_TAG, tagLength, tagStr, locateOnly);
+        free(tagStr);
+        *uriEnd = uri + uriLength;
+        break;
+    }
     }
 
-    ONDEBUG((fprintf(stderr, "END fromFingerprints(%.*s) = %06x\n", limit == -1 ? strlen(ref) : limit, ref, a)));
+    ONDEBUG((fprintf(stderr, "END fromURI(%s) = %06x\n", uri, a)));
     return a;
 }
 
+static Arrow uri(char *uri, int locateOnly) {
+    char c, *uriEnd;
+    Arrow a = fromUri(uri, &uriEnd, locateOnly);
+    if (locateOnly && uriEnd != uri && a == Eve) return Eve;
 
-Arrow xl_fromFingerprints(char* ref) {
-   return fromFingerprints(ref, -1);
+
+    while ((c = *uriEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
+           // white spaces are tolerated and ignored here
+           uriEnd++;
+    }
+
+    if (*uriEnd) {
+       ONDEBUG((fprintf(stderr, "uriEnd = >%s<\n", uriEnd)));
+
+       Arrow second = fromUri(uriEnd, &uriEnd, locateOnly);
+       if (locateOnly && uriEnd != uri && second == Eve) return Eve;
+       a = arrow(a, second, locateOnly); // TODO: document actual design
+    }
+
+    return a;
+}
+
+Arrow xl_uri(char* aUri) {
+   return uri(aUri, 0);
+}
+
+Arrow xl_uriMaybe(char* aUri) {
+   return uri(aUri, 1);
 }
 
 int xl_isEve(Arrow a) {

@@ -4,6 +4,7 @@
 #define tag(S) xl_tag(S)
 #define btag(N, S) xl_btag(N, S)
 #define blob(N, S) xl_blob(N, S)
+#define uri(U)     xl_uri(U)
 
 #define t(S) xl_tag(S)
 #define a(T, H) xl_arrow(T, H)
@@ -15,6 +16,7 @@
 #define tagMaybe(S) xl_tagMaybe(S)
 #define btagMaybe(N, S) xl_btagMaybe(N, S)
 #define blobMaybe(N, S) xl_blobMaybe(N, S)
+#define URIMaybe(U)     xl_uriMaybe(U)
 
 #define typeOf(A)    xl_typeOf(A)
 #define headOf(A)    xl_headOf(A)
@@ -22,14 +24,12 @@
 #define tagOf(A)     xl_tagOf(A)
 #define btagOf(A, N) xl_btagOf(A, N)
 #define blobOf(A, N) xl_blobOf(A, N)
+#define uriOf(U)     xl_uriOf(U)
 
 #define head(A)    xl_headOf(A)
 #define tail(A)    xl_tailOf(A)
 #define str(A) xl_tagOf(A)
 #define nstr(A, N) xl_btagOf(A, N)
-
-#define toFingerprints(A) xl_toFingerprints(A)
-#define fromFingerprints(S) xl_fromFingerprints(S)
 
 #define root(A) xl_root(A)
 #define unroot(A) xl_unroot(A)
@@ -43,8 +43,6 @@
 #define childrenOf(A) xl_childrenOf(A)
 #define childrenOfCB(A, CB, C) xl_childrenOfCB(A, CB, C)
 
-#define program(P) xl_program(P)
-#define programOf(P) xl_programOf(P)
 #define operator(H, C) xl_operator(H, C)
 #define continuation(H, C) xl_continuation(H, C)
 #define run(R,  M) xl_run(R,  M)
