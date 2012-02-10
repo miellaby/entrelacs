@@ -1,12 +1,18 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <string.h>
+
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
-#include <uuid/uuid.h>
+#include "log.h"
+#include "session.h"
 
 static Arrow session = EVE;
 
-Arrow xls_session(Arrow agent, Arrow uuid) {
+Arrow xls_session(Arrow agent, Arrow sessionUuid) {
    if (!session) session = tag("session");
-   Arrow s = a(session, a(agent, uuid));
+   Arrow s = a(session, a(agent, sessionUuid));
    root(s);
    return s;
 }
@@ -37,152 +43,150 @@ Arrow xls_closeSession(Arrow s) {
    return s;
 }
 
-Arrow xls_arrow(Arrow s, Arrow t, Arrow h) {
-    Arrow a = a(s, a(headOf(t), headOf(h)));
-    root(a);
+static Arrow fromUrl(Arrow session, unsigned char* url, char** urlEnd, int locateOnly) {
+    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", session, url);
+    Arrow a = xl_Eve();
+
+    char c = url[0];
+    if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
+        a = xl_Eve();
+        *urlEnd = url;
+    } else switch (c) {
+    case '.': // Eve
+        a = xl_Eve();
+        *urlEnd = url;
+        break;
+    case '$': {
+        if (url[1] == 'H') {
+            unsigned char c;
+            uint32_t urlLength = 2;
+            while ((c = url[urlLength]) > 32 && c != '.' && c != '/')
+                urlLength++;
+            assert(urlLength);
+            a = xl_uri(url);
+            if (xl_isEve(a)) {
+                *urlEnd = NULL;
+            } else {
+                *urlEnd = url + urlLength;
+            }
+            break;
+        } else {
+            int ref;
+            sscanf(url + 1, "%x", &ref);
+            Arrow sa = ref;
+            if (xl_tailOf(sa) == session) {
+                a = xl_headOf(sa);
+                *urlEnd = url + 7;
+            } else {
+                *urlEnd = NULL;
+            }
+        }
+     }
+    case '/': { // ARROW
+        char *tailUriEnd, *headUriEnd;
+        Arrow tail, head;
+        tail = fromUrl(session, url + 1, &tailUriEnd, locateOnly);
+        if (!tailUriEnd) {
+            *urlEnd = NULL;
+            break;
+        }
+
+        char* headURIStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
+        head = fromUrl(session, headURIStart, &headUriEnd, locateOnly);
+        if (!headUriEnd) {
+            *urlEnd = NULL;
+            break;
+        } else {
+            *urlEnd = headUriEnd;
+        }
+
+        a = (locateOnly ? xl_arrowMaybe(tail, head) : xl_arrow(tail, head));
+        if (xl_isEve(a) && !(xl_isEve(tail) && xl_isEve(head))) {
+            *urlEnd = NULL;
+        }
+        break;
+    }
+    default: { // TAG
+        unsigned char c;
+        uint32_t urlLength = 0;
+
+        while ((c = url[urlLength]) > 32  && c != '.' && c != '/')
+            urlLength++;
+        assert(urlLength);
+
+        a = (locateOnly ? xl_uriMaybe(url) : xl_uri(url));
+        if (xl_isEve(a)) {
+            *urlEnd = NULL;
+        } else {
+            *urlEnd = url + urlLength;
+        }
+        break;
+    }
+    }
+
+    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x\n", session, url, a);
     return a;
 }
-Arrow xls_tag(Arrow s, char* string) {
-   Arrow t = a(s, tag(string));
-   root(t);
-   return t;
-}
 
-Arrow xls_btag(Arrow s, uint32_t size, char* pointer) {
-   Arrow b = a(s, btag(size, pointer));
-   root(b);
-   return b;
-}
+static Arrow url(Arrow session, char *url, int locateOnly) {
+    char c, *urlEnd;
+    Arrow a = fromUrl(session, url, &urlEnd, locateOnly);
+    if (!urlEnd) return xl_Eve();
 
-Arrow xls_blob(Arrow s, uint32_t size, char* pointer) {
-   Arrow b = a(s, blob(size, pointer));
-   root(b);
-   return b;
-}
 
-Arrow xls_arrowMaybe(Arrow s, Arrow t, Arrow h) {
-    Arrow a = arrowMaybe(headOf(t), headOf(h));
-    if (xl_isEve(a)) return xl_Eve();
-    a = a(s, a);
-    root(a);
+    while ((c = *urlEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
+           // white spaces are tolerated and ignored here
+           urlEnd++;
+    }
+
+    if (*urlEnd) {
+       DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
+
+       Arrow b = fromUrl(session, urlEnd, &urlEnd, locateOnly);
+       if (!urlEnd) return xl_Eve();
+       a = (locateOnly ? arrowMaybe(a, b) : arrow(a, b)); // TODO: document actual design
+    }
+
     return a;
 }
 
-Arrow xls_tagMaybe(Arrow s, char* string) {
-    Arrow a = tagMaybe(string);
-    if (xl_isEve(a)) return xl_Eve();
-    a = a(s, a);
-    root(a);
-    return a;
+Arrow xls_url(Arrow session, char* aUrl) {
+   return url(session, aUrl, 0);
 }
 
-Arrow xls_btagMaybe(Arrow s, uint32_t size, char* pointer) {
-    Arrow a = btagMaybe(size, pointer);
-    if (xl_isEve(a)) return xl_Eve();
-    a = a(s, a);
-    root(a);
-    return a;
+Arrow xls_urlMaybe(Arrow session, char* aUrl) {
+   return url(session, aUrl, 1);
 }
 
-Arrow xls_blobMaybe(Arrow s, uint32_t size, char* pointer) {
-    Arrow a = blobMaybe(size, pointer);
-    if (xl_isEve(a)) return xl_Eve();
-    a = a(s, a);
-    root(a);
-    return a;
-}
-
-/* Unbuilding */
-enum e_xlType xls_typeOf(Arrow s, Arrow a) {
-    return typeOf(headOf(a));
-}
-
-Arrow xls_headOf(Arrow s, Arrow a) {
-    return a(s, headOf(headOf(a)));
-}
-
-Arrow xls_tailOf(Arrow s, Arrow a) {
-    return a(s, tailOf(headOf(a)));
-}
-    
-char* xls_tagOf(Arrow s, Arrow a) {
-    return tagOf(headOf(a));
-}
-
-char* xls_btagOf(Arrow s, Arrow a, uint32_t* size) {
-    return btagOf(headOf(a), size);
-}
-
-char* xls_blobOf(Arrow s, Arrow a, uint32_t* size) {
-    return blobOf(headOf(a), size);
-}
-
-Arrow xls_root(Arrow s, Arrow a) {
-    return xl_root(headOf(a));
-}
-
-Arrow xls_unroot(Arrow s, Arrow a) {
-    return xl_unroot(headOf(a));
-}
-
-void xls_commit(Arrow s) {
-    return xl_commit();
-}
-
-int xls_isEve(Arrow s, Arrow a) {
-    return isEve(a) || isEve(headOf(a));
-}
-
-int xls_isRooted(Arrow s, Arrow a) {
-    return isRooted(headOf(a));
-}
-
-int xls_equal(Arrow s, Arrow a) {
-    return (s == a) || equal(headOf(s), headOf(a));
+static char* toURL(Arrow session, Arrow a, int depth, uint32_t *l) { // TODO: could be rewritten with geoallocs
+    if (depth == 0) {
+        char* url = malloc(8);
+        assert(url);
+        Arrow sa = xl_arrow(session, a);
+        xl_root(sa);
+        sprintf(url, "%%%06x", (int)sa);
+        *l = 7;
+        return url;
+    } else if (xl_typeOf(a) == XL_ARROW) { // TODO tuple
+        uint32_t l1, l2;
+        char *tailUrl = toURL(session, xl_tailOf(a), depth - 1, &l1);
+        char *headUrl = toURL(session, xl_headOf(a), depth - 1, &l2);
+        char *url = malloc(2 + l1 + l2 + 1) ;
+        assert(url);
+        sprintf(url, "/%s.%s", tailUrl, headUrl);
+        free(tailUrl);
+        free(headUrl);
+        *l = 2 + l1 + l2;
+        return url;
+    } else {
+        char* url = xl_uriOf(a);
+        *l = strlen(url);
+        return url;
+    }
 }
 
 
-XLEnum xls_childrenOf(Arrow s, Arrow a) {
-    return xl_childrenOf(headOf(a));
-}
-
-void xls_childrenOfCB(Arrow s, Arrow a, XLCallBack cb, Arrow context) {
-    return xl_childrenOfCB(headOf(a), cb, context);
-}
-
-
-Arrow xls_program(Arrow s, char* string) {
-   Arrow a = a(s, program(string));
-   root(a);
-   return a;
-}
-
-char* xls_programOf(Arrow s, Arrow a) {
-   return programOf(headOf(a));
-}
-
-
-
-Arrow xls_operator(Arrow s, XLCallBack hook, Arrow context) {
-   Arrow a = a(s, xl_operator(hook, context));
-   root(a);
-   return a;
-}
-
-Arrow xls_continuation(Arrow s, XLCallBack hook, Arrow context) {
-   Arrow a = a(s, xl_continuation(hook, context));
-   root(a);
-   return a;
-}
-
-Arrow xls_run(Arrow s, Arrow rootStack, Arrow M) {
-   Arrow a = a(s, xl_run(headOf(rootStack), headOf(M)));
-   root(a);
-   return a;
-}
-
-Arrow xls_eval(Arrow s, Arrow rootStack, Arrow program) {
-   Arrow a = a(s, xl_eval(headOf(rootStack), headOf(program)));
-   root(a);
-   return a;
+char* xls_urlOf(Arrow session, Arrow a, int depth) {
+    uint32_t l;
+    return toURL(session, a, depth, &l);
 }

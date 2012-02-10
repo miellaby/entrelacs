@@ -16,7 +16,7 @@
 #define tagMaybe(S) xl_tagMaybe(S)
 #define btagMaybe(N, S) xl_btagMaybe(N, S)
 #define blobMaybe(N, S) xl_blobMaybe(N, S)
-#define URIMaybe(U)     xl_uriMaybe(U)
+#define uriMaybe(U)     xl_uriMaybe(U)
 
 #define typeOf(A)    xl_typeOf(A)
 #define headOf(A)    xl_headOf(A)
