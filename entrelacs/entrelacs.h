@@ -44,9 +44,9 @@ typedef enum e_xlType {
     XL_SMALL=3,
     XL_TAG=4,
     XL_BLOB=5
-} XlType;
+} XLType;
 
-XlType xl_typeOf(Arrow); ///< return arrow type.
+XLType xl_typeOf(Arrow); ///< return arrow type.
 Arrow xl_headOf(Arrow); ///< return arrow head.
 Arrow xl_tailOf(Arrow); ///< return arrow tail.
 char* xl_tagOf(Arrow);  ///< retrieve a tag arrow as a C string. @return pointer to freed.
@@ -77,6 +77,7 @@ void   xl_freeEnum(XLEnum); /// free enumerator.
 
 XLEnum xl_childrenOf(Arrow); ///< return all known children of an arrow as an enumerator.
                              ///< enumerator must be freed by xl_freeEnum
+Arrow  xl_childOf(Arrow); ///< return only one child or Eve if there's none. If several children, result is stochastisc( TBC?).
 
 typedef Arrow (*XLCallBack)(Arrow arrow, Arrow context); ///< generic callback type for arrow fetching
 void xl_childrenOfCB(Arrow, XLCallBack, Arrow context); ///< apply a given function to each children of an arrow

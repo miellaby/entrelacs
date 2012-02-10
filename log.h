@@ -15,27 +15,31 @@ enum _log_facility
   LOG_MEM,
   LOG_SPACE,
   LOG_MACHINE,
+  LOG_SESSION,
+  LOG_SERVER,
   LOG_FACILITY_COUNT
 };
 
 #ifdef __LOG_C__
 char *level_name[] = {
-        "off",
-        "fatal",
-        "error",
-        "warn",
-        "info",
-        "debug",
-        0
+    "off",
+    "fatal",
+    "error",
+    "warn",
+    "info",
+    "debug",
+    0
 };
 
 char *facility_name[] = {
-        "general",
-        "mem0",
-        "mem",
-        "space",
-        "machine",
-        0
+    "general",
+    "mem0",
+    "mem",
+    "space",
+    "machine",
+    "session",
+    "server",
+    0
 };
 #endif
 

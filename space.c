@@ -1114,14 +1114,16 @@ char* xl_uriOf(Arrow a) {
 }
 
 static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
-    ONDEBUG((fprintf(stderr, "BEGIN fromURI(%s)\n", uri)));
+    ONDEBUG((fprintf(stderr, "BEGIN fromUri(%s)\n", uri)));
     Arrow a = Eve;
 
     char c = uri[0];
     if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
+        a = Eve;
         *uriEnd = uri;
     } else switch (c) {
     case '.': // Eve
+        a = Eve;
         *uriEnd = uri;
         break;
     case '$': {
@@ -1136,9 +1138,13 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
 
             char *h = malloc(uriLength /* + 1  useless, there's room */);
             percent_decode(uri + 2, uriLength - 2, h, &hLength);
-            a = btagOrBlob(CATBITS_BLOB, hLength, h, locateOnly);
+            a = btagOrBlob(CATBITS_BLOB, hLength, h, 1 /* always locateOnly */);
             free(h);
-            *uriEnd = uri + uriLength;
+            if (a == Eve) { // Non assimilated blob
+                *uriEnd = NULL;
+            } else {
+                *uriEnd = uri + uriLength;
+            }
             break;
         } else {
             assert(0); // error TODO
@@ -1148,17 +1154,24 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
         char *tailUriEnd, *headUriEnd;
         Arrow tail, head;
         tail = fromUri(uri + 1, &tailUriEnd, locateOnly);
-        if (locateOnly && tailUriEnd != (char*)uri + 1 && tail == Eve) {
+        if (!tailUriEnd) { // Non assimilated tail
+            *uriEnd = NULL;
             break;
         }
+
         char* headURIStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
         head = fromUri(headURIStart, &headUriEnd, locateOnly);
-        if (locateOnly && headUriEnd != headURIStart && head == Eve) {
-            // FIXME "/." == Eve == should not be considered as unknown
+        if (!headUriEnd) { // Non assimilated head
+            *uriEnd = NULL;
             break;
         }
+
         a = arrow(tail, head, locateOnly);
-        *uriEnd = headUriEnd;
+        if (a == Eve && !(tail == Eve && head == Eve)) { // Non assimilated pair
+            *uriEnd = NULL;
+        } else {
+            *uriEnd = headUriEnd;
+        }
         break;
     }
     default: { // TAG
@@ -1174,19 +1187,23 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
         percent_decode(uri, uriLength, tagStr, &tagLength);
         a = btagOrBlob(CATBITS_TAG, tagLength, tagStr, locateOnly);
         free(tagStr);
-        *uriEnd = uri + uriLength;
+        if (a == Eve) { // Non assimilated tag
+            *uriEnd = NULL;
+        } else {
+            *uriEnd = uri + uriLength;
+        }
         break;
     }
     }
 
-    ONDEBUG((fprintf(stderr, "END fromURI(%s) = %06x\n", uri, a)));
+    ONDEBUG((fprintf(stderr, "END fromUri(%s) = %06x\n", uri, a)));
     return a;
 }
 
 static Arrow uri(char *uri, int locateOnly) {
     char c, *uriEnd;
     Arrow a = fromUri(uri, &uriEnd, locateOnly);
-    if (locateOnly && uriEnd != uri && a == Eve) return Eve;
+    if (!uriEnd) return Eve; // Not assimilated
 
 
     while ((c = *uriEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
@@ -1197,9 +1214,10 @@ static Arrow uri(char *uri, int locateOnly) {
     if (*uriEnd) {
        ONDEBUG((fprintf(stderr, "uriEnd = >%s<\n", uriEnd)));
 
-       Arrow second = fromUri(uriEnd, &uriEnd, locateOnly);
-       if (locateOnly && uriEnd != uri && second == Eve) return Eve;
-       a = arrow(a, second, locateOnly); // TODO: document actual design
+       Arrow b = fromUri(uriEnd, &uriEnd, locateOnly);
+       if (!uriEnd) return Eve; // b not assimilated
+
+       a = arrow(a, b, locateOnly); // TODO: document actual design
     }
 
     return a;
@@ -1727,6 +1745,21 @@ XLEnum xl_childrenOf(Arrow a) {
   iteratorp->pos = Eve; // current cell holding child back-ref
   iteratorp->rank = 0; // position of child back-ref in cell : 0/1
   return iteratorp;
+}
+
+Arrow xl_childOf(Arrow a) {
+    XLEnum e = xl_childrenOf(a);
+    if (!e) return Eve;
+    int n = 0;
+    Arrow chosen = Eve;
+    while (xl_enumNext(e)) {
+        Arrow child = xl_enumGet(e);
+        n++;
+        if (n == 1 || rand() % n == 1) {
+            chosen = child;
+        }
+    }
+    return chosen;
 }
 
 /** root an arrow */

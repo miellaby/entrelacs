@@ -41,6 +41,7 @@ run.%: %
 	od -t x1z -w8 $(PERSISTENCE_FILE)
 
 entrelacsd: mongoose.o session.o server.o libentrelacs.a
+	$(CC) -lpthread -ldl -o $(@) $^
 
 draft: testdraft.o testdraft run.testdraft
     
