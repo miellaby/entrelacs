@@ -44,7 +44,7 @@ One considers that *entrelacs which are isomorph are equal*.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png'/><br/>an arrow from _yin-yang_ to _triskel_ (two distinct entrelacs)</p>
 
-Entrelacs act as atomistic pieces of information. They got finished boundaries and one can't identify smaller isolated components in them. And last but not least, one can *enumerate* them!
+Entrelacs act as atomistic pieces of information. They got finished boundaries and one can't identify smaller isolated components in them. And last but not least, one can *enumerate* them! They are equivalent in all respects to [http://en.wikipedia.org/wiki/S-expression atoms in S-expression]^W^.
 
 <img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 
@@ -100,3 +100,10 @@ See EntrelacEquivalences for further reading.
 ==Knowledge representation with arrows==
 
 To get useful information structures with arrows, one may adapt many classical models and even invent new ones. See ArrowModeling for further readings.
+
+==Similarity with existing theories==
+Arrows are somewhat similar to [http://en.wikipedia.org/wiki/Cons cons cells]^W^, also represented as [http://c2.com/cgi/wiki?DottedPair dotted pairs]^W^. However, the Arrow definition doesn't relay on atoms, even if atoms are eventually reconsidered as closed re-entrant cons structures.
+
+In addition, the Entrelacs theory comprehends _cons structures_ as immutable and unique formal objects. The assimilation process described herein consequently perfoms [http://en.wikipedia.org/wiki/Hash_consing Hash consing]^W^ and arrows may be seen as _hashed cons_.
+
+All in all, the Entrelacs proposal consists in hash consing information globally and transparently within an homoiconic information system. The system also manages arrows connectivity, making the information graph _browsable_.
