@@ -92,17 +92,17 @@ static void *event_handler(enum mg_event event,
         if (aSession == NULL) {
             aSession = new_session();
             snprintf(aSession->random, sizeof(aSession->random), "%d", rand());
-            generate_session_id(aSession->session_id, aSession->random, "session->user");
+            generate_session_id(aSession->session_id, aSession->random, "server");
         }
         Arrow session = xls_session(xl_tag("server"), xl_tag(aSession->session_id));
-        Arrow inputHandler = xl_childOf(xl_arrow(session, xl_tag("inputHandler")));
+        Arrow inputHandler = xl_get(session, xl_tag("inputHandler"));
         if (xl_isEve(inputHandler)) {
             inputHandler = xl_eval(xl_Eve(), xl_uri("/let//GET/lambda/x.x"
                                                     "/let//POST/lambda/x/eval/x"
                                                     "/let//PUT/lambda/x/root/x"
                                                     "/let//DELETE/lambda/x/unroot/x"
                                                     "/lambda/x/lambda/y/x/y"));
-            xl_root(xl_arrow(session, xl_arrow(xl_arrow(session, xl_tag("inputHandler")), inputHandler)));
+            xl_set(session, xl_tag("inputHandler"), inputHandler);
         }
 
         Arrow input = xls_url(session, request_info->uri);
