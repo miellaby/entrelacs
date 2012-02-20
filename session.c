@@ -25,16 +25,115 @@ void xls_release(Arrow s, Arrow a) {
    unroot(a);
 }
 
+/**
+  contextual rooting:
+    Context stack S = /C0.C1.C2...Cn where C0 an entrelacs
+    contextRoot(S,A) ==> root(/C0/C1/.../Cn.A)
+*/
+
+Arrow xl_contextRoot(Arrow contextStack, Arrow a) {
+    Arrow rest = headOf(contextStack);
+    if (rest != contextStack) {
+        return xl_contextRoot(rest, arrow(tailOf(contextStack),a));
+    } else if (contextStack) {
+        return xl_root(arrow(contextStack, a));
+    } else {
+        return xl_root(a);
+    }
+}
+
+Arrow xl_contextIsRooted(Arrow contextStack, Arrow a) {
+    Arrow rest = headOf(contextStack);
+    if (rest != contextStack) {
+        return xl_contextIsRooted(rest, arrow(tailOf(contextStack),a));
+    } else if (contextStack) {
+        return xl_isRooted(arrow(contextStack, a)); // TODO Maybe
+    } else {
+        return xl_isRooted(a);
+    }
+}
+
+void xl_contextUnroot(Arrow contextStack, Arrow a) {
+    Arrow rest = headOf(contextStack);
+    if (rest != contextStack) {
+        xl_contextUnroot(rest, arrow(tailOf(contextStack),a));
+    } else if (contextStack) {
+        xl_unroot(arrow(contextStack, a));
+    } else {
+        xl_unroot(a);
+    }
+}
+
+/**
+    value indexing:
+    Context stack S = /C0.C1.C2...Cn where C0 an entrelacs
+    key = /C0.C1.C2...Cn.Slot = /S.Slot
+*/
+
+void xl_unset(Arrow contextStack, Arrow slot) {
+    Arrow key = arrowMaybe(contextStack, slot);
+    if (isEve(key)) return;
+
+    XLEnum e = xl_childrenOf(key);
+    while (xl_enumNext(e)) {
+       Arrow indexedValue = xl_enumGet(e);
+       if (tailOf(indexedValue) != key) continue; // incoming arrows are ignored
+       Arrow value = headOf(indexedValue);
+       xl_contextUnroot(contextStack, a(slot, value));
+       unroot(indexedValue); // FIXME: can't unroot within enum?
+    }
+    xl_freeEnum(e);
+}
+
+void xl_set(Arrow contextStack, Arrow slot, Arrow value) {
+    xl_unset(contextStack, slot);
+    xl_contextRoot(contextStack, a(slot, value));
+    root(a(a(contextStack, slot), value));
+}
+
+Arrow xl_get(Arrow contextStack, Arrow slot) {
+    Arrow value = xl_Eve();
+    Arrow key = arrowMaybe(contextStack, slot);
+    if (isEve(key))
+        return value;
+
+    XLEnum e = xl_childrenOf(key);
+    while (xl_enumNext(e)) {
+        Arrow indexedValue = xl_enumGet(e);
+        if (tailOf(indexedValue) != key) continue; // incoming arrows are ignored
+        value = headOf(indexedValue);
+        if (xl_contextIsRooted(contextStack, a(slot, value)))
+            break;
+    }
+    xl_freeEnum(e);
+    return value;
+}
+
 void xls_resetSession(Arrow s) {
-   Arrow prec = EVE;
-   XLEnum e = xl_childrenOf(s);
-   while (xl_enumNext(e)) {
-      Arrow child = xl_enumGet(e);
-      unroot(prec); // only works if not Eve
-      prec = child;
-   }
-   if (prec) unroot(prec);
-   xl_freeEnum(e);
+    XLEnum e = xl_childrenOf(s);
+    Arrow child = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
+
+    do {
+        Arrow next = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
+
+        if (tailOf(child) == s) {
+            Arrow slotValue = headOf(child);
+            Arrow slot = tailOf(slotValue);
+            if (slot != slotValue) {
+                Arrow path = arrowMaybe(s, slot);
+                if (!isEve(path)) {
+                    Arrow pathValue = arrowMaybe(path, headOf(slotValue));
+                    if (!isEve(pathValue))
+                        unroot(pathValue);
+                }
+            }
+            unroot(child);
+        }
+
+        child = next;
+    } while (child);
+
+    xl_freeEnum(e);
 }
 
 Arrow xls_closeSession(Arrow s) {
