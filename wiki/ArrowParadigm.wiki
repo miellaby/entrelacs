@@ -13,7 +13,7 @@ _Arrows_ are the only information building block one needs for to store informat
 An _arrow_ is:
   * _a pair of arrows_: both ends of an arrow are not _nodes_ but  *arrows* as well. *An arrow made structure consequently doesn't belong to [http://en.wikipedia.org/wiki/Graph_theory graph theory].*
   *  _oriented_: the pair (A,B) is distinct from (B,A). Please note this point is not so critical as one might build oriented arrows by combining non-oriented arrows. 
-  * _unique_: There is only one arrow (A,B) from A to B, whatever A and B two formerly defined arrows. The _entrelacs paradigm_ proposes to enforce this uniqueness within the information system. Each mathematically definable arrow is mapped at most once into the information storage space. In other world, arrows are [http://en.wikipedia.org/wiki/Singleton_pattern Singletons]^W^.
+  * _unique_: There is only one arrow (A,B) from A to B, whatever A and B two formerly defined arrows.
   * _immutable_: An arrow is considered as a pure mathematical object. One can't "modify" a natural number like 2. It's the same thing for arrrows. One can't _modify_ them. But an _Entrelacs system_ may assimilate new arrows and dismiss old ones.
   * _connected_: Within a managed arrows structure, a certain arrow may be connected to many children arrows. One must easily be able to browse all these children as it forms _emerging information_. It's the basis of a new kind of system abilities.
 
@@ -50,7 +50,7 @@ Entrelacs act as atomistic pieces of information. They got finished boundaries a
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align='right'/>
 
-Each definable arrow is considered unique.
+Each definable arrow is unique. The _entrelacs paradigm_ proposes to enforce this uniqueness within the information system. Each mathematically definable arrow is mapped at most once into the information storage space. In other world, arrows are [http://en.wikipedia.org/wiki/Singleton_pattern Singletons]^W^.
 
 ==Immutability==
 
