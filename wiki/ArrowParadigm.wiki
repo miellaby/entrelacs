@@ -3,17 +3,17 @@
 
 =Introduction=
 
-The *Entrelacs Manifesto* proposes to follow the _*Entrelacs paradigm*_ which consists in modeling information in the form of _arrows_ made constructs.
+The *Entrelacs Manifesto* proposes to follow the _*Entrelacs paradigm*_. It consists in modeling information in the form of _arrows_ made constructs.
 
 ==The arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
 
-The _arrow_ is the first and only information building block one needs for.
+_Arrows_ are the only information building block one needs for to store information.
  
 An _arrow_ is:
-  * _a pair of arrows_: both ends of an arrow are not _nodes_. They are *arrows* as well. *An arrow made structure consequently doesn't belong to [http://en.wikipedia.org/wiki/Graph_theory graph theory].*
+  * _a pair of arrows_: both ends of an arrow are not _nodes_ but  *arrows* as well. *An arrow made structure consequently doesn't belong to [http://en.wikipedia.org/wiki/Graph_theory graph theory].*
   *  _oriented_: the pair (A,B) is distinct from (B,A). Please note this point is not so critical as one might build oriented arrows by combining non-oriented arrows. 
-  * _a singleton_: There is only one arrow (A,B) from A to B, whatever A and B two formerly defined arrows. The _entrelacs paradigm_ proposes to map this uniqueness to the information system. Each mathematically definable arrow can't be mapped more than once in the whole information space.
+  * _unique_: There is only one arrow (A,B) from A to B, whatever A and B two formerly defined arrows. The _entrelacs paradigm_ proposes to enforce this uniqueness within the information system. Each mathematically definable arrow is mapped at most once into the information storage space. In other world, arrows are [http://en.wikipedia.org/wiki/Singleton_pattern Singletons]^W^.
   * _immutable_: An arrow is considered as a pure mathematical object. One can't "modify" a natural number like 2. It's the same thing for arrrows. One can't _modify_ them. But an _Entrelacs system_ may assimilate new arrows and dismiss old ones.
   * _connected_: Within a managed arrows structure, a certain arrow may be connected to many children arrows. One must easily be able to browse all these children as it forms _emerging information_. It's the basis of a new kind of system abilities.
 
@@ -34,7 +34,7 @@ Each arrow is an oriented pair of arrows.
 
 ==_Entrelacs_==
 
-An _entrelacs_ is a set of _intricated_ arrows forming an unique discrete construct. It means:
+An _entrelacs_ is a set of intricated arrows forming an unique discrete construct. It means:
   * any arrow from the set is the descendant/ancestor of all the other arrows of the set. In other words: whatever A & B two arrows from the set, A is a descendant/ancestor of B, and B is a descendant/ancestor of A.
   * one may characterize an entrelacs according to its topology, that is the number of arrows it contains and how these arrows are connected together.
 
@@ -46,19 +46,13 @@ One considers that *entrelacs which are isomorph are equal*.
 
 Entrelacs act as atomistic pieces of information. They got finished boundaries and one can't identify smaller isolated components in them. And last but not least, one can *enumerate* them! They are equivalent in all respects to [http://en.wikipedia.org/wiki/S-expression atoms in S-expression]^W^.
 
-<img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
-
-==The assimilation process==
-
-At each system iteration, system inputs (network events, user inputs, ...) are converted into arrows before being processed. This translation process is called "assimilation".
-
-"Assimilation" ensures arrows uniqueness. Any definable arrow must correspond to a _singleton_. There can't be more than one copy in the whole system space.
-
-"Assimilation" takes place at system boundaries. But it also deals with information produced by system processes, like when some software get a new number by adding two natural numbers.
-
-==Immutability==
+==Uniqueness==
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align='right'/>
+
+Each definable arrow is considered unique.
+
+==Immutability==
 
 As one arrow might be the ancestor of many other arrows, it can't be modified once stored in the system space.
 
@@ -78,9 +72,20 @@ Arrows uniqueness induces rooted arrows are likely ancestors of other  rooted ar
 
 An Entrelacs system garbage collector simply needs to reclaim storage resources of arrows which are neither a rooted arrow nor an ancestor of any remaining rooted arrow.
 
+
+==Assimilation process==
+
+At each system iteration, system inputs (network events, user inputs, ...) are converted into arrows before being processed. This translation process is called "assimilation".
+
+"Assimilation" ensures arrows uniqueness. Any definable arrow must correspond to a _singleton_. There can't be more than one copy in the whole system space.
+
+"Assimilation" takes place at system boundaries. But it also deals with information produced by system processes, like when some software get a new number by adding two natural numbers.
+
 ==More complex objects==
 
 Though the _arrows paradigm_ only deals with _arrows_, it may handle raw data -like binary strings- as well. The point is that raw data are equivalent to natural numbers, which may in turn be seen as _Entrelacs_ as introduced before.
+
+<img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 
 So handling raw data within an arrows structure doesn't deny the _everything is an arrow_ credo since such _pieces of data_ correspond to arrows as well.
 
