@@ -59,14 +59,14 @@ int basic() {
     DEFTAG(hello); // Arrow hello = xl_tag("hello");
     DEFTAG(world);
     DEFTAG(more_bigger_string_11111111111111111111);
-    DEFA(hello, world); // Arrow hello_world = xl_arrow(hello, world);
+    DEFA(hello, world); // Arrow _hello_world = xl_arrow(hello, world);
     
 
     // check regular arrows
     test_title("check regular arrows");
-    assert(typeOf(hello_world) == XL_ARROW);
-    assert(tail(hello_world) == hello);
-    assert(head(hello_world) == world);
+    assert(typeOf(_hello_world) == XL_ARROW);
+    assert(tail(_hello_world) == hello);
+    assert(head(_hello_world) == world);
     
     // Check tags
     test_title("check tags");
@@ -79,8 +79,8 @@ int basic() {
     
     // check rooting
     test_title("check rooting");
-    root(hello_world);
-    assert(isRooted(hello_world));
+    root(_hello_world);
+    assert(isRooted(_hello_world));
 
     // check GC
     test_title("check GC");
@@ -88,15 +88,15 @@ int basic() {
     DEFA(hello, loose);
     commit();
     assert(typeOf(loose) == XL_UNDEF);
-    assert(typeOf(hello_loose) == XL_UNDEF);
+    assert(typeOf(_hello_loose) == XL_UNDEF);
     
     // check rooting persistency
     test_title("check rooting persistency");
-    assert(isRooted(hello_world));
+    assert(isRooted(_hello_world));
     
     // check deduplication
     test_title("check deduplication");
-    Arrow original = hello_world;
+    Arrow original = _hello_world;
     Arrow original_big_string = more_bigger_string_11111111111111111111;
     {
        DEFTAG(more_bigger_string_11111111111111111111);
@@ -104,14 +104,14 @@ int basic() {
        DEFTAG(hello);
        DEFTAG(world);
        DEFA(hello, world);
-       assert(original == hello_world);
+       assert(original == _hello_world);
     }
 
     // check uri assimilation
     test_title("check URI assimilation");
     {
         Arrow uri = uri("/hello.world");
-        assert(uri == hello_world);
+        assert(uri == _hello_world);
     }
 
     // check btag/tag equivalency
@@ -120,7 +120,7 @@ int basic() {
         Arrow helloB = btag(5, "hello");
         Arrow worldB = btag(5, "world");
         DEFA(helloB, worldB);
-        assert(original == helloB_worldB);
+        assert(original == _helloB_worldB);
    }
 
     // check btag dedup
@@ -128,31 +128,31 @@ int basic() {
     Arrow fooB = tag("headOf");
     Arrow barB = tag("tailOf");
     DEFA(fooB, barB);
-    Arrow originalB = fooB_barB;
+    Arrow originalB = _fooB_barB;
     {
         Arrow fooB = btag(6, "headOf");
         Arrow barB = btag(6, "tailOf");
             DEFA(fooB, barB);
-            assert(originalB == fooB_barB);
+            assert(originalB == _fooB_barB);
     }
 
     // check arrow connection
     test_title("arrow connection");
     DEFTAG(dude);
     DEFA(hello, dude);
-    root(hello_dude);
+    root(_hello_dude);
     
     childrenOfCB(hello, printArrow, Eve());
     
     // check unrooting
     test_title("check unrooting");
-    unroot(hello_world);
-    assert(!isRooted(hello_world));
+    unroot(_hello_world);
+    assert(!isRooted(_hello_world));
     
     // check GC after unrooting
     test_title("check GC after unrooting");
     commit();
-    assert(XL_UNDEF == typeOf(hello_world));
+    assert(XL_UNDEF == typeOf(_hello_world));
     assert(XL_UNDEF == typeOf(world));
     assert(XL_TAG == typeOf(hello));
 
@@ -160,8 +160,8 @@ int basic() {
     test_title("check arrow disconnection");
     childrenOfCB(hello, printArrow, Eve());
     
-    unroot(hello_dude);
-	commit();
+    unroot(_hello_dude);
+    commit();
 
     return 0;
 }

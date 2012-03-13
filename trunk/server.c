@@ -98,10 +98,10 @@ static void *event_handler(enum mg_event event,
         Arrow inputHandler = xl_get(session, xl_tag("inputHandler"));
         if (xl_isEve(inputHandler)) {
             inputHandler = xl_eval(xl_Eve(), xl_uri("/let//GET/lambda/x.x"
-                                                    "/let//POST/lambda/x/eval/x"
-                                                    "/let//PUT/lambda/x/root/x"
-                                                    "/let//DELETE/lambda/x/unroot/x"
-                                                    "/lambda/x/lambda/y/x/y"));
+                                                    "/let//POST/lambda/x/eval.x"
+                                                    "/let//PUT/lambda/x/root.x"
+                                                    "/let//DELETE/lambda/x/unroot.x"
+                                                    "/lambda/x/lambda/y/x.y"));
             xl_set(session, xl_tag("inputHandler"), inputHandler);
         }
 
@@ -143,7 +143,7 @@ static void *event_handler(enum mg_event event,
                          ? xl_btagOf(r, &contentLength)
                          : NULL)));
         if (!content) {
-            char* content = xls_urlOf(session, r, iDepth);
+            content = xls_urlOf(session, r, iDepth);
             contentLength = strlen(content);
         }
         pthread_mutex_unlock (&mutex);
@@ -169,8 +169,8 @@ static void *event_handler(enum mg_event event,
 
 static const char *options[] = {
   "document_root", "html",
-  "listening_ports", "8008,4433s", // "8008,4433s" activates SSL redirection
-  "ssl_certificate", "ssl_cert.pem",
+  "listening_ports", "8008", // "8008,4433s" activates SSL redirection
+  //"ssl_certificate", "ssl_cert.pem",
   "num_threads", "5",
   NULL
 };

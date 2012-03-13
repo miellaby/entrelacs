@@ -1,64 +1,34 @@
-#include "entrelacs/entrelacs.h"
+#include "entrelacs/entrelacsm.h"
 #include "mem.h" // for geoalloc
 #include <stdlib.h> // free & co
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
+#include "session.h"
 
-struct s_printArrowC { int size; int max; char* buffer; };
-
-int printArrow(Arrow a, void *ctx) {
-    struct s_printArrowC *context = (struct s_printArrowC *)ctx;
-    if (!context) { 
-      struct s_printArrowC context0 = { 0, 0, NULL };
-      geoalloc(&context0.buffer, &context0.max, &context0.size, sizeof(char), 1);
-      context0.buffer[0] = '\0';
-      printArrow(a, (void *)&context0);
-      fprintf(stderr, "%s\n", context0.buffer);
-      return 0;
-    }
-
-
-	if (xl_isRooted(a)) {
-        int size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
-        sprintf(context->buffer + size - 1, "_");
-	}
-	
-    enum e_xlType t = xl_typeOf(a);
-    if (t == XL_TAG) {
-        int l;
-        char* s = xl_btagOf(a, &l);
-        int size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + l - 1 + 2);
-        sprintf(context->buffer + size - 1, "\"%s\"", s);
-        free(s);
-    } else if (t == XL_ARROW) {
-        int size;
-        size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
-        sprintf(context->buffer + size - 1, "(");
-        printArrow(xl_tailOf(a), (void *)context);
-        size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 2);
-        sprintf(context->buffer + size - 1, ", ");
-        printArrow(xl_headOf(a), (void *)context);
-        size = context->size;
-        geoalloc(&context->buffer, &context->max, &context->size, sizeof(char), size + 1);
-        sprintf(context->buffer + size - 1, ")");
-    }
-    return 0;
+static Arrow print(Arrow arrow, Arrow context) {
+  char* url = xls_urlOf(EVE, arrow, -1);
+  fprintf(stderr, "0x%6x %s\n", arrow, url);
+  free(url);
+  return EVE;
 }
 
 int main(int argc, char* argv[]) {
-	xl_init();
+    xl_init();
     char output[255];
-    Arrow root = xl_tag("root");
-    //xl_tag("unroot");
-    //xl_tag("children");
-    //Arrow h = xl_arrow(xl_tag("hello"), xl_tag("world"));
-    Arrow root2 = xl_btag(5, "root");
-    assert(root == root2);
-	xl_commit();
-	return 0;
+    DEFTAG(context);
+    DEFTAG(hello);
+    DEFTAG(world);
+    xl_set(context, hello, world);
+    fprintf(stderr, "1: xl_set\n");
+    childrenOfCB(context, print, EVE);
+    xl_unset(context, hello);
+    fprintf(stderr, "2: xl_unset\n");
+    childrenOfCB(context, print, EVE);
+    xl_set(context, hello, world);
+    fprintf(stderr, "3: xl_get\n");
+    Arrow what = xl_get(context, hello);
+    print(what, EVE);
+    xl_commit();
+    return 0;
 }

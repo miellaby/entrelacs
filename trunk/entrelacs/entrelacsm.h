@@ -9,7 +9,7 @@
 #define t(S) xl_tag(S)
 #define a(T, H) xl_arrow(T, H)
 #define DEFTAG(V) Arrow V = xl_tag(#V)
-#define DEFA(T, H) Arrow T##_##H = a(T, H)
+#define DEFA(T, H) Arrow _##T##_##H = a(T, H)
 
 
 #define arrowMaybe(T, H)  xl_arrowMaybe(T, H)

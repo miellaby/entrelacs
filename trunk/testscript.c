@@ -29,29 +29,29 @@ int main(int argc, char **argv) {
 
     Arrow a = uri(buffer);
     fprintf(stderr, " => ");
-    print(a, NULL);
+    print(a, EVE);
     Arrow command = head(a);
     Arrow arg = tail(a);
 
     if (command == root) {
        fprintf(stderr, "rooting ");
-       print(arg, NULL);
+       print(arg, EVE);
        root(arg);
        commit();
     } else if (command == unroot) {
        fprintf(stderr, "unrooting ");
-       print(arg, NULL);
+       print(arg, EVE);
        unroot(arg);
        commit();
     } else if (command == childrenOf) {
        fprintf(stderr, "childrenOf ");
-       print(arg, NULL);
+       print(arg, EVE);
        fprintf(stderr, " ==> {\n");
-       childrenOfCB(arg, print, Eve());
+       childrenOfCB(arg, print, EVE);
        fprintf(stderr, "}\n");
     } else {
        fprintf(stderr, "Unknown command: ");
-       print(command, NULL);
+       print(command, EVE);
        assert(1);
     }
   }
