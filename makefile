@@ -32,6 +32,8 @@ tests: all $(TESTS:%=test%.o) $(TESTS:%=test%)
 
 #$(TESTS:%=test%): libentrelacs.so
 $(TESTS:%=test%): libentrelacs.a
+testdraft: testdraft.o session.o libentrelacs.a
+
 
 run: $(TESTS:%=run.test%)
 
@@ -44,7 +46,7 @@ entrelacsd: mongoose.o session.o server.o libentrelacs.a
 	$(CC) -lpthread -ldl -o $(@) $^
 
 draft: testdraft.o testdraft run.testdraft
-    
+
 libentrelacs.a: $(OBJECTS)
 	ar rvs $(@) $^
 	

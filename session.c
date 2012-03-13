@@ -75,12 +75,16 @@ void xl_unset(Arrow contextStack, Arrow slot) {
     if (isEve(key)) return;
 
     XLEnum e = xl_childrenOf(key);
-    while (xl_enumNext(e)) {
-       Arrow indexedValue = xl_enumGet(e);
-       if (tailOf(indexedValue) != key) continue; // incoming arrows are ignored
-       Arrow value = headOf(indexedValue);
-       xl_contextUnroot(contextStack, a(slot, value));
-       unroot(indexedValue); // FIXME: can't unroot within enum?
+    if (xl_enumNext(e)) {
+       Arrow nextIndexedValue = xl_enumGet(e);
+       do {
+           Arrow indexedValue = nextIndexedValue;
+           nextIndexedValue = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+           if (tailOf(indexedValue) != key) continue; // incoming arrows are ignored
+           Arrow value = headOf(indexedValue);
+           xl_contextUnroot(contextStack, a(slot, value));
+           unroot(indexedValue);
+       } while (nextIndexedValue);
     }
     xl_freeEnum(e);
 }
@@ -111,10 +115,11 @@ Arrow xl_get(Arrow contextStack, Arrow slot) {
 
 void xls_resetSession(Arrow s) {
     XLEnum e = xl_childrenOf(s);
-    Arrow child = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
+    Arrow next = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
 
     do {
-        Arrow next = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
+        Arrow child = next;
+        next = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
 
         if (tailOf(child) == s) {
             Arrow slotValue = headOf(child);
@@ -130,8 +135,7 @@ void xls_resetSession(Arrow s) {
             unroot(child);
         }
 
-        child = next;
-    } while (child);
+    } while (next);
 
     xl_freeEnum(e);
 }

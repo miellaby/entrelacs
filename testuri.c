@@ -15,8 +15,6 @@
 
 #define test_title(T) fprintf(stderr, T "\n")
 
-static struct s_buffer { int size; int max; char* buffer; } buffer = {0, 0, NULL} ;
-
 Arrow blobFromFile(char *f) {
  Arrow a = Eve();
  int fd  = open(f, O_RDONLY); 
@@ -44,14 +42,14 @@ int main(int argc, char* argv[]) {
     // assimilate arrows
     DEFTAG(hello); // Arrow hello = xl_tag("hello");
     DEFTAG(world);
-    DEFA(hello, world); // Arrow hello_world = xl_arrow(hello, world);
+    DEFA(hello, world); // Arrow _hello_world = xl_arrow(hello, world);
 
     test_title("check /hello.world URI");
     {
-        char *a = uriOf(hello_world);
+        char *a = uriOf(_hello_world);
         assert(a);
         fprintf(stderr, "%s\n", a);
-        assert(uri(a) == hello_world);
+        assert(uri(a) == _hello_world);
         free(a);
     }
 
