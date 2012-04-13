@@ -1,19 +1,22 @@
-In progress: doxygen integration
+locking point:
 
-Merge API of: blob, tag et btag
-That is: if tag/btag > 128 chars, then blob
+In progress:
+* doxygen integration
 
-Merge API: xl_program/programOf <==> from/to_fingerprint
+To be done
+* merge API of: blob, tag et btag
+  * That is: if tag/btag > 128 chars, then blob
+* Merge API: xl_program/programOf <==> from/to_fingerprint
+* Leverage on arrows to find UA sessions
 
-What an URI will be? Merge fingerprint and future URI concepts.
+* What an URI will be? Merge fingerprint and future URI concepts.
+* xl_childrenOfCB : implementent map/fold variations
 
-xl_childrenOfCB : implementent map/fold variations
+* run a program in a virtualization stack
+ * v(k, a) = // where k a stack and a an arrow
+  *   isEve(k) ? a :
+  *       isEntrelacs(a) ? arrow(tail(k), v(head(k), a)) :
+  *           arrow(v(k, head(a)), v(k, tail(a)))
+ * the virtualization stack won't be reflexive-able. Out of machine state.
 
-run a program in a virtualization stack
-* v(k, a) = // where k a stack and a an arrow
-*   isEve(k) ? a :
-*       isEntrelacs(a) ? arrow(tail(k), v(head(k), a)) :
-*           arrow(v(k, head(a)), v(k, tail(a)))
-
-the virtualization stack won't be reflexive-able. Out of machine state.
 
