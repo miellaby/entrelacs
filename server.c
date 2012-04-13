@@ -34,6 +34,8 @@ static struct session sessions[MAX_SESSIONS];  // Current sessions
 static pthread_mutex_t mutex;
 
 // Get session object for the connection. Caller must hold the lock.
+// SGA:This is cut&paste code. I should leverage on the arrow space
+// session_id-->session_cb
 static struct session *get_session(const struct mg_connection *conn) {
   int i;
   char session_id[33];
@@ -94,15 +96,16 @@ static void *event_handler(enum mg_event event,
             snprintf(aSession->random, sizeof(aSession->random), "%d", rand());
             generate_session_id(aSession->session_id, aSession->random, "server");
         }
-        Arrow session = xls_session(xl_tag("server"), xl_tag(aSession->session_id));
-        Arrow inputHandler = xl_get(session, xl_tag("inputHandler"));
+        // TODO: Here there could be a global server super-session. Use the API
+        Arrow session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
+        Arrow inputHandler = xls_get(session, xl_tag("inputHandler"));
         if (xl_isEve(inputHandler)) {
             inputHandler = xl_eval(xl_Eve(), xl_uri("/let//GET/lambda/x.x"
                                                     "/let//POST/lambda/x/eval.x"
                                                     "/let//PUT/lambda/x/root.x"
                                                     "/let//DELETE/lambda/x/unroot.x"
                                                     "/lambda/x/lambda/y/x.y"));
-            xl_set(session, xl_tag("inputHandler"), inputHandler);
+            xls_set(session, xl_tag("inputHandler"), inputHandler);
         }
 
         Arrow input = xls_url(session, request_info->uri);
