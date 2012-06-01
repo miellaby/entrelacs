@@ -3,9 +3,9 @@
 Entrelacs might eventually become a real Operating System. But for the moment, the Entrelacs prototype stands as yet an other virtual machine on top of an existing software stack; typically a GNU/Linux system.
 
 Entrelacs prototype includes several nested components:
-  * An [EntrelacsServer HTTP/REST server].
-  * The [EntrelacsAbstractMachine Entrelacs machine].
   * The [ArrowsSpace Arrows Space]. 
+  * The [EntrelacsAbstractMachine Entrelacs machine].
+  * An [EntrelacsServer HTTP/REST server].
 
 There are two public interfaces which gives access to both the ArrowsSpace and the EntrelacsAbstractMachine.
   * The C API of the [EntrelacsLibrary entrelacs library]
