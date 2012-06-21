@@ -2,78 +2,86 @@
 #define SESSION_H
 /** @file
  Session contextualized information.
- */
+
+ session.h gathers functions to handle contexts and sessions.
+
+ A "context path" is an arrow in the form /C0.C1.C2...Cn where C0 is Eve or an atom and each Cx is an identifier of some nested context in a parent context
+ For example : /World.Europa.France points to the context identified by "France" in the parent context "Europa" in the parent context "World" in the root context
+
+ Context-rooting an arrow $a within a context path /C0.C1..Cn consists in rooting both
+  /C0.C1...Cn.$a and /C0/C1/../Cn.$a arrows. The newly formed context path (/$c.$a) is returned
+
+ Of course, the path of the root context is Eve.
+
+ A "session" simply is a special context whose path is in the form /$c.sessions./$agent.$id
+  with $c is some context (maybe a super session), $agent some agent and $id some identifier
+
+*/
 #include "entrelacs/entrelacs.h"
 
-
-
-/** roots and returns a session arrow, given a super session, an agent and an UUID arrow.
-  * basically (superSession ("session" (agent sessionUuid))).
-  * Note how a session arrow is a context stack: S = /Eve.s0.s1...sn
- */
-Arrow xls_session(Arrow superSession, Arrow agent, Arrow sessionUuid);
-
-/** root an arrow into a session context. Returns it as a meta-arrow.
-    xls_root(S=/Eve.s0.s1...sn, a)
-    <=> root(/S.a), root(/s0/s1/.../sn.a)
+/** context-root and return a session for given context, agent, and identifier.
+    $session =  /$c.sessions./$agent.$id
 */
-Arrow xls_root(Arrow s, Arrow a);
+Arrow xls_session(Arrow c, Arrow agent, Arrow id);
 
-/** return meta-arrow for a given arrow rooted in a session.
-    xls_isRooted(S=/Eve.s0.s1...sn, a)
-    <=> isRooted(/S.a) && isRooted(/s0/s1/.../sn.a)
+/** reset a session and unroot it from its context.
 */
-Arrow xls_isRooted(Arrow s, Arrow a);
-
-/** unroot an arrow out of a session.
-    xls_unroot(S=/Eve.s0.s1...sn, a)
-    <=> unroot(/S.a), unroot(/s0/s1/.../sn.a)
-*/
-void xls_unroot(Arrow s, Arrow a);
-
-/** unroot all session-attached arrows.
-  * also reset and unroot any sub-session
-*/
-void xls_reset(Arrow s);
-
-/** reset a session and detach it from its super-session. */
 Arrow xls_close(Arrow s);
 
-
-/* context stack is:
-  S = /C0.C1.C2...Cn w/ C0 entrelacs or Eve
+/** context-root an arrow and return its path ($c.$e).
+    xls_root($c=/C0.C1...Cn, a)
+      --> root(/C0/C1/.../Cn.a), root(/$c.a)
 */
+Arrow xls_root(Arrow c, Arrow a);
 
-/** set a slot to a value within a context stack.
-  1) xls_unset(S, slot)
-  2) xls_root(/S.slot, value)
- */
-void  xls_set(Arrow s, Arrow slot, Arrow value);
+/** return ($c.$e) if $e is context-rooted within $c, otherelse EVE.
+    xls_isRooted($c, a) --> isRooted(/$c.a)
+*/
+Arrow xls_isRooted(Arrow c, Arrow a);
 
-/** Remove a slot and any attached value within a session
-    simply by performing xls_reset(/s.slot)
- */
-void  xls_unset(Arrow s, Arrow slot);
+/** context-unroot an arrow and retun its path.
+    xls_unroot($c=/C0.C1...Cn, a)
+      --> unroot($c.a), unroot(/C0/C1/.../Cn.a)
+*/
+Arrow xls_unroot(Arrow c, Arrow a);
 
-/** get a value of a slot within a context stack.
-  return any value such as
-    1) /S.slot.value is rooted
-    2) /s0/s1...sn/slot.value is rooted as well
- */
-Arrow xls_get(Arrow s, Arrow slot);
+/** context-unroot all arrows for a given context path,
+    and recursivly reset any sub-context.
+*/
+void xls_reset(Arrow c);
 
-/** Assimilate an URL and get back its corresponding arrow.
-  * Temporary ID based URL are only valid in a given session.
-  */
+/** traditional "set-key-value".
+
+     1) unroot any arrow from $c.$key context path
+     2) root $value in /$c.$key context path
+*/
+Arrow xls_set(Arrow c, Arrow slot, Arrow value);
+
+/** traditional "unset-key".
+
+    reset $c.$key context path
+*/
+void  xls_unset(Arrow c, Arrow slot);
+
+/** traditional "get-key".
+    returns the rooted arrow in $c.$key context path
+    (if several arrows, only one is returned)
+*/
+Arrow xls_get(Arrow c, Arrow slot);
+
+/** Resolve an URL into an arrow.
+    Any embedded ID must belong to the considered session.
+*/
 Arrow xls_url(Arrow s, char* url);
-/** Assimilate an URL and get back its corresponding arrow if existing.
-  * Temporary ID based URL are only valid in a given session.
-  */
+
+/** Resolve an URL into an arrow if it exists.
+    Any embedded ID must belong to the considered session.
+*/
 Arrow xls_urlMaybe(Arrow s, char* url);
 
-
-/** Forge a valid URL for a given arrow and session.
-  * Ancestors at 'depth' level are substitued with temporary ID which are only valid for the session.
-  */
+/** Forge an URL for a given arrow within a given session.
+    Ancestors at 'depth' level are replaced by
+    temporary ID which are only valid for the session.
+*/
 char* xls_urlOf(Arrow s, Arrow a, int depth);
-#endig /* SESSION_H *.
+#endif /* SESSION_H */

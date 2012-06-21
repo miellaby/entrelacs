@@ -1,4 +1,5 @@
 locking point:
+*
 
 In progress:
 * doxygen integration
@@ -19,4 +20,9 @@ To be done
   *           arrow(v(k, head(a)), v(k, tail(a)))
  * the virtualization stack won't be reflexive-able. Out of machine state.
 
+In study:
+* xls_root to create less arrows (but also less indexation)
+  * e.g root x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
 
+To take care of:
+* call-backs has to be refreshen every time the server starts.

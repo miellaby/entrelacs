@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <printf.h>
 #include <ctype.h>
 #include "entrelacs/entrelacs.h"
 #include "mem0.h"
@@ -1113,6 +1114,7 @@ char* xl_uriOf(Arrow a) {
     return toURI(a, &l);
 }
 
+
 static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
     ONDEBUG((fprintf(stderr, "BEGIN fromUri(%s)\n", uri)));
     Arrow a = Eve;
@@ -1840,6 +1842,7 @@ int xl_equal(Arrow a, Arrow b) {
   return (a == b);
 }
 
+/** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a) {
   ONDEBUG((fprintf(stderr, "forget a=%06x\n", a)));
 
@@ -1919,12 +1922,40 @@ void xl_commit() {
   mem_commit();
 }
 
+
+/** printf extension for arrow (%O specifier) */
+static int printf_arrow_extension(FILE *stream,
+                                    const struct printf_info *info,
+                                    const void *const *args) {
+  Arrow arrow = *((Arrow*) (args[0]));
+
+  char* uri = xl_uriOf(arrow);
+  int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
+  free(uri);
+  return len;
+}
+
+/** printf extension "arginfo" */
+static int printf_arrow_arginfo_size (const struct printf_info *info, size_t n,
+                          int *argtypes, int *size) {
+  /* We always take exactly one argument and this is a pointer to the
+     structure.. */
+  if (n > 0)
+    argtypes[0] = PA_INT;
+  return 1;
+}
+
 /** initialize the Entrelacs system */
 int space_init() {
+
   int rc = mem_init();
   if (rc < 0) { // problem
       return rc;
   }
+
+  // register a printf extension for arrow (glibc only!)
+  register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
+
   if (rc) { // very first start
     // Eve
     Cell cellEve = arrow_build(0, Eve, Eve);

@@ -87,12 +87,12 @@ Arrow xl_operator(XLCallBack hook, Arrow); ///< assimilate a C implemented opera
 Arrow xl_continuation(XLCallBack hook, Arrow); ///< assimilate a C implemented continuation.
 
 /** run an Entrelacs Machine.
- * A machine may be virtualized (not yet implemented), rootStack identifies a stack of embedded VM.
- * rootStack == (En (.. (E3 (E2 (E1 Eve)))))
+ * $M is a machine state. $contextPath is a work context path (/C0.C1...Cn).
+ * If the context path is not Eve, $M is "virtualized" (not yet implemented).
  */
-Arrow xl_run(Arrow rootStack, Arrow M); ///< M == (<program> (<environment> <continuation-stack>))
+Arrow xl_run(Arrow contextPath, Arrow M); ///< M == (<program> (<environment> <continuation-stack>))
 
 /** Eval a program by building and run a machine */
-Arrow xl_eval(Arrow rootStack, Arrow program);
+Arrow xl_eval(Arrow contextPath, Arrow program);
 
 #endif // entrelacs.h

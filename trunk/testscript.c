@@ -5,11 +5,9 @@
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 
-static Arrow print(Arrow arrow, Arrow context) {
-  char* uri = uriOf(arrow);
-  fprintf(stderr, "%s\n", uri);
-  free(uri);
-  return arrow;
+static Arrow printCB(Arrow arrow, Arrow context) {
+    fprintf(stderr, "%O\n", arrow);
+    return arrow;
 }
 
 int main(int argc, char **argv) {
@@ -25,33 +23,26 @@ int main(int argc, char **argv) {
   assert(fd);
 
   while (fgets(buffer, 1024, fd)) {
-    fprintf(stderr, "%s", buffer);
-
     Arrow a = uri(buffer);
-    fprintf(stderr, " => ");
-    print(a, EVE);
+    fprintf(stderr, "%s assimilated as %O\n", buffer, a);
     Arrow command = head(a);
     Arrow arg = tail(a);
 
     if (command == root) {
-       fprintf(stderr, "rooting ");
-       print(arg, EVE);
+       fprintf(stderr, "rooting %O\n", arg);
        root(arg);
        commit();
     } else if (command == unroot) {
-       fprintf(stderr, "unrooting ");
-       print(arg, EVE);
+       fprintf(stderr, "unrooting %O\n", arg);
        unroot(arg);
        commit();
     } else if (command == childrenOf) {
-       fprintf(stderr, "childrenOf ");
-       print(arg, EVE);
+       fprintf(stderr, "childrenOf %O\n", arg);
        fprintf(stderr, " ==> {\n");
-       childrenOfCB(arg, print, EVE);
+       childrenOfCB(arg, printCB, EVE);
        fprintf(stderr, "}\n");
     } else {
-       fprintf(stderr, "Unknown command: ");
-       print(command, EVE);
+       fprintf(stderr, "Unknown command: %O", command);
        assert(1);
     }
   }
