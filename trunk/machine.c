@@ -556,13 +556,13 @@ Arrow ifHook(Arrow CM, Arrow context) {
     Arrow x = tail(tail(head(p)));
     Arrow s = head(head(p));
     p = a(let, a(a(x, branch), s));
-    CM = a(p, ek);
+    M = a(p, ek);
   } else {
     // p == (if arg)
     // rewritten in (branch)
-    CM = a(branch, ek);
+    M = a(branch, ek);
   }
-  return CM;
+  return M;
 }
 
 Arrow commitHook(Arrow CM, Arrow context) {
