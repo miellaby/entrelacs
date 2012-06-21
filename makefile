@@ -7,12 +7,12 @@
 # CFLAGS="-g -o2" make clean.testmachine testmachine
 # make run.testmachine
 
-.PHONY: clean all clean.% test.% run.% help
+.PHONY: server clean all clean.% test.% run.% help
 CPPFLAGS += -std=c99
 
 TARGETS = libentrelacs.so libentrelacs.a
 # entrelacsd
-OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o
+OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
 TESTS = space uri script machine
 
 PERSISTENCE_FILE=/var/tmp/entrelacs_test.dat
@@ -32,7 +32,7 @@ tests: all $(TESTS:%=test%.o) $(TESTS:%=test%)
 
 #$(TESTS:%=test%): libentrelacs.so
 $(TESTS:%=test%): libentrelacs.a
-testdraft: testdraft.o session.o libentrelacs.a
+testdraft: testdraft.o libentrelacs.a
 
 
 run: $(TESTS:%=run.test%)
@@ -41,6 +41,8 @@ run.%: %
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	od -t x1z -w8 $(PERSISTENCE_FILE)
+
+server: entrelacsd
 
 entrelacsd: mongoose.o session.o server.o libentrelacs.a
 	$(CC) -lpthread -ldl -o $(@) $^

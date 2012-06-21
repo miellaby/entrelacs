@@ -14,6 +14,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <pthread.h>
+
 #include "entrelacs/entrelacs.h"
 #include "session.h"
 #include "mongoose.h"
@@ -48,13 +49,17 @@ static struct session *get_session(const struct mg_connection *conn) {
       break;
     }
   }
-  return i == MAX_SESSIONS ? NULL : &sessions[i];
+  struct session* s = (i == MAX_SESSIONS ? NULL : &sessions[i]);
+  printf("conn %p session %s\n", conn, s ? s->session_id : "NULL");
+  return s;
 }
 
 static void get_qsvar(const struct mg_request_info *request_info,
                       const char *name, char *dst, size_t dst_len) {
   const char *qs = request_info->query_string;
   mg_get_var(qs, strlen(qs == NULL ? "" : qs), name, dst, dst_len);
+  printf(dst_len == -1 ? "no %s variable in query string\n" :
+         "query string variable %s = '%.*s'\n", name, dst_len, dst);
 }
 
 static void my_strlcpy(char *dst, const char *src, size_t len) {
@@ -72,7 +77,9 @@ static struct session *new_session(void) {
       break;
     }
   }
-  return i == MAX_SESSIONS ? NULL : &sessions[i];
+  struct session* s = i == MAX_SESSIONS ? NULL : &sessions[i];
+  printf(s == NULL ? "WARNING: can't allocate session\n" : "new session %p\n", s);
+  return s;
 }
 
 // Generate session ID. buf must be 33 bytes in size.
@@ -81,6 +88,7 @@ static struct session *new_session(void) {
 static void generate_session_id(char *buf, const char *random,
                                 const char *user) {
   mg_md5(buf, random, user, NULL);
+  printf("generated session ID = %s\n", buf);
 }
 
 static void *event_handler(enum mg_event event,
@@ -96,8 +104,10 @@ static void *event_handler(enum mg_event event,
             snprintf(aSession->random, sizeof(aSession->random), "%d", rand());
             generate_session_id(aSession->session_id, aSession->random, "server");
         }
+
         // TODO: Here there could be a global server super-session. Use the API
         Arrow session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
+        printf("arrow session is %O\n", session);
         Arrow inputHandler = xls_get(session, xl_tag("inputHandler"));
         if (xl_isEve(inputHandler)) {
             inputHandler = xl_eval(xl_Eve(), xl_uri("/let//GET/lambda/x.x"

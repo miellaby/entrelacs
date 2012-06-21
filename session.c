@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -8,129 +9,159 @@
 #include "log.h"
 #include "session.h"
 
-Arrow xls_session(Arrow superSession, Arrow agent, Arrow sessionUuid) {
-   Arrow sessionTag = tag("session");
-   Arrow context = a(sessionTag, a(agent, sessionUuid));
-   xls_root(superSession, context);
-   Arrow session = a(superSession, context);
+
+Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
+   /* $session =  /$s.sessions./$agent.$uuid */
+   Arrow session = xls_root(a(s, tag("sessions")), a(agent, uuid));
+
    return session;
 }
 
 /* TODO: FIXME: We could parameter a maximal depth of deep rooting (meta-level)
-   when reached, we could break the recursion and root directly to "buzz"
-   e.g. deepRoot(/s0.s1.s2.s3, a, depth=2) <=> root(/"buzz"/s2/s3.a) s0/s1 super context forgotten
+   when reached, we could break the recursion and root directly to context
+   e.g. deepRoot(/s0.s1.s2.s3, a, depth=1) <=> root(/s0.s1.s2/s3.a) s0/s1/s2
    NO. IT DOESN'T WORK UNLESS ONE SETS UP COUNTERS OR TTL
    */
-Arrow deepRoot(Arrow s, Arrow a) {
-    Arrow rest = tailOf(s);
-    if (rest != s) {
-        return deepRoot(rest, arrow(headOf(s),a));
-    } else if (s) {
-        return xl_root(arrow(s, a));
+Arrow deepRoot(Arrow c, Arrow e) {
+    Arrow parent = tailOf(c);
+    if (parent != c) {
+        return deepRoot(parent, a(headOf(c), e));
+    } else if (c) {
+        return root(arrow(c, e));
     } else {
-        return xl_root(a);
+        return root(e);
     }
 }
 
-Arrow xls_root(Arrow s, Arrow a) {
-    root(a(s, a));
-    return deepRoot(s, a);
+/* root in a context */
+Arrow xls_root(Arrow c, Arrow e) {
+    if (c == EVE)
+        return root(e);
+
+    deepRoot(c, e);
+    return root(a(c, e));
 }
 
-Arrow deepIsRooted(Arrow s, Arrow a) {
-    Arrow rest = tailOf(s);
-    if (rest != s) {
-        return deepIsRooted(rest, arrow(headOf(s),a));
-    } else if (s) {
-        return xl_isRooted(arrow(s, a));
+#if 0
+// not used
+Arrow deepIsRooted(Arrow c, Arrow e) {
+    Arrow parent = tailOf(c);
+    if (parent != c) {
+        return deepIsRooted(parent, arrow(headOf(c),e));
+    } else if (s != EVE) {
+        return isRooted(arrow(c, e));
     } else {
-        return xl_isRooted(a);
+        return isRooted(e);
     }
 }
+#endif
 
-Arrow xls_isRooted(Arrow s, Arrow a) {
-    Arrow m = arrowMaybe(s, a);
-    if (isEve(m)) return m;
-    return deepIsRooted(m);
+Arrow xls_isRooted(Arrow c, Arrow e) {
+    if (c == EVE)
+        return isRooted(e);
+
+    Arrow m = arrowMaybe(c, e);
+    if (m == EVE || !isRooted(m))
+        return EVE;
+
+    return m;
 }
 
-void deepUnroot(Arrow s, Arrow a) {
-    Arrow rest = tailOf(s);
-    if (rest != s) { // TODO : maybe
-        deepUnroot(rest, arrow(headOf(s),a));
-    } else if (s) {
-        xl_unroot(arrow(s, a));
+void deepUnroot(Arrow c, Arrow e) {
+    Arrow parent = tailOf(c);
+
+    if (parent != c) {
+        deepUnroot(parent, a(headOf(c), e));
+    } else if (c != EVE) {
+        unroot(a(c, e));
     } else {
-        xl_unroot(a);
+        unroot(e);
     }
 }
 
-Arrow xls_unroot(Arrow s, Arrow a) {
-    unroot(a(s, a));
-    return deepUnroot(s, a);
+Arrow xls_unroot(Arrow c, Arrow e) {
+    if (c == EVE)
+        return unroot(e);
+
+    deepUnroot(c, e);
+    return unroot(a(c, e));
 }
 
-/**
-    value indexing:
-    Context stack S = /C0.C1.C2...Cn where C0 an entrelacs
-    key = /C0.C1.C2...Cn.Slot = /S.Slot
-*/
-void xls_set(Arrow s, Arrow slot, Arrow value) {
-    xls_unset(s, slot);
-    xls_root(a(s, slot), value);
-}
-
-void xls_unset(Arrow s, Arrow slot) {
-    Arrow context = arrowMaybe(s, slot);
-    if (isEve(context)) return;
-    xls_reset(context);
-}
-
-Arrow xls_get(Arrow s, Arrow slot) {
-    Arrow value = xl_Eve();
-    Arrow key = arrowMaybe(s, slot);
-    if (isEve(key))
-        return value;
-
-    XLEnum e = xl_childrenOf(key);
-    while (xl_enumNext(e)) {
-        Arrow keyValue = xl_enumGet(e);
-        if (tailOf(keyValue) != key) continue; // incoming arrows are ignored
-        value = headOf(keyValue);
-        if (xls_isRooted(key, value))
-            break;
-    }
-    xl_freeEnum(e);
-    return value;
-}
-
-void xls_reset(Arrow s) {
-    XLEnum e = xl_childrenOf(s);
-    Arrow next = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
+/** reset a context
+  Recursivly unroot any rooted arrow under a given context
+ */
+void xls_reset(Arrow c) {
+    XLEnum childrenEnum = xl_childrenOf(c);
+    Arrow next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
     do {
         Arrow child = next;
-        next = (xl_enumNext(e) ? xl_enumGet(e) : EVE);
+        next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
 
-        if (tailOf(child) == s) {
-            if (isRooted(child) == child) {
-                xls_unroot(s, headOf(child));
+        if (tailOf(child) == c) { // Only outgoing arrow
+            if (isRooted(child) != EVE) {
+                xls_unroot(c, headOf(child));
             }
             xls_reset(child);
         }
 
     } while (next);
 
-    xl_freeEnum(e);
+    xl_freeEnum(childrenEnum);
 }
 
+/** traditional "set-key-value".
+
+     1) unroot any arrow from $c.$key context path
+     2) root $value in /$c.$key context path
+*/
+Arrow xls_set(Arrow c, Arrow key, Arrow value) {
+    xls_unset(c, key);
+    return xls_root(a(c, key), value);
+}
+
+/** traditional "unset-key".
+
+    reset $c.$key context path
+*/
+void xls_unset(Arrow c, Arrow key) {
+    Arrow slotContext = arrowMaybe(c, key);
+    if (slotContext == EVE) return;
+
+    xls_reset(slotContext);
+}
+
+/** traditional "get-key".
+    returns the rooted arrow in $c.$key context path
+    (if several arrows, only one is returned)
+*/
+Arrow xls_get(Arrow c, Arrow key) {
+    Arrow keyContext = arrowMaybe(c, key);
+    if (keyContext == EVE)
+        return EVE;
+
+    Arrow value = EVE;
+    XLEnum enumChildren = xl_childrenOf(keyContext);
+    while (xl_enumNext(enumChildren)) {
+        Arrow keyValue = xl_enumGet(enumChildren);
+        if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
+        value = headOf(keyValue);
+        if (isRooted(keyValue))
+            break;
+    }
+    xl_freeEnum(enumChildren);
+    return value;
+}
+
+/** close a session $s */
 Arrow xls_close(Arrow s) {
+   /* $session =  /$s.sessions./$agent.$uuid */
    xls_reset(s);
    xls_unroot(tailOf(s), headOf(s));
    return s;
 }
 
-static Arrow fromUrl(Arrow locked, unsigned char* url, char** urlEnd, int locateOnly) {
-    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", locked, url);
+static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly) {
+    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", s, url);
     Arrow a = xl_Eve();
 
     char c = url[0];
@@ -160,8 +191,8 @@ static Arrow fromUrl(Arrow locked, unsigned char* url, char** urlEnd, int locate
             int ref;
             sscanf(url + 1, "%x", &ref);
             Arrow sa = ref;
-            // Security check: no way to forge %x ref which doesn't belong to the current session
-            if (xl_tailOf(sa) == locked) {
+            // Security check: no way to resolve a %x ref which hasn't been forged in the current session
+            if (xl_tailOf(sa) == s) {
                 a = xl_headOf(sa);
                 *urlEnd = url + 7;
             } else {
@@ -172,14 +203,14 @@ static Arrow fromUrl(Arrow locked, unsigned char* url, char** urlEnd, int locate
     case '/': { // ARROW
         char *tailUriEnd, *headUriEnd;
         Arrow tail, head;
-        tail = fromUrl(locked, url + 1, &tailUriEnd, locateOnly);
+        tail = _fromUrl(s, url + 1, &tailUriEnd, locateOnly);
         if (!tailUriEnd) {
             *urlEnd = NULL;
             break;
         }
 
         char* headURIStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
-        head = fromUrl(locked, headURIStart, &headUriEnd, locateOnly);
+        head = _fromUrl(s, headURIStart, &headUriEnd, locateOnly);
         if (!headUriEnd) {
             *urlEnd = NULL;
             break;
@@ -211,13 +242,13 @@ static Arrow fromUrl(Arrow locked, unsigned char* url, char** urlEnd, int locate
     }
     }
 
-    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x\n", locked, url, a);
+    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x\n", s, url, a);
     return a;
 }
 
-static Arrow url(Arrow locked, char *url, int locateOnly) {
+static Arrow fromUrl(Arrow s, char *url, int locateOnly) {
     char c, *urlEnd;
-    Arrow a = fromUrl(locked, url, &urlEnd, locateOnly);
+    Arrow a = _fromUrl(s, url, &urlEnd, locateOnly);
     if (!urlEnd) return xl_Eve();
 
 
@@ -229,7 +260,7 @@ static Arrow url(Arrow locked, char *url, int locateOnly) {
     if (*urlEnd) {
        DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
 
-       Arrow b = fromUrl(locked, urlEnd, &urlEnd, locateOnly);
+       Arrow b = _fromUrl(s, urlEnd, &urlEnd, locateOnly);
        if (!urlEnd) return xl_Eve();
        a = (locateOnly ? arrowMaybe(a, b) : arrow(a, b)); // TODO: document actual design
     }
@@ -237,29 +268,26 @@ static Arrow url(Arrow locked, char *url, int locateOnly) {
     return a;
 }
 
-Arrow xls_url(Arrow session, char* aUrl) {
-    Arrow locked = a(session, tag("locked"));
-    return url(locked, aUrl, 0);
+Arrow xls_url(Arrow s, char* aUrl) {
+    return fromUrl(s, aUrl, 0);
 }
 
-Arrow xls_urlMaybe(Arrow session, char* aUrl) {
-    Arrow locked = a(session, tag("locked"));
-    return url(locked, aUrl, 1);
+Arrow xls_urlMaybe(Arrow s, char* aUrl) {
+    return fromUrl(s, aUrl, 1);
 }
 
-static char* toURL(Arrow locked, Arrow a, int depth, uint32_t *l) { // TODO: could be rewritten with geoallocs
+static char* toURL(Arrow s, Arrow e, int depth, uint32_t *l) { // TODO: could be rewritten with geoallocs
     if (depth == 0) {
         char* url = malloc(8);
         assert(url);
-        xls_root(locked, a);
-        Arrow sa = arrow(locked, a);
+        Arrow sa = xls_root(s, e);
         sprintf(url, "%%%06x", (int)sa);
         *l = 7;
         return url;
-    } else if (xl_typeOf(a) == XL_ARROW) { // TODO tuple
+    } else if (xl_typeOf(e) == XL_ARROW) { // TODO tuple
         uint32_t l1, l2;
-        char *tailUrl = toURL(locked, xl_tailOf(a), depth - 1, &l1);
-        char *headUrl = toURL(locked, xl_headOf(a), depth - 1, &l2);
+        char *tailUrl = toURL(s, xl_tailOf(e), depth - 1, &l1);
+        char *headUrl = toURL(s, xl_headOf(e), depth - 1, &l2);
         char *url = malloc(2 + l1 + l2 + 1) ;
         assert(url);
         sprintf(url, "/%s.%s", tailUrl, headUrl);
@@ -268,15 +296,14 @@ static char* toURL(Arrow locked, Arrow a, int depth, uint32_t *l) { // TODO: cou
         *l = 2 + l1 + l2;
         return url;
     } else {
-        char* url = xl_uriOf(a);
+        char* url = uriOf(e);
         *l = strlen(url);
         return url;
     }
 }
 
 
-char* xls_urlOf(Arrow session, Arrow a, int depth) {
+char* xls_urlOf(Arrow s, Arrow e, int depth) {
     uint32_t l;
-    Arrow locked = a(session, tag("locked"));
-    return toURL(locked, a, depth, &l);
+    return toURL(s, e, depth, &l);
 }

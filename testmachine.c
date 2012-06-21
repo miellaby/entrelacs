@@ -4,13 +4,6 @@
 
 #include "entrelacs/entrelacs.h"
 
-static Arrow print(Arrow arrow, void* context) {
-  char* uri = xl_uriOf(arrow);
-  fprintf(stderr, " %s\n", uri);
-  free(uri);
-  return arrow;
-}
-
 int main(int argc, char **argv) {
   FILE* fd;
   char buffer[1024];
@@ -80,19 +73,13 @@ int main(int argc, char **argv) {
       char *pUri, *rUri;
 
     fprintf(stderr, "Now evaluating '%s' ; ", str);
-
-
     Arrow p = xl_uri(str);
+    fprintf(stderr, "p = %O\n", p);
+
     assert(!xl_isEve(p));
-    pUri = xl_uriOf(p);
-    fprintf(stderr, "programUri = '%s'\n", pUri);
 
     Arrow r = xl_eval(xl_Eve(), p);
-    rUri = xl_uriOf(r);
-    fprintf(stderr, "eval('%s') = '%s'\n", pUri, rUri);
-
-    free(pUri);
-    free(rUri);
+    fprintf(stderr, "eval %O = %O\n", p, r);
   }
   
   return EXIT_SUCCESS;
