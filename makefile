@@ -6,14 +6,15 @@
 # make run
 # CFLAGS="-g -o2" make clean.testmachine testmachine
 # make run.testmachine
-
+# make entrelacsd
+# make run.testshell
 .PHONY: server clean all clean.% test.% run.% help
 CPPFLAGS += -std=c99
 
 TARGETS = libentrelacs.so libentrelacs.a
 # entrelacsd
 OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
-TESTS = space uri script machine
+TESTS = space uri script machine shell
 
 PERSISTENCE_FILE=/var/tmp/entrelacs_test.dat
 

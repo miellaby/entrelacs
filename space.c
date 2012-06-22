@@ -1158,21 +1158,22 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
         tail = fromUri(uri + 1, &tailUriEnd, locateOnly);
         if (!tailUriEnd) { // Non assimilated tail
             *uriEnd = NULL;
-            break;
-        }
-
-        char* headURIStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
-        head = fromUri(headURIStart, &headUriEnd, locateOnly);
-        if (!headUriEnd) { // Non assimilated head
-            *uriEnd = NULL;
-            break;
-        }
-
-        a = arrow(tail, head, locateOnly);
-        if (a == Eve && !(tail == Eve && head == Eve)) { // Non assimilated pair
-            *uriEnd = NULL;
+        } else if (!*tailUriEnd) {
+            a  = tail;
+            *uriEnd = tailUriEnd;
         } else {
-            *uriEnd = headUriEnd;
+            char* headUriStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
+            head = fromUri(headUriStart, &headUriEnd, locateOnly);
+            if (!headUriEnd) { // Non assimilated head
+                *uriEnd = NULL;
+            } else {
+                a = arrow(tail, head, locateOnly);
+                if (a == Eve && !(tail == Eve && head == Eve)) { // Non assimilated pair
+                    *uriEnd = NULL;
+                } else {
+                    *uriEnd = headUriEnd;
+                }
+            }
         }
         break;
     }
@@ -1198,28 +1199,33 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
     }
     }
 
-    ONDEBUG((fprintf(stderr, "END fromUri(%s) = %06x\n", uri, a)));
+    ONDEBUG((fprintf(stderr, "END fromUri(%s) = %O\n", uri, a)));
     return a;
+}
+
+static char* skeepSpacesAndOneDot(char* uriEnd) {
+    char c;
+    while ((c = *uriEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
+        // white spaces are tolerated and ignored here
+        uriEnd++;
+    }
+    if (*uriEnd == '.') uriEnd++;
+    return uriEnd;
 }
 
 static Arrow uri(char *uri, int locateOnly) {
     char c, *uriEnd;
     Arrow a = fromUri(uri, &uriEnd, locateOnly);
     if (!uriEnd) return Eve; // Not assimilated
+    uriEnd = skeepSpacesAndOneDot(uriEnd);
 
+    while (*uriEnd) {
+        ONDEBUG((fprintf(stderr, "uriEnd = >%s<\n", uriEnd)));
+        Arrow b = fromUri(uriEnd, &uriEnd, locateOnly);
+        if (!uriEnd) return Eve; // Not assimilated
+        uriEnd = skeepSpacesAndOneDot(uriEnd);
 
-    while ((c = *uriEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
-           // white spaces are tolerated and ignored here
-           uriEnd++;
-    }
-
-    if (*uriEnd) {
-       ONDEBUG((fprintf(stderr, "uriEnd = >%s<\n", uriEnd)));
-
-       Arrow b = fromUri(uriEnd, &uriEnd, locateOnly);
-       if (!uriEnd) return Eve; // b not assimilated
-
-       a = arrow(a, b, locateOnly); // TODO: document actual design
+        a = arrow(a, b, locateOnly); // TODO: document actual design
     }
 
     return a;

@@ -12,7 +12,7 @@
 #else
 #define ONDEBUG(w)
 #endif
-#define dputs(S) ONDEBUG(fprintf(stderr, "%s\n", S))
+#define dputs(format, args...) ONDEBUG(fprintf(stderr, format "\n", ## args))
 
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0,
    evalOp = 0, lambda = 0, lambdax = 0, operator = 0,
@@ -61,62 +61,65 @@ static Arrow _load_binding(Arrow x, Arrow w, Arrow e) {
 }
 
 
-static Arrow _resolve(Arrow a, Arrow e, Arrow M) {
-  ONDEBUG((fprintf(stderr, "   _resolve a = %O\n", a)));
-  int type = typeOf(a);
-  if (type == XL_EVE) return Eve();
-  if (a == selfM) return M;
-  
-  Arrow x = a;
-  if (type == XL_ARROW) {
-    Arrow t = tailOf(a);
-    if (t == arrowOp) {
-       Arrow t = headOf(a);
-       Arrow t1 = tailOf(t);
-       Arrow t2 = headOf(t);
-       return a(_resolve(t1, e, M), _resolve(t2, e, M));
-    } else if (t == escape) {
-       return headOf(a);
-    } else if (t == lambda) {
-       Arrow xs = headOf(a);
-       return arrow(xs, e);
-    } else if (t == lambdax) {
-       Arrow xs = headOf(a);
-       return arrow(lambdax, arrow(xs, e));
-    } else if (t == var) {
-       x = headOf(a);
-    } else {
-      return a;
+static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
+    ONDEBUG((fprintf(stderr, "   _resolve a = %O\n", a)));
+    int type = typeOf(a);
+    if (type == XL_EVE) return Eve();
+    if (a == selfM) return M;
+
+    Arrow x = a;
+    if (type == XL_ARROW) {
+        Arrow t = tailOf(a);
+        if (t == arrowOp) {
+            Arrow t = headOf(a);
+            Arrow t1 = tailOf(t);
+            Arrow t2 = headOf(t);
+            return a(_resolve(t1, e, C, M), _resolve(t2, e, C, M));
+        } else if (t == escape) {
+            return headOf(a);
+        } else if (t == lambda) {
+            Arrow xs = headOf(a);
+            return arrow(xs, e);
+        } else if (t == lambdax) {
+            Arrow xs = headOf(a);
+            return arrow(lambdax, arrow(xs, e));
+        } else if (t == var) {
+            x = headOf(a);
+        } else {
+            return a;
+        }
     }
-  }
-  // environment matching loop
-  Arrow se = e;
-  while (!isEve(se)) {
-    Arrow b = tailOf(se);
-    Arrow bx = tailOf(b);
-    if (bx == x)
-      return headOf(b);
-    se = headOf(se);
-  }
-  
-  // global matching loop
-   XLEnum enu = childrenOf(x);
-   Arrow found = Eve();
-   while (xl_enumNext(enu) && isEve(found)) {
-      Arrow child = xl_enumGet(enu);
-      if (isRooted(child))
-         found = child;
-   }
-   xl_freeEnum(enu);
-   if (!isEve(found))
-      return headOf(found);
-  
-  return a;
+    // environment matching loop
+    Arrow se = e;
+    while (!isEve(se)) {
+        Arrow b = tailOf(se);
+        Arrow bx = tailOf(b);
+        if (bx == x)
+            return headOf(b);
+        se = headOf(se);
+    }
+
+    // global matching loop
+    Arrow slot = C ? a(C, x) : x;
+    XLEnum enu = childrenOf(slot);
+    Arrow found = EVE;
+    while (xl_enumNext(enu)) {
+        Arrow child = xl_enumGet(enu);
+        if (isRooted(child) && tailOf(child) == slot) {
+            found = child;
+            break;
+        }
+    }
+    xl_freeEnum(enu);
+    if (found != EVE)
+        return headOf(found);
+
+    return a;
 }
 
-static Arrow resolve(Arrow a, Arrow e, Arrow M) {
+static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
   ONDEBUG((fprintf(stderr, "resolve a = %O in e = %O\n", a, e)));
-  Arrow w = _resolve(a, e, M);
+  Arrow w = _resolve(a, e, C, M);
   ONDEBUG((fprintf(stderr, "resolved in w = %O\n", w)));
   return w;
 }
@@ -131,7 +134,7 @@ static int isTrivial(Arrow s) {
 }
 
 
-static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
+static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   ONDEBUG((fprintf(stderr, "transition M = %O\n", M)));
 
   Arrow p = tailOf(M);
@@ -142,7 +145,7 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
   
   if (isTrivial(p)) { // Trivial expression
      // p == v
-     dputs("p == v");
+     dputs("p == v trivial");
 
      if (isEve(k)) return M; // stop, program result = resolve(v, e, M)
      
@@ -155,21 +158,21 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
         int n = sscanf(hooks, "%p", &hook);
         assert(n == 1);
         free(hooks);
-        M = hook(a(contextPath, M), continuationParameter);
+        M = hook(a(C, M), continuationParameter);
         return M;
         
      } else if (tail(k) == evalOp) { // #e# special "eval" continuation
        // k == (eval kk)
        dputs("    k == (eval kk)");
        Arrow kk = head(k);
-       Arrow w = resolve(p, e, M);
+       Arrow w = resolve(p, e, C, M);
        M = a(w, a(e, kk)); // unstack continuation and reinject evaluation result as input expression
        return M;
        
      } else {
        // k == ((x (ss ee)) kk)
        dputs("    k == ((x (ss ee)) kk)");
-       Arrow w = resolve(p, e, M);
+       Arrow w = resolve(p, e, C, M);
        Arrow kk = head(k);
        Arrow f = tail(k);
        Arrow x = tail(f);
@@ -221,9 +224,9 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
 
      if (isTrivial(v)) { // Trivial let expression
        // p == (let ((x v:t) s))
-       dputs("     v == t trivial");
+       dputs("     v (%O) == t trivial", v);
        Arrow t = v;
-       Arrow w = resolve(t, e, M);
+       Arrow w = resolve(t, e, C, M);
        if (isEve(x)) { // #e# direct environment load
          dputs("          direct environment load");
           M = a(s, a(_load_binding(tail(w), head(w), e), k));
@@ -266,7 +269,7 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
          return M;
      }
 
-     int resolvedTail = tail(resolve(v0, e, M));
+     int resolvedTail = tail(resolve(v0, e, C, M));
 
      if (resolvedTail != lambdax && !isTrivial(v1)) { // non trivial argument in application in let expression #e#
        // p == (let ((x v:(t0 v1)) s)) where v1 not trivial
@@ -284,23 +287,24 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
      dputs("p == (let ((x v:(v0:t0 v1:t1) s))  # a really trivial application in let expression");
      Arrow t0 = v0;
      Arrow t1 = v1;
-     Arrow C = resolve(t0, e, M);
-     if (tail(C) == C) {
-           dputs("wrong C ==> not reduced");
-           M = a(s, a(_load_binding(x, v, e), k)); // short-cut
+     Arrow closure = resolve(t0, e, closure, M);
+     if (tail(closure) == closure) {
+           ONDEBUG(fprintf(stderr, "info: %O is not a closure\n", closure));
+           Arrow w = resolve(t1, e, C, M);
+           M = a(s, a(_load_binding(x, a(closure, w), e), k));
            return M;
      }
      
-     if (tail(C) == operator) { // System call special case
+     if (tail(closure) == operator) { // System call special case
            // C = (operator (hook context))
            dputs("C = (operator (hook context))");
-           Arrow operatorParameter = head(head(C));
+           Arrow operatorParameter = head(head(closure));
            XLCallBack hook;
-           char* hooks = str(tail(head(C)));
+           char* hooks = str(tail(head(closure)));
            int n = sscanf(hooks, "%p", &hook);
            assert(n == 1);
            free(hooks);
-           M = hook(a(contextPath, M), operatorParameter);
+           M = hook(a(closure, M), operatorParameter);
            return M;
            
      }
@@ -308,24 +312,24 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
      // closure case
      Arrow w;
      Arrow ee;
-     if (tail(C) == lambdax) { // #e# special closure
+     if (tail(closure) == lambdax) { // #e# special closure
              // C == (lambdax ((y ss) ee))
              dputs("C == (lambdax ((y ss) ee))");
              
              // special closure : C == ("lambdax" CC) w/ CC being a regular closure
              // - applied arrow is escaped by default (like in let construct)
-             C = head(C);
-             ee = head(C);
+             closure = head(closure);
+             ee = head(closure);
              w = t1; // t1 is NOT resolved
 
      } else {
              // C == ((y ss) ee)
-             ee = head(C);
+             ee = head(closure);
              dputs("C == ((y ss) ee)");
-             w = resolve(t1, e, M);
+             w = resolve(t1, e, closure, M);
      }
-     Arrow y = tail(tail(C));
-     Arrow ss = head(tail(C));
+     Arrow y = tail(tail(closure));
+     Arrow ss = head(tail(closure));
      M = a(ss, a(_load_binding(y, w, ee), a(a(x, a(s, e)), k))); // stacks up a continuation
      return M;
   }
@@ -358,16 +362,16 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
      M = a(ss, a(e, a(evalOp, a(a(p, a(a(s, a(var, p)), e)), k)))); // stack an eval continuation
      return M;
   }
-  Arrow resolvedTail = tail(resolve(s, e, M));
+  Arrow resolvedTail = tail(resolve(s, e, C, M));
   if (resolvedTail != lambdax && !isTrivial(v)) { // Not trivial argument in application #e#
-    dputs("    v == something not trivial");
+    dputs("    v (%O) == something not trivial", v);
     // rewriting rule: pp = (let ((p v) (s (var p))))
     // ==> M = (v (e ((p ((s (var p)) e)) k))))
     M = a(v, a(e, a(a(p, a(a(s, a(var, p)), e)), k)));
     return M;
   }
 
-  dputs("    v == t trivial");
+  dputs("    v (%O) == t trivial", v);
   Arrow t = v; // v == t trivial
 
     
@@ -377,77 +381,80 @@ static Arrow transition(Arrow contextPath, Arrow M) { // M = (p, (e, k))
   // p == (t0 t1) where t0 should return a closure or such
   dputs("    p == (t0:v t1:s) # a really trivial application");
   Arrow t0 = s;
-  Arrow C = resolve(t0, e, M);
+  Arrow Closure = resolve(t0, e, C, M);
   Arrow t1 = head(p);
   
-  if (tail(C) == C) {
-    dputs("        wrong C ==> not reduced");
-    M = a(a(escape, p), ek);
+  if (tail(Closure) == Closure) {
+    ONDEBUG(fprintf(stderr, "info: %O is not a closure\n", Closure));
+    // not a closure, one replaces it by a fake closure
+    // /lambda/x/arrow/C.x == ((p (arrow (t0 p)) Eve)
+    Closure = a(a(p,a(arrowOp,a(t0,p))),EVE);
+    M = a(a(arrowOp, p), ek);
     return M;
   }
 
   // Continuation stacking not needed!
 
-  if (tail(C) == operator) { // System call case
+  if (tail(Closure) == operator) { // System call case
        // C == (operator (hook context))
        dputs("       C == (operator (hook context))");
-       Arrow operatorParameter = head(head(C));
+       Arrow operatorParameter = head(head(Closure));
        XLCallBack hook;
-       char* hooks = str(tail(head(C)));
+       char* hooks = str(tail(head(Closure)));
        int n = sscanf(hooks, "%p", &hook);
        assert(n == 1);
        free(hooks);
-       M = hook(a(contextPath, M), operatorParameter);
+       M = hook(a(Closure, M), operatorParameter);
        return M;
        
   } else { // closure case
        Arrow w;
        Arrow ee;
-       if (tail(C) == lambdax) { // #e# special closure where applied arrow is not evaluated (like let)
+       if (tail(Closure) == lambdax) { // #e# special closure where applied arrow is not evaluated (like let)
          // C == (lambdax ((y ss) ee))
          dputs("        C == (lambdax ((y ss) ee))");
          
          // special closure : C == ("lambdax" CC) w/ CC being a regular closure
          // - applied arrow is escaped by default (like in let construct)
-         C = head(C);
-         ee = head(C);
+         Closure = head(Closure);
+         ee = head(Closure);
          w = t1; // t1 is NOT resolved
 
        } else {
          // C == ((x ss) ee)
          dputs("        C == ((x ss) ee)");
-         ee = head(C);
-         w = resolve(t1, e, M);
+         ee = head(Closure);
+         w = resolve(t1, e, C, M);
        }
-       Arrow x = tail(tail(C));
-       Arrow ss = head(tail(C));
+       Arrow x = tail(tail(Closure));
+       Arrow ss = head(tail(Closure));
        M = a(ss, a(_load_binding(x, w, ee), k));
        return M;   
   }
 }
 
-Arrow xl_run(Arrow contextPath, Arrow M) {
+Arrow xl_run(Arrow C, Arrow M) {
   machine_init();
-  M = transition(contextPath, M);
+  M = transition(C, M);
   while (!isEve(head(head(M))) || !isTrivial(tail(M))) {
-    M = transition(contextPath, M);
+    M = transition(C, M);
   }
   ONDEBUG((fprintf(stderr, "run finished with M = %O\n",M)));
   Arrow p = tail(M);
   Arrow e = tail(head(M));
-  return resolve(p, e, M);
+  return resolve(p, e, C, M);
 }
 
-Arrow xl_eval(Arrow contextPath, Arrow program) {
+Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
   machine_init();
-  Arrow M = a(program, a(systemEnvironment, Eve()));
-  return run(contextPath, M);
+  Arrow M = a(p, a(systemEnvironment, Eve()));
+  return run(C /* ContextPath */, M);
 }
 
 
-Arrow xl_argInMachine(Arrow CnM) {
-  Arrow contextPath = tailOf(CnM);
-  Arrow M = headOf(CnM);
+Arrow xl_argInMachine(Arrow CM) {
+  Arrow C = tailOf(CM);
+  Arrow M = headOf(CM);
   Arrow p = tailOf(M);
   Arrow ek = headOf(M);
   Arrow e = tailOf(ek);
@@ -461,7 +468,7 @@ Arrow xl_argInMachine(Arrow CnM) {
   }
   ONDEBUG((fprintf(stderr, "   argument is %O\n", arg)));
   assert(isTrivial(arg));
-  Arrow w = resolve(arg, e, M);
+  Arrow w = resolve(arg, e, C, M);
   return w;
 }
 
@@ -487,23 +494,23 @@ Arrow xl_reduceMachine(Arrow CM, Arrow r) {
   return M;
 }
 
-Arrow runHook(Arrow CM, Arrow context) {
+Arrow runHook(Arrow CM, Arrow hookParameter) {
    return xl_argInMachine(CM);
 }
 
-Arrow tailOfHook(Arrow CM, Arrow context) {
+Arrow tailOfHook(Arrow CM, Arrow hookParameter) {
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = tail(arrow);
    return xl_reduceMachine(CM, r);
 }
 
-Arrow headOfHook(Arrow CM, Arrow context) {
+Arrow headOfHook(Arrow CM, Arrow hookParameter) {
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = head(arrow);
    return xl_reduceMachine(CM, r);
 }
 
-Arrow childrenOfHook(Arrow CM, Arrow context) {
+Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
    Arrow parent = xl_argInMachine(CM);
    XLEnum e = childrenOf(parent);
    Arrow list = Eve();
@@ -515,28 +522,30 @@ Arrow childrenOfHook(Arrow CM, Arrow context) {
    return xl_reduceMachine(CM, list);
 }
 
-Arrow rootHook(Arrow CM, Arrow context) {
+Arrow rootHook(Arrow CM, Arrow hookParameter) {
    Arrow contextPath = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_root(contextPath, arrow);
    return xl_reduceMachine(CM, r);
 }
 
-Arrow unrootHook(Arrow CM, Arrow context) {
+Arrow unrootHook(Arrow CM, Arrow hookParameter) {
    Arrow contextPath = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_unroot(contextPath, arrow);
    return xl_reduceMachine(CM, r);
 }
 
-Arrow isRootedHook(Arrow CM, Arrow context) {
+Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
    Arrow contextPath = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_isRooted(contextPath, arrow);
    return xl_reduceMachine(CM, r);
 }
 
-Arrow ifHook(Arrow CM, Arrow context) {
+Arrow ifHook(Arrow CM, Arrow hookParameter) {
+  Arrow M = headOf(CM);
+
   // the ifHook performs some magic
   Arrow body = xl_argInMachine(CM);
   Arrow condition = tail(body);
@@ -565,12 +574,12 @@ Arrow ifHook(Arrow CM, Arrow context) {
   return M;
 }
 
-Arrow commitHook(Arrow CM, Arrow context) {
-   Arrow contextPath = tailOf(CM);
+Arrow commitHook(Arrow CM, Arrow hookParameter) {
+   Arrow C = tailOf(CM);
    Arrow M = headOf(CM);
-   xls_root(contextPath, a(selfM, CM)); // TODO/FIXME fix this
+   xls_root(C, a(selfM, CM)); // TODO/FIXME fix this
    commit();
-   xls_unroot(contextPath, a(selfM, CM));
+   xls_unroot(C, a(selfM, CM));
    return xl_reduceMachine(CM, Eve());
 }
 
@@ -617,7 +626,7 @@ static void machine_init() {
   
   systemEnvironment = Eve();
   for (int i = 0; systemFns[i].s != NULL ; i++) {
-    Arrow op = a(tag(systemFns[i].s), operator(systemFns[i].fn, Eve()));
+    Arrow op = a(tag(systemFns[i].s), operator(systemFns[i].fn, EVE));
     systemEnvironment= a(op, systemEnvironment);
   }
   root(a(reserved, systemEnvironment));

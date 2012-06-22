@@ -14,7 +14,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <pthread.h>
-
+#include "log.h"
 #include "entrelacs/entrelacs.h"
 #include "session.h"
 #include "mongoose.h"
@@ -50,7 +50,7 @@ static struct session *get_session(const struct mg_connection *conn) {
     }
   }
   struct session* s = (i == MAX_SESSIONS ? NULL : &sessions[i]);
-  printf("conn %p session %s\n", conn, s ? s->session_id : "NULL");
+  DEBUGPRINTF("conn %p session %s\n", conn, s ? s->session_id : "NULL");
   return s;
 }
 
@@ -58,7 +58,7 @@ static void get_qsvar(const struct mg_request_info *request_info,
                       const char *name, char *dst, size_t dst_len) {
   const char *qs = request_info->query_string;
   mg_get_var(qs, strlen(qs == NULL ? "" : qs), name, dst, dst_len);
-  printf(dst_len == -1 ? "no %s variable in query string\n" :
+  DEBUGPRINTF(dst_len == -1 ? "no %s variable in query string\n" :
          "query string variable %s = '%.*s'\n", name, dst_len, dst);
 }
 
@@ -78,7 +78,7 @@ static struct session *new_session(void) {
     }
   }
   struct session* s = i == MAX_SESSIONS ? NULL : &sessions[i];
-  printf(s == NULL ? "WARNING: can't allocate session\n" : "new session %p\n", s);
+  DEBUGPRINTF(s == NULL ? "WARNING: can't allocate session\n" : "new session %p\n", s);
   return s;
 }
 
@@ -88,7 +88,7 @@ static struct session *new_session(void) {
 static void generate_session_id(char *buf, const char *random,
                                 const char *user) {
   mg_md5(buf, random, user, NULL);
-  printf("generated session ID = %s\n", buf);
+  DEBUGPRINTF("generated session ID = %s\n", buf);
 }
 
 static void *event_handler(enum mg_event event,
@@ -107,20 +107,20 @@ static void *event_handler(enum mg_event event,
 
         // TODO: Here there could be a global server super-session. Use the API
         Arrow session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
-        printf("arrow session is %O\n", session);
-        Arrow inputHandler = xls_get(session, xl_tag("inputHandler"));
-        if (xl_isEve(inputHandler)) {
-            inputHandler = xl_eval(xl_Eve(), xl_uri("/let//GET/lambda/x.x"
-                                                    "/let//POST/lambda/x/eval.x"
-                                                    "/let//PUT/lambda/x/root.x"
-                                                    "/let//DELETE/lambda/x/unroot.x"
-                                                    "/lambda/x/lambda/y/x.y"));
-            xls_set(session, xl_tag("inputHandler"), inputHandler);
+        DEBUGPRINTF("session arrow is %O\n", session);
+        Arrow get = xls_get(session, xl_tag("GET"));
+        if (get == EVE) {
+            xls_set(session, xl_tag("GET"), xl_eval(EVE, xl_uri("/lambda/x.x")));
+            xls_set(session, xl_tag("PUT"), xl_eval(EVE, xl_uri("/lambda/x/root.x")));
+            xls_set(session, xl_tag("POST"), xl_eval(EVE, xl_uri("/lambda/x/eval.x")));
+            xls_set(session, xl_tag("DELETE"), xl_eval(EVE, xl_uri("/lambda/x/unroot.x")));
         }
 
         Arrow input = xls_url(session, request_info->uri);
+        DEBUGPRINTF("input %s assimilated as %O\n", request_info->uri, input);
+
         Arrow method = xl_tag(request_info->request_method);
-        Arrow r = xl_eval(xl_Eve(), xl_arrow(xl_arrow(inputHandler, method), input));
+        Arrow r = xl_eval(session, xl_arrow(method, input));
 
         int iDepth = -1;
         int lDepth = 0;
@@ -203,11 +203,11 @@ int main(void) {
   assert(ctx != NULL);
 
   // Wait until enter is pressed, then exit
-  printf("server started on ports %s, press enter to quit.\n",
+  DEBUGPRINTF("server started on ports %s, press enter to quit.\n",
          mg_get_option(ctx, "listening_ports"));
   getchar();
   mg_stop(ctx);
-  printf("%s\n", "server stopped.");
+  DEBUGPRINTF("%s\n", "server stopped.");
 
   pthread_mutex_destroy(&mutex);
 
