@@ -180,7 +180,14 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
             while ((c = url[urlLength]) > 32 && c != '.' && c != '/')
                 urlLength++;
             assert(urlLength);
-            a = xl_uri(url);
+
+            // TODO a refaire
+            char *sub = malloc(urlLength + 1);
+            strncpy(sub, url, urlLength);
+            sub[urlLength]='\0';
+            a = (locateOnly ? xl_uriMaybe(sub) : xl_uri(sub));
+            free(sub);
+
             if (xl_isEve(a)) {
                 *urlEnd = NULL;
             } else {
@@ -199,28 +206,29 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
                 *urlEnd = NULL;
             }
         }
-     }
+    }
     case '/': { // ARROW
-        char *tailUriEnd, *headUriEnd;
+        char *tailUrlEnd, *headUrlEnd;
         Arrow tail, head;
-        tail = _fromUrl(s, url + 1, &tailUriEnd, locateOnly);
-        if (!tailUriEnd) {
+        tail = _fromUrl(s, url + 1, &tailUrlEnd, locateOnly);
+        if (!tailUrlEnd) {
             *urlEnd = NULL;
-            break;
-        }
-
-        char* headURIStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
-        head = _fromUrl(s, headURIStart, &headUriEnd, locateOnly);
-        if (!headUriEnd) {
-            *urlEnd = NULL;
-            break;
+        } else if (!*tailUrlEnd) {
+            a  = tail;
+            *urlEnd = tailUrlEnd;
         } else {
-            *urlEnd = headUriEnd;
-        }
-
-        a = (locateOnly ? xl_arrowMaybe(tail, head) : xl_arrow(tail, head));
-        if (xl_isEve(a) && !(xl_isEve(tail) && xl_isEve(head))) {
-            *urlEnd = NULL;
+            char* headUrlStart = *tailUrlEnd == '.' ? tailUrlEnd + 1 : tailUrlEnd;
+            head = _fromUrl(s, headUrlStart, &headUrlEnd, locateOnly);
+            if (!headUrlEnd) {
+                *urlEnd = NULL;
+            } else {
+                a = (locateOnly ? xl_arrowMaybe(tail, head) : xl_arrow(tail, head));
+                if (a == EVE && !(tail == EVE && head == EVE)) {
+                    *urlEnd = NULL;
+                } else {
+                    *urlEnd = headUrlEnd;
+                }
+            }
         }
         break;
     }
@@ -232,7 +240,13 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
             urlLength++;
         assert(urlLength);
 
-        a = (locateOnly ? xl_uriMaybe(url) : xl_uri(url));
+        // TODO a refaire
+        char *sub = malloc(urlLength + 1);
+        strncpy(sub, url, urlLength);
+        sub[urlLength]='\0';
+        a = (locateOnly ? xl_uriMaybe(sub) : xl_uri(sub));
+        free(sub);
+
         if (xl_isEve(a)) {
             *urlEnd = NULL;
         } else {
@@ -246,23 +260,30 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
     return a;
 }
 
+static char* skeepSpacesAndOneDot(char* urlEnd) {
+    char c;
+    while ((c = *urlEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
+        // white spaces are tolerated and ignored here
+        urlEnd++;
+    }
+    if (*urlEnd == '.') urlEnd++;
+    return urlEnd;
+}
+
 static Arrow fromUrl(Arrow s, char *url, int locateOnly) {
     char c, *urlEnd;
     Arrow a = _fromUrl(s, url, &urlEnd, locateOnly);
-    if (!urlEnd) return xl_Eve();
+    if (!urlEnd) return EVE;
 
+    urlEnd = skeepSpacesAndOneDot(urlEnd);
+    while (*urlEnd) {
+        DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
+        Arrow b = _fromUrl(s, urlEnd, &urlEnd, locateOnly);
 
-    while ((c = *urlEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
-           // white spaces are tolerated and ignored here
-           urlEnd++;
-    }
+        if (!urlEnd) return EVE; // Not assimilated
+        urlEnd = skeepSpacesAndOneDot(urlEnd);
 
-    if (*urlEnd) {
-       DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
-
-       Arrow b = _fromUrl(s, urlEnd, &urlEnd, locateOnly);
-       if (!urlEnd) return xl_Eve();
-       a = (locateOnly ? arrowMaybe(a, b) : arrow(a, b)); // TODO: document actual design
+        a = (locateOnly ? arrowMaybe(a, b) : arrow(a, b)); // TODO: document actual design
     }
 
     return a;
