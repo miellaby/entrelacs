@@ -100,7 +100,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     }
 
     // nested context matching loop
-    while (C) {
+    while (typeOf(C) == XL_ARROW) {
         Arrow slot = a(C, x);
         XLEnum enu = childrenOf(slot);
         Arrow found = EVE;
@@ -317,7 +317,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           int n = sscanf(hooks, "%p", &hook);
           assert(n == 1);
           free(hooks);
-          M = hook(a(resolved_s, M), operatorParameter);
+          M = hook(a(C, M), operatorParameter);
           return M;
 
       } else if (resolved_s_type == paddock || resolved_s_type == closure) {
@@ -406,7 +406,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       int n = sscanf(hooks, "%p", &hook);
       assert(n == 1);
       free(hooks);
-      M = hook(a(resolved_s, M), operatorParameter);
+      M = hook(a(C, M), operatorParameter);
       return M;
 
   } else if (resolved_s_type == paddock || resolved_s_type == closure) {
@@ -455,9 +455,9 @@ Arrow xl_argInMachine(Arrow CM) {
     // p == (<operator> arg)
     arg = head(p);
   }
-  ONDEBUG((fprintf(stderr, "   argument is %O\n", arg)));
   assert(isTrivial(arg));
   Arrow w = resolve(arg, e, C, M);
+  ONDEBUG((fprintf(stderr, "   argument is %O resolved in %O\n", arg, w)));
   return w;
 }
 
