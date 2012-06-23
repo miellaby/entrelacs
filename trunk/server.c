@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <assert.h>
 #include <string.h>
 #include <time.h>
@@ -203,10 +204,11 @@ int main(void) {
   assert(ctx != NULL);
 
   // Wait until enter is pressed, then exit
-  DEBUGPRINTF("server started on ports %s, press enter to quit.\n",
+  DEBUGPRINTF("server started on ports %s.\n",
          mg_get_option(ctx, "listening_ports"));
-  getchar();
-  mg_stop(ctx);
+
+  pause(); // FIXME
+
   DEBUGPRINTF("%s\n", "server stopped.");
 
   pthread_mutex_destroy(&mutex);

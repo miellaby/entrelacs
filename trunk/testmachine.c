@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     "/let//myHeadOf/lambda/x/headOf.x/myHeadOf/escape/1/2/3/4.5",
     "/let//f/lambda/y/arrow/y.3/f.2",
     "/let//p/escape/headOf/escape/1/2/3/4.5/eval.p",
-    "/let//myEscape/lambdax/raw.raw/myEscape/x.2",
+    "/let//myEscape/macro/raw.raw/myEscape/x.2",
     "/let//exp/escape/lambda/y/arrow/y.3//eval.exp.2",
     "/if/escape/./hello.goodbye",
     "/if/escape/world/hello.goodbye",
@@ -53,13 +53,13 @@ int main(int argc, char **argv) {
     "/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval.crawlp/headOf.list.Eve/let//crawl/eval.crawlp.crawl.Eve",
     "/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval.crawlp/headOf.list.Eve/let//crawl/eval.crawlp/crawl/escape/1/2/3/4/5/", // last / => Eve
     "/childrenOf/escape.set",
-    "/let//set/lambdax/variable/lambda/value/root/arrow/variable.value//set.set.set",
+    "/let//set/macro/variable/lambda/value/root/arrow/variable.value//set.set.set",
     "/commit",
     "/childrenOf/escape.set",
     "set",
 //    "(let (firstRootedp escape lambda list if arrow list escape (let (cond isRooted tailOf list) if arrow cond escape (tailOf list) (eval firstRootedp) headOf list) Eve) \
 //        let (firstRooted eval firstRootedp) \
-//        let (myGet lambdax variable \
+//        let (myGet macro variable \
 //            let (links childrenOf variable) \
 //                 let (link firstRooted links) \
 //                          headOf link) ((myGet set) myGet) myGet)",
