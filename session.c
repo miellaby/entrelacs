@@ -160,8 +160,8 @@ Arrow xls_close(Arrow s) {
    return s;
 }
 
-static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly) {
-    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", s, url);
+static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int locateOnly) {
+    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", context, url);
     Arrow a = xl_Eve();
 
     char c = url[0];
@@ -198,8 +198,8 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
             int ref;
             sscanf(url + 1, "%x", &ref);
             Arrow sa = ref;
-            // Security check: no way to resolve a %x ref which hasn't been forged in the current session
-            if (xl_tailOf(sa) == s) {
+            // Security check: no way to resolve a %x ref which hasn't been forged in the context
+            if (xl_tailOf(sa) == context) {
                 a = xl_headOf(sa);
                 *urlEnd = url + 7;
             } else {
@@ -210,7 +210,7 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
     case '/': { // ARROW
         char *tailUrlEnd, *headUrlEnd;
         Arrow tail, head;
-        tail = _fromUrl(s, url + 1, &tailUrlEnd, locateOnly);
+        tail = _fromUrl(context, url + 1, &tailUrlEnd, locateOnly);
         if (!tailUrlEnd) {
             *urlEnd = NULL;
         } else if (!*tailUrlEnd) {
@@ -218,7 +218,7 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
             *urlEnd = tailUrlEnd;
         } else {
             char* headUrlStart = *tailUrlEnd == '.' ? tailUrlEnd + 1 : tailUrlEnd;
-            head = _fromUrl(s, headUrlStart, &headUrlEnd, locateOnly);
+            head = _fromUrl(context, headUrlStart, &headUrlEnd, locateOnly);
             if (!headUrlEnd) {
                 *urlEnd = NULL;
             } else {
@@ -256,7 +256,7 @@ static Arrow _fromUrl(Arrow s, unsigned char* url, char** urlEnd, int locateOnly
     }
     }
 
-    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x\n", s, url, a);
+    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x\n", context, url, a);
     return a;
 }
 
@@ -270,15 +270,15 @@ static char* skeepSpacesAndOneDot(char* urlEnd) {
     return urlEnd;
 }
 
-static Arrow fromUrl(Arrow s, char *url, int locateOnly) {
+static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
     char c, *urlEnd;
-    Arrow a = _fromUrl(s, url, &urlEnd, locateOnly);
+    Arrow a = _fromUrl(context, url, &urlEnd, locateOnly);
     if (!urlEnd) return EVE;
 
     urlEnd = skeepSpacesAndOneDot(urlEnd);
     while (*urlEnd) {
         DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
-        Arrow b = _fromUrl(s, urlEnd, &urlEnd, locateOnly);
+        Arrow b = _fromUrl(context, urlEnd, &urlEnd, locateOnly);
 
         if (!urlEnd) return EVE; // Not assimilated
         urlEnd = skeepSpacesAndOneDot(urlEnd);
@@ -290,25 +290,27 @@ static Arrow fromUrl(Arrow s, char *url, int locateOnly) {
 }
 
 Arrow xls_url(Arrow s, char* aUrl) {
-    return fromUrl(s, aUrl, 0);
+    Arrow locked = a(s, tag("locked"));
+    return fromUrl(locked, aUrl, 0);
 }
 
 Arrow xls_urlMaybe(Arrow s, char* aUrl) {
-    return fromUrl(s, aUrl, 1);
+    Arrow locked = a(s, tag("locked"));
+    return fromUrl(locked, aUrl, 1);
 }
 
-static char* toURL(Arrow s, Arrow e, int depth, uint32_t *l) { // TODO: could be rewritten with geoallocs
+static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: could be rewritten with geoallocs
     if (depth == 0) {
         char* url = malloc(8);
         assert(url);
-        Arrow sa = xls_root(s, e);
+        Arrow sa = xls_root(context, e);
         sprintf(url, "%%%06x", (int)sa);
         *l = 7;
         return url;
     } else if (xl_typeOf(e) == XL_ARROW) { // TODO tuple
         uint32_t l1, l2;
-        char *tailUrl = toURL(s, xl_tailOf(e), depth - 1, &l1);
-        char *headUrl = toURL(s, xl_headOf(e), depth - 1, &l2);
+        char *tailUrl = toURL(context, xl_tailOf(e), depth - 1, &l1);
+        char *headUrl = toURL(context, xl_headOf(e), depth - 1, &l2);
         char *url = malloc(2 + l1 + l2 + 1) ;
         assert(url);
         sprintf(url, "/%s.%s", tailUrl, headUrl);
@@ -326,5 +328,7 @@ static char* toURL(Arrow s, Arrow e, int depth, uint32_t *l) { // TODO: could be
 
 char* xls_urlOf(Arrow s, Arrow e, int depth) {
     uint32_t l;
-    return toURL(s, e, depth, &l);
+    Arrow locked = a(s, tag("locked"));
+
+    return toURL(locked, e, depth, &l);
 }
