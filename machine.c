@@ -16,7 +16,7 @@
 
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, operator = 0,
-   continuation = 0, selfM = 0, arrowOp = 0;
+   continuation = 0, escalate = 0, selfM = 0, arrowOp = 0;
 
 static void machine_init();
 
@@ -484,7 +484,7 @@ Arrow xl_reduceMachine(Arrow CM, Arrow r) {
 }
 
 Arrow runHook(Arrow CM, Arrow hookParameter) {
-   return xl_argInMachine(CM);
+   return xl_argInMachine(CM); // TODO prevent escalation
 }
 
 Arrow tailOfHook(Arrow CM, Arrow hookParameter) {
@@ -502,6 +502,8 @@ Arrow headOfHook(Arrow CM, Arrow hookParameter) {
 Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
    Arrow parent = xl_argInMachine(CM);
    XLEnum e = childrenOf(parent);
+   if (!e) return xl_reduceMachine(CM, EVE);
+
    Arrow list = EVE;
    while (xl_enumNext(e)) {
       Arrow child = xl_enumGet(e);
@@ -512,9 +514,9 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
 }
 
 Arrow rootHook(Arrow CM, Arrow hookParameter) {
-   Arrow contextPath = tailOf(CM);
+   Arrow C = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
-   Arrow r = xls_root(contextPath, arrow);
+   Arrow r = xls_root(C, arrow);
    return xl_reduceMachine(CM, r);
 }
 
@@ -601,7 +603,8 @@ static void machine_init() {
   continuation = tag("continuation");
   selfM = tag("@M");
   arrowOp = tag("arrow");
-  
+  escalate = tag("escalate");
+
   // root reserved keywords
   Arrow reserved = tag("reserved");
   root(a(reserved, let));
@@ -617,7 +620,8 @@ static void machine_init() {
   root(a(reserved, continuation));
   root(a(reserved, selfM));
   root(a(reserved, arrowOp));
-  
+  root(a(reserved, escalate));
+
   // root fundamental operators in the global context
   for (int i = 0; systemFns[i].s != NULL ; i++) {
     root(a(tag(systemFns[i].s), operator(systemFns[i].fn, EVE)));
@@ -629,6 +633,11 @@ Arrow xl_run(Arrow C, Arrow M) {
   M = transition(C, M);
   while (!isEve(head(head(M))) || !isTrivial(tail(M))) {
     M = transition(C, M);
+    // only operators can produce such a thing
+    while (head(M) == escalate && M != escalate) {
+        C = head(C);
+        M = tail(M);
+    }
   }
   ONDEBUG((fprintf(stderr, "run finished with M = %O\n",M)));
   Arrow p = tail(M);

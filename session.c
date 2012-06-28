@@ -11,8 +11,8 @@
 
 
 Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
-   /* $session =  /$s.sessions./$agent.$uuid */
-   Arrow session = xls_root(a(s, tag("sessions")), a(agent, uuid));
+   /* $session =  /$s/session/$agent.$uuid */
+   Arrow session = xls_root(s, a(tag("session"), a(agent, uuid)));
 
    return session;
 }
@@ -91,6 +91,8 @@ Arrow xls_unroot(Arrow c, Arrow e) {
   Recursivly unroot any rooted arrow under a given context
  */
 void xls_reset(Arrow c) {
+    if (c == EVE) return;
+
     XLEnum childrenEnum = xl_childrenOf(c);
     Arrow next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
     do {
@@ -98,10 +100,10 @@ void xls_reset(Arrow c) {
         next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
 
         if (tailOf(child) == c) { // Only outgoing arrow
+            xls_reset(child);
             if (isRooted(child) != EVE) {
                 xls_unroot(c, headOf(child));
             }
-            xls_reset(child);
         }
 
     } while (next);
@@ -154,7 +156,7 @@ Arrow xls_get(Arrow c, Arrow key) {
 
 /** close a session $s */
 Arrow xls_close(Arrow s) {
-   /* $session =  /$s.sessions./$agent.$uuid */
+   /* $session =  /$s/session/$agent.$uuid */
    xls_reset(s);
    xls_unroot(tailOf(s), headOf(s));
    return s;
@@ -162,15 +164,15 @@ Arrow xls_close(Arrow s) {
 
 static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int locateOnly) {
     DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", context, url);
-    Arrow a = xl_Eve();
+    Arrow a = EVE;
 
     char c = url[0];
     if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
-        a = xl_Eve();
+        a = EVE;
         *urlEnd = url;
     } else switch (c) {
     case '.': // Eve
-        a = xl_Eve();
+        a = EVE;
         *urlEnd = url;
         break;
     case '$': {
@@ -187,8 +189,9 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
             sub[urlLength]='\0';
             a = (locateOnly ? xl_uriMaybe(sub) : xl_uri(sub));
             free(sub);
-
-            if (xl_isEve(a)) {
+            if (a == NIL) {
+                *urlEnd = NULL;
+            } else if (a == EVE) {
                 *urlEnd = NULL;
             } else {
                 *urlEnd = url + urlLength;
@@ -203,6 +206,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
                 a = xl_headOf(sa);
                 *urlEnd = url + 7;
             } else {
+                a = NIL;
                 *urlEnd = NULL;
             }
         }
@@ -212,9 +216,10 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
         Arrow tail, head;
         tail = _fromUrl(context, url + 1, &tailUrlEnd, locateOnly);
         if (!tailUrlEnd) {
+            a = tail; // NIL or EVE
             *urlEnd = NULL;
-        } else if (!*tailUrlEnd) {
-            a  = tail;
+        } else if (!*tailUrlEnd) { // no more char
+            a = tail;
             *urlEnd = tailUrlEnd;
         } else {
             char* headUrlStart = *tailUrlEnd == '.' ? tailUrlEnd + 1 : tailUrlEnd;
@@ -246,8 +251,9 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
         sub[urlLength]='\0';
         a = (locateOnly ? xl_uriMaybe(sub) : xl_uri(sub));
         free(sub);
-
-        if (xl_isEve(a)) {
+        if (a == NIL) {
+            *urlEnd = NULL;
+        } else if (a == EVE) {
             *urlEnd = NULL;
         } else {
             *urlEnd = url + urlLength;
@@ -273,17 +279,18 @@ static char* skeepSpacesAndOneDot(char* urlEnd) {
 static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
     char c, *urlEnd;
     Arrow a = _fromUrl(context, url, &urlEnd, locateOnly);
-    if (!urlEnd) return EVE;
+    if (!urlEnd) return a; // NIL or EVE
 
     urlEnd = skeepSpacesAndOneDot(urlEnd);
     while (*urlEnd) {
         DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
         Arrow b = _fromUrl(context, urlEnd, &urlEnd, locateOnly);
 
-        if (!urlEnd) return EVE; // Not assimilated
+        if (!urlEnd) return b; // NIL or EVE
         urlEnd = skeepSpacesAndOneDot(urlEnd);
-
+        if (a == EVE && b == EVE) continue;
         a = (locateOnly ? arrowMaybe(a, b) : arrow(a, b)); // TODO: document actual design
+        if (a == EVE) return EVE;
     }
 
     return a;

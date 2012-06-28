@@ -423,7 +423,7 @@ static Address jumpToChild0(Cell cell, Address address, Address offset, Address 
 }
 
 /** return Eve */
-Arrow xl_Eve() { return Eve; }
+Arrow xl_Eve() { return EVE; }
 
 /** retrieve tail->head arrow
  * by creating the singleton if not found.
@@ -436,8 +436,8 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   Cell cell;
 
   // Eve special case
-  if (tail == Eve && head == Eve) {
-    return Eve;
+  if (tail == EVE && head == EVE) {
+    return EVE;
   }
 
   // Compute hashs
@@ -448,7 +448,7 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
 
   // Probe for an existing singleton
   probeAddress = hashLocation;
-  firstFreeCell = Eve;
+  firstFreeCell = EVE;
   while (1) {	 // TODO: thinking about a probing limit
      cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
      if (cell_isFree(cell))
@@ -469,9 +469,9 @@ static Arrow arrow(Arrow tail, Arrow head, int locateOnly) {
   // Miss
 
   if (locateOnly) // one only want to test for singleton existence in the arrows space
-    return Eve; // Eve means not found
+    return EVE; // Eve means not found
 
-  if (firstFreeCell == Eve) {
+  if (firstFreeCell == EVE) {
     while (1) {
       growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
       cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
@@ -518,7 +518,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
   unsigned i, jump;
   char c, *p;
   if (!str) {
-    return Eve;
+    return EVE;
   }
 
   hash = hashString(str);
@@ -530,7 +530,7 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
 
   // Search for an existing singleton
   probeAddress = hashLocation;
-  firstFreeCell = Eve;
+  firstFreeCell = EVE;
   while (1) {
       cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
       if (cell_isFree(cell))
@@ -571,9 +571,9 @@ static Arrow tagOrBlob(Cell catBits, char* str, int locateOnly) {
   }
 
   if (locateOnly)
-    return Eve;
+    return EVE;
 
-  if (firstFreeCell == Eve) {
+  if (firstFreeCell == EVE) {
     while (1) {
       growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
       cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
@@ -705,7 +705,7 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, int locateOnly) {
   unsigned i, jump;
   char c, *p;
   if (!length) {
-    return Eve;
+    return EVE;
   }
 
   hash = hashBString(str, length);
@@ -717,7 +717,7 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, int locateOnly) {
 
   // Search for an existing singleton
   probeAddress = hashLocation;
-  firstFreeCell = Eve;
+  firstFreeCell = EVE;
   while (1) {
       cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 1)));
       if (cell_isFree(cell))
@@ -758,9 +758,9 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, int locateOnly) {
   }
 
   if (locateOnly)
-    return Eve;
+    return EVE;
 
-  if (firstFreeCell == Eve) {
+  if (firstFreeCell == EVE) {
     while (1) {
       growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
       cell = mem_get(probeAddress); ONDEBUG((show_cell(cell, 0)));
@@ -908,8 +908,8 @@ Arrow xl_btagMaybe(uint32_t size, char* s) { return btagOrBlob(CATBITS_TAG, size
 Arrow xl_blobMaybe(uint32_t size, char* data) { return blob(size, data, 1);}
 
 Arrow xl_headOf(Arrow a) {
-  if (a == Eve)
-     return Eve;
+  if (a == EVE)
+     return EVE;
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
   if (!cell_isArrow(cell))
@@ -923,8 +923,8 @@ Arrow xl_headOf(Arrow a) {
 }
 
 Arrow xl_tailOf(Arrow a) {
-  if (a == Eve)
-     return Eve;
+  if (a == EVE)
+     return EVE;
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
   if (!cell_isArrow(cell))
@@ -940,7 +940,7 @@ Arrow xl_tailOf(Arrow a) {
 
 static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   Address current = a;
-  if (a == Eve) {
+  if (a == EVE) {
      lengthP = 0;
      return (char *)0; // Invalid Id
   }
@@ -1117,15 +1117,15 @@ char* xl_uriOf(Arrow a) {
 
 static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
     ONDEBUG((fprintf(stderr, "BEGIN fromUri(%s)\n", uri)));
-    Arrow a = Eve;
+    Arrow a = EVE;
 
     char c = uri[0];
     if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
-        a = Eve;
+        a = EVE;
         *uriEnd = uri;
     } else switch (c) {
     case '.': // Eve
-        a = Eve;
+        a = EVE;
         *uriEnd = uri;
         break;
     case '$': {
@@ -1142,7 +1142,8 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
             percent_decode(uri + 2, uriLength - 2, h, &hLength);
             a = btagOrBlob(CATBITS_BLOB, hLength, h, 1 /* always locateOnly */);
             free(h);
-            if (a == Eve) { // Non assimilated blob
+            if (a == EVE && !locateOnly) { // Non assimilated blob
+                a = NIL; // NIL because URI is not supposed to be wrong
                 *uriEnd = NULL;
             } else {
                 *uriEnd = uri + uriLength;
@@ -1156,22 +1157,29 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
         char *tailUriEnd, *headUriEnd;
         Arrow tail, head;
         tail = fromUri(uri + 1, &tailUriEnd, locateOnly);
-        if (!tailUriEnd) { // Non assimilated tail
+        if (tail == NIL) { // Non assimilated tail
+            a = NIL;
             *uriEnd = NULL;
-        } else if (!*tailUriEnd) {
+        } else if (!*tailUriEnd /* no more char */) {
             a  = tail;
             *uriEnd = tailUriEnd;
         } else {
             char* headUriStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
             head = fromUri(headUriStart, &headUriEnd, locateOnly);
             if (!headUriEnd) { // Non assimilated head
+                a = head; // NIL or EVE
                 *uriEnd = NULL;
             } else {
                 a = arrow(tail, head, locateOnly);
-                if (a == Eve && !(tail == Eve && head == Eve)) { // Non assimilated pair
-                    *uriEnd = NULL;
-                } else {
+                if (tail == EVE && head == EVE) {
+                    a = EVE;
                     *uriEnd = headUriEnd;
+                } else {
+                    a = arrow(tail, head, locateOnly);
+                    if (a == EVE)
+                        *uriEnd = NULL;
+                    else
+                        *uriEnd = headUriEnd;
                 }
             }
         }
@@ -1190,7 +1198,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
         percent_decode(uri, uriLength, tagStr, &tagLength);
         a = btagOrBlob(CATBITS_TAG, tagLength, tagStr, locateOnly);
         free(tagStr);
-        if (a == Eve) { // Non assimilated tag
+        if (a == EVE) { // Non assimilated tag
             *uriEnd = NULL;
         } else {
             *uriEnd = uri + uriLength;
@@ -1213,19 +1221,22 @@ static char* skeepSpacesAndOneDot(char* uriEnd) {
     return uriEnd;
 }
 
-static Arrow uri(char *uri, int locateOnly) {
+static Arrow uri(char *uri, int locateOnly) { // TODO: document actual design
     char c, *uriEnd;
     Arrow a = fromUri(uri, &uriEnd, locateOnly);
-    if (!uriEnd) return Eve; // Not assimilated
+    if (uriEnd == NULL) return a; // return NIL (wrong URI) or EVE (not assimilated)
     uriEnd = skeepSpacesAndOneDot(uriEnd);
 
     while (*uriEnd) {
         ONDEBUG((fprintf(stderr, "uriEnd = >%s<\n", uriEnd)));
         Arrow b = fromUri(uriEnd, &uriEnd, locateOnly);
-        if (!uriEnd) return Eve; // Not assimilated
+        if (!uriEnd) return b; // return NIL (wrong URI) or EVE (not assimilated)
         uriEnd = skeepSpacesAndOneDot(uriEnd);
 
-        a = arrow(a, b, locateOnly); // TODO: document actual design
+        if (a == EVE && b == EVE) continue;
+
+        a = arrow(a, b, locateOnly);
+        if (a == EVE) return EVE; // not assimilated pair
     }
 
     return a;
@@ -1240,12 +1251,12 @@ Arrow xl_uriMaybe(char* aUri) {
 }
 
 int xl_isEve(Arrow a) {
-  return (a == Eve);
+  return (a == EVE);
 }
 
 
 enum e_xlType xl_typeOf(Arrow a) {
-  if (a == Eve) return XL_EVE;
+  if (a == EVE) return XL_EVE;
 
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (cell_isFree(cell))
@@ -1267,7 +1278,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  */
 static void connect(Arrow a, Arrow child) {
   ONDEBUG((fprintf(stderr, "connect child=%06x to a=%06x\n", child, a)));
-  if (a == Eve) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
+  if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
   Cell catBits = cell_getCatBits(cell);
@@ -1394,7 +1405,7 @@ static void connect(Arrow a, Arrow child) {
  */
 static void disconnect(Arrow a, Arrow child) {
     ONDEBUG((fprintf(stderr, "disconnect child=%06x from a=%06x\n", child, a)));
-    if (a == Eve) return; // One doesn't store Eve connectivity.
+    if (a == EVE) return; // One doesn't store Eve connectivity.
 
     // get parent arrow definition
     Cell parent = mem_get(a); ONDEBUG((show_cell(parent, 0)));
@@ -1555,7 +1566,7 @@ static void disconnect(Arrow a, Arrow child) {
 void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
   ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
 
-  if (a == Eve) {
+  if (a == EVE) {
      return; // Eve connectivity not traced
   }
 
@@ -1622,7 +1633,7 @@ static int xl_enumNextChildOf(XLEnum e) {
     Cell cell;
     Arrow child;
 
-    if (pos == Eve) { // First call to "next" for this enumeration
+    if (pos == EVE) { // First call to "next" for this enumeration
         cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
         pos = jumpToChild0(cell, a, hChild, a);
         if (!pos) {
@@ -1697,7 +1708,7 @@ static int xl_enumNextChildOf(XLEnum e) {
         iteratorp->current = child;
         return !0;
     } else {
-        iteratorp->current = Eve;
+        iteratorp->current = EVE;
         return 0; // last iteration
     }
 }
@@ -1727,7 +1738,7 @@ void xl_freeEnum(XLEnum e) {
 XLEnum xl_childrenOf(Arrow a) {
   ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
 
-  if (a == Eve) {
+  if (a == EVE) {
      return NULL; // Eve connectivity not traced
   }
 
@@ -1749,17 +1760,17 @@ XLEnum xl_childrenOf(Arrow a) {
   iteratorp->type = 0; // iterator type = childrenOf
   iteratorp->hash = hChild;  // hChild
   iteratorp->parent = a;   // parent arrow
-  iteratorp->current = Eve; // current child
-  iteratorp->pos = Eve; // current cell holding child back-ref
+  iteratorp->current = EVE; // current child
+  iteratorp->pos = EVE; // current cell holding child back-ref
   iteratorp->rank = 0; // position of child back-ref in cell : 0/1
   return iteratorp;
 }
 
 Arrow xl_childOf(Arrow a) {
     XLEnum e = xl_childrenOf(a);
-    if (!e) return Eve;
+    if (!e) return EVE;
     int n = 0;
-    Arrow chosen = Eve;
+    Arrow chosen = EVE;
     while (xl_enumNext(e)) {
         Arrow child = xl_enumGet(e);
         n++;
@@ -1772,12 +1783,12 @@ Arrow xl_childOf(Arrow a) {
 
 /** root an arrow */
 Arrow xl_root(Arrow a) {
-    if (a == Eve) {
-        return Eve; // no
+    if (a == EVE) {
+        return EVE; // no
     }
 
     Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
-    if (!cell_isArrow(cell) || cell_isRooted(cell)) return Eve;
+    if (!cell_isArrow(cell) || cell_isRooted(cell)) return EVE;
 
     // If this arrow had no child before, it was loose
     int loose = (cell_getChild0(cell) ? 0 : !0);
@@ -1799,12 +1810,12 @@ Arrow xl_root(Arrow a) {
 
 /** unroot a rooted arrow */
 Arrow xl_unroot(Arrow a) {
-    if (a == Eve)
-        return Eve; // stop dreaming!
+    if (a == EVE)
+        return EVE; // stop dreaming!
 
     Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
     if (!cell_isArrow(cell))
-        return Eve;
+        return EVE;
     if (!cell_isRooted(cell))
         return a;
 
@@ -1828,17 +1839,17 @@ Arrow xl_unroot(Arrow a) {
 
 /** return the root status */
 int xl_isRooted(Arrow a) {
-  if (a == Eve) return Eve;
+  if (a == EVE) return EVE;
 
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
   if (!cell_isArrow(cell)) return -1;
-  return (cell_isRooted(cell) ? a : Eve);
+  return (cell_isRooted(cell) ? a : EVE);
 }
 
 /** check if an arrow is loose */
 int xl_isLoose(Arrow a) {
-  if (a == Eve) return 0;
+  if (a == EVE) return 0;
 
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   return (cell_isArrow(cell) && !cell_isRooted(cell) && cell_getChild0(cell) == 0);
@@ -1964,9 +1975,9 @@ int space_init() {
 
   if (rc) { // very first start
     // Eve
-    Cell cellEve = arrow_build(0, Eve, Eve);
+    Cell cellEve = arrow_build(0, EVE, EVE);
     cellEve = cell_setRootBit(cellEve, ROOTBIT_ROOTED);
-    mem_set(Eve, cellEve); ONDEBUG((show_cell(cellEve, 0)));
+    mem_set(EVE, cellEve); ONDEBUG((show_cell(cellEve, 0)));
     mem_commit();
   }
 
