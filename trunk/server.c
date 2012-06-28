@@ -19,7 +19,7 @@
 #include "entrelacs/entrelacs.h"
 #include "session.h"
 #include "mongoose.h"
-
+#include <string.h>
 #define MAX_SESSIONS 20
 #define SESSION_TTL 120
 
@@ -39,20 +39,21 @@ static pthread_mutex_t mutex;
 // SGA:This is cut&paste code. I should leverage on the arrow space
 // session_id-->session_cb
 static struct session *get_session(const struct mg_connection *conn) {
-  int i;
-  char session_id[33];
-  time_t now = time(NULL);
-  mg_get_cookie(conn, "session", session_id, sizeof(session_id));
-  for (i = 0; i < MAX_SESSIONS; i++) {
-    if (sessions[i].expire != 0 &&
-        sessions[i].expire > now &&
-        strcmp(sessions[i].session_id, session_id) == 0) {
-      break;
+    struct session* s = NULL;
+    int i;
+    char session_id[33];
+    time_t now = time(NULL);
+    mg_get_cookie(conn, "session", session_id, sizeof(session_id));
+    for (i = 0; i < MAX_SESSIONS; i++) {
+        if (sessions[i].expire != 0 &&
+                strcmp(sessions[i].session_id, session_id) == 0) {
+            sessions[i].expire = now + SESSION_TTL; // expire counter renewal
+            s = &sessions[i];
+            break;
+        }
     }
-  }
-  struct session* s = (i == MAX_SESSIONS ? NULL : &sessions[i]);
-  DEBUGPRINTF("conn %p session %s\n", conn, s ? s->session_id : "NULL");
-  return s;
+    DEBUGPRINTF(s == NULL ? "conn %p invalid session %s\n" : "conn %p session %s found\n" , conn, session_id);
+    return s;
 }
 
 static void get_qsvar(const struct mg_request_info *request_info,
@@ -70,15 +71,16 @@ static void my_strlcpy(char *dst, const char *src, size_t len) {
 
 // Allocate new session object
 static struct session *new_session(void) {
-  int i;
   time_t now = time(NULL);
+  struct session* s = NULL;
+  int i = 0;
   for (i = 0; i < MAX_SESSIONS; i++) {
-    if (sessions[i].expire == 0 || sessions[i].expire < now) {
-      sessions[i].expire = time(0) + SESSION_TTL;
+    if (sessions[i].expire == 0) {
+      sessions[i].expire = now + SESSION_TTL;
+      s = &sessions[i];
       break;
     }
   }
-  struct session* s = i == MAX_SESSIONS ? NULL : &sessions[i];
   DEBUGPRINTF(s == NULL ? "WARNING: can't allocate session\n" : "new session %p\n", s);
   return s;
 }
@@ -147,6 +149,15 @@ static void *event_handler(enum mg_event event,
                     : (rt == XL_TAG
                        ? "text/plain"
                        : "text/uri-list")));
+        char* contentTypeCopy = NULL;
+        Arrow rtas = xl_arrowMaybe(xl_tag("Content-Type"), r);
+        if (rtas != EVE) {
+            Arrow rta = xls_get(session, rta);
+            if (rta != EVE) {
+                contentTypeCopy = xl_tagOf(rta);
+                contentType = contentTypeCopy;
+            }
+        }
         uint32_t contentLength;
         char* content =
                 (iDepth == 0
@@ -170,6 +181,7 @@ static void *event_handler(enum mg_event event,
         if (contentType) {
             mg_printf(conn, "Content-Type: %s\r\n", contentType);
         }
+        if (contentTypeCopy) free(contentTypeCopy);
         mg_printf(conn, "Set-Cookie: session=%s; max-age=3600; http-only\r\n",  aSession->session_id);
         mg_printf(conn, "\r\n");
         mg_write(conn, content, (size_t)contentLength);
@@ -207,8 +219,22 @@ int main(void) {
   DEBUGPRINTF("server started on ports %s.\n",
          mg_get_option(ctx, "listening_ports"));
 
-  pause(); // FIXME
+  while (1) {
+      sleep(60);
+      time_t now = time(NULL);
+      int i;
+      for (i = 0; i < MAX_SESSIONS; i++) {
+        if (sessions[i].expire != 0 && sessions[i].expire < now) {
+            sessions[i].expire = 0;
+            DEBUGPRINTF("session %s outdated.\n", sessions[i].session_id);
+            pthread_mutex_lock (&mutex);
+            Arrow session = xls_session(EVE, xl_tag("server"), xl_tag(sessions[i].session_id));
+            xls_reset(session);
+            pthread_mutex_unlock (&mutex);
+        }
+      }
 
+  }
   DEBUGPRINTF("%s\n", "server stopped.");
 
   pthread_mutex_destroy(&mutex);

@@ -12,9 +12,12 @@
 
 /** Eve. */
 #define EVE (0)
+#define NIL (0xFFFFFF)
 
 /** Arrow ID. */
 typedef uint32_t Arrow; ///< ArrowId = SpatialRef (may be enforced by a transaction ID in a near future)
+
+extern const Arrow Eve; // equals EVE
 
 /** initialize the Entrelacs system. */
 void xl_init();
@@ -25,7 +28,7 @@ Arrow xl_arrow(Arrow, Arrow); ///< assimilate a pair of arrows, returning the co
 Arrow xl_tag(char*); ///< assimilate a C string, returning the corresponding tag arrow.
 Arrow xl_btag(uint32_t size, char*); ///< assimilate a piece of data, returning the corresponding tag arrow.
 Arrow xl_blob(uint32_t size, char*); ///< assimilate a piece of data, returning a blob arrow.
-Arrow xl_uri(char*); ///< assimilate an arrow URI, returning an arrow
+Arrow xl_uri(char*); ///< assimilate an URI, returning an arrow (NIL if URI is wrong)
 
 /* Probe arrows without creating them if not known by the system.
  */
@@ -33,7 +36,7 @@ Arrow xl_arrowMaybe(Arrow, Arrow); ///< return the arrow corresponding to a prev
 Arrow xl_tagMaybe(char*); ///< return the arrow corresponding to a previously assimilated C string, Eve otherwise.
 Arrow xl_btagMaybe(uint32_t size, char*); ///< return the arrow corresponding to a previously assimilated piece of data, Eve otherwise.
 Arrow xl_blobMaybe(uint32_t size, char*); ///< return the arrow corresponding to a previously assimilated piece of data, Eve otherwise.
-Arrow xl_uriMaybe(char*); ///< return the arrow corresponding to a previously assimilated URI, Eve otherwise.
+Arrow xl_uriMaybe(char*); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
 
 /* Unbuilding */
 typedef enum e_xlType {
@@ -46,7 +49,7 @@ typedef enum e_xlType {
     XL_BLOB=5
 } XLType;
 
-XLType xl_typeOf(Arrow); ///< return arrow type.
+XLType xl_typeOf(Arrow); ///< return arrow type. // TODO: could it be a SMALL arrow ?
 Arrow xl_headOf(Arrow); ///< return arrow head.
 Arrow xl_tailOf(Arrow); ///< return arrow tail.
 char* xl_tagOf(Arrow);  ///< retrieve a tag arrow as a C string. @return pointer to freed.
