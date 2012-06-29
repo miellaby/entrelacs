@@ -98,18 +98,29 @@ static void *event_handler(enum mg_event event,
                            struct mg_connection *conn,
                            const struct mg_request_info *request_info) {
     void *processed = "yes";
+    Arrow session;
 
     if (event == MG_NEW_REQUEST) {
         pthread_mutex_lock (&mutex);
+        // TODO: Here there could be a global server super-session. Use the API
         struct session *aSession = get_session(conn);
         if (aSession == NULL) {
             aSession = new_session();
             snprintf(aSession->random, sizeof(aSession->random), "%d", rand());
             generate_session_id(aSession->session_id, aSession->random, "server");
-        }
+            session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
+            char* sessionUri = xl_uriOf(session);
+            char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
+            if (!server_secret_s) server_secret_s = "chut";
+            char secret_s[256];
+            snprintf(secret_s, 255, "%s=%s", sessionUri, server_secret_s);
+            xl_root(xl_arrow(xl_tag(server_secret_s), xl_tag(secret_s)));
+            xl_commit();
+            free(sessionUri);
+        } else
+            session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
 
-        // TODO: Here there could be a global server super-session. Use the API
-        Arrow session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
+
         DEBUGPRINTF("session arrow is %O\n", session);
         Arrow get = xls_get(session, xl_tag("GET"));
         if (get == EVE) {
@@ -117,6 +128,7 @@ static void *event_handler(enum mg_event event,
             xls_set(session, xl_tag("PUT"), xl_eval(EVE, xl_uri("/lambda/x/root.x")));
             xls_set(session, xl_tag("POST"), xl_eval(EVE, xl_uri("/lambda/x/eval.x")));
             xls_set(session, xl_tag("DELETE"), xl_eval(EVE, xl_uri("/lambda/x/unroot.x")));
+            xl_commit();
         }
 
         Arrow input = xls_url(session, request_info->uri);
@@ -233,7 +245,7 @@ int main(void) {
             pthread_mutex_unlock (&mutex);
         }
       }
-
+      xl_commit();
   }
   DEBUGPRINTF("%s\n", "server stopped.");
 
