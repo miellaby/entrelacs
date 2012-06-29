@@ -484,7 +484,11 @@ Arrow xl_reduceMachine(Arrow CM, Arrow r) {
 }
 
 Arrow runHook(Arrow CM, Arrow hookParameter) {
-   return xl_argInMachine(CM); // TODO prevent escalation
+   Arrow M = xl_argInMachine(CM);
+   if (headOf(M) == escalate) // come on
+       return Eve;
+
+   return M;
 }
 
 Arrow tailOfHook(Arrow CM, Arrow hookParameter) {
@@ -574,6 +578,27 @@ Arrow commitHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, EVE);
 }
 
+Arrow escalateHook(Arrow CM, Arrow hookParameter) {
+    Arrow C = tailOf(CM);
+    Arrow M = headOf(CM);
+    char* uri = uriOf(C);
+    Arrow secret = xl_argInMachine(CM);
+    char* secret_s = str(secret);
+    char  try_s[256];
+    snprintf(try_s, 255, "%s=%s", uri, secret_s);
+    char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
+    if (!server_secret_s) server_secret_s = "chut";
+    printf("Try is %O %s\n", C, try_s);
+    if (isRooted(a(tag(server_secret_s), tag(try_s))))
+        // success
+        M = a(xl_reduceMachine(CM, EVE), escalate);
+    else
+        M = xl_reduceMachine(CM, EVE);
+    free(secret_s);
+    free(uri);
+    return M;
+}
+
 static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
  {"run", runHook},
  {"tailOf", tailOfHook},
@@ -584,6 +609,7 @@ static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
  {"isRooted", isRootedHook},
  {"if", ifHook},
  {"commit", commitHook},
+ {"escalate", escalateHook},
  {NULL, NULL}
 };
 
@@ -631,11 +657,17 @@ static void machine_init() {
 Arrow xl_run(Arrow C, Arrow M) {
   machine_init();
   M = transition(C, M);
+  while (head(M) == escalate && M != escalate) {
+      C = head(C);
+      ONDEBUG((fprintf(stderr, "machine context escalate to %O\n", C)));
+      M = tail(M);
+  }
   while (!isEve(head(head(M))) || !isTrivial(tail(M))) {
     M = transition(C, M);
     // only operators can produce such a thing
     while (head(M) == escalate && M != escalate) {
         C = head(C);
+        ONDEBUG((fprintf(stderr, "machine context escalate to %O\n", C)));
         M = tail(M);
     }
   }
@@ -646,6 +678,7 @@ Arrow xl_run(Arrow C, Arrow M) {
 }
 
 Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
+  ONDEBUG((fprintf(stderr, "cl_eval C=%O p=%O\n", C, p)));
   machine_init();
   Arrow M = a(p, a(EVE, EVE));
   return run(C /* ContextPath */, M);
