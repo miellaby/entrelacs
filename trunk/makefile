@@ -8,10 +8,10 @@
 # make run.testmachine
 # make entrelacsd
 # make run.testshell
-.PHONY: server clean all clean.% test.% run.% help
+.PHONY: help server clean all clean.% test.% run.% start
 CPPFLAGS += -std=c99
 
-TARGETS = libentrelacs.so libentrelacs.a
+TARGETS = libentrelacs.so libentrelacs.a server
 # entrelacsd
 OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
 TESTS = space uri script machine shell
@@ -57,3 +57,9 @@ libentrelacs.so: $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $(@) $^ -shared -lc
 
 *.o: *.h
+
+start: server
+	-killall entrelacsd
+	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
+	ENTRELACS=$(PERSISTENCE_FILE) ./entrelacsd
+	od -t x1z -w8 $(PERSISTENCE_FILE)
