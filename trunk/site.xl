@@ -1,0 +1,4 @@
+/let//fake/escalate/escape.chut/set/a.<html>hello people<%2Fhtml>
+/let//fake/escalate/escape.chut/set//Content-Type.<html>hello people<%2Fhtml>.text%2fhtml
+/get.a
+/get/Content-Type.<html>hello people<%2Fhtml>
