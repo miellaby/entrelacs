@@ -15,6 +15,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <pthread.h>
+#define LOG_CURRENT LOG_SERVER
 #include "log.h"
 #include "entrelacs/entrelacs.h"
 #include "session.h"
@@ -52,7 +53,7 @@ static struct session *get_session(const struct mg_connection *conn) {
             break;
         }
     }
-    DEBUGPRINTF(s == NULL ? "conn %p invalid session %s\n" : "conn %p session %s found\n" , conn, session_id);
+    DEBUGPRINTF(s == NULL ? "conn %p invalid session %s" : "conn %p session %s found" , conn, session_id);
     return s;
 }
 
@@ -60,8 +61,8 @@ static void get_qsvar(const struct mg_request_info *request_info,
                       const char *name, char *dst, size_t dst_len) {
   const char *qs = request_info->query_string;
   mg_get_var(qs, strlen(qs == NULL ? "" : qs), name, dst, dst_len);
-  DEBUGPRINTF(dst_len == -1 ? "no %s variable in query string\n" :
-         "query string variable %s = '%.*s'\n", name, dst_len, dst);
+  DEBUGPRINTF(dst_len == -1 ? "no %s variable in query string" :
+         "query string variable %s = '%.*s'", name, dst_len, dst);
 }
 
 static void my_strlcpy(char *dst, const char *src, size_t len) {
@@ -81,7 +82,7 @@ static struct session *new_session(void) {
       break;
     }
   }
-  DEBUGPRINTF(s == NULL ? "WARNING: can't allocate session\n" : "new session %p\n", s);
+  DEBUGPRINTF(s == NULL ? "WARNING: can't allocate session" : "new session %p", s);
   return s;
 }
 
@@ -91,7 +92,7 @@ static struct session *new_session(void) {
 static void generate_session_id(char *buf, const char *random,
                                 const char *user) {
   mg_md5(buf, random, user, NULL);
-  DEBUGPRINTF("generated session ID = %s\n", buf);
+  DEBUGPRINTF("generated session ID = %s", buf);
 }
 
 static void *event_handler(enum mg_event event,
@@ -109,6 +110,7 @@ static void *event_handler(enum mg_event event,
             snprintf(aSession->random, sizeof(aSession->random), "%d", rand());
             generate_session_id(aSession->session_id, aSession->random, "server");
             session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
+
             char* sessionUri = xl_uriOf(session);
             char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
             if (!server_secret_s) server_secret_s = "chut";
@@ -117,22 +119,14 @@ static void *event_handler(enum mg_event event,
             xl_root(xl_arrow(xl_tag(server_secret_s), xl_tag(secret_s)));
             xl_commit();
             free(sessionUri);
-        } else
+        } else {
             session = xls_session(EVE, xl_tag("server"), xl_tag(aSession->session_id));
-
-
-        DEBUGPRINTF("session arrow is %O\n", session);
-        Arrow get = xls_get(session, xl_tag("GET"));
-        if (get == EVE) {
-            xls_set(session, xl_tag("GET"), xl_eval(EVE, xl_uri("/lambda/x.x")));
-            xls_set(session, xl_tag("PUT"), xl_eval(EVE, xl_uri("/lambda/x/root.x")));
-            xls_set(session, xl_tag("POST"), xl_eval(EVE, xl_uri("/lambda/x/eval.x")));
-            xls_set(session, xl_tag("DELETE"), xl_eval(EVE, xl_uri("/lambda/x/unroot.x")));
-            xl_commit();
         }
 
+        DEBUGPRINTF("session arrow is %O", session);
+
         Arrow input = xls_url(session, request_info->uri);
-        DEBUGPRINTF("input %s assimilated as %O\n", request_info->uri, input);
+        DEBUGPRINTF("input %s assimilated as %O", request_info->uri, input);
 
         Arrow method = xl_tag(request_info->request_method);
         Arrow r = xl_eval(session, xl_arrow(method, input));
@@ -162,13 +156,10 @@ static void *event_handler(enum mg_event event,
                        ? "text/plain"
                        : "text/uri-list")));
         char* contentTypeCopy = NULL;
-        Arrow rtas = xl_arrowMaybe(xl_tag("Content-Type"), r);
-        if (rtas != EVE) {
-            Arrow rta = xls_get(session, rta);
-            if (rta != EVE) {
-                contentTypeCopy = xl_tagOf(rta);
-                contentType = contentTypeCopy;
-            }
+        Arrow rta = xl_eval(session, xl_arrow(xl_tag("Content-Type"), r));
+        if (rta != EVE) {
+            contentTypeCopy = xl_tagOf(rta);
+            contentType = contentTypeCopy;
         }
         uint32_t contentLength;
         char* content =
@@ -194,7 +185,7 @@ static void *event_handler(enum mg_event event,
             mg_printf(conn, "Content-Type: %s\r\n", contentType);
         }
         if (contentTypeCopy) free(contentTypeCopy);
-        mg_printf(conn, "Set-Cookie: session=%s; max-age=3600; http-only\r\n",  aSession->session_id);
+        mg_printf(conn, "Set-Cookie: session=%s; max-age=60; http-only\r\n",  aSession->session_id);
         mg_printf(conn, "\r\n");
         mg_write(conn, content, (size_t)contentLength);
 
@@ -217,7 +208,20 @@ int main(void) {
   struct mg_context *ctx;
   pthread_mutex_init(&mutex, NULL);
 
+#ifndef PRODUCTION
+  log_init(NULL, "server=debug,machine=warn");
+#endif
+
   xl_init();
+
+  Arrow get = xls_get(EVE, xl_tag("GET"));
+  if (get == EVE) {
+      xls_set(EVE, xl_tag("GET"), xl_eval(EVE, xl_uri("/lambda/x.x")));
+      xls_set(EVE, xl_tag("PUT"), xl_eval(EVE, xl_uri("/lambda/x/root.x")));
+      xls_set(EVE, xl_tag("POST"), xl_eval(EVE, xl_uri("/lambda/x/eval.x")));
+      xls_set(EVE, xl_tag("DELETE"), xl_eval(EVE, xl_uri("/lambda/x/unroot.x")));
+      xl_commit();
+  }
 
   // Initialize random number generator. It will be used later on for
   // the session identifier creation.
@@ -228,7 +232,7 @@ int main(void) {
   assert(ctx != NULL);
 
   // Wait until enter is pressed, then exit
-  DEBUGPRINTF("server started on ports %s.\n",
+  DEBUGPRINTF("server started on ports %s.",
          mg_get_option(ctx, "listening_ports"));
 
   while (1) {
@@ -238,7 +242,7 @@ int main(void) {
       for (i = 0; i < MAX_SESSIONS; i++) {
         if (sessions[i].expire != 0 && sessions[i].expire < now) {
             sessions[i].expire = 0;
-            DEBUGPRINTF("session %s outdated.\n", sessions[i].session_id);
+            DEBUGPRINTF("session %s outdated.", sessions[i].session_id);
             pthread_mutex_lock (&mutex);
             Arrow session = xls_session(EVE, xl_tag("server"), xl_tag(sessions[i].session_id));
             xls_reset(session);
@@ -247,7 +251,7 @@ int main(void) {
       }
       xl_commit();
   }
-  DEBUGPRINTF("%s\n", "server stopped.");
+  DEBUGPRINTF("%s", "server stopped.");
 
   pthread_mutex_destroy(&mutex);
 

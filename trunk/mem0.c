@@ -1,4 +1,5 @@
 #define MEM0_C
+#define LOG_CURRENT LOG_MEM0
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -126,7 +127,7 @@ static int openJournal(int forWrite) {
     JOURNAL = fopen(mem0_journalFilePath, forWrite == JOURNAL_WRITING ? "wb" : "rb");
     if (forWrite == JOURNAL_WRITING && !JOURNAL) {
         perror("");
-        DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open journal for writing");
+        LOGPRINTF(LOG_FATAL, "Can't open journal for writing");
     }
     return (JOURNAL == NULL);
 }
@@ -138,11 +139,11 @@ void mem0_initJournal() {
 void mem0_addToJournal(Address r, Cell v) {
    size_t writen = fwrite(&r, sizeof(Address), 1, JOURNAL);
    if (writen != 1) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write into journal");
+       LOGPRINTF(LOG_FATAL, "Can't write into journal");
    }
    writen = fwrite(&v, sizeof(Cell), 1, JOURNAL);
    if (writen != 1) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write into journal");
+       LOGPRINTF(LOG_FATAL, "Can't write into journal");
    }
 }
 
@@ -154,7 +155,7 @@ int mem0_terminateJournal() {
     if (fflush(JOURNAL)
         /* || fsync(JOURNAL) */
         || fclose(JOURNAL)) {
-        DPRINTF(LOG_FATAL, LOG_MEM0, "Can't terminate journal");
+        LOGPRINTF(LOG_FATAL, "Can't terminate journal");
     }
     JOURNAL = NULL;
     return 0;
@@ -166,7 +167,7 @@ void mem0_dismissJournal() {
     /* fsync(F); */
 
     if (!mem0_journalFilePath || unlink(mem0_journalFilePath)) {
-         DPRINTF(LOG_FATAL, LOG_MEM0, "Can't remove journal");
+         LOGPRINTF(LOG_FATAL, "Can't remove journal");
     }
 }
 
@@ -176,7 +177,7 @@ int mem0_openPreviousJournal() {
     if (openJournal(JOURNAL_READING))
         goto corrupted;
 
-    DPRINTF(LOG_WARN, LOG_MEM0, "Previous journal found");
+    DEBUGPRINTF("Previous journal found");
 
     fseek(JOURNAL, 0, SEEK_END);
     DEBUGPRINTF("journal size is %ld", ftell(JOURNAL));
@@ -187,18 +188,18 @@ int mem0_openPreviousJournal() {
 
     size_t read = fread(&check, sizeof(check), 1, JOURNAL);
     if (read != 1) {
-        DPRINTF(LOG_WARN, LOG_MEM0, "Journal last bytes reading failed. probably truncated file");
+        LOGPRINTF(LOG_WARN, "Journal last bytes reading failed. probably truncated file");
         goto corrupted;
     }
 
     for (int i = 0; i < sizeof(check); i++) {
         if (check[i]) {
-            DPRINTF(LOG_WARN, LOG_MEM0, "Journal is not properly terminated");
+            LOGPRINTF(LOG_WARN, "Journal is not properly terminated");
             goto corrupted;
         }
     }
     valid:
-        DPRINTF(LOG_WARN, LOG_MEM0, "Previous journal is validated");
+        DEBUGPRINTF("Previous journal is validated");
         return 0;
 
     corrupted:
@@ -219,7 +220,7 @@ void mem0_recoverFromJournal() {
         size_t addressRead = fread(&address, sizeof(Address), 1, JOURNAL);
         size_t cellRead = fread(&cell, sizeof(Cell), 1, JOURNAL);
         if (!(addressRead == 1 && cellRead == 1)) {
-            DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read Address/Cell pair from journal");
+            LOGPRINTF(LOG_FATAL, "Can't read Address/Cell pair from journal");
         }
         if (!address && !cell) break; // Terminator found
         _mem0_set(address, cell);
@@ -237,7 +238,7 @@ char* mem0_filePath = NULL;
 char* mem0_dirPath = NULL;
 
 int mem0_init() {
-  if (F) {
+  if (F != NULL) {
      DEBUGPRINTF("mem0_init as already been done");
      return 0;
   }
@@ -265,14 +266,14 @@ int mem0_init() {
   F = fopen(mem0_filePath, "w+b");
   if (!F) {
       perror("");
-      DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open persistence file '%s'", mem0_filePath);
+      LOGPRINTF(LOG_FATAL, "Can't open persistence file '%s'", mem0_filePath);
       return -1;
   }
 
   // set it up to its max size
   _mem0_set(SPACE_SIZE - 1, 0);
   if (ftell(F) <= 0) {
-      DPRINTF(LOG_FATAL, LOG_MEM0, "mem0 not writable?");
+      LOGPRINTF(LOG_FATAL, "mem0 not writable?");
   }
 
   // recover from previous journal if any
@@ -286,7 +287,7 @@ Cell mem0_get(Address r) {
    DEBUGPRINTF("mem0_get@%012x ", r);
    assert(!JOURNAL);
    if (r >= SPACE_SIZE) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "mem0_get@%012x out of range", r);
+       LOGPRINTF(LOG_FATAL, "mem0_get@%012x out of range", r);
        return 0;
    }
    Cell result;
@@ -294,7 +295,7 @@ Cell mem0_get(Address r) {
    //DEBUGPRINTF("Moved to %ld", ftell(F));
    size_t read = fread(&result, sizeof(Cell), 1, F);
    if (read != 1) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read from mem0 @%012x", r);
+       LOGPRINTF(LOG_FATAL, "Can't read from mem0 @%012x", r);
    }
    return result;
 }
@@ -302,14 +303,14 @@ Cell mem0_get(Address r) {
 void _mem0_set(Address r, Cell v) {
    DEBUGPRINTF("mem0_set@%012x %016llx", r, v);
    if (r >= SPACE_SIZE) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "mem0_set@%012x out of range", r);
+       LOGPRINTF(LOG_FATAL, "mem0_set@%012x out of range", r);
        return;
    }
 
    fseek(F, r * sizeof(Cell), SEEK_SET);
    size_t write = fwrite(&v, sizeof(Cell), 1, F);
    if (write != 1) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write to mem0");
+       LOGPRINTF(LOG_FATAL, "Can't write to mem0");
    }
 }
 
@@ -334,16 +335,16 @@ void mem0_saveData(char *h, size_t size, char* data) {
   FILE* fd = fopen(filename, "w");
   if (!fd) {
      perror("");
-     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open blob file '%s' in '%s'", filename, dirname);
+     LOGPRINTF(LOG_FATAL, "Can't open blob file '%s' in '%s'", filename, dirname);
   }
   chdir("..");
   size_t written = fwrite(data, size, 1, fd);
   if (written != 1) {
-     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't write into blob file '%s'", filename);
+     LOGPRINTF(LOG_FATAL, "Can't write into blob file '%s'", filename);
   }
   int rc = fclose(fd);
   if (rc) {
-     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't close loaded blob file '%s'", filename);
+     LOGPRINTF(LOG_FATAL, "Can't close loaded blob file '%s'", filename);
   }
 }
 
@@ -356,14 +357,14 @@ char* mem0_loadData(char* h, size_t* sizeP) {
   chdir(PERSISTENCE_DIR);
   int rc = chdir(dirname);
   if (rc) {
-     DPRINTF(LOG_FATAL, LOG_MEM0, "Can't move into '%s' directory", dirname);
+     LOGPRINTF(LOG_FATAL, "Can't move into '%s' directory", dirname);
   }
 
   FILE* fd = fopen(filename, "r");
   chdir("..");
   if (!fd) {
       perror("");
-      DPRINTF(LOG_FATAL, LOG_MEM0, "Can't open blob file '%s' in '%s'", filename, dirname);
+      LOGPRINTF(LOG_FATAL, "Can't open blob file '%s' in '%s'", filename, dirname);
   }
 
   // retrieve file size
@@ -371,7 +372,7 @@ char* mem0_loadData(char* h, size_t* sizeP) {
   size = ftell(fd);
   rewind(fd);
   if (!size) {
-      DPRINTF(LOG_FATAL, LOG_MEM0, "Blob file '%s' is truncated", filename);
+      LOGPRINTF(LOG_FATAL, "Blob file '%s' is truncated", filename);
   }
 
   char *buffer = (char *)malloc(sizeof(char) * size);
@@ -379,12 +380,12 @@ char* mem0_loadData(char* h, size_t* sizeP) {
 
   rc = fread(buffer, size, 1, fd);
   if (rc != 1) {
-       DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read blob file '%s' content", filename);
+       LOGPRINTF(LOG_FATAL, "Can't read blob file '%s' content", filename);
   }
 
   rc = fclose(fd);
   if (rc) {
-      DPRINTF(LOG_FATAL, LOG_MEM0, "Can't close blob file '%s'", filename);
+      LOGPRINTF(LOG_FATAL, "Can't close blob file '%s'", filename);
   }
 
   *sizeP = size;
@@ -396,7 +397,7 @@ int mem0_commit() {
         mem0_terminateJournal();
         int rc = mem0_openPreviousJournal();
         if (rc) {
-            DPRINTF(LOG_FATAL, LOG_MEM0, "Can't read back the journal file!");
+            LOGPRINTF(LOG_FATAL, "Can't read back the journal file!");
         }
         mem0_recoverFromJournal();
     } else {

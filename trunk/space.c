@@ -8,12 +8,8 @@
 #include "mem0.h"
 #include "mem.h"
 #include "sha1.h"
-
-#ifndef PRODUCTION
-#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
-#else
-#define ONDEBUG(w)
-#endif
+#define LOG_CURRENT LOG_SPACE
+#include "log.h"
 
 /*
  * Eve
@@ -297,7 +293,7 @@ uint64_t hashString(char *str) { // simple string hash
     hash = ((hash << 5) + hash) + c;
   }
 
-  ONDEBUG((fprintf(stderr, "hashString(\"%s\") = %016llx\n", str, hash)));
+  DEBUGPRINTF("hashString(\"%s\") = %016llx", str, hash);
   return hash;
 }
 
@@ -314,7 +310,7 @@ uint64_t hashBString(char *buffer, uint32_t length) { // simple string hash
     hash = ((hash << 5) + hash) + c;
   }
 
-  ONDEBUG((fprintf(stderr, "hashBString(%d, \"%.*s\") = %016llx\n", length, length, buffer, hash)));
+  DEBUGPRINTF("hashBString(%d, \"%.*s\") = %016llx", length, length, buffer, hash);
   return hash;
 }
 
@@ -1116,7 +1112,7 @@ char* xl_uriOf(Arrow a) {
 
 
 static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
-    ONDEBUG((fprintf(stderr, "BEGIN fromUri(%s)\n", uri)));
+    DEBUGPRINTF("BEGIN fromUri(%s)", uri);
     Arrow a = EVE;
 
     char c = uri[0];
@@ -1207,7 +1203,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int locateOnly) {
     }
     }
 
-    ONDEBUG((fprintf(stderr, "END fromUri(%s) = %O\n", uri, a)));
+    DEBUGPRINTF("END fromUri(%s) = %O", uri, a);
     return a;
 }
 
@@ -1228,7 +1224,7 @@ static Arrow uri(char *uri, int locateOnly) { // TODO: document actual design
     uriEnd = skeepSpacesAndOneDot(uriEnd);
 
     while (*uriEnd) {
-        ONDEBUG((fprintf(stderr, "uriEnd = >%s<\n", uriEnd)));
+        DEBUGPRINTF("uriEnd = >%s<", uriEnd);
         Arrow b = fromUri(uriEnd, &uriEnd, locateOnly);
         if (!uriEnd) return b; // return NIL (wrong URI) or EVE (not assimilated)
         uriEnd = skeepSpacesAndOneDot(uriEnd);
@@ -1277,7 +1273,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  * TODO : when adding a new cell, try to reduce jumpers from time to time
  */
 static void connect(Arrow a, Arrow child) {
-  ONDEBUG((fprintf(stderr, "connect child=%06x to a=%06x\n", child, a)));
+  DEBUGPRINTF("connect child=%06x to a=%06x", child, a);
   if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   assert(cell_isArrow(cell));
@@ -1320,13 +1316,13 @@ static void connect(Arrow a, Arrow child) {
       // first ref bucket is empty
       cell |= ((Cell)child << 32);
       mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
-      ONDEBUG((fprintf(stderr, "Connection using first ref bucket of %06x\n", current)));
+      DEBUGPRINTF("Connection using first ref bucket of %06x", current);
 	  return;
     } else if (!((Cell)cell & 0xFFFFFF00LLU)) {
       // second ref bucket is empty
 	  cell |= ((Cell)child << 8);
       mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
-      ONDEBUG((fprintf(stderr, "Connection using second ref bucket of %06x\n", current)));
+      DEBUGPRINTF("Connection using second ref bucket of %06x", current);
 	  return;
     }
   } else {
@@ -1348,9 +1344,9 @@ static void connect(Arrow a, Arrow child) {
   }
 
   if (current == a) { // No child yet
-     ONDEBUG((fprintf(stderr, "new child0: %06x ", next)));
+     DEBUGPRINTF("new child0: %06x ", next);
      if (jump >= MAX_CHILD0) { // ohhh the pain
-        ONDEBUG((fprintf(stderr, "MAX CHILD0!\n")));
+        DEBUGPRINTF("MAX CHILD0!");
 		Address sync = next;
 		Cell syncCell = nextCell;
 		syncCell = sync_build(syncCell, a, 0, REATTACHMENT_CHILD0);
@@ -1370,16 +1366,16 @@ static void connect(Arrow a, Arrow child) {
 
 		jump = MAX_CHILD0;
      } else { // Easy one
-        ONDEBUG((fprintf(stderr, "child0=%d\n", jump)));
+        DEBUGPRINTF("child0=%d", jump);
         nextCell = lastRefs_build(nextCell, child, 0, 0);
      }
      mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
      cell = cell_chainChild0(cell, jump);
      mem_set(a, cell); ONDEBUG((show_cell(cell, 0)));
   } else {
-    ONDEBUG((fprintf(stderr, "new chain: %06x ", next)));
+    DEBUGPRINTF("new chain: %06x ", next);
     if (jump >= MAX_JUMP) {
-      ONDEBUG((fprintf(stderr, " MAX JUMP!\n")));
+      DEBUGPRINTF(" MAX JUMP!");
 	  nextCell = lastRefs_build(nextCell, cell_getRef1(cell), child, 0);
 	  mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
 
@@ -1387,7 +1383,7 @@ static void connect(Arrow a, Arrow child) {
 	  cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
 	  mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
     } else {
-      ONDEBUG((fprintf(stderr, " jump=%d\n", jump)));
+      DEBUGPRINTF(" jump=%d", jump);
       // One add a new cell (a "last" chained cell)
       nextCell = lastRefs_build(nextCell, child, 0, 0);
       mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
@@ -1404,7 +1400,7 @@ static void connect(Arrow a, Arrow child) {
  * If the parent arrow gets unreferred (no child and unrooted), it is disconnected in turn from its head and tail (recursive calls) and it is recorded as a loose arrow
  */
 static void disconnect(Arrow a, Arrow child) {
-    ONDEBUG((fprintf(stderr, "disconnect child=%06x from a=%06x\n", child, a)));
+    DEBUGPRINTF("disconnect child=%06x from a=%06x", child, a);
     if (a == EVE) return; // One doesn't store Eve connectivity.
 
     // get parent arrow definition
@@ -1564,7 +1560,7 @@ static void disconnect(Arrow a, Arrow child) {
 
 
 void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
-  ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
+  DEBUGPRINTF("xl_childrenOf a=%06x", a);
 
   if (a == EVE) {
      return; // Eve connectivity not traced
@@ -1736,7 +1732,7 @@ void xl_freeEnum(XLEnum e) {
 }
 
 XLEnum xl_childrenOf(Arrow a) {
-  ONDEBUG((fprintf(stderr, "xl_childrenOf a=%06x\n", a)));
+  DEBUGPRINTF("xl_childrenOf a=%06x", a);
 
   if (a == EVE) {
      return NULL; // Eve connectivity not traced
@@ -1788,7 +1784,8 @@ Arrow xl_root(Arrow a) {
     }
 
     Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
-    if (!cell_isArrow(cell) || cell_isRooted(cell)) return EVE;
+    if (!cell_isArrow(cell)) return EVE;
+    if (cell_isRooted(cell)) return a;
 
     // If this arrow had no child before, it was loose
     int loose = (cell_getChild0(cell) ? 0 : !0);
@@ -1861,7 +1858,7 @@ int xl_equal(Arrow a, Arrow b) {
 
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a) {
-  ONDEBUG((fprintf(stderr, "forget a=%06x\n", a)));
+  DEBUGPRINTF("forget a=%06x", a);
 
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   Cell catBits = cell_getCatBits(cell);
@@ -1927,7 +1924,7 @@ static void forget(Arrow a) {
 }
 
 void xl_commit() {
-  ONDEBUG((fprintf(stderr, "xl_commit (looseStackSize = %d)\n", looseStackSize)));
+  DEBUGPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
   unsigned i;
   for (i = 0; i < looseStackSize ; i++) { // loose stack scanning
     Arrow a = looseStack[i];

@@ -6,6 +6,7 @@
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
+#define LOG_CURRENT LOG_SESSION
 #include "log.h"
 #include "session.h"
 
@@ -35,11 +36,13 @@ Arrow deepRoot(Arrow c, Arrow e) {
 
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
-    if (c == EVE)
-        return root(e);
-
-    deepRoot(c, e);
-    return root(a(c, e));
+    if (c == EVE) {
+        root(e);
+        return root(a(EVE, e));
+    } else {
+        deepRoot(c, e);
+        return root(a(c, e));
+    }
 }
 
 #if 0
@@ -141,17 +144,24 @@ Arrow xls_get(Arrow c, Arrow key) {
     if (keyContext == EVE)
         return EVE;
 
-    Arrow value = EVE;
+    Arrow value = NIL;
     XLEnum enumChildren = xl_childrenOf(keyContext);
     while (xl_enumNext(enumChildren)) {
         Arrow keyValue = xl_enumGet(enumChildren);
         if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
-        value = headOf(keyValue);
-        if (isRooted(keyValue))
+        if (isRooted(keyValue)) {
+            value = headOf(keyValue);
             break;
+        }
     }
     xl_freeEnum(enumChildren);
-    return value;
+
+    if (value == NIL && tailOf(c) != c)
+        return xls_get(tailOf(c), key);
+    else if (value == NIL)
+        return EVE;
+    else
+        return value;
 }
 
 /** close a session $s */
@@ -163,7 +173,7 @@ Arrow xls_close(Arrow s) {
 }
 
 static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int locateOnly) {
-    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')\n", context, url);
+    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')", context, url);
     Arrow a = EVE;
 
     char c = url[0];
@@ -262,7 +272,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
     }
     }
 
-    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x\n", context, url, a);
+    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x", context, url, a);
     return a;
 }
 
@@ -283,7 +293,7 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
 
     urlEnd = skeepSpacesAndOneDot(urlEnd);
     while (*urlEnd) {
-        DEBUGPRINTF("urlEnd = >%s<\n", urlEnd);
+        DEBUGPRINTF("urlEnd = >%s<", urlEnd);
         Arrow b = _fromUrl(context, urlEnd, &urlEnd, locateOnly);
 
         if (!urlEnd) return b; // NIL or EVE

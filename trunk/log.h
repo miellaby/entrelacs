@@ -19,17 +19,11 @@ enum _log_facility
   LOG_SERVER,
   LOG_FACILITY_COUNT
 };
+#ifndef LOG_CURRENT
+#define LOG_CURRENT LOG_GENERAL
+#endif
 
 #ifdef __LOG_C__
-char *level_name[] = {
-    "off",
-    "fatal",
-    "error",
-    "warn",
-    "info",
-    "debug",
-    0
-};
 
 char *facility_name[] = {
     "general",
@@ -41,22 +35,39 @@ char *facility_name[] = {
     "server",
     0
 };
+
+char *level_name[] = {
+    "off",
+    "fatal",
+    "error",
+    "warn",
+    "info",
+    "debug",
+    0
+};
+
 #endif
 
 extern int log_level[LOG_FACILITY_COUNT];
-extern int log_init(const char *fname, const char *debug);
+extern int log_init(const char *filename, const char *debug_str);
 extern void log_msg(int level, enum _log_facility facility, char *fname, int lineno, char *fmt, ...);
 
-#define DPRINTF(level, facility, fmt, arg...) { log_msg(level, facility, __FILE__, __LINE__, fmt, ##arg); }
+#define LOGPRINTF(level, fmt, arg...) { log_msg(level, LOG_CURRENT, __FILE__, __LINE__, fmt, ##arg); }
 
 
-#ifndef PRODUCTION
+#ifdef DEBUG
   #define ONDEBUG(w) w
 #else
   #define ONDEBUG(w)
 #endif
 
-#define DEBUGPRINTF(fmt, arg...) ONDEBUG(DPRINTF(LOG_DEBUG, LOG_GENERAL, fmt, ##arg))
 
+#ifdef PRODUCTION
+#define DEBUGPRINTF(format, arg...) (void)(0)
+#define dputs(format, arg...) (void)(0)
+#else
+#define DEBUGPRINTF(format, arg...) LOGPRINTF(LOG_DEBUG, format, ##arg)
+#define dputs(format, arg...) DEBUGPRINTF(format, ##arg)
+#endif
 
 #endif /* __LOG_H__ */

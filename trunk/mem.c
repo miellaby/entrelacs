@@ -6,14 +6,9 @@
 #define MEM_C
 #include <stdlib.h>
 #include <assert.h>
+#define LOG_CURRENT LOG_MEM
+#include "log.h"
 #include "mem.h"
-
-#ifndef PRODUCTION
-#include "stdio.h"
-  #define ONDEBUG(w) w
-#else
-  #define ONDEBUG(w)
-#endif
 
 #define MEMSIZE 0x2000
 static const Address memSize = MEMSIZE ; ///< mem size (8192 records)
@@ -34,7 +29,7 @@ static const Address reserveSize = RESERVESIZE ; ///< cache reserve size
  Modified cells are moved into this reserve when their location in mem[] are need to load other cells
  TODO replace it by cuckoo hashing or smarter alternative
  */
-static struct s_reserve {
+static struct s_reserve { // TODO : change the name
   Address a;
   Cell    c;
 } reserve[RESERVESIZE];
@@ -86,19 +81,19 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 
 /** Get a cell */
 Cell mem_get(Address a) {
-  ONDEBUG((fprintf(stderr, "mem_get@%06x = ", a)));
+  DEBUGPRINTF("mem_get(%06x) begin", a);
   Address i;
   Address offset = a & 0xFFF;
   uint32_t  page = a >> 12;
   m = mem[offset];
   if (!memIsEmpty(m) && memPageOf(m) == page) {
-    ONDEBUG((fprintf(stderr, "%016llx from cache\n", m.c)));
+    DEBUGPRINTF("mem_get returns %016llx from cache", m.c);
     return m.c;
   }
   
   for (i = 0; i < reserveHead ; i++) {
     if (reserve[i].a == a) {
-      ONDEBUG((fprintf(stderr, "%016llx from reserve\n", reserve[i].c)));
+      DEBUGPRINTF("mem_get returns %016llx from reserve", reserve[i].c);
       return reserve[i].c;
     }
   }
@@ -106,7 +101,7 @@ Cell mem_get(Address a) {
   if (memIsChanged(m)) {
     // When replacing a modified cell, move it to reserve
     Address moved = (memPageOf(m) << 12) | offset;
-    ONDEBUG((fprintf(stderr, "(%06x moved in reserve) ", moved)));
+    DEBUGPRINTF("mem_get moves %06x to reserve", moved);
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = moved;
     reserve[reserveHead++].c = m.c;
@@ -114,19 +109,18 @@ Cell mem_get(Address a) {
 
   mem[offset].a = page;
   return (mem[offset].c = mem0_get(a));
-  // rem: debug trace end put by mem0_get
 }
 
 /** Set a cell */
 void mem_set(Address a, Cell c) {
-    ONDEBUG((fprintf(stderr, "mem_set@%06x : %016llx", a, c)));
+    DEBUGPRINTF("mem_set(%06x, %016llx) begin", a, c);
     Address offset = a & 0xFFF;
     uint32_t  page = a >> 12;
     m = mem[offset];
     if (memIsEmpty(m) || memPageOf(m) != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
             if (reserve[i].a == a) {
-                ONDEBUG((fprintf(stderr, "(found in reserve)\n")));
+                DEBUGPRINTF("mem cell found in reserve");
                 // one changes data in the reserve cell
                 reserve[i].c = c;
                 return; // no need to log it (it's already done)
@@ -135,7 +129,7 @@ void mem_set(Address a, Cell c) {
         // no copy in the reserve, one puts the modified cell in mem0
         if (memIsChanged(m)) { // one replaces a modificied cell that one moves to reserve
             Address moved = (memPageOf(m) << 12) | offset;
-            ONDEBUG((fprintf(stderr, "(%06x moved in reserve) ", moved)));
+            DEBUGPRINTF("mem_set moved %06x to reserve", moved);
             assert(reserveHead < reserveSize);
             reserve[reserveHead].a = moved;
             reserve[reserveHead].c = m.c;
@@ -152,7 +146,7 @@ void mem_set(Address a, Cell c) {
 
     mem[offset].a = MEM1_CHANGED | page;
     mem[offset].c = c;
-    ONDEBUG((fprintf(stderr, "logSize=%d\n", logSize)));
+    DEBUGPRINTF("mem_set end, logSize=%d", logSize);
 }
 
 static int _addressCmp(const void *a, const void *b) {
@@ -161,11 +155,13 @@ static int _addressCmp(const void *a, const void *b) {
 
 /** commit */
 void mem_commit() {
-  ONDEBUG((fprintf(stderr, "mem_commit (logSize = %d)\n", logSize)));
+  DEBUGPRINTF("mem_commit begin, logSize=%d", logSize);
   Address i;
   if (!logSize) return;
 
+  // sort memory log
   qsort(log, logSize, sizeof(Address), _addressCmp);
+
   // TODO: optimize by commiting all reserved cells first then all logged cells found in mem
   for (i = 0; i < logSize; i++) {
     Address a = log[i];
@@ -177,14 +173,14 @@ void mem_commit() {
 
   zeroalloc((char **)&log, &logMax, &logSize);
   reserveHead = 0;
-  ONDEBUG((fprintf(stderr, "mem_commit done\n")));
+  DEBUGPRINTF("mem_commit done");
 }
 
 /** init
   @return 1 if very first start, <0 if error, 0 otherwise
 */
 int mem_init() {
-  ONDEBUG((fprintf(stderr, "mem_init (memSize = %d)\n", memSize)));
+  DEBUGPRINTF("mem_init (memSize = %d)");
   int rc = mem0_init();
   if (rc < 0) return rc;
   Address i;

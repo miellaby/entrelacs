@@ -11,116 +11,100 @@
 
 static FILE *log_fp = NULL;
 #ifndef PRODUCTION
-   static int default_log_level = LOG_DEBUG;
+   static int default_log_level = LOG_INFO;
 #else
    static int default_log_level = LOG_WARN;
 #endif
 int log_level[LOG_FACILITY_COUNT];
 
-int
-log_init(const char *fname, const char *debug)
+int log_init(const char *filename, const char *debug_str)
 {
-        int i;
-        FILE *fp;
-        short int log_level_set[LOG_FACILITY_COUNT];
+    int i;
+    FILE *fp;
 
-        if (debug)
-        {
-                char *rhs, *lhs, *p;
-                int n;
-                int level, facility;
-                memset(&log_level_set, 0, sizeof(log_level_set));
-                rhs = lhs = (char*) debug;
-                while (rhs && (rhs = strchr(rhs, '='))) {
-                        rhs++;
-                        p = strchr(rhs, ',');
-                        n = p ? p - rhs : strlen(rhs);
-                        for (level=0; level_name[level]; level++) {
-                                if (!(strncasecmp(level_name[level], rhs, n)))
-                                        break;
-                        }
-                        rhs = p;
-                        if (!(level_name[level])) {
-                                // unknown level
-                                continue;
-                        }
-                        do {
-                                if (*lhs==',') lhs++;
-                                p = strpbrk(lhs, ",=");
-                                n = p ? p - lhs : strlen(lhs);
-                                for (facility=0; facility_name[facility]; facility++) {
-                                        if (!(strncasecmp(facility_name[facility], lhs, n)))
-                                                break;
-                                }
-                                if ((facility_name[facility])) {
-                                        log_level[facility] = level;
-                                        log_level_set[facility] = 1;
-                                }
-                                lhs = p;
-                        } while (*lhs && *lhs==',');
+    for (i=0; i<LOG_FACILITY_COUNT; i++)
+        log_level[i] = default_log_level;
+
+    if (debug_str) {
+        char *rhs, *lhs, *p;
+        int n;
+        int level, facility;
+        rhs = lhs = (char*) debug_str;
+        while (rhs && (rhs = strchr(rhs, '='))) {
+            rhs++;
+            p = strchr(rhs, ',');
+            n = p ? p - rhs : strlen(rhs);
+            for (level=0; level_name[level]; level++) {
+                if (!(strncasecmp(level_name[level], rhs, n)))
+                    break;
+            }
+            rhs = p;
+            if (!level_name[level]) {
+                // unknown level
+                continue;
+            }
+            do {
+                if (*lhs==',') lhs++;
+                p = strpbrk(lhs, ",=");
+                n = p ? p - lhs : strlen(lhs);
+                for (facility=0; facility_name[facility]; facility++) {
+                    if (!(strncasecmp(facility_name[facility], lhs, n)))
+                        break;
                 }
-                for (i=0; i<LOG_FACILITY_COUNT; i++)
-                {
-                        if( !log_level_set[i] )
-                        {
-                                log_level[i] = default_log_level;
-                        }
+                if (facility_name[facility]) {
+                    log_level[facility] = level;
                 }
+                lhs = p;
+            } while (*lhs && *lhs==',');
         }
-        else {
-                for (i=0; i<LOG_FACILITY_COUNT; i++)
-                        log_level[i] = default_log_level;
-        }
+    }
 
-        if (!fname) // use default i.e. stdout
-                return 0;
-
-        if (!(fp = fopen(fname, "a")))
-                return 1;
-        log_fp = fp;
+    if (!filename) // use default i.e. stdout
         return 0;
+
+    if (!(fp = fopen(filename, "a")))
+        return 1;
+    log_fp = fp;
+    return 0;
 }
 
-void
-log_msg(int level, enum _log_facility facility, char *fname, int lineno, char *fmt, ...)
+void log_msg(int level, enum _log_facility facility, char *fname, int lineno, char *fmt, ...)
 {
-        char* errbuf;
-        va_list ap;
-        time_t t;
-        struct tm *tm;
-
-        if (level && level>log_level[facility] && level>LOG_FATAL)
-                return;
-
-        if (!log_fp)
-                log_fp = stdout;
-
-        // user log
-        va_start(ap, fmt);
-        //vsnprintf(errbuf, sizeof(errbuf), fmt, ap);
-        if (vasprintf(&errbuf, fmt, ap) == -1)
-        {
-                va_end(ap);
-                return;
-        }
-        va_end(ap);
-
-        // timestamp
-        t = time(NULL);
-        tm = localtime(&t);
-        fprintf(log_fp, "[%04d/%02d/%02d %02d:%02d:%02d] ",
-                tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday,
-                tm->tm_hour, tm->tm_min, tm->tm_sec);
-
-        if (level)
-                fprintf(log_fp, "%s:%d: %s: %s\n", fname, lineno, level_name[level], errbuf);
-        else
-                fprintf(log_fp, "%s:%d: %s\n", fname, lineno, errbuf);
-        fflush(log_fp);
-        free(errbuf);
-
-        if (level==LOG_FATAL)
-                exit(-1);
-
+    char* errbuf;
+    va_list ap;
+    time_t t;
+    struct tm *tm;
+    if (level && level>log_level[facility] && level>LOG_FATAL)
         return;
+
+    if (!log_fp)
+        log_fp = stdout;
+
+    // user log
+    va_start(ap, fmt);
+    //vsnprintf(errbuf, sizeof(errbuf), fmt, ap);
+    if (vasprintf(&errbuf, fmt, ap) == -1) {
+        va_end(ap);
+        return;
+    }
+    va_end(ap);
+
+    // timestamp
+    t = time(NULL);
+    tm = localtime(&t);
+    fprintf(log_fp, "[%04d/%02d/%02d %02d:%02d:%02d] ",
+            tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday,
+            tm->tm_hour, tm->tm_min, tm->tm_sec);
+
+    if (level)
+        fprintf(log_fp, "%s:%d: %s: %s\n", fname, lineno, level_name[level], errbuf);
+    else
+        fprintf(log_fp, "%s:%d: %s\n", fname, lineno, errbuf);
+    fflush(log_fp);
+    free(errbuf);
+
+    if (level==LOG_FATAL)
+        exit(-1);
+
+    return;
 }
