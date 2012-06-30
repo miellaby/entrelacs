@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
   char buffer[1024];
   
   xl_init();
-  char *str, *programs[] = {
+  char *str, *programs[] = { // TODO some programs here must be wrong since new keyarrows paddock, closure...
       "///lambda/x/lambda/y/arrow/x.y.2.3",
       "///lambda/x/lambda/y/arrow/x/escape.y.2.3",
       "/let//myJoin/lambda/x/lambda/y/arrow/x.y//myJoin.2.3",

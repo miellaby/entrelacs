@@ -3230,9 +3230,11 @@ static void handle_request(struct mg_connection *conn) {
     * conn->request_info.query_string++ = '\0';
   }
   uri_len = strlen(ri->uri);
-  // SGA: NO (void) url_decode(ri->uri, (size_t)uri_len, ri->uri, (size_t)(uri_len + 1), 0);
-  remove_double_dots_and_double_slashes(ri->uri);
-  convert_uri_to_file_name(conn, ri->uri, path, sizeof(path));
+  // SGA: sanitized uri is distinct from original uri
+  char *sanitized_uri = strdup(ri->uri);
+  (void) url_decode(ri->uri, (size_t)uri_len, sanitized_uri, (size_t)(uri_len + 1), 0);
+  remove_double_dots_and_double_slashes(sanitized_uri);
+  convert_uri_to_file_name(conn, sanitized_uri, path, sizeof(path));
 
   DEBUG_TRACE(("%s", ri->uri));
   if (!check_authorization(conn, path)) {
@@ -3263,7 +3265,7 @@ static void handle_request(struct mg_connection *conn) {
   } else if (st.is_directory && ri->uri[uri_len - 1] != '/') {
     (void) mg_printf(conn,
         "HTTP/1.1 301 Moved Permanently\r\n"
-        "Location: %s/\r\n\r\n", ri->uri);
+        "Location: %s/\r\n\r\n", sanitized_uri);
   } else if (st.is_directory &&
              !substitute_index_file(conn, path, sizeof(path), &st)) {
     if (!mg_strcasecmp(conn->ctx->config[ENABLE_DIRECTORY_LISTING], "yes")) {
@@ -3287,6 +3289,7 @@ static void handle_request(struct mg_connection *conn) {
   } else {
     handle_file_request(conn, path, &st);
   }
+  free(sanitized_uri);
 }
 
 static void close_all_listening_sockets(struct mg_context *ctx) {

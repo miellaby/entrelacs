@@ -6,13 +6,8 @@
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 #include "session.h"
-
-#if !(defined PRODUCTION) || defined DEBUG_MACHINE
-#define ONDEBUG(w) (fprintf(stderr, "%s:%d ", __FILE__, __LINE__), w)
-#else
-#define ONDEBUG(w)
-#endif
-#define dputs(format, args...) ONDEBUG(fprintf(stderr, format "\n", ## args))
+#define LOG_CURRENT LOG_MACHINE
+#include "log.h"
 
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, operator = 0,
@@ -62,7 +57,7 @@ static Arrow _load_binding(Arrow x, Arrow w, Arrow e) {
 
 
 static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
-    ONDEBUG((fprintf(stderr, "   _resolve a = %O\n", a)));
+    DEBUGPRINTF("   _resolve a = %O", a);
     int type = typeOf(a);
     if (type == XL_EVE) return EVE;
     if (a == selfM) return M;
@@ -99,11 +94,14 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
         se = headOf(se);
     }
 
+
+    // TODO: See if we can reuse xls_get. ISSUE: xls_get return EVE
+
     // nested context matching loop
     while (typeOf(C) == XL_ARROW) {
         Arrow slot = a(C, x);
         XLEnum enu = childrenOf(slot);
-        Arrow found = EVE;
+        Arrow found = NIL;
         while (xl_enumNext(enu)) {
             Arrow child = xl_enumGet(enu);
             if (isRooted(child) && tailOf(child) == slot) {
@@ -112,7 +110,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
             }
         }
         xl_freeEnum(enu);
-        if (found != EVE)
+        if (found != NIL)
             return headOf(found);
 
         C = tail(C);
@@ -120,7 +118,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
 
     // top-level global matching loop
     XLEnum enu = childrenOf(x);
-    Arrow found = EVE;
+    Arrow found = NIL;
     while (xl_enumNext(enu)) {
         Arrow child = xl_enumGet(enu);
         if (isRooted(child) && tailOf(child) == x) {
@@ -129,16 +127,16 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
         }
     }
     xl_freeEnum(enu);
-    if (found != EVE)
+    if (found != NIL)
         return headOf(found);
 
     return a;
 }
 
 static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
-  ONDEBUG((fprintf(stderr, "resolve a = %O in e = %O\n", a, e)));
+  DEBUGPRINTF("resolve a = %O in e = %O", a, e);
   Arrow w = _resolve(a, e, C, M);
-  ONDEBUG((fprintf(stderr, "resolved in w = %O\n", w)));
+  DEBUGPRINTF("resolved in w = %O", w);
   return w;
 }
 
@@ -153,13 +151,13 @@ static int isTrivial(Arrow s) {
 
 
 static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
-  ONDEBUG((fprintf(stderr, "transition M = %O\n", M)));
+  DEBUGPRINTF("transition M = %O", M);
 
   Arrow p = tailOf(M);
   Arrow ek = headOf(M);
   Arrow e = tailOf(ek);
   Arrow k = headOf(ek);
-  ONDEBUG((fprintf(stderr, "   p = %O\n   e = %O\n   k = %O\n", p, e, k)));
+  DEBUGPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
   
   if (isTrivial(p)) { // Trivial expression
      // p == v
@@ -457,7 +455,7 @@ Arrow xl_argInMachine(Arrow CM) {
   }
   assert(isTrivial(arg));
   Arrow w = resolve(arg, e, C, M);
-  ONDEBUG((fprintf(stderr, "   argument is %O resolved in %O\n", arg, w)));
+  DEBUGPRINTF("   argument is %O resolved in %O", arg, w);
   return w;
 }
 
@@ -467,17 +465,17 @@ Arrow xl_reduceMachine(Arrow CM, Arrow r) {
   Arrow ek = headOf(M);
   if (tail(p) == let) {
     // p == (let ((x (<operator> arg)) s))
-    ONDEBUG((fprintf(stderr, "   let-application reduced to r = %O\n", r)));
+    DEBUGPRINTF("   let-application reduced to r = %O", r);
     Arrow x = tail(tail(head(p)));
     Arrow s = head(head(p));
-    ONDEBUG((fprintf(stderr, "     s = %O\n", s)));
+    DEBUGPRINTF("     s = %O", s);
     Arrow e = tail(ek);
     Arrow k = head(ek);
-    ONDEBUG((fprintf(stderr, "     k = %O\n", k)));
+    DEBUGPRINTF("     k = %O", k);
     Arrow ne = _load_binding(x, r, e);
     M = a(s, a(ne, k));                                      
   } else {
-    ONDEBUG((fprintf(stderr, "   application reduced to r = %O\n", r)));
+    DEBUGPRINTF("   application reduced to r = %O", r);
     M = a(a(escape, r), ek);
   }
   return M;
@@ -531,6 +529,27 @@ Arrow unrootHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, r);
 }
 
+Arrow setHook(Arrow CM, Arrow hookParameter) {
+   Arrow C = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   Arrow r = xls_set(C, xl_tailOf(arrow), xl_headOf(arrow));
+   return xl_reduceMachine(CM, r);
+}
+
+Arrow unsetHook(Arrow CM, Arrow hookParameter) {
+   Arrow contextPath = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   xls_unset(contextPath, arrow);
+   return xl_reduceMachine(CM, arrow);
+}
+
+Arrow getHook(Arrow CM, Arrow hookParameter) {
+   Arrow C = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   Arrow r = xls_get(C, arrow);
+   return xl_reduceMachine(CM, r);
+}
+
 Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
    Arrow contextPath = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
@@ -539,6 +558,7 @@ Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
 }
 
 Arrow ifHook(Arrow CM, Arrow hookParameter) {
+  Arrow C = tailOf(CM);
   Arrow M = headOf(CM);
 
   // the ifHook performs some magic
@@ -546,10 +566,11 @@ Arrow ifHook(Arrow CM, Arrow hookParameter) {
   Arrow condition = tail(body);
   Arrow alternative = head(body);
   Arrow branch;
-  Arrow p = tail(CM);
-  Arrow ek = head(CM);
+  Arrow p = tail(M);
+  Arrow ek = head(M);
   Arrow e = tail(ek);
-  if (isEve(condition))
+  Arrow w = resolve(condition, e, C, M);
+  if (isEve(w))
      branch = head(alternative);
   else
      branch = tail(alternative);
@@ -586,9 +607,9 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     char* secret_s = str(secret);
     char  try_s[256];
     snprintf(try_s, 255, "%s=%s", uri, secret_s);
+    LOGPRINTF(LOG_WARN, "escalate attempt");
     char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
     if (!server_secret_s) server_secret_s = "chut";
-    printf("Try is %O %s\n", C, try_s);
     if (isRooted(a(tag(server_secret_s), tag(try_s))))
         // success
         M = a(xl_reduceMachine(CM, EVE), escalate);
@@ -599,22 +620,11 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     return M;
 }
 
-static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
- {"run", runHook},
- {"tailOf", tailOfHook},
- {"headOf", headOfHook},
- {"childrenOf", childrenOfHook},
- {"root", rootHook},
- {"unroot", unrootHook},
- {"isRooted", isRootedHook},
- {"if", ifHook},
- {"commit", commitHook},
- {"escalate", escalateHook},
- {NULL, NULL}
-};
 
 static void machine_init() {
   if (let) return;
+
+  // initialize key arrows
   // environment = tag("environment");
   let = tag("let");
   load = tag("load");
@@ -631,54 +641,75 @@ static void machine_init() {
   arrowOp = tag("arrow");
   escalate = tag("escalate");
 
-  // root reserved keywords
-  Arrow reserved = tag("reserved");
-  root(a(reserved, let));
-  root(a(reserved, load));
-  root(a(reserved, var));
-  root(a(reserved, escape));
-  root(a(reserved, evalOp));
-  root(a(reserved, lambda));
-  root(a(reserved, macro));
-  root(a(reserved, closure));
-  root(a(reserved, paddock));
-  root(a(reserved, operator));
-  root(a(reserved, continuation));
-  root(a(reserved, selfM));
-  root(a(reserved, arrowOp));
-  root(a(reserved, escalate));
+  // preserve keyarrows from GC
+  Arrow locked = tag("locked");
+  root(a(locked, let));
+  root(a(locked, load));
+  root(a(locked, var));
+  root(a(locked, escape));
+  root(a(locked, evalOp));
+  root(a(locked, lambda));
+  root(a(locked, macro));
+  root(a(locked, closure));
+  root(a(locked, paddock));
+  root(a(locked, operator));
+  root(a(locked, continuation));
+  root(a(locked, selfM));
+  root(a(locked, arrowOp));
+  root(a(locked, escalate));
 
-  // root fundamental operators in the global context
+  // root basic operators into the global context
+  static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
+      {"run", runHook},
+      {"tailOf", tailOfHook},
+      {"headOf", headOfHook},
+      {"childrenOf", childrenOfHook},
+      {"root", rootHook},
+      {"unroot", unrootHook},
+      {"isRooted", isRootedHook},
+      {"setHook", setHook},
+      {"unsetHook", unsetHook},
+      {"getHook", getHook},
+      {"ifHook", ifHook},
+      {"commit", commitHook},
+      {"escalate", escalateHook},
+      {NULL, NULL}
+  };
+
   for (int i = 0; systemFns[i].s != NULL ; i++) {
-    root(a(tag(systemFns[i].s), operator(systemFns[i].fn, EVE)));
+    Arrow operatorKey = tag(systemFns[i].s);
+    if (xls_get(EVE, operatorKey) != EVE) continue; // already set
+    root(a(operatorKey, operator(systemFns[i].fn, EVE)));
   }
+
+  if (!xls_get(EVE, tag("if")))       root(a(tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/let//value/eval.condition/ifHook/arrow/value.alternative..")));
+  if (!xls_get(EVE, tag("get")))     root(a(tag("get"), xl_uri("/paddock//x/getHook.x.")));
+  if (!xls_get(EVE, tag("unset"))) root(a(tag("unset"), xl_uri("/paddock//x/unsetHook.x.")));
+  if (!xls_get(EVE, tag("set")))     root(a(tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/let//value/eval.exp/setHook/arrow/slot.value..")));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
   machine_init();
-  M = transition(C, M);
-  while (head(M) == escalate && M != escalate) {
-      C = head(C);
-      ONDEBUG((fprintf(stderr, "machine context escalate to %O\n", C)));
-      M = tail(M);
-  }
-  while (!isEve(head(head(M))) || !isTrivial(tail(M))) {
+  // M = //p/e.k
+  while (/*k*/head(head(M)) != EVE || !isTrivial(/*p*/tail(M))) {
     M = transition(C, M);
-    // only operators can produce such a thing
+    // only operators can produce such a state
     while (head(M) == escalate && M != escalate) {
-        C = head(C);
-        ONDEBUG((fprintf(stderr, "machine context escalate to %O\n", C)));
+        C = tail(C);
+        LOGPRINTF(LOG_WARN, "machine context escalate to %O", C);
         M = tail(M);
     }
   }
-  ONDEBUG((fprintf(stderr, "run finished with M = %O\n",M)));
+  DEBUGPRINTF("run finished with M = %O", M);
   Arrow p = tail(M);
   Arrow e = tail(head(M));
-  return resolve(p, e, C, M);
+  Arrow w = resolve(p, e, C, M);
+  DEBUGPRINTF("run result is %O", w);
+  return w;
 }
 
 Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
-  ONDEBUG((fprintf(stderr, "cl_eval C=%O p=%O\n", C, p)));
+  DEBUGPRINTF("cl_eval C=%O p=%O", C, p);
   machine_init();
   Arrow M = a(p, a(EVE, EVE));
   return run(C /* ContextPath */, M);
