@@ -74,7 +74,6 @@ char* mem0_path(char** target, char* prePath, char* postPath) {
   } else if (!strcmp(postPath, ".")) {
       postPath = "";
   }
-
   *target = NULL;
 
   int prePathLength = strlen(prePath);
@@ -86,6 +85,8 @@ char* mem0_path(char** target, char* prePath, char* postPath) {
       asprintf(target, "%s/%s", prePath, postPath);
   }
   assert(*target);
+  if (translatedPrePath) free(translatedPrePath);
+  if (translatedPostPath) free(translatedPostPath);
 }
 
 // =============

@@ -509,7 +509,7 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
    Arrow list = EVE;
    while (xl_enumNext(e)) {
       Arrow child = xl_enumGet(e);
-      list = a(child, list);
+      list = a(list, child);
    }
    xl_freeEnum(e);
    return xl_reduceMachine(CM, list);

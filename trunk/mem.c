@@ -18,20 +18,23 @@ static const Address memSize = MEMSIZE ; ///< mem size (8192 records)
  Each record can carry one mem0 cell.
  */
 static struct s_mem {
-  unsigned short a; ///< <--mem1 internal flags (4 bits)--><--page # (12 bits)-->
   Cell c;
+  unsigned short a; ///< <--mem1 internal flags (4 bits)--><--page # (12 bits)-->
+  uint16_t stamp;
 } m, mem[MEMSIZE];
 
 #define RESERVESIZE 1024
 static const Address reserveSize = RESERVESIZE ; ///< cache reserve size
+static uint32_t pokes = 0;
 
 /** The RAM cache reserve.
  Modified cells are moved into this reserve when their location in mem[] are need to load other cells
  TODO replace it by cuckoo hashing or smarter alternative
  */
 static struct s_reserve { // TODO : change the name
-  Address a;
   Cell    c;
+  Address a;
+  uint16_t stamp;
 } reserve[RESERVESIZE];
 
 static uint32_t reserveHead = 0; ///< cache reserve stack head
@@ -80,7 +83,7 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 }
 
 /** Get a cell */
-Cell mem_get(Address a) {
+Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   DEBUGPRINTF("mem_get(%06x) begin", a);
   Address i;
   Address offset = a & 0xFFF;
@@ -88,12 +91,14 @@ Cell mem_get(Address a) {
   m = mem[offset];
   if (!memIsEmpty(m) && memPageOf(m) == page) {
     DEBUGPRINTF("mem_get returns %016llx from cache", m.c);
+    if (stamp_p != NULL) *stamp_p = m.stamp;
     return m.c;
   }
   
   for (i = 0; i < reserveHead ; i++) {
     if (reserve[i].a == a) {
       DEBUGPRINTF("mem_get returns %016llx from reserve", reserve[i].c);
+      if (stamp_p != NULL) *stamp_p = reserve[i].stamp;
       return reserve[i].c;
     }
   }
@@ -104,11 +109,19 @@ Cell mem_get(Address a) {
     DEBUGPRINTF("mem_get moves %06x to reserve", moved);
     assert(reserveHead < reserveSize);
     reserve[reserveHead].a = moved;
+    reserve[reserveHead].stamp = m.stamp;
     reserve[reserveHead++].c = m.c;
   }
 
   mem[offset].a = page;
+  mem[offset].stamp = pokes;
+  if (stamp_p != NULL) *stamp_p = pokes;
   return (mem[offset].c = mem0_get(a));
+}
+
+/** Get a cell */
+Cell mem_get(Address a) {
+    return mem_get_advanced(a, NULL);
 }
 
 /** Set a cell */
@@ -123,6 +136,7 @@ void mem_set(Address a, Cell c) {
                 DEBUGPRINTF("mem cell found in reserve");
                 // one changes data in the reserve cell
                 reserve[i].c = c;
+                reserve[i].stamp = ++pokes;
                 return; // no need to log it (it's already done)
             }
         }
@@ -132,6 +146,7 @@ void mem_set(Address a, Cell c) {
             DEBUGPRINTF("mem_set moved %06x to reserve", moved);
             assert(reserveHead < reserveSize);
             reserve[reserveHead].a = moved;
+            reserve[reserveHead].stamp = m.stamp;
             reserve[reserveHead].c = m.c;
             reserveHead++;
         }
@@ -145,6 +160,7 @@ void mem_set(Address a, Cell c) {
     }
 
     mem[offset].a = MEM1_CHANGED | page;
+    mem[offset].stamp = ++pokes;
     mem[offset].c = c;
     DEBUGPRINTF("mem_set end, logSize=%d", logSize);
 }
@@ -176,6 +192,10 @@ void mem_commit() {
   DEBUGPRINTF("mem_commit done");
 }
 
+uint32_t mem_pokes() {
+    return pokes;
+}
+
 /** init
   @return 1 if very first start, <0 if error, 0 otherwise
 */
@@ -186,6 +206,7 @@ int mem_init() {
   Address i;
   for (i = 0; i < memSize; i++) {
     mem[i].a = MEM1_EMPTY;
+    mem[i].stamp = 0;
   }
 
   geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), 0);
