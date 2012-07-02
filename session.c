@@ -18,6 +18,22 @@ Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
    return session;
 }
 
+Arrow xls_sessionMaybe(Arrow s, Arrow agent, Arrow uuid) {
+   Arrow agentUuidMaybe = arrowMaybe(agent, uuid);
+   if (!agentUuidMaybe)
+       return EVE;
+
+   Arrow sessionMaybe = arrowMaybe(tag("session"), agentUuidMaybe);
+   if (!sessionMaybe)
+       return EVE;
+
+   Arrow rootedSession = xls_isRooted(EVE, sessionMaybe);
+   if (!rootedSession)
+       return EVE;
+
+   return rootedSession;
+}
+
 /* TODO: FIXME: We could parameter a maximal depth of deep rooting (meta-level)
    when reached, we could break the recursion and root directly to context
    e.g. deepRoot(/s0.s1.s2.s3, a, depth=1) <=> root(/s0.s1.s2/s3.a) s0/s1/s2
@@ -27,7 +43,7 @@ Arrow deepRoot(Arrow c, Arrow e) {
     Arrow parent = tailOf(c);
     if (parent != c) {
         return deepRoot(parent, a(headOf(c), e));
-    } else if (c) {
+    } else if (c != EVE) {
         return root(arrow(c, e));
     } else {
         return root(e);
@@ -36,13 +52,8 @@ Arrow deepRoot(Arrow c, Arrow e) {
 
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
-    if (c == EVE) {
-        root(e);
-        return root(a(EVE, e));
-    } else {
-        deepRoot(c, e);
-        return root(a(c, e));
-    }
+    deepRoot(c, e);
+    return root(a(c, e));
 }
 
 #if 0
@@ -51,7 +62,7 @@ Arrow deepIsRooted(Arrow c, Arrow e) {
     Arrow parent = tailOf(c);
     if (parent != c) {
         return deepIsRooted(parent, arrow(headOf(c),e));
-    } else if (s != EVE) {
+    } else if (c != EVE) {
         return isRooted(arrow(c, e));
     } else {
         return isRooted(e);
@@ -60,9 +71,6 @@ Arrow deepIsRooted(Arrow c, Arrow e) {
 #endif
 
 Arrow xls_isRooted(Arrow c, Arrow e) {
-    if (c == EVE)
-        return isRooted(e);
-
     Arrow m = arrowMaybe(c, e);
     if (m == EVE || !isRooted(m))
         return EVE;
@@ -83,9 +91,6 @@ void deepUnroot(Arrow c, Arrow e) {
 }
 
 Arrow xls_unroot(Arrow c, Arrow e) {
-    if (c == EVE)
-        return unroot(e);
-
     deepUnroot(c, e);
     return unroot(a(c, e));
 }
@@ -98,7 +103,7 @@ void xls_reset(Arrow c) {
 
     XLEnum childrenEnum = xl_childrenOf(c);
     Arrow next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
-    do {
+    while (next != EVE) {
         Arrow child = next;
         next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
 
@@ -108,8 +113,7 @@ void xls_reset(Arrow c) {
                 xls_unroot(c, headOf(child));
             }
         }
-
-    } while (next);
+    }
 
     xl_freeEnum(childrenEnum);
 }

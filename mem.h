@@ -11,21 +11,39 @@
 int  mem_init();
 
 /** set binary content into memory cell
- @param cell Address
- @param Cell content
+ @param Cell Address
+ @param Cell Content
  */
 void mem_set(Address, Cell);
 
 /** get binary content from memory cell
- @param cell Address
- @return Cell content
+ @param Cell Address
+ @return Cell Content
  */
 Cell mem_get(Address);
+
+/** get binary content from memory cell
+ @param Cell Address
+ @return Cell Content
+ */
+Cell mem_get(Address);
+
+/** get binary content from memory cell and related poke stamp
+ @param Cell Address
+ @param Cell Stamp Pointer
+ @return Cell Content
+ */
+Cell mem_get_advanced(Address, uint16_t* stamp_p);
 
 /** close current micro-transaction,
  by making all memory changes from last commit persistent
  */
 void mem_commit();
+
+/** get a counter of write operation
+ @return Pokes
+ */
+uint32_t mem_pokes();
 
 /** setup or reinitialize a geometrically growing RAM area
  */

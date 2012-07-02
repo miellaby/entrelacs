@@ -1615,6 +1615,7 @@ typedef struct iterator_s {
     Arrow current;
     Address pos;
     int rank;
+    uint16_t stamp;
 } iterator_t;
 
 static int xl_enumNextChildOf(XLEnum e) {
@@ -1623,20 +1624,23 @@ static int xl_enumNextChildOf(XLEnum e) {
     // iterate from current location stored in childrenOf iterator
     Arrow    a = iteratorp->parent;
     uint32_t hChild = iteratorp->hash;
-    Address pos = iteratorp->pos;
-    int     rank = iteratorp->rank;
-
+    Address  pos = iteratorp->pos;
+    int      rank = iteratorp->rank;
+    uint16_t stamp = iteratorp->stamp;
+    uint16_t stamp2;
     Cell cell;
     Arrow child;
 
     if (pos == EVE) { // First call to "next" for this enumeration
-        cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+        cell = mem_get_advanced(a, &stamp2); ONDEBUG((show_cell(cell, 0)));
+        assert (stamp2 == stamp); // enum broken
         pos = jumpToChild0(cell, a, hChild, a);
         if (!pos) {
             return 0; // no child
         }
     } else {
-        cell = mem_get(pos); ONDEBUG((show_cell(cell, 0)));
+        cell = mem_get_advanced(pos, &stamp2); ONDEBUG((show_cell(cell, 0)));
+        assert (stamp2 == stamp); // enum broken
         if (!rank) {
             if (cell_getCatBits(cell) != CATBITS_LAST && cell_getJumpNext(cell) ==  MAX_JUMP) {
                 // jump == MAX ==> ref1 points to next
@@ -1661,7 +1665,7 @@ static int xl_enumNextChildOf(XLEnum e) {
             rank = 0;
         }
     }
-    cell = mem_get(pos); ONDEBUG((show_cell(cell, 0)));
+    cell = mem_get_advanced(pos, &stamp2); ONDEBUG((show_cell(cell, 0)));
 
     // For every cell but last
     while (cell_getCatBits(cell) != CATBITS_LAST) {
@@ -1669,6 +1673,7 @@ static int xl_enumNextChildOf(XLEnum e) {
         if (child) {
             iteratorp->pos = pos;
             iteratorp->rank = 0;
+            iteratorp->stamp = stamp2;
             iteratorp->current = child;
             return !0;
         }
@@ -1680,16 +1685,18 @@ static int xl_enumNextChildOf(XLEnum e) {
             if (child) {
                 iteratorp->pos = pos;
                 iteratorp->rank = 1;
+                iteratorp->stamp = stamp2;
                 iteratorp->current = child;
                 return !0;
             }
             pos = jumpToNext(cell, pos, hChild, a);
         }
-        cell = mem_get(pos); ONDEBUG((show_cell(cell, 0)));
+        cell = mem_get_advanced(pos, &stamp2); ONDEBUG((show_cell(cell, 0)));
     }
 
     // Last cell
     iteratorp->pos = pos;
+    iteratorp->stamp = stamp2;
     child = cell_getRef0(cell);
 
     if (child) {
@@ -1737,8 +1744,8 @@ XLEnum xl_childrenOf(Arrow a) {
   if (a == EVE) {
      return NULL; // Eve connectivity not traced
   }
-
-  Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+  uint16_t stamp;
+  Cell cell = mem_get_advanced(a, &stamp); ONDEBUG((show_cell(cell, 0)));
   if (!cell_isArrow(cell)) return NULL; // invalid ID
 
   Cell catBits = cell_getCatBits(cell);
@@ -1759,6 +1766,7 @@ XLEnum xl_childrenOf(Arrow a) {
   iteratorp->current = EVE; // current child
   iteratorp->pos = EVE; // current cell holding child back-ref
   iteratorp->rank = 0; // position of child back-ref in cell : 0/1
+  iteratorp->stamp = stamp;
   return iteratorp;
 }
 

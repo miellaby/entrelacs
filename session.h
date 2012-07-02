@@ -24,6 +24,10 @@
 */
 Arrow xls_session(Arrow c, Arrow agent, Arrow id);
 
+/** return an assimilated session /$c.sessions./$agent.$id, Eve if none
+*/
+Arrow xls_sessionMaybe(Arrow c, Arrow agent, Arrow id);
+
 /** reset a session and unroot it from its context.
 */
 Arrow xls_close(Arrow s);
