@@ -1266,138 +1266,200 @@ enum e_xlType xl_typeOf(Arrow a) {
 }
 
 
-/** connect a child arrow to its parent arrow "a"
- * * one adds the child back-ref to the children list of "a"
- * * if the parent arrow was loose (eg. disconnected & unrooted), one connects the parent arrow to its head and tail (recursive calls) and one removes the LOOSE mem1 flag attached to 'a' cell
+/** connect a child arrow to its parent arrow "a".
+ * it consists in adding the child to the children list of "a".
+ * An arrow gets connected to its both parents as soon as it or one of its descendants gets rooted.
  *
+ * Steps:
+ * 1) if it turns out the parent arrow was loose (i.e. unconnected + unrooted), then
+ *   - one removes it from the "loose" log
+ *   - one connects the parent arrow to its own parents (recursive connect() calls)
+ * 2) Compute hashChild
+ * 3) Scan the existing children list for a free bucket,
+ *    starting from child0 up to the last linked cell.
+ *   - If a free bucket is found, back-ref is put here. End.
+ * 4) If previous scan failed.
+ *   - search for a free cell and compute jumps count (offset multiplier)
+ *     relatively to the last cell in chain (or "a" if no list yet).
+ * 5) If it turns out one's adding the very first cell to an empty children list.
+ *   5.1) If jumps count over limit ... The Pain!
+ *     - Put a "reattachement" into found cell
+ *     - Search for a second free cell
+ *     - Hook the "reattachement" to the second free cell
+ *     - Set child0 to MAX in parent definition
+ *   5.2) Normal case: Put the back-ref into free cell and update child0 inside parent def.
+ * 6) Otherelse, one's adding a new "last" cell after the current "last" of the children list.
+ *   5.1) jumps count over limit
+ *    - set jump to MAX in the current last
+ *    - replace the 2d ref of the current last with the ref to the free cell
+ *    - converts the free cell into a "last" cell, pointing the child ref
+ *    - the replaced 2d ref is put back nearby the child ref
+ *   5.2) The most regular case. jumps count not too high.
+ *    - transform the free cell into a new cell.
+ *    - chain it to the previous last by converting it into
+ *      a "chain cell" and setting up its jump field.
  * TODO : when adding a new cell, try to reduce jumpers from time to time
  */
 static void connect(Arrow a, Arrow child) {
-  DEBUGPRINTF("connect child=%06x to a=%06x", child, a);
-  if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
-  Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
-  assert(cell_isArrow(cell));
-  Cell catBits = cell_getCatBits(cell);
-  int loose = (cell_getChild0(cell) == 0);
+    DEBUGPRINTF("connect child=%06x to a=%06x", child, a);
+    if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
+    Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
+    assert(cell_isArrow(cell));
+    Cell catBits = cell_getCatBits(cell);
+    int loose = (cell_getChild0(cell) == 0);
 
-  if (loose) {
-      // (try to) remove 'a' from the loose log
-      looseStackRemove(a);
-      // One recursively connects the parent arrow to its ancestors.
-	  if (catBits == CATBITS_ARROW) {
-		connect(cell_getTail(cell), a);
-		connect(cell_getHead(cell), a);
-	  } else if (catBits == CATBITS_TUPLE) {
-	    // TODO connect every end
-	  }
-  }
-  CellData data = (catBits == CATBITS_ARROW || catBits == CATBITS_SMALL)
-      ? cell_getSmall(cell)
-	  : cell_getChecksum(cell);
-
-  uint32_t hChild = hashChild(a, data) % PRIM1;
-  if (!hChild) hChild = 2; // offset can't be 0
-
-  Address current = jumpToChild0(cell, a, hChild, a);
-  if (current) {
-	cell = mem_get(current); ONDEBUG((show_cell(cell, 0)));
-	while ((cell & 0xFFFFFF00000000LLU) &&
-        	(cell & 0x000000FFFFFF00LLU) &&
-		   cell_getCatBits(cell) != CATBITS_LAST) {
-		if (cell_getJumpNext(cell) ==  MAX_JUMP) {
-		   // jump == MAX ==> "deep link": ref1 points to next
-		   current = cell_getRef1(cell);
-		} else {
-		   current = jumpToNext(cell, current, hChild, a);
-		}
-		cell = mem_get(current); ONDEBUG((show_cell(cell, 0)));
+    if (loose) {
+        // (try to) remove 'a' from the loose log
+        looseStackRemove(a);
+        // One recursively connects the parent arrow to its ancestors.
+        if (catBits == CATBITS_ARROW) {
+            connect(cell_getTail(cell), a);
+            connect(cell_getHead(cell), a);
+        } else if (catBits == CATBITS_TUPLE) {
+            // TODO connect every end
+        }
     }
-	if (!(cell & 0xFFFFFF00000000LLU)) {
-      // first ref bucket is empty
-      cell |= ((Cell)child << 32);
-      mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
-      DEBUGPRINTF("Connection using first ref bucket of %06x", current);
-	  return;
-    } else if (!((Cell)cell & 0xFFFFFF00LLU)) {
-      // second ref bucket is empty
-	  cell |= ((Cell)child << 8);
-      mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
-      DEBUGPRINTF("Connection using second ref bucket of %06x", current);
-	  return;
-    }
-  } else {
-    current = a;
-  }
+    CellData data = (catBits == CATBITS_ARROW || catBits == CATBITS_SMALL)
+            ? cell_getSmall(cell)
+            : cell_getChecksum(cell);
 
-  // if no free cell in list
-  // free cell search and jump computing
-  Address next;
-  Cell nextCell;
-  Address offset = hChild;
-  unsigned jump = 1;
-  growingShift(current, next, offset, current);
-  nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
-  while (!cell_isFree(nextCell)) {
-      jump++;
-      growingShift(next, next, offset, current);
-      nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
-  }
+    uint32_t hChild = hashChild(a, data) % PRIM1;
+    if (!hChild) hChild = 2; // offset can't be 0
 
-  if (current == a) { // No child yet
-     DEBUGPRINTF("new child0: %06x ", next);
-     if (jump >= MAX_CHILD0) { // ohhh the pain
-        DEBUGPRINTF("MAX CHILD0!");
-		Address sync = next;
-		Cell syncCell = nextCell;
-		syncCell = sync_build(syncCell, a, 0, REATTACHMENT_CHILD0);
-		mem_set(sync, syncCell); ONDEBUG((show_cell(syncCell, 0)));
-
-		offset = hChild;
-        growingShift(next, next, offset, current);
-		nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
-		while (!cell_isFree(nextCell)) {
-			growingShift(next, next, offset, current);
-			nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
-		}
-		syncCell = sync_build(syncCell, a, next, REATTACHMENT_CHILD0);
-		mem_set(sync, syncCell); ONDEBUG((show_cell(syncCell, 0)));
-
-		nextCell = lastRefs_build(nextCell, child, 0, 0);
-
-		jump = MAX_CHILD0;
-     } else { // Easy one
-        DEBUGPRINTF("child0=%d", jump);
-        nextCell = lastRefs_build(nextCell, child, 0, 0);
-     }
-     mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
-     cell = cell_chainChild0(cell, jump);
-     mem_set(a, cell); ONDEBUG((show_cell(cell, 0)));
-  } else {
-    DEBUGPRINTF("new chain: %06x ", next);
-    if (jump >= MAX_JUMP) {
-      DEBUGPRINTF(" MAX JUMP!");
-	  nextCell = lastRefs_build(nextCell, cell_getRef1(cell), child, 0);
-	  mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
-
-	  // When jump = MAX_JUMP in a children cell, ref1 actually points to the next chained cell
-	  cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
-	  mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
+    Address current = jumpToChild0(cell, a, hChild, a);
+    if (current) {
+        cell = mem_get(current); ONDEBUG((show_cell(cell, 0)));
+        while ((cell & 0xFFFFFF00000000LLU) &&
+               (cell & 0x000000FFFFFF00LLU) &&
+               cell_getCatBits(cell) != CATBITS_LAST) {
+            if (cell_getJumpNext(cell) ==  MAX_JUMP) {
+                // jump == MAX ==> "deep link": ref1 points to next
+                current = cell_getRef1(cell);
+            } else {
+                current = jumpToNext(cell, current, hChild, a);
+            }
+            cell = mem_get(current); ONDEBUG((show_cell(cell, 0)));
+        }
+        if (!(cell & 0xFFFFFF00000000LLU)) {
+            // first ref bucket is empty
+            cell |= ((Cell)child << 32);
+            mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
+            DEBUGPRINTF("Connection using first ref bucket of %06x", current);
+            return;
+        } else if (!((Cell)cell & 0xFFFFFF00LLU)) {
+            // second ref bucket is empty
+            cell |= ((Cell)child << 8);
+            mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
+            DEBUGPRINTF("Connection using second ref bucket of %06x", current);
+            return;
+        }
     } else {
-      DEBUGPRINTF(" jump=%d", jump);
-      // One add a new cell (a "last" chained cell)
-      nextCell = lastRefs_build(nextCell, child, 0, 0);
-      mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
-	  // One chain the previous last cell with this last celll
-      cell = cell_chain(cell, jump - 1);
-      mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
-    } 
-  }
+        current = a;
+    }
+
+    // if no free cell in list
+    // free cell search and jump computing
+    Address next;
+    Cell nextCell;
+    Address offset = hChild;
+    unsigned jump = 1;
+    growingShift(current, next, offset, current);
+    nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
+    while (!cell_isFree(nextCell)) {
+        jump++;
+        growingShift(next, next, offset, current);
+        nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
+    }
+
+    if (current == a) { // No child yet
+        DEBUGPRINTF("new child0: %06x ", next);
+        if (jump >= MAX_CHILD0) { // ohhh the pain
+            DEBUGPRINTF("MAX CHILD0!");
+            Address sync = next;
+            Cell syncCell = nextCell;
+            syncCell = sync_build(syncCell, a, 0, REATTACHMENT_CHILD0);
+            mem_set(sync, syncCell); ONDEBUG((show_cell(syncCell, 0)));
+
+            offset = hChild;
+            growingShift(next, next, offset, current);
+            nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
+            while (!cell_isFree(nextCell)) {
+                growingShift(next, next, offset, current);
+                nextCell = mem_get(next); ONDEBUG((show_cell(nextCell, 0)));
+            }
+            syncCell = sync_build(syncCell, a, next, REATTACHMENT_CHILD0);
+            mem_set(sync, syncCell); ONDEBUG((show_cell(syncCell, 0)));
+
+            nextCell = lastRefs_build(nextCell, child, 0, 0);
+
+            jump = MAX_CHILD0;
+        } else { // Easy one
+            DEBUGPRINTF("child0=%d", jump);
+            nextCell = lastRefs_build(nextCell, child, 0, 0);
+        }
+        mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
+        cell = cell_chainChild0(cell, jump);
+        mem_set(a, cell); ONDEBUG((show_cell(cell, 0)));
+    } else {
+        DEBUGPRINTF("new chain: %06x ", next);
+        if (jump >= MAX_JUMP) {
+            DEBUGPRINTF(" MAX JUMP!");
+            nextCell = lastRefs_build(nextCell, cell_getRef1(cell), child, 0);
+            mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
+
+            // When jump = MAX_JUMP in a children cell, ref1 actually points to the next chained cell
+            cell = refs_build(cell, cell_getRef0(cell), next, MAX_JUMP);
+            mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
+        } else {
+            DEBUGPRINTF(" jump=%d", jump);
+            // One add a new cell (a "last" chained cell)
+            nextCell = lastRefs_build(nextCell, child, 0, 0);
+            mem_set(next, nextCell); ONDEBUG((show_cell(nextCell, 0)));
+            // One chain the previous last cell with this last celll
+            cell = cell_chain(cell, jump - 1);
+            mem_set(current, cell); ONDEBUG((show_cell(cell, 0)));
+        }
+    }
 }
 
 
-/** disconnect a child arrow from its parent arrow.
- * One removes the child back-ref from the "child0 jump list" of its parent.
- * If the parent arrow gets unreferred (no child and unrooted), it is disconnected in turn from its head and tail (recursive calls) and it is recorded as a loose arrow
+/** disconnect a child arrow from its parent arrow "a".
+ * - it consists in removing the child from the children list of "a".
+ * - an arrow gets disconnected from its both parents as soon as it gets both unrooted and child-less.
+ *
+ * Steps:
+ * 1) compute hashChild
+ * 2) find the first cell of the children list. Note jumpToChild0 can be complex when a.JUMP == MAX
+ * 3) Scan the children list for the child ref.
+ * 4) Erase the back ref from the found chain cell.
+ * 5) If still data in the chain cell (except case where JUMP==MAX), one leaves it as is. Work is done.
+ *    Otherwise, one undertakes to remove the empty chell chain.
+ * 6) If the empty cell is the last.
+ *   6.1) Free the cell.
+ *   6.2) If not the first chain cell. Unchain the previous cell by making it the last chained cell.
+ *   6.3) If one's removing the unique cell of the list.
+ *    - Reset child0 in "a"
+ *    - If "a" is not rooted, then it gets loose.
+ *      * So one adds it to the "loose log"
+ *      * one disconnects "a" from its both parents.
+ * 7) If the empty cell is a chain cell (not the last)
+ *   7.1) Free the empty cell.
+ *   7.2) Find the next cell in the chain.
+ *   7.3) If there's a previous cell. One makes it point to the found cell.
+ *    - If the previous chain cell was already a deep link, one simply makes it pointing to next. Done.
+ *    - Else one computes the new jumps count.
+ *    - If jumps count < MAX_JUMP, one simply updates the previous cell. Done.
+ *    - If jumps count == MAX, one puts a deep link into the previous cell.
+ *      If one overwrittes an other child back-reference in the process,
+ *      then one connects this child in turn.
+ *   7.5) If there's no previous cell,
+ *    - one adds the jump amount to a.child0 (don't forget + 1 to jump over freed cell)
+ *    - if jumps count still < MAX, then it's easy.
+ *    - but if jumps == MAX, then one restores the freed cell and convert it into a "deep link" cell.
+ *      Note "a" definition is untouched since it already points to the modified cell.
+ *
+ * Reminder: If the parent arrow gets unreferred (child-less and unrooted), then it gets disconnected
+ *    in turn from its head and tail (recursive calls) and it gets recorded as a loose arrow (step 6.3).
  */
 static void disconnect(Arrow a, Arrow child) {
     DEBUGPRINTF("disconnect child=%06x from a=%06x", child, a);
@@ -1553,6 +1615,7 @@ static void disconnect(Arrow a, Arrow child) {
                 // One reuses the freed cell and convert it into a "deep link" cell
                 chain = refs_build(chain, 0, next, MAX_JUMP);
                 mem_set(current, chain); ONDEBUG((show_cell(chain, 0)));
+                // Note: no need to touch "a" def. Already pointing the cell.
             }
         }
     }
