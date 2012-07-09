@@ -52,6 +52,7 @@ Arrow deepRoot(Arrow c, Arrow e) {
 
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
+    DEBUGPRINTF("Rooting %O to %O", e, c);
     deepRoot(c, e);
     return root(a(c, e));
 }
@@ -91,6 +92,7 @@ void deepUnroot(Arrow c, Arrow e) {
 }
 
 Arrow xls_unroot(Arrow c, Arrow e) {
+    DEBUGPRINTF("Unrooting %O from %O", e, c);
     deepUnroot(c, e);
     return unroot(a(c, e));
 }
@@ -109,7 +111,7 @@ void xls_reset(Arrow c) {
 
         if (tailOf(child) == c) { // Only outgoing arrow
             xls_reset(child);
-            if (isRooted(child) != EVE) {
+            if (xl_isRooted(child) != EVE) {
                 xls_unroot(c, headOf(child));
             }
         }
