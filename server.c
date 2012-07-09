@@ -61,20 +61,6 @@ static void get_qsvar(const struct mg_request_info *request_info,
          "query string variable %s = '%.*s'", name, dst_len, dst);
 }
 
-static void my_strlcpy(char *dst, const char *src, size_t len) {
-  strncpy(dst, src, len);
-  dst[len - 1] = '\0';
-}
-
-// Generate session ID. buf must be 33 bytes in size.
-// Note that it is easy to steal session cookies by sniffing traffic.
-// This is why all communication must be SSL-ed.
-static void generate_session_id(char *buf, const char *random,
-                                const char *user) {
-  mg_md5(buf, random, user, NULL);
-  DEBUGPRINTF("generated session ID = %s", buf);
-}
-
 static void *event_handler(enum mg_event event,
                            struct mg_connection *conn,
                            const struct mg_request_info *request_info) {
@@ -85,21 +71,28 @@ static void *event_handler(enum mg_event event,
         Arrow session = get_connection_session(conn);
         char* session_id;
         if (session == EVE) {
+            // generate session_id
+            // Note that it is easy to steal session cookies by sniffing traffic.
+            // This is why all communication must be SSL-ed.
             char random[20];
             session_id = (char *)malloc(33 * sizeof(char));
             assert(session_id);
             snprintf(random, sizeof(random), "%d", rand());
-            generate_session_id(session_id, random, "server");
-
+            mg_md5(session_id, random, "server", NULL);
             DEBUGPRINTF("New session with id %s", session_id);
+
+            // create session
             session = xls_session(EVE, xl_tag("server"), xl_tag(session_id));
+
+            // store secret as server-secret<->"/session-secret-pair-uri" hidden pair
+            // TODO : do as commented root "/%O./%O.%O", server-secret, session, session-secret
             char* sessionUri = xl_uriOf(session);
             char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
             if (!server_secret_s) server_secret_s = "chut";
             char secret_s[256];
             snprintf(secret_s, 255, "%s=%s", sessionUri, server_secret_s);
             xl_root(xl_arrow(xl_tag(server_secret_s), xl_tag(secret_s)));
-
+            // TODO unroot while house cleaning
             xl_commit();
             free(sessionUri);
         } else {
@@ -198,7 +191,7 @@ int main(void) {
   pthread_mutex_init(&mutex, NULL);
 
 #ifndef PRODUCTION
-  log_init(NULL, "server=debug,machine=warn");
+  log_init(NULL, "server,session=debug,machine=warn");
 #endif
 
   xl_init();
@@ -224,6 +217,7 @@ int main(void) {
   DEBUGPRINTF("server started on ports %s.",
          mg_get_option(ctx, "listening_ports"));
 
+  // TODO deep house cleaning at start-up
   while (1) {
       sleep(HOUSECLEANING_PERIOD);
       time_t now = time(NULL);

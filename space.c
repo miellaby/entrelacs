@@ -1696,14 +1696,21 @@ static int xl_enumNextChildOf(XLEnum e) {
 
     if (pos == EVE) { // First call to "next" for this enumeration
         cell = mem_get_advanced(a, &stamp2); ONDEBUG((show_cell(cell, 0)));
-        assert (stamp2 == stamp); // enum broken
+        if (stamp2 != stamp) {
+            return 0; // enum broken
+        }
+
         pos = jumpToChild0(cell, a, hChild, a);
         if (!pos) {
             return 0; // no child
         }
     } else {
         cell = mem_get_advanced(pos, &stamp2); ONDEBUG((show_cell(cell, 0)));
-        assert (stamp2 == stamp); // enum broken
+        if (stamp2 != stamp) { // enum broken
+            iteratorp->current = EVE;
+            return 0; // no child
+        }
+
         if (!rank) {
             if (cell_getCatBits(cell) != CATBITS_LAST && cell_getJumpNext(cell) ==  MAX_JUMP) {
                 // jump == MAX ==> ref1 points to next
