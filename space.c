@@ -1253,6 +1253,7 @@ int xl_isEve(Arrow a) {
 
 enum e_xlType xl_typeOf(Arrow a) {
   if (a == EVE) return XL_EVE;
+  if (a >= SPACE_SIZE) return XL_UNDEF;
 
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   if (cell_isFree(cell))

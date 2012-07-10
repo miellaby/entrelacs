@@ -214,11 +214,12 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
             }
             break;
         } else {
-            int ref;
+            int ref = 0;
             sscanf(url + 1, "%x", &ref);
+
             Arrow sa = ref;
             // Security check: no way to resolve a %x ref which hasn't been forged in the context
-            if (xl_tailOf(sa) == context) {
+            if (xl_typeOf(sa) == XL_ARROW && xl_tailOf(sa) == context) {
                 a = xl_headOf(sa);
                 *urlEnd = url + 7;
             } else {
