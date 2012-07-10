@@ -96,7 +96,7 @@ static void *event_handler(enum mg_event event,
             xl_commit();
             free(sessionUri);
         } else {
-            session_id = xl_tagOf(xl_tailOf(xl_tailOf(session)));
+            session_id = xl_tagOf(xl_headOf(xl_headOf(xl_headOf(session))));
         }
 
         DEBUGPRINTF("session arrow is %O", session);
