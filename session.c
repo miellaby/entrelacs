@@ -225,6 +225,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
                 a = NIL;
                 *urlEnd = NULL;
             }
+            break;
         }
     }
     case '/': { // ARROW
@@ -327,7 +328,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         char* url = malloc(8);
         assert(url);
         Arrow sa = xls_root(context, e);
-        sprintf(url, "%%%06x", (int)sa);
+        sprintf(url, "$%06x", (int)sa);
         *l = 7;
         return url;
     } else if (xl_typeOf(e) == XL_ARROW) { // TODO tuple
