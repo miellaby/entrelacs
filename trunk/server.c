@@ -105,6 +105,16 @@ static void *event_handler(enum mg_event event,
 
         Arrow input = xls_url(session, request_info->uri);
         DEBUGPRINTF("input %s assimilated as %O", request_info->uri, input);
+        if (input == NIL) {
+            pthread_mutex_unlock (&mutex);
+            free(session_id);
+            mg_printf(conn, "HTTP/1.1 %d %s\r\n"
+                      "Content-Type: text/plain\r\n"
+                      "Content-Length: 0\r\n"
+                      "\r\n", 400, "BAD REQUEST");
+            mg_write(conn, "", (size_t)0);
+            return processed;
+        }
 
         Arrow method = xl_tag(request_info->request_method);
         Arrow r = xl_eval(session, xl_arrow(method, input));
