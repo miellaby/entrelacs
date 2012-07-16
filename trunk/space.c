@@ -1937,8 +1937,6 @@ int xl_equal(Arrow a, Arrow b) {
 
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a) {
-  DEBUGPRINTF("forget a=%06x", a);
-
   Cell cell = mem_get(a); ONDEBUG((show_cell(cell, 0)));
   Cell catBits = cell_getCatBits(cell);
   // Compute hashs
@@ -2005,9 +2003,11 @@ static void forget(Arrow a) {
 void xl_commit() {
   DEBUGPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
   unsigned i;
-  for (i = 0; i < looseStackSize ; i++) { // loose stack scanning
-    Arrow a = looseStack[i];
+  for (i = looseStackSize ; i > 0; i--) { // loose stack scanning
+    Arrow a = looseStack[i - 1];
     if (xl_isLoose(a)) { // a loose arrow is removed NOW
+      DEBUGPRINTF("forget loose arrow %X", a);
+
       forget(a);
     }
   }
@@ -2020,11 +2020,12 @@ void xl_commit() {
 static int printf_arrow_extension(FILE *stream,
                                     const struct printf_info *info,
                                     const void *const *args) {
+  static char* nilFakeURI = "(NIL)";
   Arrow arrow = *((Arrow*) (args[0]));
-
-  char* uri = xl_uriOf(arrow);
+  char* uri = arrow != NIL ? xl_uriOf(arrow) : nilFakeURI;
   int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
-  free(uri);
+  if (uri != nilFakeURI)
+      free(uri);
   return len;
 }
 

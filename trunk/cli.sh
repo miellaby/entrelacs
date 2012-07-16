@@ -1,6 +1,6 @@
 #!/bin/sh
 echo hit ^D to exit. >&2
-
+[ -f cookies.tmp ] && rm cookies.tmp
 COOKIES=cookies.tmp
 HEADERS=headers.tmp
 

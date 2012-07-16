@@ -65,7 +65,9 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     Arrow x = a;
     if (type == XL_ARROW) {
         Arrow t = tailOf(a);
-        if (t == arrowOp) {
+        if (t == closure || t == paddock || t == operator) {
+            return a; // naturally escaped / typed litteral
+        } else if (t == arrowOp) {
             Arrow t = headOf(a);
             Arrow t1 = tailOf(t);
             Arrow t2 = headOf(t);
@@ -86,7 +88,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     }
     // environment matching loop
     Arrow se = e;
-    while (!isEve(se)) {
+    while (se != EVE) {
         Arrow b = tailOf(se);
         Arrow bx = tailOf(b);
         if (bx == x)
@@ -94,47 +96,15 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
         se = headOf(se);
     }
 
+    Arrow value = xls_get(C, x);
+    if (value != NIL)
+        return value;
 
-    // TODO: See if we can reuse xls_get. ISSUE: xls_get return EVE
-
-    // nested context matching loop
-    while (typeOf(C) == XL_ARROW) {
-        Arrow slot = a(C, x);
-        XLEnum enu = childrenOf(slot);
-        Arrow found = NIL;
-        while (xl_enumNext(enu)) {
-            Arrow child = xl_enumGet(enu);
-            if (isRooted(child) && tailOf(child) == slot) {
-                found = child;
-                break;
-            }
-        }
-        xl_freeEnum(enu);
-        if (found != NIL)
-            return headOf(found);
-
-        C = tail(C);
-    }
-
-    // top-level global matching loop
-    XLEnum enu = childrenOf(x);
-    Arrow found = NIL;
-    while (xl_enumNext(enu)) {
-        Arrow child = xl_enumGet(enu);
-        if (isRooted(child) && tailOf(child) == x) {
-            found = child;
-            break;
-        }
-    }
-    xl_freeEnum(enu);
-    if (found != NIL)
-        return headOf(found);
-
-    return a;
+    return x; // an unbound variable is kept as is
 }
 
 static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
-  DEBUGPRINTF("resolve a = %O in e = %O", a, e);
+  DEBUGPRINTF("resolve a = %O in e = %O C = %O", a, e, C);
   Arrow w = _resolve(a, e, C, M);
   DEBUGPRINTF("resolved in w = %O", w);
   return w;
@@ -145,7 +115,9 @@ static int isTrivial(Arrow s) {
   int type = typeOf(s);
   if (type != XL_ARROW) return 1; // true
   Arrow t = tailOf(s);
-  if (t == lambda || t == macro || t == arrowOp || t == escape || t == var) return 1;
+  // TODO what if I used arrows for casting these keywords?
+  if (t == lambda || t == closure || t == macro || t == paddock || t == operator \
+          || t == arrowOp || t == escape || t == var) return 1; // TODO closure,paddock,escape,arrowOp,var: as hooks
   return 0;
 }
 
@@ -397,7 +369,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   if (resolved_s_type == operator) { // System call case
       // r(t0) == (operator (hook context))
-      dputs("       r(t0) == (operator (hook context))");
+      dputs("       r(t0) == /operator/hook.context (%O)", resolved_s);
       Arrow operatorParameter = head(head(resolved_s));
       XLCallBack hook;
       char* hooks = str(tail(head(resolved_s)));
@@ -547,7 +519,7 @@ Arrow getHook(Arrow CM, Arrow hookParameter) {
    Arrow C = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_get(C, arrow);
-   return xl_reduceMachine(CM, r);
+   return xl_reduceMachine(CM, (r == NIL ? EVE : r)); // TODO: "throwing" an error?
 }
 
 Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
@@ -678,14 +650,18 @@ static void machine_init() {
 
   for (int i = 0; systemFns[i].s != NULL ; i++) {
     Arrow operatorKey = tag(systemFns[i].s);
-    if (xls_get(EVE, operatorKey) != EVE) continue; // already set
-    root(a(operatorKey, operator(systemFns[i].fn, EVE)));
+    if (xls_get(EVE, operatorKey) != NIL) continue; // already set
+    xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
   }
 
-  if (!xls_get(EVE, tag("if")))       root(a(tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/let//value/eval.condition/ifHook/arrow/value.alternative..")));
-  if (!xls_get(EVE, tag("get")))     root(a(tag("get"), xl_uri("/paddock//x/getHook.x.")));
-  if (!xls_get(EVE, tag("unset"))) root(a(tag("unset"), xl_uri("/paddock//x/unsetHook.x.")));
-  if (!xls_get(EVE, tag("set")))     root(a(tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/let//value/eval.exp/setHook/arrow/slot.value..")));
+  if (xls_get(EVE, tag("if")) == NIL)
+      xls_set(EVE, tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/let//value/eval.condition/ifHook/arrow/value.alternative.."));
+  if (xls_get(EVE, tag("get")) == NIL)
+      xls_set(EVE, tag("get"), xl_uri("/paddock//x/getHook.x."));
+  if (xls_get(EVE, tag("unset")) == NIL)
+      xls_set(EVE, tag("unset"), xl_uri("/paddock//x/unsetHook.x."));
+  if (xls_get(EVE, tag("set")) == NIL)
+      xls_set(EVE, tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/let//value/eval.exp/setHook/arrow/slot.value.."));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {

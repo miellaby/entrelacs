@@ -24,7 +24,7 @@ help:
 	@head makefile | grep '^#'
 
 clean: $(TESTS:%=clean.test%)
-	-rm -f $(OBJECTS) $(TARGETS) $(TESTS:%=test%)
+	-rm -f $(OBJECTS) $(TARGETS) $(TESTS:%=test%) server.o
 
 $(TESTS:%=clean.test%):
 	-rm $(@:clean.%=%) $(@:clean.%=%.o)

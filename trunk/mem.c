@@ -19,7 +19,7 @@ static const Address memSize = MEMSIZE ; ///< mem size (8192 records)
  */
 static struct s_mem {
   Cell c;
-  unsigned short a; ///< <--mem1 internal flags (4 bits)--><--page # (12 bits)-->
+  uint16_t a; ///< <--mem1 internal flags (4 bits)--><--page # (12 bits)-->
   uint16_t stamp;
 } m, mem[MEMSIZE];
 
@@ -173,7 +173,10 @@ static int _addressCmp(const void *a, const void *b) {
 void mem_commit() {
   DEBUGPRINTF("mem_commit begin, logSize=%d", logSize);
   Address i;
-  if (!logSize) return;
+  if (!logSize) {
+      assert(reserveHead == 0);
+      return;
+  }
 
   // sort memory log
   qsort(log, logSize, sizeof(Address), _addressCmp);
@@ -189,7 +192,7 @@ void mem_commit() {
 
   zeroalloc((char **)&log, &logMax, &logSize);
   reserveHead = 0;
-  DEBUGPRINTF("mem_commit done");
+  LOGPRINTF(LOG_WARN, "mem_commit done");
 }
 
 uint32_t mem_pokes() {
