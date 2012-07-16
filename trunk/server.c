@@ -136,17 +136,23 @@ static void *event_handler(enum mg_event event,
 
         char* output_url = xls_urlOf(session, r, l_depth);
         XLType rt = xl_typeOf(r);
+
+#if 0 // FIXME
+#define URI_CONTENT_TYPE "text/uri-list"
+#else
+#define URI_CONTENT_TYPE "text/plain"
+#endif
         char* content_type =
                 (i_depth == 0
-                 ? "text/uri-list"
+                 ? URI_CONTENT_TYPE
                  : (rt == XL_BLOB
                     ? NULL /* No Content-Type */
                     : (rt == XL_TAG
                        ? "text/plain"
-                       : "text/uri-list")));
+                       : URI_CONTENT_TYPE)));
         char* contentTypeCopy = NULL;
         Arrow rta = xl_eval(session, xl_arrow(xl_tag("Content-Type"), r));
-        if (rta != EVE) {
+        if (rta != EVE && xl_tailOf(rta) == rta) {
             contentTypeCopy = xl_tagOf(rta);
             content_type = contentTypeCopy;
         }
