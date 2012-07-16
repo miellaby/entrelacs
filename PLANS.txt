@@ -1,3 +1,16 @@
+Did
+* operator, closure & paddock: now auto escaped, as typed litteral
+* xls_get now returns NIL (FFFFFF) when no arrow found
+  * NIL is a undefined arrow. Different from Eve (0)
+* resolve now use xls_get to get "global" variable value
+* now rooting a pair won't make a global bound variable. Use xls_set(EVE,slot,value) instead.
+  ===> root((EVE->slot)->value) ; root(EVE->(slot->value)))
+* xlg_get bug fix. Recursive get up to the root context might fail.
+* beware space.c show_cell return;
+* looseStack dumped in reverse order
+*
+
+
 locking point:
 *
 

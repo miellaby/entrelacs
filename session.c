@@ -52,7 +52,7 @@ Arrow deepRoot(Arrow c, Arrow e) {
 
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
-    DEBUGPRINTF("Rooting %O to %O", e, c);
+    DEBUGPRINTF("xls_root(%O,%O)", c, e);
     deepRoot(c, e);
     return root(a(c, e));
 }
@@ -92,9 +92,11 @@ void deepUnroot(Arrow c, Arrow e) {
 }
 
 Arrow xls_unroot(Arrow c, Arrow e) {
-    DEBUGPRINTF("Unrooting %O from %O", e, c);
+    DEBUGPRINTF("xls_unroot(%O,%O)", c, e);
     deepUnroot(c, e);
-    return unroot(a(c, e));
+    Arrow u = unroot(a(c, e));
+    // DEBUGPRINTF("xls_unroot(%O,%O) done.", c, e);
+    return u;
 }
 
 /** reset a context
@@ -126,6 +128,8 @@ void xls_reset(Arrow c) {
      2) root $value in /$c.$key context path
 */
 Arrow xls_set(Arrow c, Arrow key, Arrow value) {
+    DEBUGPRINTF("xls_set(%O,%O,%O)", c, key, value);
+
     xls_unset(c, key);
     return xls_root(a(c, key), value);
 }
@@ -145,29 +149,36 @@ void xls_unset(Arrow c, Arrow key) {
     returns the rooted arrow in $c.$key context path
     (if several arrows, only one is returned)
 */
-Arrow xls_get(Arrow c, Arrow key) {
-    Arrow keyContext = arrowMaybe(c, key);
-    if (keyContext == EVE)
-        return EVE;
-
+static Arrow get(Arrow c, Arrow key) {
     Arrow value = NIL;
-    XLEnum enumChildren = xl_childrenOf(keyContext);
-    while (xl_enumNext(enumChildren)) {
-        Arrow keyValue = xl_enumGet(enumChildren);
-        if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
-        if (isRooted(keyValue)) {
-            value = headOf(keyValue);
-            break;
-        }
-    }
-    xl_freeEnum(enumChildren);
+    Arrow keyContext = arrowMaybe(c, key);
+    if (keyContext != EVE) {
 
-    if (value == NIL && tailOf(c) != c)
-        return xls_get(tailOf(c), key);
-    else if (value == NIL)
-        return EVE;
-    else
+        XLEnum enumChildren = xl_childrenOf(keyContext);
+        while (xl_enumNext(enumChildren)) {
+            Arrow keyValue = xl_enumGet(enumChildren);
+            if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
+            if (isRooted(keyValue)) {
+                value = headOf(keyValue);
+                break;
+            }
+        }
+        xl_freeEnum(enumChildren);
+    }
+
+    if (value != NIL)
         return value;
+
+    if (tailOf(c) == c)
+        return NIL;
+
+    return get(tailOf(c), key);
+}
+
+Arrow xls_get(Arrow c, Arrow key) {
+    Arrow value = get(c, key);
+    DEBUGPRINTF("xls_get(%O,%O) returned %O", c, key, value);
+    return value;
 }
 
 /** close a session $s */

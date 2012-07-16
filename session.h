@@ -68,8 +68,9 @@ Arrow xls_set(Arrow c, Arrow slot, Arrow value);
 void  xls_unset(Arrow c, Arrow slot);
 
 /** traditional "get-key".
-    returns the rooted arrow in $c.$key context path
-    (if several arrows, only one is returned)
+    returns the rooted arrow in $c.$key context path.
+    if several arrows, only one is returned.
+    if no arrow, return NIL.
 */
 Arrow xls_get(Arrow c, Arrow slot);
 

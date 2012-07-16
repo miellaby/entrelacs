@@ -199,19 +199,22 @@ static const char *options[] = {
 int main(void) {
   struct mg_context *ctx;
   pthread_mutex_init(&mutex, NULL);
-
+#ifdef DEBUG
+  log_init(NULL, "server,session,machine,space=debug");
+#else
 #ifndef PRODUCTION
-  log_init(NULL, "server,session=debug,machine=warn");
+  log_init(NULL, "server,session=debug");
+#endif
 #endif
 
   xl_init();
 
   Arrow get = xls_get(EVE, xl_tag("GET"));
-  if (get == EVE) {
-      xls_set(EVE, xl_tag("GET"), xl_eval(EVE, xl_uri("/lambda/x.x")));
-      xls_set(EVE, xl_tag("PUT"), xl_eval(EVE, xl_uri("/lambda/x/root.x")));
-      xls_set(EVE, xl_tag("POST"), xl_eval(EVE, xl_uri("/lambda/x/eval.x")));
-      xls_set(EVE, xl_tag("DELETE"), xl_eval(EVE, xl_uri("/lambda/x/unroot.x")));
+  if (get == NIL) {
+      xls_set(EVE, xl_tag("GET"), xl_uri("/closure//x.x."));
+      xls_set(EVE, xl_tag("PUT"), xl_uri("/closure//x/root.x."));
+      xls_set(EVE, xl_tag("POST"), xl_uri("/closure//x/eval.x."));
+      xls_set(EVE, xl_tag("DELETE"), xl_uri("/closure//x/unroot.x."));
       xl_commit();
   }
 
@@ -250,12 +253,13 @@ int main(void) {
 
           Arrow expire = xls_get(session, xl_tag("expire"));
           uint32_t var_size = 0;
-          time_t* expire_time = (expire != EVE ? (time_t *)xl_btagOf(expire, &var_size) : NULL);
+          time_t* expire_time = (expire != NIL ? (time_t *)xl_btagOf(expire, &var_size) : NULL);
 
-          if (expire == EVE || var_size != sizeof(time_t)) {
+          if (expire == NIL || var_size != sizeof(time_t)) {
               LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
+              xl_freeEnum(e);
               sessionTag =  xl_tag("session");
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
@@ -268,6 +272,7 @@ int main(void) {
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           }
       }
+      xl_freeEnum(e);
       xl_commit();
       pthread_mutex_unlock (&mutex);
       DEBUGPRINTF("House Cleaning done.");
