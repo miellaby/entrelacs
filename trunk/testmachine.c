@@ -1,13 +1,15 @@
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
 #include <assert.h>
+#include "log.h"
 
 #include "entrelacs/entrelacs.h"
 
 int main(int argc, char **argv) {
   FILE* fd;
   char buffer[1024];
-  
+  log_init(NULL, "server,session,machine,space=debug");
+
   xl_init();
   char *str, *programs[] = { // TODO some programs here must be wrong since new keyarrows paddock, closure...
       "///lambda/x/lambda/y/arrow/x.y.2.3",

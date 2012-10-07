@@ -1,3 +1,4 @@
+#include "log.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -38,6 +39,7 @@ Arrow blobFromFile(char *f) {
 }
 
 int main(int argc, char* argv[]) {
+    log_init(NULL, "server,session,machine,space=debug");
     xl_init();
     // assimilate arrows
     DEFTAG(hello); // Arrow hello = xl_tag("hello");

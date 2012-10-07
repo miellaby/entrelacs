@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include "session.h"
+#include "log.h"
 
 static Arrow print(Arrow arrow, Arrow context) {
   char* url = xls_urlOf(EVE, arrow, -1);

@@ -1,6 +1,7 @@
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
 #include <assert.h>
+#include "log.h"
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
@@ -13,7 +14,8 @@ static Arrow printCB(Arrow arrow, Arrow context) {
 int main(int argc, char **argv) {
   FILE* fd;
   char buffer[1024];
-  
+  log_init(NULL, "server,session,machine,space=debug");
+
   xl_init();
   DEFTAG(root);
   DEFTAG(childrenOf);
