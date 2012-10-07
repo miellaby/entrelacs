@@ -32,9 +32,10 @@
 // Protects everything.
 static pthread_mutex_t mutex;
 
-// Get session object for the connection. Caller must hold the lock.
-// SGA:This is cut&paste code. I should leverage on the arrow space
-// session_id-->session_cb
+// Get session object for the connection. Caller must hold the lock
+// HTTP Cookie "session" contains the session id.
+// Session is valid if "/server.$id" is rooted within some context (whose bottom context is "sessions")
+
 static Arrow get_connection_session(const struct mg_connection *conn) {
     char session_uuid[100];
 
@@ -43,7 +44,8 @@ static Arrow get_connection_session(const struct mg_connection *conn) {
         DEBUGPRINTF("No session cookie");
         return EVE;
     }
-
+    // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
+    // TODO: remove the first parameter of sessionMaybe
     Arrow session = xls_sessionMaybe(EVE, xl_tag("server"), xl_uri(session_uuid));
     if (session == EVE) {
         DEBUGPRINTF("Unknown session cookie %s", session_uuid);

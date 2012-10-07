@@ -2,6 +2,7 @@
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
+#include "log.h"
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
@@ -80,7 +81,9 @@ int basic() {
     // check rooting
     test_title("check rooting");
     root(_hello_world);
+    root(more_bigger_string_11111111111111111111);
     assert(isRooted(_hello_world));
+    assert(isRooted(more_bigger_string_11111111111111111111));
 
     // check GC
     test_title("check GC");
@@ -294,6 +297,7 @@ int stress() {
 }
 
 int main(int argc, char* argv[]) {
+    log_init(NULL, "space=debug");
     xl_init();
     basic();
     stress();

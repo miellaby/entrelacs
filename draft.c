@@ -1,10 +1,9 @@
-/* This scrap file is used to think about design issues
+/* This scrap file gathers toughs about design issues
 */
 
-Loose state is useless for regular arrow, where loose <=> head.jump == 0
-it is useless for tag arrow as well, where loose <=> ref#==0
-
-I'm going to remove this concept.
+// Loose state is useless for regular arrow, where loose <=> head.jump == 0
+// it is useless for tag arrow as well, where loose <=> ref#==0
+// I'm going to remove this concept.
 
 
 // Je viens d'imaginer une façon excellente d'accélerer le parcours d'un cache a la recherche des modifications
