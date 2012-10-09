@@ -154,7 +154,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
        dputs("    k == (eval kk)");
        Arrow kk = head(k);
        Arrow w = resolve(p, e, C, M);
-       M = a(w, a(e, kk)); // unstack continuation and reinject evaluation result as input expression
+       M = a(w, kk); // unstack continuation and reinject evaluation result as input expression
        return M;
        
      } else {
@@ -302,13 +302,19 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
               // r(t0) == (paddock ((y ss) ee))
               dputs("  r(t0) == (paddock ((y ss) ee))");
               w = t1; // applied arrow is not resolved
+
+              // stacks up two continuation
+              // the first is a normal continuation to eval paddock expression
+              // second one is to eval expression result in caller closure
+              // that is the evaluation of the expression after macro-substitution
+              M = a(ss, a(_load_binding(y, w, ee), a(a(x, a(s, e)), a (evalOp, k))));
           } else {
               // r(t0) == (closure ((y ss) ee))
               dputs("  r(t0) == (closure ((y ss) ee))");
               w = resolve(t1, e, C, M);
+              M = a(ss, a(_load_binding(y, w, ee), a(a(x, a(s, e)), k))); // stacks up a continuation
           }
 
-          M = a(ss, a(_load_binding(y, w, ee), a(a(x, a(s, e)), k))); // stacks up a continuation
           return M;
 
       } else { // not a closure thing
@@ -391,13 +397,16 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           // r(t0) == (paddock ((x ss) ee))
           dputs("        r(t0) == (paddock ((x ss) ee))");
           w = t1; // applied arrow is not evaluated (like in let construct)
+
+          // stacks up one continuation to eval the expression after macro-substitution
+          M = a(ss, a(_load_binding(x, w, ee), a(evalOp, k)));
       } else {
           // r(t0) == (closure ((x ss) ee))
           dputs("        r(t0) == (closure ((x ss) ee))");
           w = resolve(t1, e, C, M);
+          M = a(ss, a(_load_binding(x, w, ee), k));
       }
 
-      M = a(ss, a(_load_binding(x, w, ee), k));
       return M;
 
   } else {
@@ -653,15 +662,15 @@ static void machine_init() {
     if (xls_get(EVE, operatorKey) != NIL) continue; // already set
     xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
   }
-
+  // FIXME : if/x/... doesn't work as expected; I tried every combination of operators. #&!&!
   if (xls_get(EVE, tag("if")) == NIL)
-      xls_set(EVE, tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/let//value/eval.condition/ifHook/arrow/value.alternative.."));
+      xls_set(EVE, tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/arrow/ifHook/arrow//arrow//escape.arrow/eval.condition.alternative."));
   if (xls_get(EVE, tag("get")) == NIL)
-      xls_set(EVE, tag("get"), xl_uri("/paddock//x/getHook.x."));
+      xls_set(EVE, tag("get"), xl_uri("/paddock//x/arrow/getHook/arrow/escape.x."));
   if (xls_get(EVE, tag("unset")) == NIL)
-      xls_set(EVE, tag("unset"), xl_uri("/paddock//x/unsetHook.x."));
+      xls_set(EVE, tag("unset"), xl_uri("/paddock//x/arrow/unsetHook/arrow/escape.x."));
   if (xls_get(EVE, tag("set")) == NIL)
-      xls_set(EVE, tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/let//value/eval.exp/setHook/arrow/slot.value.."));
+      xls_set(EVE, tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/arrow/setHook/arrow//arrow/escape.slot.exp."));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
