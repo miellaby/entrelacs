@@ -208,7 +208,7 @@ int main(void) {
   struct mg_context *ctx;
   pthread_mutex_init(&mutex, NULL);
 #ifdef DEBUG
-  log_init(NULL, "server,session,machine,space=debug");
+  log_init(NULL, "server,session,machine=debug");
 #else
 #ifndef PRODUCTION
   log_init(NULL, "server,session=debug");
