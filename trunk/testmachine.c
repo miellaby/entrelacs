@@ -11,12 +11,20 @@ int main(int argc, char **argv) {
   log_init(NULL, "server,session,machine,space=debug");
 
   xl_init();
-  char *str, *programs[] = { // TODO some programs here must be wrong since new keyarrows paddock, closure...
-      "///lambda/x/lambda/y/arrow/x.y.2.3",
-      "///lambda/x/lambda/y/arrow/x/escape.y.2.3",
-      "/let//myJoin/lambda/x/lambda/y/arrow/x.y//myJoin.2.3",
-      "/let//x.1/let//y.x.y",
-      "//lambda/x.x/let//myHeadOf/lambda/x/headOf.x/myHeadOf/escape/1/2/3/4.5",
+  char *str, *programs[] = {
+
+     "/set/wave/lambda/x/if//equal/x.world///arrow/hello/var.x/no_way",
+     "/wave.me", // ===> no_way
+     "/wave.world", // ==> /hello.world
+     NULL,
+
+      // TODO remake of next expressions
+
+    "///lambda/x/lambda/y/arrow/x.y.2.3",
+    "///lambda/x/lambda/y/arrow/x/escape.y.2.3",
+    "/let//myJoin/lambda/x/lambda/y/arrow/x.y//myJoin.2.3",
+    "/let//x.1/let//y.x.y",
+    "//lambda/x.x/let//myHeadOf/lambda/x/headOf.x/myHeadOf/escape/1/2/3/4.5",
     //  "/run.Eve",
     "@M",
     "/undefinedThing.Eve",
@@ -41,11 +49,11 @@ int main(int argc, char **argv) {
     "/let//p/escape/headOf/escape/1/2/3/4.5/eval.p",
     "/let//myEscape/macro/raw.raw/myEscape/x.2",
     "/let//exp/escape/lambda/y/arrow/y.3//eval.exp.2",
-    "/if/escape/./hello.goodbye",
-    "/if/escape/world/hello.goodbye",
+    "/if/./hello.goodbye",
+    "/if/world/hello.goodbye",
     "/root/escape/+/2.2",
     "/isRooted/escape/+/2.2",
-    "/if/escape/world/hello.goodbye",
+    "/if/world/hello.goodbye",
     "/unroot/escape/+/2.2",
     "/isRooted/escape/+/2.2",
     "/childrenOf/escape.reserved",
@@ -55,7 +63,7 @@ int main(int argc, char **argv) {
     "/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval.crawlp/headOf.list.Eve/let//crawl/eval.crawlp.crawl.Eve",
     "/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval.crawlp/headOf.list.Eve/let//crawl/eval.crawlp/crawl/escape/1/2/3/4/5/", // last / => Eve
     "/childrenOf/escape.set",
-    "/let//set/macro/variable/lambda/value/root/arrow/variable.value//set.set.set",
+    "/let//mySet/macro/vv/let//variable/tailOf.vv/let//value/headOf.vv/arrow/root/arrow//var.variable/var.value/mySet/mySet.mySet",
     "/commit",
     "/childrenOf/escape.set",
     "set",

@@ -68,7 +68,7 @@ static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
         if (t == escape)
             return h;
         else if (t == var)
-            return _resolve(h, e, C, M);
+            return _resolve(a, e, C, M);
         else {
             Arrow rt = _resolve_deeply(t, e, C, M);
             Arrow rh = _resolve_deeply(h, e, C, M);
@@ -105,7 +105,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
         } else if (t == var) {
             x = headOf(a);
         } else {
-            return a;
+           return a;
         }
     }
     // environment matching loop
@@ -147,6 +147,34 @@ static int isTrivial(Arrow s) {
   return 0;
 }
 
+static int isTrivialOrBound(Arrow s, Arrow e, Arrow C, Arrow M, Arrow* w) {
+    if (isTrivial(s)) {
+        *w = resolve(s, e, C, M);
+        return !0;
+    } else {
+        Arrow se = e;
+        while (typeOf(se) == XL_ARROW) {
+            Arrow b = tailOf(se);
+            Arrow bx = tailOf(b);
+            if (bx == s) {
+                *w = headOf(b);
+                return !0;
+            }
+            se = headOf(se);
+        }
+
+        if (se != EVE) {
+             // Environnement is broken
+            *w = brokenEnvironmentWear;
+            return !0;
+        }
+
+        *w = xls_get(C, s);
+        return *w != NIL;
+    }
+
+}
+
 static int chainSize = 0; // TODO thread safe
 
 static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
@@ -156,9 +184,10 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow ek = headOf(M);
   Arrow e = tailOf(ek);
   Arrow k = headOf(ek);
+  Arrow w;
   DEBUGPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
   
-  if (isTrivial(p)) { // Trivial expression
+  if (isTrivialOrBound(p, e, C, M, &w)) { // Trivial expression
      // p == v
      dputs("p == v trivial");
 
@@ -177,20 +206,20 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
         return M;
         
      } else if (tail(k) == evalOp) { // #e# special "eval" continuation
-       // k == (eval kk)
-       dputs("    k == (eval kk)");
-       Arrow kk = head(k);
-       Arrow w = resolve(p, e, C, M);
+       // k == (eval (ee kk))
+       dputs("    k == (eval (ee kk))");
+       Arrow eekk = head(k);
+       Arrow ee = tail(eekk);
+       Arrow kk = head(eekk);
        if (w == brokenEnvironmentWear)
            return a(wear,a(brokenEnvironmentWear, M));
        chainSize--;
-       M = a(w, kk); // unstack continuation and reinject evaluation result as input expression
+       M = a(w, a(ee, kk)); // unstack continuation and reinject evaluation result as input expression
        return M;
        
      } else {
        // k == ((x (ss ee)) kk)
        dputs("    k == ((x (ss ee)) kk)");
-       Arrow w = resolve(p, e, C, M);
        if (w == brokenEnvironmentWear)
            return a(wear,a(brokenEnvironmentWear, M));
 
@@ -232,7 +261,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
      Arrow s = head(p);
 
      chainSize++;
-     M = a(s, a(e, a(evalOp, k))); // stack an eval continuation
+     M = a(s, a(e, a(evalOp, a(e, k)))); // stack an eval continuation
      return M;
   }
   
@@ -242,15 +271,13 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       Arrow v = head(tail(head(p)));
       Arrow x = tail(tail(head(p)));
       Arrow s = head(head(p));
-
+      Arrow w;
 
       // FIXME x == "@M" case
 
-      if (isTrivial(v)) { // Trivial let expression
+      if (isTrivialOrBound(v, e, C, M, &w)) { // Trivial let expression
           // p == (let ((x v:t) s))
           dputs("     v (%O) == t trivial", v);
-          Arrow t = v;
-          Arrow w = resolve(t, e, C, M);
           if (w == brokenEnvironmentWear)
               return a(wear,a(brokenEnvironmentWear, M));
 
@@ -282,12 +309,12 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           dputs("     v == (eval ss) # an eval expression");
           Arrow ss = v1;
           chainSize++;
-          M = a(ss, a(e, a(evalOp, a(a(x, a(s, e)), k)))); // stack an eval continuation
+          M = a(ss, a(e, a(evalOp, a(e, a(a(x, a(s, e)), k))))); // stack an eval continuation
           return M;
       }
 
-
-      if (!isTrivial(v0)) { // non trivial expression in application in let expression #e#
+      Arrow resolved_s;
+      if (!isTrivialOrBound(v0, e, C,  M, &resolved_s)) { // non trivial expression in application in let expression #e#
           // p == (let ((x v:(v0 v1)) s)) where v0 not trivial
           dputs("p == (let ((x v:(v0 v1)) s)) where v0 not trivial");
           // rewriting program to stage s0 evaluation
@@ -298,13 +325,12 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           return M;
       }
 
-      Arrow resolved_s = resolve(v0, e, C, M);
       if (resolved_s == brokenEnvironmentWear)
           return a(wear,a(brokenEnvironmentWear, M));
 
       Arrow resolved_s_type = tail(resolved_s);
 
-      if (resolved_s != paddock && !isTrivial(v1)) { // non trivial argument in application in let expression #e#
+      if (!isTrivialOrBound(v1, e, C, M, &w) && resolved_s != paddock) { // non trivial argument in application in let expression #e#
           // p == (let ((x v:(t0 v1)) s)) where v1 not trivial
           dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
 
@@ -351,12 +377,11 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
               // the first is a normal continuation to eval paddock expression
               // second one is to eval expression result in caller closure
               // that is the evaluation of the expression after macro-substitution
-              chainSize++;
-              M = a(ss, a(_load_binding(y, w, ee), a(a(x, a(s, e)), a (evalOp, k))));
+              chainSize+=2;
+              M = a(ss, a(_load_binding(y, w, ee), a(evalOp, a(e, a(a(x, a(s, e)), k)))));
           } else {
               // r(t0) == (closure ((y ss) ee))
               dputs("  r(t0) == (closure ((y ss) ee))");
-              w = resolve(t1, e, C, M);
               if (w == brokenEnvironmentWear)
                   return a(wear,a(brokenEnvironmentWear, M));
               chainSize++;
@@ -367,7 +392,6 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
       } else { // not a closure thing
           ONDEBUG(fprintf(stderr, "info: r(t0)=%O is not closure-like\n", resolved_s));
-          Arrow w = resolve(t1, e, C, M);
           if (w == brokenEnvironmentWear)
               return a(wear,a(brokenEnvironmentWear, M));
 
@@ -380,8 +404,8 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   dputs("p == (s v)");
   Arrow s = tail(p);
   Arrow v = head(p);
-
-  if (!isTrivial(s)) { // Not trivial closure in application #e#
+  Arrow resolved_s;
+  if (!isTrivialOrBound(s, e, C, M, &resolved_s)) { // Not trivial closure in application #e#
     dputs("p == (s v) where s is an application or such");
     // rewriting rule: pp = (let ((p s) ((var p) v)))
     // ==> M = (s (e ((p (((var p) v) e)) k)))
@@ -389,11 +413,14 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
     return M;
   }
 
+  if (resolved_s == brokenEnvironmentWear)
+      return a(wear,a(brokenEnvironmentWear, M));
+
   if (tail(v) == let) { // let expression as application argument #e#
       dputs("    p == (s v:(let ((x vv) ss))");
     // rewriting rule: pp = (let ((p v) (s (var p))))
     // ==> M = (v (e ((p ((s (var p)) e)) k))))
-    M = a(v, a(e, a(a(p, a(a(s, a(var, p)), e)), k)));
+    M = a(v, a(e, a(a(p, a(a(a(escape,resolved_s), a(var, p)), e)), k)));
     return M;
   }
 
@@ -402,16 +429,13 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
      dputs("     v == (eval ss) # an eval expression");
      Arrow ss = head(v);
      chainSize++;
-     M = a(ss, a(e, a(evalOp, a(a(p, a(a(s, a(var, p)), e)), k)))); // stack an eval continuation
+     M = a(ss, a(e, a(evalOp, a(e, a(a(p, a(a(a(escape,resolved_s), a(var, p)), e)), k))))); // stack an eval continuation
      return M;
   }
 
-  Arrow resolved_s = resolve(s, e, C, M);
-  if (resolved_s == brokenEnvironmentWear)
-      return a(wear,a(brokenEnvironmentWear, M));
-
   Arrow resolved_s_type = tail(resolved_s);
-  if (resolved_s_type != paddock && !isTrivial(v)) { // Not trivial argument in application #e#
+  w = NIL;
+  if (!isTrivialOrBound(v, e, C, M, &w) && resolved_s_type != paddock) { // Not trivial argument in application #e#
     dputs("    v (%O) == something not trivial", v);
     // rewriting rule: pp = (let ((p v) (s (var p))))
     // ==> M = (v (e ((p ((s (var p)) e)) k))))
@@ -448,7 +472,6 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       Arrow x = tail(tail(yse));
       Arrow ss = head(tail(yse));
 
-      Arrow w;
       if (resolved_s_type == paddock) { // #e# paddock special closure
           // r(t0) == (paddock ((x ss) ee))
           dputs("        r(t0) == (paddock ((x ss) ee))");
@@ -456,14 +479,13 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
           // stacks up one continuation to eval the expression after macro-substitution
           chainSize++;
-          M = a(ss, a(_load_binding(x, w, ee), a(evalOp, k)));
+          M = a(ss, a(_load_binding(x, w, ee), a(evalOp, a(e, k))));
       } else {
           // r(t0) == (closure ((x ss) ee))
           dputs("        r(t0) == (closure ((x ss) ee))");
-          w = resolve(t1, e, C, M);
           if (w == brokenEnvironmentWear)
               return a(wear,a(brokenEnvironmentWear, M));
-          chainSize--;
+          //chainSize--;
           M = a(ss, a(_load_binding(x, w, ee), k));
       }
 
@@ -471,8 +493,12 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   } else {
       ONDEBUG(fprintf(stderr, "info: r(t0)=%O is not closure-like\n", resolved_s));
-      // not a closure, one let's the expression as if it was escaped
-      M = a(a(escape, p), ek);
+      // not a closure, one let's the expression almost as if it was escaped
+      if (w == brokenEnvironmentWear)
+          return a(wear,a(brokenEnvironmentWear, M));
+      else if (w == NIL)
+          w = t1;
+      M = a(a(escape, a(t0, w)), ek);
       return M;
   }
 
@@ -492,8 +518,9 @@ Arrow xl_argInMachine(Arrow CM) {
     // p == (<operator> arg)
     arg = head(p);
   }
-  assert(isTrivial(arg));
-  Arrow w = resolve(arg, e, C, M);
+  Arrow w;
+  assert(isTrivialOrBound(arg, e, C, M, &w));
+  resolve(arg, e, C, M);
   DEBUGPRINTF("   argument is %O resolved in %O", arg, w);
   return w;
 }
@@ -597,36 +624,18 @@ Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
 }
 
 Arrow ifHook(Arrow CM, Arrow hookParameter) {
-  Arrow C = tailOf(CM);
-  Arrow M = headOf(CM);
-
   // the ifHook performs some magic
-  Arrow body = xl_argInMachine(CM);
-  Arrow condition = tail(body);
-  Arrow alternative = head(body);
-  Arrow branch;
-  Arrow p = tail(M);
-  Arrow ek = head(M);
-  Arrow e = tail(ek);
-  Arrow w = resolve(condition, e, C, M);
-  if (isEve(w))
-     branch = head(alternative);
-  else
-     branch = tail(alternative);
+  Arrow condition = xl_argInMachine(CM);
+  Arrow branch = xl_operator(isEve(condition) ? headOfHook: tailOfHook, EVE);
 
-  if (tail(p) == let) {
-    // p == (let ((x (if arg)) s))
-    // rewritten in (let ((x branch) s))
-    Arrow x = tail(tail(head(p)));
-    Arrow s = head(head(p));
-    p = a(let, a(a(x, branch), s));
-    M = a(p, ek);
-  } else {
-    // p == (if arg)
-    // rewritten in (branch)
-    M = a(branch, ek);
-  }
-  return M;
+  return xl_reduceMachine(CM, branch);
+}
+
+Arrow equalHook(Arrow CM, Arrow hookParameter) {
+   Arrow contextPath = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   Arrow r = xl_equal(tailOf(arrow), headOf(arrow)) ? tailOf(arrow) : EVE;
+   return xl_reduceMachine(CM, r);
 }
 
 Arrow commitHook(Arrow CM, Arrow hookParameter) {
@@ -697,6 +706,8 @@ static void machine_init() {
   root(a(locked, selfM));
   root(a(locked, arrowWord));
   root(a(locked, escalate));
+  root(a(locked, wear));
+  root(a(locked, brokenEnvironmentWear));
 
   // root basic operators into the global context
   static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
@@ -711,6 +722,7 @@ static void machine_init() {
       {"unsetHook", unsetHook},
       {"getHook", getHook},
       {"ifHook", ifHook},
+      {"equalHook", equalHook},
       {"commit", commitHook},
       {"escalate", escalateHook},
       {NULL, NULL}
@@ -722,20 +734,23 @@ static void machine_init() {
     xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
   }
   if (xls_get(EVE, tag("if")) == NIL)
-      xls_set(EVE, tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/arrow/lambda//eval.x/ifHook//escape.escape///var/eval.x/var.alternative/eval.x."));
+      xls_set(EVE, tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/arrow/eval//ifHook/var.condition//escape.escape/var.alternative."));
+  if (xls_get(EVE, tag("equal")) == NIL)
+      xls_set(EVE, tag("equal"), xl_uri("/paddock//x/let//a/tailOf.x/let//b/headOf.x/arrow/let///tailOf/var.x/var.a/let///headOf/var.x/var.b/equalHook/arrow///escape.var/tailOf/var.x//escape.var/headOf/var.x."));
   if (xls_get(EVE, tag("get")) == NIL)
       xls_set(EVE, tag("get"), xl_uri("/paddock//x/arrow/getHook//escape.escape/var.x."));
   if (xls_get(EVE, tag("unset")) == NIL)
       xls_set(EVE, tag("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape.escape/var.x."));
   if (xls_get(EVE, tag("set")) == NIL)
-      xls_set(EVE, tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/arrow/setHook//escape.escape//var.slot/var.exp."));
+      xls_set(EVE, tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/arrow/let///headOf/var.x/var.exp/setHook/arrow///escape.escape/var.slot//escape.var/headOf/var.x."));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
   machine_init();
   // M = //p/e.k
   chainSize = 0;
-  while (tail(M) != wear && (/*k*/head(head(M)) != EVE || !isTrivial(/*p*/tail(M)))) {
+  Arrow w;
+  while (tail(M) != wear && (!isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w) || /*k*/head(head(M)) != EVE)) {
     M = transition(C, M);
 
     if (chainSize > 100) {
@@ -758,9 +773,7 @@ Arrow xl_run(Arrow C, Arrow M) {
   }
 
   DEBUGPRINTF("run finished with M = %O", M);
-  Arrow p = tail(M);
-  Arrow e = tail(head(M));
-  Arrow w = resolve(p, e, C, M);
+  if (w == NIL) w = EVE;
   DEBUGPRINTF("run result is %O", w);
   return w;
 }
