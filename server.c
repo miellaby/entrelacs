@@ -181,7 +181,7 @@ static void *event_handler(enum mg_event event,
         if (content_type) {
             mg_printf(conn, "Content-Type: %s\r\n", content_type);
         }
-        mg_printf(conn, "Set-Cookie: session=%s; max-age=60; http-only\r\n",  session_id);
+        mg_printf(conn, "Set-Cookie: session=%s; max-age=60; path=/; http-only\r\n",  session_id);
         mg_printf(conn, "\r\n");
         mg_write(conn, content, (size_t)content_length);
         free(output_url);
