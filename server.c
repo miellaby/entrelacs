@@ -160,7 +160,7 @@ static void *event_handler(enum mg_event event,
         }
         uint32_t content_length;
         char* content = NULL;
-        if (i_depth > 0) {
+        if (i_depth != 0) {
             if (rt == XL_BLOB) {
                 content = xl_blobOf(r, &content_length);
             } else if (rt == XL_TAG) {
