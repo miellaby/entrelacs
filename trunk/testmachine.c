@@ -58,13 +58,18 @@ int main(int argc, char **argv) {
     {"/say/isRooted/escape////2.+.2.=.5", "/say."},
     {"/unroot/escape/////2.+.2.=.4", "/////2.+.2.=.4"},
     {"/say/isRooted/escape/////2.+.2.=.4", "/say."},
-    {"/childrenOf/escape.locked", "//locked./%26%21%23.broken%20environment.//locked.%26%21%23.//locked.escalate.//locked.arrow.//locked.%40M.//locked.continuation.//locked.operator.//locked.paddock.//locked.closure.//locked.macro.//locked.lambda.//locked.eval.//locked.escape.//locked.var.//locked.load.//locked.let."},
     {"/let//myHeadOf/lambda/x/headOf.x/myHeadOf/escape/1/2/3/4.5", "/2/3/4.5"},
     {"//let//myHeadOf/lambda/x/headOf.x.myHeadOf/escape/1/2/3/4.5", "/2/3/4.5"},
     {"/unroot/something/not.rooted", "/something/not.rooted"},
     // to be rewritten with a fixed point thingy: {"/let//crawlp/arrow/lambda/list/if/list///eval/var.crawlp/headOf.list/./let//crawl/eval.crawlp/crawl/1/2.3", "/1"},
     {"/say/commit.", "/say."},
-
+    {"/fall.context/,/set/foo.bar", "bar"},
+    {"/say/get.foo", "/say."},
+    {"/fall.context/,/say/get.foo", "/say.bar"},
+    {"/set//demo.89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//fall.demo/,/var.x.", "/paddock//x/arrow//fall.demo/,/var.x."},
+    {"/fall.context/,/escalate/escape//demo.demo/set/foo.bar", "bar"},
+    {"/say/get.foo", "/say."},
+    {"/fall.demo/,/say/get.foo", "/say.bar"},
     {NULL, NULL}
 #if 0
         // TODO remake of next expressions
