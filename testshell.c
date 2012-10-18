@@ -7,7 +7,8 @@
 #include "session.h"
 int main(int argc, char **argv) {
   char buffer[1024];
-  log_init(NULL, "server,session,machine,space=debug");
+  //log_init(NULL, "server,session,machine,space=debug");
+  log_init(NULL, "server,session,machine=debug");
 
   xl_init();
   while (fgets(buffer, 1024, stdin) != NULL) {

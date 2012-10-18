@@ -85,18 +85,6 @@ static void *event_handler(enum mg_event event,
 
             // create session
             session = xls_session(EVE, xl_tag("server"), xl_tag(session_id));
-
-            // store secret as server-secret<->"/session-secret-pair-uri" hidden pair
-            // TODO : do as commented root "/%O./%O.%O", server-secret, session, session-secret
-            char* sessionUri = xl_uriOf(session);
-            char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
-            if (!server_secret_s) server_secret_s = "chut";
-            char secret_s[256];
-            snprintf(secret_s, 255, "%s=%s", sessionUri, server_secret_s);
-            xl_root(xl_arrow(xl_tag(server_secret_s), xl_tag(secret_s)));
-            // TODO unroot while house cleaning
-            xl_commit();
-            free(sessionUri);
         } else {
             session_id = xl_tagOf(xl_headOf(xl_headOf(xl_headOf(session))));
         }
@@ -223,6 +211,15 @@ int main(void) {
       xls_set(EVE, xl_tag("PUT"), xl_uri("/closure//x/root.x."));
       xls_set(EVE, xl_tag("POST"), xl_uri("/closure//x/eval.x."));
       xls_set(EVE, xl_tag("DELETE"), xl_uri("/closure//x/unroot.x."));
+      xl_commit();
+  }
+
+  {   // store secret as server-secret<->"/session-secret-pair-uri" hidden pair
+      char* server_secret_sha1 = getenv("ENTRELACS_SECRET"); // TODO better solution
+      if (!server_secret_sha1) server_secret_sha1 = "8f84b95af52fbfae67209b6cfd3ab7dd1f1e0b12";
+      // meta-user do : mudo
+      xls_set(EVE, xl_arrow(xl_tag("mudo"), xl_tag(server_secret_sha1)), xl_tag("eval"));
+      // TODO unroot while house cleaning
       xl_commit();
   }
 

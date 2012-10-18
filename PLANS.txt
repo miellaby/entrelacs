@@ -1,3 +1,6 @@
+
+
+
 Did
 * operator, closure & paddock: now auto escaped, as typed litteral
 * xls_get now returns NIL (FFFFFF) when no arrow found
@@ -36,6 +39,7 @@ To be done
 In study:
 * xls_root to create less arrows (but also less indexation)
   * e.g root x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
+* session is actually continuation
 
 To take care of:
 * call-backs has to be refreshen every time the server starts.

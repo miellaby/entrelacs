@@ -8,10 +8,11 @@
 #include "session.h"
 #define LOG_CURRENT LOG_MACHINE
 #include "log.h"
+#include "sha1.h"
 
-static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0,
+static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, operator = 0,
-   continuation = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0 ;
+   continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0 ;
 
 static void machine_init();
 
@@ -176,12 +177,14 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   Arrow p = tailOf(M); // program
   Arrow ins = tailOf(p); // let,load,eval,lambda,macro,... instruction
+  Arrow param = headOf(p);
   Arrow ek = headOf(M);
   Arrow e = tailOf(ek);
   Arrow k = headOf(ek);
   Arrow w;
   DEBUGPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
-  
+
+
   if (ins == load) { //load expression #e#
      // p == (load (s0 s1))
      dputs("p == (load (s0 s1))");
@@ -410,11 +413,26 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
      }
   }
 
+
   // application cases
   dputs("p == (s v)");
   Arrow s = tail(p);
   Arrow v = head(p);
   Arrow ws;
+
+
+  if (xl_typeOf(v) == XL_ARROW && tailOf(v) == comma) {
+      dputs("p == (s (, next))");
+      // TODO: right-paddock to emulate this
+      //  <==> (let (it s) next)
+      Arrow next = headOf(v);
+      if (next == comma)
+          return a(s, ek);
+      // k = ((it (next e)) k)
+      chainSize++;
+      return a(s, a(e, a(a(it, a(next, e)), k)));
+  }
+
 
   if (!isTrivialOrBound(s, e, C, M, &ws)) { // Not trivial closure in application #e#
     dputs("p == (s v) where s is an application or such");
@@ -666,25 +684,46 @@ Arrow commitHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, EVE);
 }
 
+Arrow fallHook(Arrow CM, Arrow hookParameter) {
+    Arrow C = tailOf(CM);
+    Arrow M = headOf(CM);
+    Arrow V = xl_argInMachine(CM);
+    return a(a(V, xl_reduceMachine(CM, EVE)), fall);
+}
+
 Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     Arrow C = tailOf(CM);
     Arrow M = headOf(CM);
-    char* uri = uriOf(C);
-    Arrow secret = xl_argInMachine(CM);
+    if (C == EVE)
+        return xl_reduceMachine(CM, EVE);
+    // arg = (target secret)
+    Arrow target_secret_expr = xl_argInMachine(CM);
+    Arrow target_secret = tailOf(target_secret_expr);
+    Arrow expr = headOf(target_secret_expr);
+    Arrow target = tailOf(target_secret);
+    Arrow secret = headOf(target_secret);
     char* secret_s = str(secret);
-    char  try_s[256];
-    snprintf(try_s, 255, "%s=%s", uri, secret_s);
-    LOGPRINTF(LOG_WARN, "escalate attempt");
-    char* server_secret_s = getenv("ENTRELACS_SECRET"); // TODO better solution
-    if (!server_secret_s) server_secret_s = "chut";
-    if (isRooted(a(tag(server_secret_s), tag(try_s))))
-        // success
-        M = a(xl_reduceMachine(CM, EVE), escalate);
-    else
-        M = xl_reduceMachine(CM, EVE);
+    if (!secret_s)
+        return xl_reduceMachine(CM, EVE);
+
+    unsigned char h[20], secret_sha1[41];
+    sha1(secret_s, strlen(secret_s), h);
+    for (int i = 0; i < 20; i++) {
+           sprintf(secret_sha1 + i * 2, "%02x", h[i]);
+    }
     free(secret_s);
-    free(uri);
-    return M;
+
+    Arrow CT = (xl_typeOf(C) == XL_ARROW ? xl_tailOf(C) : EVE); // Meta-context
+    Arrow expression = xls_get(CT, a(target, xl_tag(secret_sha1)));
+
+    if (expression == NIL) {
+        LOGPRINTF(LOG_WARN, "escalate attempt %O",
+                  target_secret_expr);
+
+        return xl_reduceMachine(CM, EVE);
+    }
+
+    return a(a(a(expression, expr), EVE), escalate);
 }
 
 static void machine_init() {
@@ -705,7 +744,10 @@ static void machine_init() {
   continuation = tag("continuation");
   selfM = tag("@M");
   arrowWord = tag("arrow");
+  fall = tag("fall");
   escalate = tag("escalate");
+  comma=tag(",");
+  it=tag("it");
   swearWord = tag("&!#");
   brokenEnvironment = arrow(swearWord, tag("broken environment"));
 
@@ -724,7 +766,10 @@ static void machine_init() {
   root(a(locked, continuation));
   root(a(locked, selfM));
   root(a(locked, arrowWord));
+  root(a(locked, fall));
   root(a(locked, escalate));
+  root(a(locked, comma));
+  root(a(locked, it));
   root(a(locked, swearWord));
   root(a(locked, brokenEnvironment));
 
@@ -743,6 +788,7 @@ static void machine_init() {
       {"ifHook", ifHook},
       {"equalHook", equalHook},
       {"commit", commitHook},
+      {"fall", fallHook},
       {"escalate", escalateHook},
       {NULL, NULL}
   };
@@ -769,23 +815,34 @@ Arrow xl_run(Arrow C, Arrow M) {
   // M = //p/e.k
   chainSize = 0;
   Arrow w;
-  while (tail(M) != swearWord && (!isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w) || /*k*/head(head(M)) != EVE)) {
-    M = transition(C, M);
+  while (chainSize < 500 && tail(M) != swearWord && (!isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w) || /*k*/head(head(M)) != EVE)) {
+      // only operators can produce fall/escalate states
+      // TODO check secret here
 
-    if (chainSize > 500) {
-        M = arrow(swearWord, arrow(arrow(swearWord, tag("too long continuation chain")), M));
-        break;
-    }
+      if (head(M) == fall) {
+          Arrow VM = tail(M);
+          Arrow V = tail(VM);
+          C=a(C,V); // Fall into context
+          M = head(VM);
+          LOGPRINTF(LOG_WARN, "machine context fall to %O", V);
+          continue;
+      }
 
-    // only operators can produce such a state
-    while (head(M) == escalate && M != escalate) {
-        C = tail(C);
-        LOGPRINTF(LOG_WARN, "machine context escalate to %O", C);
-        M = tail(M);
-    }
+      // only operators can produce such a state
+      if (head(M) == escalate) {
+          C = tail(C); // Escape from enclosing context
+          LOGPRINTF(LOG_WARN, "machine context escalate to %O", C);
+          M = tail(M);
+          continue;
+      }
+
+      M = transition(C, M);
   }
 
-  if (tail(M) == swearWord) {
+  if (chainSize >= 500) {
+      DEBUGPRINTF("Continuation chain is too long (infinite loop?), p=%O", tail(M));
+      return a(swearWord, tag("too long continuation chain"));
+  } else  if (tail(M) == swearWord) {
       DEBUGPRINTF("run finished with error : %O", head(M));
       return tail(head(M));
   }
@@ -800,7 +857,7 @@ Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
   DEBUGPRINTF("cl_eval C=%O p=%O", C, p);
   machine_init();
   Arrow M = a(p, a(EVE, EVE));
-  return run(C /* ContextPath */, M);
+  return xl_run(C /* ContextPath */, M);
 }
 
 
