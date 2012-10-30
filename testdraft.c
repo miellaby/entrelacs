@@ -17,9 +17,9 @@ static Arrow print(Arrow arrow, Arrow context) {
 int main(int argc, char* argv[]) {
     xl_init();
     char output[255];
-    DEFTAG(context);
-    DEFTAG(hello);
-    DEFTAG(world);
+    DEFATOM(context);
+    DEFATOM(hello);
+    DEFATOM(world);
     xls_set(context, hello, world);
     fprintf(stderr, "1: xl_set\n");
     childrenOfCB(context, print, EVE);

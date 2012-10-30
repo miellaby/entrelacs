@@ -21,14 +21,14 @@ Arrow _printArrow(Arrow a) {
     }
 
     enum e_xlType t = xl_typeOf(a);
-    if (t == XL_TAG) {
+    if (t == XL_ATOM) {
         int l;
-        char* s = xl_btagOf(a, &l);
+        char* s = xl_memOf(a, &l);
         int size = buffer.size;
         geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + l + 2);
         sprintf(buffer.buffer + size - 1, "\"%s\"", s);
         free(s);
-    } else if (t == XL_ARROW) {
+    } else if (t == XL_PAIR) {
         int size;
         size = buffer.size;
         geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
@@ -57,21 +57,21 @@ Arrow printArrow(Arrow a, Arrow ctx) {
 int basic() {
     // assimilate arrows
     test_title("assimilate arrows");
-    DEFTAG(hello); // Arrow hello = xl_tag("hello");
-    DEFTAG(world);
-    DEFTAG(more_bigger_string_11111111111111111111);
-    DEFA(hello, world); // Arrow _hello_world = xl_arrow(hello, world);
+    DEFATOM(hello); // Arrow hello = xl_atom("hello");
+    DEFATOM(world);
+    DEFATOM(more_bigger_string_11111111111111111111);
+    DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
     
 
-    // check regular arrows
-    test_title("check regular arrows");
-    assert(typeOf(_hello_world) == XL_ARROW);
+    // check regular pairs
+    test_title("check regular pairs");
+    assert(typeOf(_hello_world) == XL_PAIR);
     assert(tail(_hello_world) == hello);
     assert(head(_hello_world) == world);
     
-    // Check tags
-    test_title("check tags");
-    assert(typeOf(hello) == XL_TAG && typeOf(world) == XL_TAG);
+    // Check atoms
+    test_title("check atoms");
+    assert(typeOf(hello) == XL_ATOM && typeOf(world) == XL_ATOM);
 	char *s1 = str(hello);
 	char *s2 = str(world);
 	assert(!strcmp("hello", s1) && !strcmp("world", s2));
@@ -87,7 +87,7 @@ int basic() {
 
     // check GC
     test_title("check GC");
-	DEFTAG(loose);
+	DEFATOM(loose);
     DEFA(hello, loose);
     commit();
     assert(typeOf(loose) == XL_UNDEF);
@@ -102,10 +102,10 @@ int basic() {
     Arrow original = _hello_world;
     Arrow original_big_string = more_bigger_string_11111111111111111111;
     {
-       DEFTAG(more_bigger_string_11111111111111111111);
+       DEFATOM(more_bigger_string_11111111111111111111);
        assert(original_big_string == more_bigger_string_11111111111111111111);
-       DEFTAG(hello);
-       DEFTAG(world);
+       DEFATOM(hello);
+       DEFATOM(world);
        DEFA(hello, world);
        assert(original == _hello_world);
     }
@@ -117,31 +117,31 @@ int basic() {
         assert(uri == _hello_world);
     }
 
-    // check btag/tag equivalency
-    test_title("check btag/tag equivalency");
+    // check natom/atom equivalency
+    test_title("check natom/atom equivalency");
     {
-        Arrow helloB = btag(5, "hello");
-        Arrow worldB = btag(5, "world");
+        Arrow helloB = natom(5, "hello");
+        Arrow worldB = natom(5, "world");
         DEFA(helloB, worldB);
         assert(original == _helloB_worldB);
    }
 
-    // check btag dedup
-    test_title("check btag dedup");
-    Arrow fooB = tag("headOf");
-    Arrow barB = tag("tailOf");
+    // check natom dedup
+    test_title("check natom dedup");
+    Arrow fooB = atom("headOf");
+    Arrow barB = atom("tailOf");
     DEFA(fooB, barB);
     Arrow originalB = _fooB_barB;
     {
-        Arrow fooB = btag(6, "headOf");
-        Arrow barB = btag(6, "tailOf");
+        Arrow fooB = natom(6, "headOf");
+        Arrow barB = natom(6, "tailOf");
             DEFA(fooB, barB);
             assert(originalB == _fooB_barB);
     }
 
-    // check arrow connection
-    test_title("arrow connection");
-    DEFTAG(dude);
+    // check pair connection
+    test_title("pair connection");
+    DEFATOM(dude);
     DEFA(hello, dude);
     root(_hello_dude);
     
@@ -157,10 +157,10 @@ int basic() {
     commit();
     assert(XL_UNDEF == typeOf(_hello_world));
     assert(XL_UNDEF == typeOf(world));
-    assert(XL_TAG == typeOf(hello));
+    assert(XL_ATOM == typeOf(hello));
 
-    // check arrow disconnection
-    test_title("check arrow disconnection");
+    // check pair disconnection
+    test_title("check pair disconnection");
     childrenOfCB(hello, printArrow, Eve());
     
     unroot(_hello_dude);
@@ -171,7 +171,7 @@ int basic() {
 
 int stress() {
     char buffer[50];
-    Arrow tags[1000];
+    Arrow atoms[1000];
     Arrow pairs[500];
     Arrow big;
 
@@ -180,10 +180,10 @@ int stress() {
     {
         for (int i = 0 ; i < 200; i++) {
             snprintf(buffer, 50, "This is the tag #%d", i);
-            tags[i] = tag(buffer);
+            atoms[i] = atom(buffer);
             if (i % 2) {
                 int j = (i - 1) / 2;
-                pairs[j] = arrow(tags[i - 1], tags[i]);
+                pairs[j] = pair(atoms[i - 1], atoms[i]);
                 printArrow(tailOf(pairs[j]), Eve());
                 printArrow(headOf(pairs[j]), Eve());
                 printArrow(pairs[j], Eve());
@@ -192,11 +192,11 @@ int stress() {
 
         for (int i = 0 ; i < 200; i++) {
             snprintf(buffer, 50, "This is the tag #%d", i);
-            Arrow tagi = tag(buffer);
-            assert(tags[i] == tagi);
+            Arrow tagi = atom(buffer);
+            assert(atoms[i] == tagi);
             if (i % 2) {
                 int j = (i - 1) / 2;
-                Arrow pairj = arrow(tags[i - 1], tags[i]);
+                Arrow pairj = pair(atoms[i - 1], atoms[i]);
                 assert(pairs[j] == pairj);
             }
         }
@@ -206,7 +206,7 @@ int stress() {
     test_title("rooting stress");
     {
         for (int i = 0 ; i < 200; i++) {
-            root(tags[i]);
+            root(atoms[i]);
             if (i % 2) {
                 int j = (i - 1) / 2;
                 root(pairs[j]);
@@ -215,19 +215,19 @@ int stress() {
         commit();
     }
 
-    DEFTAG(connectMe);
+    DEFATOM(connectMe);
 
     // connection stress
     test_title("connection stress");
     {
         root(connectMe);
         for (int i = 0 ; i < 200; i++) {
-            Arrow child = arrow(connectMe, tags[i]);
+            Arrow child = pair(connectMe, atoms[i]);
             root(child);
         }
         for (int j = 0 ; j < 100; j++) {
             printArrow(pairs[j], Eve());
-            Arrow child = arrow(connectMe, pairs[j]);
+            Arrow child = pair(connectMe, pairs[j]);
             root(child);
         }
         childrenOfCB(connectMe, printArrow, Eve());
@@ -237,11 +237,11 @@ int stress() {
     test_title("disconnection stress");
     {
         for (int i = 0 ; i < 200; i++) {
-            Arrow child = arrow(connectMe, tags[i]);
+            Arrow child = pair(connectMe, atoms[i]);
             unroot(child);
         }
         for (int j = 0 ; j < 100; j++) {
-            Arrow child = arrow(connectMe, pairs[j]);
+            Arrow child = pair(connectMe, pairs[j]);
             unroot(child);
         }
         childrenOfCB(connectMe, printArrow, Eve());
@@ -250,24 +250,24 @@ int stress() {
     // connecting stress (big depth)
     test_title("connecting stress (big depth)");
     {
-        Arrow loose = tag("save me!");
+        Arrow loose = atom("save me!");
         big = loose;
         for (int i = 0 ; i < 2; i++) {
             if (i % 2)
-                big = arrow(big, tags[i]);
+                big = pair(big, atoms[i]);
             else
-                big = arrow(tags[i], big);
+                big = pair(atoms[i], big);
         }
         for (int j = 0 ; j < 100; j++) {
             if (j % 2)
-                big = arrow(big, pairs[j]);
+                big = pair(big, pairs[j]);
             else
-                big = arrow(pairs[j], big);
+                big = pair(pairs[j], big);
         }
         root(big);
         commit();
 
-        assert(typeOf(loose) == XL_TAG);
+        assert(typeOf(loose) == XL_ATOM);
         printArrow(big, Eve());
     }
 
@@ -276,12 +276,12 @@ int stress() {
     {
         unroot(big);
         commit();
-        assert(isEve(tagMaybe("save me!")));
+        assert(isEve(atomMaybe("save me!")));
 
         // unrooting stress
         test_title("unrooting stress");
         for (int i = 0 ; i < 200; i++) {
-            unroot(tags[i]);
+            unroot(atoms[i]);
             if (i % 2) {
                 int j = (i - 1) / 2;
                 unroot(pairs[j]);

@@ -46,7 +46,7 @@ static Arrow get_connection_session(const struct mg_connection *conn) {
     }
     // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
     // TODO: remove the first parameter of sessionMaybe
-    Arrow session = xls_sessionMaybe(EVE, xl_tag("server"), xl_uri(session_uuid));
+    Arrow session = xls_sessionMaybe(EVE, xl_atom("server"), xl_uri(session_uuid));
     if (session == EVE) {
         DEBUGPRINTF("Unknown session cookie %s", session_uuid);
     } else {
@@ -84,14 +84,14 @@ static void *event_handler(enum mg_event event,
             DEBUGPRINTF("New session with id %s", session_id);
 
             // create session
-            session = xls_session(EVE, xl_tag("server"), xl_tag(session_id));
+            session = xls_session(EVE, xl_atom("server"), xl_atom(session_id));
         } else {
-            session_id = xl_tagOf(xl_headOf(xl_headOf(xl_headOf(session))));
+            session_id = xl_strOf(xl_headOf(xl_headOf(xl_headOf(session))));
         }
 
         DEBUGPRINTF("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
-        xls_set(session, xl_tag("expire"), xl_btag(sizeof(time_t), (char *)&now));
+        xls_set(session, xl_atom("expire"), xl_natom(sizeof(time_t), (char *)&now));
 
         Arrow input = xls_url(session, request_info->uri);
         DEBUGPRINTF("input %s assimilated as %O", request_info->uri, input);
@@ -106,8 +106,8 @@ static void *event_handler(enum mg_event event,
             return processed;
         }
 
-        Arrow method = xl_tag(request_info->request_method);
-        Arrow r = xl_eval(session, xl_arrow(method, input));
+        Arrow method = xl_atom(request_info->request_method);
+        Arrow r = xl_eval(session, xl_pair(method, input));
 
 
         char i_depthBuf[255];
@@ -135,25 +135,26 @@ static void *event_handler(enum mg_event event,
         char* content_type =
                 (i_depth == 0
                  ? URI_CONTENT_TYPE
-                 : (rt == XL_BLOB
-                    ? NULL /* No Content-Type */
-                    : (rt == XL_TAG
+                 : (rt == XL_ATOM
                        ? "text/plain"
-                       : URI_CONTENT_TYPE)));
+                       : URI_CONTENT_TYPE));
         char* contentTypeCopy = NULL;
-        Arrow rta = xl_eval(session, xl_arrow(xl_tag("Content-Type"), r));
-        if (rta != EVE && xl_tailOf(rta) == rta) {
-            contentTypeCopy = xl_tagOf(rta);
+        if (rt == XL_PAIR && xl_tailOf(r) == xl_atom("Content-Typed")) {
+            contentTypeCopy = xl_strOf(xl_tailOf(xl_headOf(r)));
             content_type = contentTypeCopy;
+            r = xl_headOf(xl_headOf(r));
+        } else {
+            Arrow application = xl_pair(xl_atom("Content-Type"), r);
+            Arrow rta = xl_eval(session, application);
+            if (rta != EVE && xl_isAtom(rta)) {
+               contentTypeCopy = xl_strOf(rta);
+               content_type = contentTypeCopy;
+            }
         }
         uint32_t content_length;
         char* content = NULL;
         if (i_depth != 0) {
-            if (rt == XL_BLOB) {
-                content = xl_blobOf(r, &content_length);
-            } else if (rt == XL_TAG) {
-                content = xl_btagOf(r, &content_length);
-            }
+            content = xl_memOf(r, &content_length);
         }
         if (!content) {
             content = xls_urlOf(session, r, i_depth);
@@ -205,12 +206,12 @@ int main(void) {
 
   xl_init();
 
-  Arrow get = xls_get(EVE, xl_tag("GET"));
+  Arrow get = xls_get(EVE, xl_atom("GET"));
   if (get == NIL) {
-      xls_set(EVE, xl_tag("GET"), xl_uri("/closure//x.x."));
-      xls_set(EVE, xl_tag("PUT"), xl_uri("/closure//x/root.x."));
-      xls_set(EVE, xl_tag("POST"), xl_uri("/closure//x/eval.x."));
-      xls_set(EVE, xl_tag("DELETE"), xl_uri("/closure//x/unroot.x."));
+      xls_set(EVE, xl_atom("GET"), xl_uri("/closure//x.x."));
+      xls_set(EVE, xl_atom("PUT"), xl_uri("/closure//x/root.x."));
+      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x/eval.x."));
+      xls_set(EVE, xl_atom("DELETE"), xl_uri("/closure//x/unroot.x."));
       xl_commit();
   }
 
@@ -218,7 +219,7 @@ int main(void) {
       char* server_secret_sha1 = getenv("ENTRELACS_SECRET"); // TODO better solution
       if (!server_secret_sha1) server_secret_sha1 = "8f84b95af52fbfae67209b6cfd3ab7dd1f1e0b12";
       // meta-user do : mudo
-      xls_set(EVE, xl_arrow(xl_tag("mudo"), xl_tag(server_secret_sha1)), xl_tag("eval"));
+      xls_set(EVE, xl_pair(xl_atom("mudo"), xl_atom(server_secret_sha1)), xl_atom("eval"));
       // TODO unroot while house cleaning
       xl_commit();
   }
@@ -231,7 +232,6 @@ int main(void) {
   ctx = mg_start(&event_handler, NULL, options);
   assert(ctx != NULL);
 
-  // Wait until enter is pressed, then exit
   DEBUGPRINTF("server started on ports %s.",
          mg_get_option(ctx, "listening_ports"));
 
@@ -242,7 +242,7 @@ int main(void) {
       DEBUGPRINTF("House Cleaning ...");
       pthread_mutex_lock (&mutex);
 
-      Arrow sessionTag = xl_tag("session");
+      Arrow sessionTag = xl_atom("session");
       XLEnum e = xl_childrenOf(sessionTag);
 
       Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
@@ -256,23 +256,23 @@ int main(void) {
           if (session == EVE)
               continue; // session is not rooted
 
-          Arrow expire = xls_get(session, xl_tag("expire"));
+          Arrow expire = xls_get(session, xl_atom("expire"));
           uint32_t var_size = 0;
-          time_t* expire_time = (expire != NIL ? (time_t *)xl_btagOf(expire, &var_size) : NULL);
+          time_t* expire_time = (expire != NIL ? (time_t *)xl_memOf(expire, &var_size) : NULL);
 
           if (expire == NIL || var_size != sizeof(time_t)) {
               LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
               xl_freeEnum(e);
-              sessionTag =  xl_tag("session");
+              sessionTag =  xl_atom("session");
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           } else if (*expire_time < now) {
               DEBUGPRINTF("session %O outdated.", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
-              sessionTag =  xl_tag("session");
+              sessionTag =  xl_atom("session");
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           }

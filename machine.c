@@ -19,14 +19,14 @@ static void machine_init();
 Arrow xl_operator(XLCallBack hookp, Arrow context) {
   char hooks[64];
   snprintf(hooks, 64, "%p", hookp);
-  Arrow hook = tag(hooks);
+  Arrow hook = atom(hooks);
   return a(operator, a(hook, context));
 }
 
 Arrow xl_continuation(XLCallBack hookp, Arrow context) {
   char hooks[64];
   snprintf(hooks, 64, "%p", hookp);
-  Arrow hook = tag(hooks);
+  Arrow hook = atom(hooks);
   return a(continuation, a(hook, context));
 }
 
@@ -64,7 +64,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M);
  */
 static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
     // TODO: turn this call stack into machine states
-    if (typeOf(a) == XL_ARROW) {
+    if (typeOf(a) == XL_PAIR) {
         Arrow t = tailOf(a);
         Arrow h = headOf(a);
         if (t == escape)
@@ -91,7 +91,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     if (a == selfM) return M;
 
     Arrow x = a;
-    if (type == XL_ARROW) {
+    if (type == XL_PAIR) {
         Arrow t = tailOf(a);
         if (t == swearWord || t == closure || t == paddock || t == operator) {
             return a; // naturally escaped / typed litteral
@@ -102,10 +102,10 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
             return headOf(a);
         } else if (t == lambda) {
             Arrow xs = headOf(a);
-            return arrow(closure, arrow(xs, e));
+            return pair(closure, pair(xs, e));
         } else if (t == macro) {
             Arrow xs = headOf(a);
-            return arrow(paddock, arrow(xs, e));
+            return pair(paddock, pair(xs, e));
         }
 
         if (t == var) {
@@ -114,7 +114,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     }
     // environment matching loop
     Arrow se = e;
-    while (typeOf(se) == XL_ARROW) {
+    while (typeOf(se) == XL_PAIR) {
         Arrow b = tailOf(se);
         Arrow bx = tailOf(b);
         if (bx == x)
@@ -148,7 +148,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
 
 static int isTrivial(Arrow s) {
   int type = typeOf(s);
-  if (type != XL_ARROW) return 1; // an atomic arrow is always trivial
+  if (type != XL_PAIR) return 1; // an atomic arrow is always trivial
   Arrow t = tailOf(s);
   // TODO what if I used arrows for casting these keywords?
   if (t == swearWord || t == lambda || t == closure || t == macro || t == paddock || t == operator \
@@ -294,9 +294,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       Arrow t0 = v0;
       Arrow t1 = v1;
 
-      if (w0_type == paddock && isTrivialOrBound(arrow(w0, t1), e, C, M, &w)) {
+      if (w0_type == paddock && isTrivialOrBound(pair(w0, t1), e, C, M, &w)) {
           M = a(w, a(evalOp, a(e, a(a(x, a(s, e)), k))));
-      } else if (isTrivialOrBound(arrow(w0, w1), e, C, M, &w)) {
+      } else if (isTrivialOrBound(pair(w0, w1), e, C, M, &w)) {
           if (isEve(x)) { // #e# direct environment load
               dputs("          direct environment load");
               M = a(s, a(_load_binding(tail(w), head(w), e), k));
@@ -421,7 +421,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow ws;
 
 
-  if (xl_typeOf(v) == XL_ARROW && tailOf(v) == comma) {
+  if (xl_typeOf(v) == XL_PAIR && tailOf(v) == comma) {
       dputs("p == (s (, next))");
       // TODO: right-paddock to emulate this
       //  <==> (let (it s) next)
@@ -482,10 +482,10 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow t0 = s;
   Arrow t1 = v;
 
-  if (ws_type == paddock && isTrivialOrBound(arrow(ws, t1), e, C, M, &w)) {
+  if (ws_type == paddock && isTrivialOrBound(pair(ws, t1), e, C, M, &w)) {
       M = a(w, a(evalOp, ek));
       return M;
-  //} else if (isTrivialOrBound(arrow(ws, wv), e, C, M, &w)) {
+  //} else if (isTrivialOrBound(pair(ws, wv), e, C, M, &w)) {
   //    M = a(a(escape, w), ek);
   //    return M;
   }
@@ -713,8 +713,8 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     }
     free(secret_s);
 
-    Arrow CT = (xl_typeOf(C) == XL_ARROW ? xl_tailOf(C) : EVE); // Meta-context
-    Arrow expression = xls_get(CT, a(target, xl_tag(secret_sha1)));
+    Arrow CT = (xl_typeOf(C) == XL_PAIR ? xl_tailOf(C) : EVE); // Meta-context
+    Arrow expression = xls_get(CT, a(target, xl_atom(secret_sha1)));
 
     if (expression == NIL) {
         LOGPRINTF(LOG_WARN, "escalate attempt %O",
@@ -730,29 +730,29 @@ static void machine_init() {
   if (let) return;
 
   // initialize key arrows
-  // environment = tag("environment");
-  let = tag("let");
-  load = tag("load");
-  var = tag("var");
-  escape = tag("escape");
-  evalOp = tag("eval");
-  lambda = tag("lambda");
-  macro = tag("macro");
-  closure = tag("closure");
-  paddock = tag("paddock"); // closure for macro
-  operator = tag("operator");
-  continuation = tag("continuation");
-  selfM = tag("@M");
-  arrowWord = tag("arrow");
-  fall = tag("fall");
-  escalate = tag("escalate");
-  comma=tag(",");
-  it=tag("it");
-  swearWord = tag("&!#");
-  brokenEnvironment = arrow(swearWord, tag("broken environment"));
+  // environment = atom("environment");
+  let = atom("let");
+  load = atom("load");
+  var = atom("var");
+  escape = atom("escape");
+  evalOp = atom("eval");
+  lambda = atom("lambda");
+  macro = atom("macro");
+  closure = atom("closure");
+  paddock = atom("paddock"); // closure for macro
+  operator = atom("operator");
+  continuation = atom("continuation");
+  selfM = atom("@M");
+  arrowWord = atom("arrow");
+  fall = atom("fall");
+  escalate = atom("escalate");
+  comma=atom(",");
+  it=atom("it");
+  swearWord = atom("&!#");
+  brokenEnvironment = pair(swearWord, atom("broken environment"));
 
   // preserve keyarrows from GC
-  Arrow locked = tag("locked");
+  Arrow locked = atom("locked");
   root(a(locked, let));
   root(a(locked, load));
   root(a(locked, var));
@@ -794,20 +794,20 @@ static void machine_init() {
   };
 
   for (int i = 0; systemFns[i].s != NULL ; i++) {
-    Arrow operatorKey = tag(systemFns[i].s);
+    Arrow operatorKey = atom(systemFns[i].s);
     if (xls_get(EVE, operatorKey) != NIL) continue; // already set
     xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
   }
-  if (xls_get(EVE, tag("if")) == NIL)
-      xls_set(EVE, tag("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/arrow/eval//ifHook/var.condition//escape.escape/var.alternative."));
-  if (xls_get(EVE, tag("equal")) == NIL)
-      xls_set(EVE, tag("equal"), xl_uri("/paddock//x/let//a/tailOf.x/let//b/headOf.x/arrow/let///tailOf/var.x/var.a/let///headOf/var.x/var.b/equalHook/arrow///escape.var/tailOf/var.x//escape.var/headOf/var.x."));
-  if (xls_get(EVE, tag("get")) == NIL)
-      xls_set(EVE, tag("get"), xl_uri("/paddock//x/arrow/getHook//escape.escape/var.x."));
-  if (xls_get(EVE, tag("unset")) == NIL)
-      xls_set(EVE, tag("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape.escape/var.x."));
-  if (xls_get(EVE, tag("set")) == NIL)
-      xls_set(EVE, tag("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/arrow/let///headOf/var.x/var.exp/setHook/arrow///escape.escape/var.slot//escape.var/headOf/var.x."));
+  if (xls_get(EVE, atom("if")) == NIL)
+      xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/arrow/eval//ifHook/var.condition//escape.escape/var.alternative."));
+  if (xls_get(EVE, atom("equal")) == NIL)
+      xls_set(EVE, atom("equal"), xl_uri("/paddock//x/let//a/tailOf.x/let//b/headOf.x/arrow/let///tailOf/var.x/var.a/let///headOf/var.x/var.b/equalHook/arrow///escape.var/tailOf/var.x//escape.var/headOf/var.x."));
+  if (xls_get(EVE, atom("get")) == NIL)
+      xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getHook//escape.escape/var.x."));
+  if (xls_get(EVE, atom("unset")) == NIL)
+      xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape.escape/var.x."));
+  if (xls_get(EVE, atom("set")) == NIL)
+      xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/arrow/let///headOf/var.x/var.exp/setHook/arrow///escape.escape/var.slot//escape.var/headOf/var.x."));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
@@ -841,7 +841,7 @@ Arrow xl_run(Arrow C, Arrow M) {
 
   if (chainSize >= 500) {
       DEBUGPRINTF("Continuation chain is too long (infinite loop?), p=%O", tail(M));
-      return a(swearWord, tag("too long continuation chain"));
+      return a(swearWord, atom("too long continuation chain"));
   } else  if (tail(M) == swearWord) {
       DEBUGPRINTF("run finished with error : %O", head(M));
       return tail(head(M));
