@@ -1,7 +1,7 @@
 # Suggested calls:
 # CFLAGS=-DPRODUCTION make clean all
 # CFLAGS="-g -o2" make clean all
-# CFLAGS="-DPRODUCTION -DDEBUG_MACHINE -g -o2" make clean all
+# CFLAGS="-DDEBUG -g -o2" make clean all
 # make tests
 # make run
 # CFLAGS="-g -o2" make clean.testmachine testmachine
@@ -23,8 +23,11 @@ all: $(TARGETS)
 help:
 	@head makefile | grep '^#'
 
-clean: $(TESTS:%=clean.test%)
-	-rm -f $(OBJECTS) $(TARGETS) $(TESTS:%=test%) server.o
+clean: $(TESTS:%=clean.test%) clean.server
+	-rm -f $(OBJECTS) $(TARGETS)
+
+clean.server:
+	-rm -f mongoose.o server.o entrelacsd
 
 $(TESTS:%=clean.test%):
 	-rm $(@:clean.%=%) $(@:clean.%=%.o)

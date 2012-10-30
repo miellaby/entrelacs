@@ -200,7 +200,7 @@ int main(void) {
   log_init(NULL, "server,session,machine=debug");
 #else
 #ifndef PRODUCTION
-  log_init(NULL, "server,session=debug");
+  log_init(NULL, "server=debug");
 #endif
 #endif
 
