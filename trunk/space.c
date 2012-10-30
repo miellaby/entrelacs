@@ -677,10 +677,13 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
   Address probeAddress, firstFreeCell, newArrow;
   Cell cell;
 
-  // Eve special case
-  if (tail == EVE && head == EVE) {
-    return EVE;
-  }
+  // NOPE:Eve special case
+  // It's a mistake
+  //if (tail == EVE && head == EVE) {
+  //   return EVE;
+  //  }
+  if (tail == NIL || head == NIL)
+    return NIL;
 
   // Compute hashs
   hash = hashArrow(tail, head);
@@ -979,6 +982,7 @@ static void percent_decode(const char *src, size_t src_len, char *dst, size_t* d
 static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
     int r;
     int t = xl_typeOf(a);
+    assert(a != NIL);
     switch(t) {
         case XL_EVE: {
             char *s = (char*)malloc(1);
@@ -1000,7 +1004,10 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
         case XL_PAIR: {
             uint32_t l1, l2;
             char *tailUri = toURI(xl_tailOf(a), &l1);
+	    if (!tailUri) return NULL;
             char *headUri = toURI(xl_headOf(a), &l2);
+	    if (!headUri) { free(tailUri); return NULL;}
+
             char *uri = malloc(2 + l1 + l2 + 1) ;
             assert(uri);
             sprintf(uri, "/%s.%s", tailUri, headUri);
@@ -1013,6 +1020,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
             assert(0);
             return NULL; // Not yet supported TODO
         default:
+            assert(0);
             return NULL;
     }
 }
@@ -1960,6 +1968,7 @@ static int printf_arrow_extension(FILE *stream,
   static char* nilFakeURI = "(NIL)";
   Arrow arrow = *((Arrow*) (args[0]));
   char* uri = arrow != NIL ? xl_uriOf(arrow) : nilFakeURI;
+  assert(uri);
   int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
   if (uri != nilFakeURI)
       free(uri);

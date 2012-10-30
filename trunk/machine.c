@@ -64,7 +64,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M);
  */
 static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
     // TODO: turn this call stack into machine states
-    if (typeOf(a) == XL_PAIR) {
+    if (isPair(a)) {
         Arrow t = tailOf(a);
         Arrow h = headOf(a);
         if (t == escape)
@@ -86,12 +86,11 @@ static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
 
 static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     DEBUGPRINTF("   _resolve a = %O", a);
-    int type = typeOf(a);
-    if (type == XL_EVE) return EVE;
+    if (a == EVE) return EVE;
     if (a == selfM) return M;
 
     Arrow x = a;
-    if (type == XL_PAIR) {
+    if (isPair(a)) {
         Arrow t = tailOf(a);
         if (t == swearWord || t == closure || t == paddock || t == operator) {
             return a; // naturally escaped / typed litteral
@@ -114,7 +113,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     }
     // environment matching loop
     Arrow se = e;
-    while (typeOf(se) == XL_PAIR) {
+    while (isPair(se)) {
         Arrow b = tailOf(se);
         Arrow bx = tailOf(b);
         if (bx == x)
@@ -147,8 +146,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
 
 
 static int isTrivial(Arrow s) {
-  int type = typeOf(s);
-  if (type != XL_PAIR) return 1; // an atomic arrow is always trivial
+  if (isAtom(s)) return 1; // an atomic arrow is always trivial
   Arrow t = tailOf(s);
   // TODO what if I used arrows for casting these keywords?
   if (t == swearWord || t == lambda || t == closure || t == macro || t == paddock || t == operator \
@@ -159,7 +157,8 @@ static int isTrivial(Arrow s) {
 static int isTrivialOrBound(Arrow a, Arrow e, Arrow C, Arrow M, Arrow* w) {
     if (isTrivial(a)) {
         *w = resolve(a, e, C, M);
-        return !0;
+        DEBUGPRINTF("isTrivialOrBound(%O) : is trivial and resolved to %O !!", a, *w);
+        return (*w != NIL);
     } else {
         *w = _resolve(a, e, C, M);
         if (*w != NIL) {
@@ -216,12 +215,15 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       Arrow x = tail(tail(head(p)));
       Arrow s = head(head(p));
       Arrow w;
+      dputs("   x = %O\n   v = %O\n   s= %O", x, v, s);
 
       // FIXME x == "@M" case
 
       if (isTrivialOrBound(v, e, C, M, &w)) { // Trivial let expression
           // p == (let ((x v:t) s))
           dputs("     v (%O) == t trivial", v);
+
+          // FIXME: if v == /p.v where p resolve to a paddock, one should eval the bound value
           if (w == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
 
@@ -277,9 +279,10 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
       Arrow w0_type = tail(w0);
 
-      if (!isTrivialOrBound(v1, e, C, M, &w1) && w0 != paddock) { // non trivial argument in application in let expression #e#
+      if (!isTrivialOrBound(v1, e, C, M, &w1) && w0_type != paddock) {
+          // non trivial argument in application in let expression #e# 
           // p == (let ((x v:(t0 v1)) s)) where v1 not trivial
-          dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
+    	    dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
 
           // rewriting program to stage v1 and (v0 v1) evaluation
           // pp = (let ((p v1) (let ((x (v0 (var p))) s))))
@@ -288,15 +291,21 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           M = a(pp, ek);
           return M;
       }
-      
+ 
       // p == (let ((x (t0 t1)) s)) where t0 is a closure or equivalent
       dputs("p == (let ((x v:(v0:t0 v1:t1) s))  # a really trivial application in let expression");
       Arrow t0 = v0;
       Arrow t1 = v1;
 
-      if (w0_type == paddock && isTrivialOrBound(pair(w0, t1), e, C, M, &w)) {
+      if (w0_type == paddock && isTrivialOrBound(pair(t0, t1), e, C, M, &w)) {
+	        dputs("   t0 is bound to a paddock w0 and /w0.t1 is bound to %O, one evals this expression", w); 
+          // FIXME : pair(t0, t1) is v. See FIXME above
           M = a(w, a(evalOp, a(e, a(a(x, a(s, e)), k))));
-      } else if (isTrivialOrBound(pair(w0, w1), e, C, M, &w)) {
+	        return M;
+      } else if (w0_type != paddock && isTrivialOrBound(pair(t0, w1), e, C, M, &w)) {
+
+          dputs("   /t0 is not bound to a paddock and /t0.resolve(t1) is bound to %O", w);
+
           if (isEve(x)) { // #e# direct environment load
               dputs("          direct environment load");
               M = a(s, a(_load_binding(tail(w), head(w), e), k));
@@ -308,7 +317,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
       if (w0_type == operator) { // System call special case
           // r(t0) = (operator (hook context))
-          dputs("  r(t0) = (operator (hook context))");
+          dputs("  resolve(t0) = (operator (hook context))");
           Arrow operatorParameter = head(head(w0));
           XLCallBack hook;
           char* hooks = str(tail(head(w0)));
@@ -319,14 +328,14 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           return M;
 
       } else if (w0_type == paddock || w0_type == closure) {
-          // closure/paddock case
+          dputs("    w0_type = %O", w0_type);
           Arrow yse = head(w0);
           Arrow ee = head(yse);
           Arrow y = tail(tail(yse));
           Arrow ss = head(tail(yse));
           if (w0_type == paddock) { // #e# paddock special closure
               // r(t0) == (paddock ((y ss) ee))
-              dputs("  r(t0) == (paddock ((y ss) ee))");
+              dputs("  resolve(t0) == %O", w0);
               // applied arrow is not resolved
 
               // stacks up two continuation
@@ -337,7 +346,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
               M = a(ss, a(_load_binding(y, t1, ee), a(evalOp, a(e, a(a(x, a(s, e)), k)))));
           } else {
               // r(t0) == (closure ((y ss) ee))
-              dputs("  r(t0) == (closure ((y ss) ee))");
+              dputs("  resolve(t0) == %O", w0);
               if (w1 == brokenEnvironment)
                   return a(swearWord,a(brokenEnvironment, M));
               chainSize++;
@@ -347,11 +356,11 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           return M;
 
       } else { // not a closure thing
-          ONDEBUG(fprintf(stderr, "info: r(t0)=%O is not closure-like\n", w0));
+          ONDEBUG(fprintf(stderr, "info: resolve(t0)=%O is not closure-like\n", w0));
           if (w == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
 
-          M = a(s, a(_load_binding(x, a(w0, w), e), k));
+          M = a(s, a(_load_binding(x, a(w0, w1), e), k));
           return M;
       }
   } // let
@@ -421,7 +430,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow ws;
 
 
-  if (xl_typeOf(v) == XL_PAIR && tailOf(v) == comma) {
+  if (xl_isPair(v) && tailOf(v) == comma) {
       dputs("p == (s (, next))");
       // TODO: right-paddock to emulate this
       //  <==> (let (it s) next)
@@ -481,18 +490,19 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   dputs("    p == (t0:s t1:v) # a really trivial application");
   Arrow t0 = s;
   Arrow t1 = v;
-
-  if (ws_type == paddock && isTrivialOrBound(pair(ws, t1), e, C, M, &w)) {
+  if (ws_type == paddock && isTrivialOrBound(pair(s, t1), e, C, M, &w)) {
+      dputs("s is bound to a paddock and /s.t1 is bound to %O, one evals the expression", w);
       M = a(w, a(evalOp, ek));
       return M;
-  //} else if (isTrivialOrBound(pair(ws, wv), e, C, M, &w)) {
-  //    M = a(a(escape, w), ek);
-  //    return M;
+  } else if (ws_type != paddock && isTrivialOrBound(pair(s, wv), e, C, M, &w)) {
+      dputs("/s.resolve(v) is bound to something and s is not bound to a paddock!");
+      M = a(a(escape, w), ek);
+      return M;
   }
 
   if (ws_type == operator) { // System call case
-      // r(t0) == (operator (hook context))
-      dputs("       r(t0) == /operator/hook.context (%O)", ws);
+      // resolve(t0) == (operator (hook context))
+      dputs("       resolve(t0) == /operator/hook.context (%O)", ws);
       Arrow operatorParameter = head(head(ws));
       XLCallBack hook;
       char* hooks = str(tail(head(ws)));
@@ -511,7 +521,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
       if (ws_type == paddock) { // #e# paddock special closure
           // r(t0) == (paddock ((x ss) ee))
-          dputs("        r(t0) == (paddock ((x ss) ee))");
+          dputs("        resolve(t0) == (paddock ((x ss) ee))");
           wv = t1; // applied arrow is not evaluated (like in let construct)
 
           // stacks up one continuation to eval the expression after macro-substitution
@@ -519,7 +529,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           M = a(ss, a(_load_binding(x, wv, ee), a(evalOp, ek)));
       } else {
           // r(t0) == (closure ((x ss) ee))
-          dputs("        r(t0) == (closure ((x ss) ee))");
+          dputs("        resolve(t0) == (closure ((x ss) ee))");
           if (wv == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
           //chainSize--;
@@ -556,7 +566,8 @@ Arrow xl_argInMachine(Arrow CM) {
     arg = head(p);
   }
   Arrow w;
-  assert(isTrivialOrBound(arg, e, C, M, &w));
+  int bound = isTrivialOrBound(arg, e, C, M, &w);
+  assert(bound);
   resolve(arg, e, C, M);
   DEBUGPRINTF("   argument is %O resolved in %O", arg, w);
   return w;
@@ -713,7 +724,7 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     }
     free(secret_s);
 
-    Arrow CT = (xl_typeOf(C) == XL_PAIR ? xl_tailOf(C) : EVE); // Meta-context
+    Arrow CT = (isPair(C) ? xl_tailOf(C) : EVE); // Meta-context
     Arrow expression = xls_get(CT, a(target, xl_atom(secret_sha1)));
 
     if (expression == NIL) {
