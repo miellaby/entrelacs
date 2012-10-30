@@ -13,17 +13,17 @@
 
 Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
    /* $session =  /$s/session/$agent.$uuid */
-   Arrow session = xls_root(s, a(tag("session"), a(agent, uuid)));
+   Arrow session = xls_root(s, a(atom("session"), a(agent, uuid)));
 
    return session;
 }
 
 Arrow xls_sessionMaybe(Arrow s, Arrow agent, Arrow uuid) {
-   Arrow agentUuidMaybe = arrowMaybe(agent, uuid);
+   Arrow agentUuidMaybe = pairMaybe(agent, uuid);
    if (!agentUuidMaybe)
        return EVE;
 
-   Arrow sessionMaybe = arrowMaybe(tag("session"), agentUuidMaybe);
+   Arrow sessionMaybe = pairMaybe(atom("session"), agentUuidMaybe);
    if (!sessionMaybe)
        return EVE;
 
@@ -44,7 +44,7 @@ Arrow deepRoot(Arrow c, Arrow e) {
     if (parent != c) {
         return deepRoot(parent, a(headOf(c), e));
     } else if (c != EVE) {
-        return root(arrow(c, e));
+        return root(pair(c, e));
     } else {
         return root(e);
     }
@@ -62,9 +62,9 @@ Arrow xls_root(Arrow c, Arrow e) {
 Arrow deepIsRooted(Arrow c, Arrow e) {
     Arrow parent = tailOf(c);
     if (parent != c) {
-        return deepIsRooted(parent, arrow(headOf(c),e));
+        return deepIsRooted(parent, pair(headOf(c),e));
     } else if (c != EVE) {
-        return isRooted(arrow(c, e));
+        return isRooted(pair(c, e));
     } else {
         return isRooted(e);
     }
@@ -72,7 +72,7 @@ Arrow deepIsRooted(Arrow c, Arrow e) {
 #endif
 
 Arrow xls_isRooted(Arrow c, Arrow e) {
-    Arrow m = arrowMaybe(c, e);
+    Arrow m = pairMaybe(c, e);
     if (m == EVE || !isRooted(m))
         return EVE;
 
@@ -139,7 +139,7 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     reset $c.$key context path
 */
 void xls_unset(Arrow c, Arrow key) {
-    Arrow slotContext = arrowMaybe(c, key);
+    Arrow slotContext = pairMaybe(c, key);
     if (slotContext == EVE) return;
 
     xls_reset(slotContext);
@@ -151,7 +151,7 @@ void xls_unset(Arrow c, Arrow key) {
 */
 static Arrow get(Arrow c, Arrow key) {
     Arrow value = NIL;
-    Arrow keyContext = arrowMaybe(c, key);
+    Arrow keyContext = pairMaybe(c, key);
     if (keyContext != EVE) {
 
         XLEnum enumChildren = xl_childrenOf(keyContext);
@@ -230,7 +230,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
 
             Arrow sa = ref;
             // Security check: no way to resolve a %x ref which hasn't been forged in the context
-            if (xl_typeOf(sa) == XL_ARROW && xl_tailOf(sa) == context) {
+            if (xl_typeOf(sa) == XL_PAIR && xl_tailOf(sa) == context) {
                 a = xl_headOf(sa);
                 *urlEnd = url + 7;
             } else {
@@ -256,7 +256,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
             if (!headUrlEnd) {
                 *urlEnd = NULL;
             } else {
-                a = (locateOnly ? xl_arrowMaybe(tail, head) : xl_arrow(tail, head));
+                a = (locateOnly ? xl_pairMaybe(tail, head) : xl_pair(tail, head));
                 if (a == EVE && !(tail == EVE && head == EVE)) {
                     *urlEnd = NULL;
                 } else {
@@ -318,7 +318,7 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
         if (!urlEnd) return b; // NIL or EVE
         urlEnd = skeepSpacesAndOneDot(urlEnd);
         if (a == EVE && b == EVE) continue;
-        a = (locateOnly ? arrowMaybe(a, b) : arrow(a, b)); // TODO: document actual design
+        a = (locateOnly ? pairMaybe(a, b) : pair(a, b)); // TODO: document actual design
         if (a == EVE) return EVE;
     }
 
@@ -326,12 +326,12 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
 }
 
 Arrow xls_url(Arrow s, char* aUrl) {
-    Arrow locked = a(s, tag("locked"));
+    Arrow locked = a(s, atom("locked"));
     return fromUrl(locked, aUrl, 0);
 }
 
 Arrow xls_urlMaybe(Arrow s, char* aUrl) {
-    Arrow locked = a(s, tag("locked"));
+    Arrow locked = a(s, atom("locked"));
     return fromUrl(locked, aUrl, 1);
 }
 
@@ -343,7 +343,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         sprintf(url, "$%06x", (int)sa);
         *l = 7;
         return url;
-    } else if (xl_typeOf(e) == XL_ARROW) { // TODO tuple
+    } else if (xl_typeOf(e) == XL_PAIR) { // TODO tuple
         uint32_t l1, l2;
         char *tailUrl = toURL(context, xl_tailOf(e), depth - 1, &l1);
         char *headUrl = toURL(context, xl_headOf(e), depth - 1, &l2);
@@ -364,7 +364,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
 
 char* xls_urlOf(Arrow s, Arrow e, int depth) {
     uint32_t l;
-    Arrow locked = a(s, tag("locked"));
+    Arrow locked = a(s, atom("locked"));
 
     return toURL(locked, e, depth, &l);
 }

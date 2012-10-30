@@ -17,9 +17,9 @@ int main(int argc, char **argv) {
   log_init(NULL, "server,session,machine,space=debug");
 
   xl_init();
-  DEFTAG(root);
-  DEFTAG(childrenOf);
-  DEFTAG(unroot);
+  DEFATOM(root);
+  DEFATOM(childrenOf);
+  DEFATOM(unroot);
   
   fd = fopen("testrc", "r");
   assert(fd);

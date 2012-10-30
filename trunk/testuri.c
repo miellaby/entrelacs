@@ -30,7 +30,7 @@ Arrow blobFromFile(char *f) {
   char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
   assert (data != (void*) -1);
   
-  a = blob(size, data);
+  a = natom(size, data);
   munmap(data, size);
  }
 
@@ -42,9 +42,9 @@ int main(int argc, char* argv[]) {
     log_init(NULL, "server,session,machine,space=debug");
     xl_init();
     // assimilate arrows
-    DEFTAG(hello); // Arrow hello = xl_tag("hello");
-    DEFTAG(world);
-    DEFA(hello, world); // Arrow _hello_world = xl_arrow(hello, world);
+    DEFATOM(hello); // Arrow hello = xl_tag("hello");
+    DEFATOM(world);
+    DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
 
     test_title("check /hello.world URI");
     {

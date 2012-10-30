@@ -12,6 +12,11 @@
 #include "log.h"
 
 /*
+ * Size limit where data is stored as "blob" rather than "tag"
+ */
+#define BLOB_MINSIZE 100
+
+/*
  * Eve
  */
 #define EVE (0)
@@ -56,13 +61,13 @@ const Arrow Eve = EVE;
  *   | P |  T |                 data                   |
  *   +---+----+----------------------------------------+
  *
- *       P: "Peeble" count aka "More" counter(5 bits)
+ *       P: "Peeble" count aka "More" counter (5 bits)
  *       T: Data type ID (3 bits)
  *    Data: Data (56 bits)
  *
  *   Data structure by type (56 bits)
  *
- *   T = 0: arrow
+ *   T = 0: pair
  *   +---------------+--------------+---+---+
  *   |     tail@     |     head@    | R | C |
  *   +---------------+--------------+---+---+
@@ -137,7 +142,7 @@ const Arrow Eve = EVE;
 
 // This remaining part is useless as attributs are always zero when building: | ((rooted) << 7) | (child0)
 
-#define arrow_build(CELL, tail, head)  (get_moreBits(CELL) | CATBITS_ARROW | ((Cell)(tail) << 32) | ((Cell)(head) << 8))
+#define pair_build(CELL, tail, head)  (get_moreBits(CELL) | CATBITS_ARROW | ((Cell)(tail) << 32) | ((Cell)(head) << 8))
 
 #define tuple_build(CELL, checksum, J) (get_moreBits(CELL) | CATBITS_TUPLE | ((Cell)(checksum) << 16) | ((J) << 8))
 
@@ -314,7 +319,7 @@ static void looseStackRemove(Address a) {
  *     hashLocation = hashArrow(tail, head) % PRIM0 for a regular arrow
  *     hashLocation = hashString(string) for a tag arrow
  * * hashProbe: probing offset when looking for a free cell nearby a conflict.
- *     hProbe = hashArrow(tail, head) % PRIM1 for a regular arrow
+ *     hProbe = hashArrow(tail, head) % PRIM1 for a regular pair
  * * hashChain: offset to separate chained cells
  *       chained data slices (and tuple ends) are separated by JUMP * h3 cells
  * * hashChild : offset to separate children cells
@@ -322,7 +327,7 @@ static void looseStackRemove(Address a) {
  *       chained children cells are separated by JUMP * hChild cells
  */
 
-/* hash function to get H1 from a regular arrow definition */
+/* hash function to get H1 from a regular pair definition */
 uint64_t hashArrow(Arrow tail, Arrow head) {
   return (tail << 20) ^ (tail >> 4) ^ head;
 }
@@ -662,11 +667,11 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, uint64_t hash, int ifExist
 }
 
 
-/** retrieve tail->head arrow
+/** retrieve tail->head pair
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-static Arrow arrow(Arrow tail, Arrow head, int ifExist) {
+static Arrow pair(Arrow tail, Arrow head, int ifExist) {
   uint64_t hash;
   Address hashLocation, hashProbe;
   Address probeAddress, firstFreeCell, newArrow;
@@ -722,7 +727,7 @@ static Arrow arrow(Arrow tail, Arrow head, int ifExist) {
   /* Create a singleton */
   newArrow = firstFreeCell;
   cell = mem_get(newArrow); ONDEBUG((show_cell('R', newArrow, cell, 0)));
-  cell = arrow_build(cell, tail, head);
+  cell = pair_build(cell, tail, head);
   mem_set(newArrow, cell); ONDEBUG((show_cell('W', newArrow, cell, 0)));
 
 
@@ -742,12 +747,12 @@ static Arrow arrow(Arrow tail, Arrow head, int ifExist) {
   return newArrow;
 }
 
-Arrow xl_arrow(Arrow tail, Arrow head) {
-    return arrow(tail, head, 0);
+Arrow xl_pair(Arrow tail, Arrow head) {
+    return pair(tail, head, 0);
 }
 
-Arrow xl_arrowMaybe(Arrow tail, Arrow head) {
-    return arrow(tail, head, 1);
+Arrow xl_pairMaybe(Arrow tail, Arrow head) {
+    return pair(tail, head, 1);
 }
 
 /** retrieve a blob arrow defined by 'size' bytes pointed by 'data',
@@ -777,26 +782,40 @@ Arrow xl_blobMaybe(uint32_t size, char* data) {
     return blob(size, data, 1);
 }
 
-Arrow xl_tag(char* str) {
+Arrow xl_atom(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
-    return btagOrBlob(CATBITS_TAG, size, str, hash, 0);
+    if (size >= BLOB_MINSIZE)
+        return blob(size, str, 0);
+    else
+        return btagOrBlob(CATBITS_TAG, size, str, hash, 0);
 }
 
-Arrow xl_tagMaybe(char* str) {
+Arrow xl_atomMaybe(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
-    return btagOrBlob(CATBITS_TAG, size, str, hash, 1);
+    if (size >= BLOB_MINSIZE)
+        return blob(size, str, 1);
+    else
+        return btagOrBlob(CATBITS_TAG, size, str, hash, 1);
 }
 
-Arrow xl_btag(uint32_t size, char* str) {
-    uint64_t hash = hashRaw(str, size);
-    return btagOrBlob(CATBITS_TAG, size, str, hash, 0);
+Arrow xl_natom(uint32_t size, char* mem) {
+    if (size >= BLOB_MINSIZE)
+        return blob(size, mem, 0);
+    else {
+        uint64_t hash = hashRaw(mem, size);
+        return btagOrBlob(CATBITS_TAG, size, mem, hash, 0);
+    }
 }
 
-Arrow xl_btagMaybe(uint32_t size, char* str) {
-    uint64_t hash = hashRaw(str, size);
-    return btagOrBlob(CATBITS_TAG, size, str, hash, 1);
+Arrow xl_natomMaybe(uint32_t size, char* mem) {
+    if (size >= BLOB_MINSIZE)
+        return blob(size, mem, 1);
+    else {
+        uint64_t hash = hashRaw(mem, size);
+        return btagOrBlob(CATBITS_TAG, size, mem, hash, 1);
+    }
 }
 
 Arrow xl_headOf(Arrow a) {
@@ -834,14 +853,14 @@ static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   Address current = a;
   if (a == EVE) {
      lengthP = 0;
-     return (char *)0; // Invalid Id
+     return (char *)0; // EVE => NUL
   }
   
   Cell cell = mem_get(current); ONDEBUG((show_cell('R', current, cell, 1)));
   Cell _catBits = cell_getCatBits(cell);
   if (_catBits != catBits) {
      lengthP = 0;
-     return (char *)0; // Invalid Id
+     return (char *)0; // Invalid Id : FIXME : -1
   }
 
   uint32_t hChain = hashChain(a, cell) % PRIM1;
@@ -875,26 +894,38 @@ static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   return tag;
 }
 
-char* xl_btagOf(Arrow a, uint32_t* lengthP) {
-  return tagOrBlobOf(CATBITS_TAG, a, lengthP);
+char* xl_memOf(Arrow a, uint32_t* lengthP) {
+    if (a == EVE) {
+        *lengthP = 0;
+        return (char *)0;
+    }
+
+    Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+    if (cell_isFree(cell)) {
+        *lengthP = 0;
+        return (char *)0; // FIXME -1
+    }
+
+    if (cell_isBlob(cell)) {
+        uint32_t hl;
+        char* h = tagOrBlobOf(CATBITS_BLOB, a, &hl);
+        if (!h) {
+            *lengthP = 0;
+            return (char *)0;
+        }
+        char* data = mem0_loadData(h, lengthP);
+        free(h);
+        return data;
+    } else {
+        return tagOrBlobOf(CATBITS_TAG, a, lengthP);
+    }
 }
 
-char* xl_tagOf(Arrow a) {
+char* xl_strOf(Arrow a) {
   uint32_t lengthP;
   return tagOrBlobOf(CATBITS_TAG, a, &lengthP);
 }
 
-char* xl_blobOf(Arrow a, uint32_t* lengthP) {
-  uint32_t hl;
-  char* h = tagOrBlobOf(CATBITS_BLOB, a, &hl);
-  if (!h) {
-     *lengthP = 0;
-	 return (char *)0;
-  }
-  char* data = mem0_loadData(h, lengthP);
-  free(h);
-  return data;
-}
 
 // URL-encode input buffer into destination buffer.
 // 0-terminate the destination buffer.
@@ -956,17 +987,17 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
             *l = 0;
             return s;
         }
-        case XL_TAG: {
-            uint32_t tagLength;
-            char* tag = xl_btagOf(a, &tagLength);
-            char *uri = malloc(3 * tagLength + 1) ;
+        case XL_ATOM: {
+            uint32_t size;
+            char* data = xl_memOf(a, &size);
+            char *uri = malloc(3 * size + 1) ;
             assert(uri);
-            percent_encode(tag, tagLength, uri, l);
-            free(tag);
+            percent_encode(data, size, uri, l);
+            free(data);
             uri = realloc(uri, 1 + *l);
             return uri;
         }
-        case XL_ARROW: {
+        case XL_PAIR: {
             uint32_t l1, l2;
             char *tailUri = toURI(xl_tailOf(a), &l1);
             char *headUri = toURI(xl_headOf(a), &l2);
@@ -978,21 +1009,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
             *l = 2 + l1 + l2;
             return uri;
         }
-        case XL_BLOB: {
-            uint32_t hLength, codeLength;
-            char* h = tagOrBlobOf(CATBITS_BLOB, a, &hLength);
-            
-            char *uri = malloc(2 + 3 * hLength + 1);
-            assert(uri);
-            uri[0] = '$';
-            uri[1] = 'H';
-            percent_encode(h, hLength, uri + 2, &codeLength);
-            free(h);
-            *l = 2 + codeLength + 1;
-            return uri;
-        }
         case XL_TUPLE:
-        case XL_SMALL:
             assert(0);
             return NULL; // Not yet supported TODO
         default:
@@ -1021,7 +1038,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
         *uriEnd = uri;
         break;
     case '$': {
-        if (uri[1] == 'H') { // BLOB
+        if (uri[1] == 'H') { // Arrow signature
             unsigned char c;
             uint32_t uriLength = 2;
             uint32_t signatureLength;
@@ -1029,7 +1046,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
             while ((c = uri[uriLength]) > 32 && c != '.' && c != '/')
                 uriLength++;
             assert(uriLength);
-
+            // FIXME: this old code needs to be moved in a global signature system
             char *signature = malloc(uriLength /* + 1  useless, there's room */);
             percent_decode(uri + 2, uriLength - 2, signature, &signatureLength);
             uint64_t hash = hashRaw(signature, signatureLength);
@@ -1046,7 +1063,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
             assert(0); // error TODO
         }
      }
-    case '/': { // ARROW
+    case '/': { // Pair
         char *tailUriEnd, *headUriEnd;
         Arrow tail, head;
         tail = fromUri(uri + 1, &tailUriEnd, ifExist);
@@ -1063,12 +1080,12 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
                 a = head; // NIL or EVE
                 *uriEnd = NULL;
             } else {
-                a = arrow(tail, head, ifExist);
+                a = pair(tail, head, ifExist);
                 if (tail == EVE && head == EVE) {
                     a = EVE;
                     *uriEnd = headUriEnd;
                 } else {
-                    a = arrow(tail, head, ifExist);
+                    a = pair(tail, head, ifExist);
                     if (a == EVE)
                         *uriEnd = NULL;
                     else
@@ -1078,20 +1095,24 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
         }
         break;
     }
-    default: { // TAG
+    default: { // ATOM
         unsigned char c;
         uint32_t uriLength = 0;
-        uint32_t tagLength;
+        uint32_t atomLength;
 
         while ((c = uri[uriLength]) > 32  && c != '.' && c != '/')
             uriLength++;
         assert(uriLength);
 
-        char *tagStr = malloc(uriLength + 1);
-        percent_decode(uri, uriLength, tagStr, &tagLength);
-        uint64_t hash = hashRaw(tagStr, tagLength);
-        a = btagOrBlob(CATBITS_TAG, tagLength, tagStr, hash, ifExist);
-        free(tagStr);
+        char *atomStr = malloc(uriLength + 1);
+        percent_decode(uri, uriLength, atomStr, &atomLength);
+        if (atomLength >= BLOB_MINSIZE)
+            a = blob(atomLength, atomStr, ifExist);
+        else {
+           uint64_t hash = hashRaw(atomStr, atomLength);
+            a = btagOrBlob(CATBITS_TAG, atomLength, atomStr, hash, ifExist);
+        }
+        free(atomStr);
         if (a == EVE) { // Non assimilated tag
             *uriEnd = NULL;
         } else {
@@ -1129,7 +1150,7 @@ static Arrow uri(char *uri, int ifExist) { // TODO: document actual design
 
         if (a == EVE && b == EVE) continue;
 
-        a = arrow(a, b, ifExist);
+        a = pair(a, b, ifExist);
         if (a == EVE) return EVE; // not assimilated pair
     }
 
@@ -1148,6 +1169,24 @@ int xl_isEve(Arrow a) {
   return (a == EVE);
 }
 
+Arrow xl_isPair(Arrow a) {
+  if (a == EVE) return EVE;
+  Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+  if (cell_isFree(cell))
+      return NIL;
+
+  return (cell_isPair(cell) ? a : EVE);
+}
+
+Arrow xl_isAtom(Arrow a) {
+  if (a == EVE) return EVE;
+  Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+  if (cell_isFree(cell))
+      return NIL;
+
+  return (cell_isEntrelacs(cell) ? a : EVE);
+}
+
 
 enum e_xlType xl_typeOf(Arrow a) {
   if (a == EVE) return XL_EVE;
@@ -1157,7 +1196,7 @@ enum e_xlType xl_typeOf(Arrow a) {
   if (cell_isFree(cell))
       return XL_UNDEF;
 
-  static enum e_xlType map[] = { XL_ARROW, XL_TUPLE, XL_SMALL, XL_TAG, XL_BLOB, XL_UNDEF, XL_UNDEF, XL_UNDEF};
+  static enum e_xlType map[] = { XL_PAIR, XL_TUPLE, XL_ATOM, XL_ATOM, XL_ATOM, XL_UNDEF, XL_UNDEF, XL_UNDEF};
 
   Cell catBits = cell_getCatBits(cell);
   int catI = catBits >> 56;
@@ -1165,9 +1204,9 @@ enum e_xlType xl_typeOf(Arrow a) {
 }
 
 
-/** connect a child arrow to its parent arrow "a".
+/** connect a child pair to its parent arrow "a".
  * it consists in adding the child to the children list of "a".
- * An arrow gets connected to its both parents as soon as it or one of its descendants gets rooted.
+ * An pair gets connected to its both parents as soon as it or one of its descendants gets rooted.
  *
  * Steps:
  * 1) if it turns out the parent arrow was loose (i.e. unconnected + unrooted), then
@@ -1322,9 +1361,9 @@ static void connect(Arrow a, Arrow child) {
 }
 
 
-/** disconnect a child arrow from its parent arrow "a".
+/** disconnect a child pair from its parent arrow "a".
  * - it consists in removing the child from the children list of "a".
- * - an arrow gets disconnected from its both parents as soon as it gets both unrooted and child-less.
+ * - an pair gets disconnected from its both parents as soon as it gets both unrooted and child-less.
  *
  * Steps:
  * 1) compute hashChild
@@ -1455,7 +1494,7 @@ static void disconnect(Arrow a, Arrow child) {
                 // The parent arrow is totally unreferred
                 // Add it to the loose log
                 looseStackAdd(a);
-                // One disconnects the arrow from its parents
+                // One disconnects the pair from its parents
                 // 2 recursive calls
                 if (cell_isPair(parent)) {
                     disconnect(cell_getTail(parent), a);
@@ -1950,7 +1989,7 @@ int space_init() {
 
   if (rc) { // very first start
     // Eve
-    Cell cellEve = arrow_build(0, EVE, EVE);
+    Cell cellEve = pair_build(0, EVE, EVE);
     cellEve = cell_setRootBit(cellEve, ROOTBIT_ROOTED);
     mem_set(EVE, cellEve); ONDEBUG((show_cell('W', EVE, cellEve, 0)));
     mem_commit();
