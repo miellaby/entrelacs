@@ -41,16 +41,16 @@ static Arrow get_connection_session(const struct mg_connection *conn) {
 
     mg_get_cookie(conn, "session", session_uuid, sizeof(session_uuid));
     if (*session_uuid == '\0') {
-        DEBUGPRINTF("No session cookie");
+        dputs("No session cookie");
         return EVE;
     }
     // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
     // TODO: remove the first parameter of sessionMaybe
     Arrow session = xls_sessionMaybe(EVE, xl_atom("server"), xl_uri(session_uuid));
     if (session == EVE) {
-        DEBUGPRINTF("Unknown session cookie %s", session_uuid);
+        dputs("Unknown session cookie %s", session_uuid);
     } else {
-        DEBUGPRINTF("Session %s found", session_uuid);
+        dputs("Session %s found", session_uuid);
     }
     return session;
 }
@@ -59,7 +59,7 @@ static void get_qsvar(const struct mg_request_info *request_info,
                       const char *name, char *dst, size_t dst_len) {
   const char *qs = request_info->query_string;
   mg_get_var(qs, strlen(qs == NULL ? "" : qs), name, dst, dst_len);
-  DEBUGPRINTF(dst_len == -1 ? "no %s variable in query string" :
+  dputs(dst_len == -1 ? "no %s variable in query string" :
          "query string variable %s = '%.*s'", name, dst_len, dst);
 }
 
@@ -81,7 +81,7 @@ static void *event_handler(enum mg_event event,
             assert(session_id);
             snprintf(random, sizeof(random), "%d", rand());
             mg_md5(session_id, random, "server", NULL);
-            DEBUGPRINTF("New session with id %s", session_id);
+            dputs("New session with id %s", session_id);
 
             // create session
             session = xls_session(EVE, xl_atom("server"), xl_atom(session_id));
@@ -89,12 +89,12 @@ static void *event_handler(enum mg_event event,
             session_id = xl_strOf(xl_headOf(xl_headOf(xl_headOf(session))));
         }
 
-        DEBUGPRINTF("session arrow is %O", session);
+        dputs("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
         xls_set(session, xl_atom("expire"), xl_natom(sizeof(time_t), (char *)&now));
 
         Arrow input = xls_url(session, request_info->uri);
-        DEBUGPRINTF("input %s assimilated as %O", request_info->uri, input);
+        dputs("input %s assimilated as %O", request_info->uri, input);
         if (input == NIL) {
             pthread_mutex_unlock (&mutex);
             free(session_id);
@@ -107,8 +107,9 @@ static void *event_handler(enum mg_event event,
         }
 
         Arrow method = xl_atom(request_info->request_method);
-        Arrow r = xl_eval(session, xl_pair(method, input));
+        Arrow output = xl_eval(session, xl_pair(method, input));
 
+        dputs("Evaluated output is %O", output);
 
         char i_depthBuf[255];
         char l_depthBuf[255];
@@ -124,8 +125,8 @@ static void *event_handler(enum mg_event event,
             l_depth = atoi(l_depthBuf);
         }
 
-        char* output_url = xls_urlOf(session, r, l_depth);
-        XLType rt = xl_typeOf(r);
+        char* output_url = xls_urlOf(session, output, l_depth);
+        int isAtomic  = xl_isAtom(output);
 
 #if 0 // FIXME
 #define URI_CONTENT_TYPE "text/uri-list"
@@ -135,16 +136,17 @@ static void *event_handler(enum mg_event event,
         char* content_type =
                 (i_depth == 0
                  ? URI_CONTENT_TYPE
-                 : (rt == XL_ATOM
+                 : (isAtomic 
                        ? "text/plain"
                        : URI_CONTENT_TYPE));
         char* contentTypeCopy = NULL;
-        if (rt == XL_PAIR && xl_tailOf(r) == xl_atom("Content-Typed")) {
-            contentTypeCopy = xl_strOf(xl_tailOf(xl_headOf(r)));
+        if (!isAtomic && xl_tailOf(output) == xl_atom("Content-Typed")) {
+            contentTypeCopy = xl_strOf(xl_tailOf(xl_headOf(output)));
             content_type = contentTypeCopy;
-            r = xl_headOf(xl_headOf(r));
+            output = xl_headOf(xl_headOf(output));
+            dputs("Content-Type: %s, output: %O", content_type, output);
         } else {
-            Arrow application = xl_pair(xl_atom("Content-Type"), r);
+            Arrow application = xl_pair(xl_atom("Content-Type"), output);
             Arrow rta = xl_eval(session, application);
             if (rta != EVE && xl_isAtom(rta)) {
                contentTypeCopy = xl_strOf(rta);
@@ -154,10 +156,10 @@ static void *event_handler(enum mg_event event,
         uint32_t content_length;
         char* content = NULL;
         if (i_depth != 0) {
-            content = xl_memOf(r, &content_length);
+            content = xl_memOf(output, &content_length);
         }
         if (!content) {
-            content = xls_urlOf(session, r, i_depth);
+            content = xls_urlOf(session, output, i_depth);
             content_length = strlen(content);
         }
         pthread_mutex_unlock (&mutex);
@@ -232,14 +234,14 @@ int main(void) {
   ctx = mg_start(&event_handler, NULL, options);
   assert(ctx != NULL);
 
-  DEBUGPRINTF("server started on ports %s.",
+  dputs("server started on ports %s.",
          mg_get_option(ctx, "listening_ports"));
 
   // TODO deep house cleaning at start-up
   while (1) {
       sleep(HOUSECLEANING_PERIOD);
       time_t now = time(NULL);
-      DEBUGPRINTF("House Cleaning ...");
+      dputs("House Cleaning ...");
       pthread_mutex_lock (&mutex);
 
       Arrow sessionTag = xl_atom("session");
@@ -269,7 +271,7 @@ int main(void) {
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           } else if (*expire_time < now) {
-              DEBUGPRINTF("session %O outdated.", session);
+              dputs("session %O outdated.", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
               sessionTag =  xl_atom("session");
@@ -280,9 +282,9 @@ int main(void) {
       xl_freeEnum(e);
       xl_commit();
       pthread_mutex_unlock (&mutex);
-      DEBUGPRINTF("House Cleaning done.");
+      dputs("House Cleaning done.");
   }
-  DEBUGPRINTF("%s", "server stopped.");
+  dputs("%s", "server stopped.");
 
   pthread_mutex_destroy(&mutex);
 

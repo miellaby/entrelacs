@@ -268,8 +268,8 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           dputs("p == (let ((x v:(v0 v1)) s)) where v0 not trivial");
           // rewriting program to stage s0 evaluation
           // TODO use (tailOf v) instead of p as variable name
-          // pp = (let ((p v0) (let ((x ((var p) v1)) s))))
-          Arrow pp = a(let, a(a(p, v0), a(let, a(a(x, a(a(var, p), v1)), s))));
+          // pp = (let ((M v0) (let ((x ((var M) v1)) s))))
+          Arrow pp = a(let, a(a(M, v0), a(let, a(a(x, a(a(var, M), v1)), s))));
           M = a(pp, ek);
           return M;
       }
@@ -285,9 +285,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
     	    dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
 
           // rewriting program to stage v1 and (v0 v1) evaluation
-          // pp = (let ((p v1) (let ((x (v0 (var p))) s))))
+          // pp = (let ((M v1) (let ((x (v0 (var M))) s))))
           // TODO use (headOf v) instead of p as variable name
-          Arrow pp = a(let, a(a(p, v1), a(let, a(a(x, a(v0, a(var, p))), s))));
+          Arrow pp = a(let, a(a(M, v1), a(let, a(a(x, a(v0, a(var, M))), s))));
           M = a(pp, ek);
           return M;
       }
@@ -445,9 +445,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   if (!isTrivialOrBound(s, e, C, M, &ws)) { // Not trivial closure in application #e#
     dputs("p == (s v) where s is an application or such");
-    // rewriting rule: pp = (let ((p s) ((var p) v)))
-    // ==> M = (s (e ((p (((var p) v) e)) k)))
-    M = a(s, a(e, a(a(p, a(a(a(var, p), v), e)), k)));
+    // rewriting rule: pp = (let ((M s) ((var M) v)))
+    // ==> M = (s (e ((M (((var M) v) e)) k)))
+    M = a(s, a(e, a(a(M, a(a(a(var, M), v), e)), k)));
     return M;
   }
 
@@ -456,9 +456,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   if (tail(v) == let) { // let expression as application argument #e#
       dputs("    p == (s v:(let ((x vv) ss))");
-    // rewriting rule: pp = (let ((p v) (s (var p))))
-    // ==> M = (v (e ((p ((s (var p)) e)) k))))
-    M = a(v, a(e, a(a(p, a(a(a(escape,ws), a(var, p)), e)), k)));
+    // rewriting rule: pp = (let ((M v) (s (var M))))
+    // ==> M = (v (e ((M ((s (var M)) e)) k))))
+    M = a(v, a(e, a(a(M, a(a(a(escape,ws), a(var, M)), e)), k)));
     return M;
   }
 
@@ -467,7 +467,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
      dputs("     v == (eval ss) # an eval expression");
      Arrow ss = head(v);
      chainSize++;
-     M = a(ss, a(e, a(evalOp, a(e, a(a(p, a(a(a(escape,ws), a(var, p)), e)), k))))); // stack an eval continuation
+     M = a(ss, a(e, a(evalOp, a(e, a(a(M, a(a(a(escape,ws), a(var, M)), e)), k))))); // stack an eval continuation
      return M;
   }
 
@@ -475,10 +475,10 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow wv = NIL;
   if (!isTrivialOrBound(v, e, C, M, &wv) && ws_type != paddock) { // Not trivial argument in application #e#
     dputs("    v (%O) == something not trivial", v);
-    // rewriting rule: pp = (let ((p v) (s (var p))))
-    // ==> M = (v (e ((p ((s (var p)) e)) k))))
+    // rewriting rule: pp = (let ((M v) (s (var M))))
+    // ==> M = (v (e ((M ((s (var M)) e)) k))))
     chainSize++;
-    M = a(v, a(e, a(a(p, a(a(s, a(var, p)), e)), k)));
+    M = a(v, a(e, a(a(M, a(a(s, a(var, M)), e)), k)));
     return M;
   }
 
