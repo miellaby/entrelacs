@@ -62,7 +62,7 @@ libentrelacs.so: $(OBJECTS)
 *.o: *.h
 
 start: server
-	-killall entrelacsd
+	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) ./entrelacsd
 	od -t x1z -w8 $(PERSISTENCE_FILE)
