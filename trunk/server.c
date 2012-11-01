@@ -141,7 +141,7 @@ static Arrow assimilateUploadedData(struct mg_connection *conn) {
 
 // Get session object for the connection. Caller must hold the lock
 // HTTP Cookie "session" contains the session id.
-// Session is valid if "/server.$id" is rooted within some context (whose bottom context is "sessions")
+// Session is valid if "/server+$id" is rooted within some context (whose bottom context is "sessions")
 
 static Arrow get_connection_session(const struct mg_connection *conn) {
     char session_uuid[100];
@@ -323,10 +323,10 @@ int main(void) {
 
   Arrow get = xls_get(EVE, xl_atom("GET"));
   if (get == NIL) {
-      xls_set(EVE, xl_atom("GET"), xl_uri("/closure//x.x."));
-      xls_set(EVE, xl_atom("PUT"), xl_uri("/closure//x/root.x."));
-      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x/eval.x."));
-      xls_set(EVE, xl_atom("DELETE"), xl_uri("/closure//x/unroot.x."));
+      xls_set(EVE, xl_atom("GET"), xl_uri("/closure//x+x+"));
+      xls_set(EVE, xl_atom("PUT"), xl_uri("/closure//x/root+x+"));
+      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x/eval+x+"));
+      xls_set(EVE, xl_atom("DELETE"), xl_uri("/closure//x/unroot+x+"));
       xl_commit();
   }
 
@@ -366,7 +366,7 @@ int main(void) {
           next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
 
           if (xl_tailOf(session) != sessionTag)
-              continue; // Not a /session.* arrow
+              continue; // Not a /session+* arrow
           session = xls_isRooted(EVE, session);
           if (session == EVE)
               continue; // session is not rooted

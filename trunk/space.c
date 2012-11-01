@@ -1011,7 +1011,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 
             char *uri = malloc(2 + l1 + l2 + 1) ;
             assert(uri);
-            sprintf(uri, "/%s.%s", tailUri, headUri);
+            sprintf(uri, "/%s+%s", tailUri, headUri);
             free(tailUri);
             free(headUri);
             *l = 2 + l1 + l2;
@@ -1042,7 +1042,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
         a = EVE;
         *uriEnd = uri;
     } else switch (c) {
-    case '.': // Eve
+    case '+': // Eve
         a = EVE;
         *uriEnd = uri;
         break;
@@ -1052,7 +1052,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
             uint32_t uriLength = 2;
             uint32_t signatureLength;
 
-            while ((c = uri[uriLength]) > 32 && c != '.' && c != '/')
+            while ((c = uri[uriLength]) > 32 && c != '+' && c != '/')
                 uriLength++;
             assert(uriLength);
             // FIXME: this old code needs to be moved in a global signature system
@@ -1083,7 +1083,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
             a  = tail;
             *uriEnd = tailUriEnd;
         } else {
-            char* headUriStart = *tailUriEnd == '.' ? tailUriEnd + 1 : tailUriEnd;
+            char* headUriStart = *tailUriEnd == '+' ? tailUriEnd + 1 : tailUriEnd;
             head = fromUri(headUriStart, &headUriEnd, ifExist);
             if (!headUriEnd) { // Non assimilated head
                 a = head; // NIL or EVE
@@ -1109,7 +1109,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
         uint32_t uriLength = 0;
         uint32_t atomLength;
 
-        while ((c = uri[uriLength]) > 32  && c != '.' && c != '/')
+        while ((c = uri[uriLength]) > 32  && c != '+' && c != '/')
             uriLength++;
         assert(uriLength);
 
@@ -1135,13 +1135,13 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
     return a;
 }
 
-static char* skeepSpacesAndOneDot(char* uriEnd) {
+static char* skeepSpacesAndOnePlus(char* uriEnd) {
     char c;
     while ((c = *uriEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
         // white spaces are tolerated and ignored here
         uriEnd++;
     }
-    if (*uriEnd == '.') uriEnd++;
+    if (*uriEnd == '+') uriEnd++;
     return uriEnd;
 }
 
@@ -1149,13 +1149,13 @@ static Arrow uri(char *uri, int ifExist) { // TODO: document actual design
     char c, *uriEnd;
     Arrow a = fromUri(uri, &uriEnd, ifExist);
     if (uriEnd == NULL) return a; // return NIL (wrong URI) or EVE (not assimilated)
-    uriEnd = skeepSpacesAndOneDot(uriEnd);
+    uriEnd = skeepSpacesAndOnePlus(uriEnd);
 
     while (*uriEnd) {
         DEBUGPRINTF("uriEnd = >%s<", uriEnd);
         Arrow b = fromUri(uriEnd, &uriEnd, ifExist);
         if (!uriEnd) return b; // return NIL (wrong URI) or EVE (not assimilated)
-        uriEnd = skeepSpacesAndOneDot(uriEnd);
+        uriEnd = skeepSpacesAndOnePlus(uriEnd);
 
         if (a == EVE && b == EVE) continue;
 
