@@ -376,7 +376,7 @@ char* mem0_loadData(char* h, size_t* sizeP) {
       LOGPRINTF(LOG_FATAL, "Blob file '%s' is truncated", filename);
   }
 
-  char *buffer = (char *)malloc(sizeof(char) * size);
+  char *buffer = (char *)malloc(sizeof(char) * (1 + size));
   assert(buffer);
 
   rc = fread(buffer, size, 1, fd);
@@ -388,7 +388,7 @@ char* mem0_loadData(char* h, size_t* sizeP) {
   if (rc) {
       LOGPRINTF(LOG_FATAL, "Can't close blob file '%s'", filename);
   }
-
+  buffer[size] = 0; // add a trailing 0 (notice one mallocated size + 1)
   *sizeP = size;
   return buffer;
 }

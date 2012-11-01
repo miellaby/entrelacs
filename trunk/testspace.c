@@ -82,9 +82,18 @@ int basic() {
     test_title("check rooting");
     root(_hello_world);
     root(more_bigger_string_11111111111111111111);
+    
     assert(isRooted(_hello_world));
     assert(isRooted(more_bigger_string_11111111111111111111));
 
+    { // check very big string (blob)
+      char* bigStr = "11111111112222222222233333333333334444444444445555555555566666666666677777777777788888888888888999999999999999";
+      Arrow bigAtom = atom(bigStr);
+      char* bigStrBack = strOf(bigAtom);
+      assert(0 == strcmp(bigStrBack, bigStr));
+      free(bigStrBack);
+    }
+    
     // check GC
     test_title("check GC");
 	DEFATOM(loose);
