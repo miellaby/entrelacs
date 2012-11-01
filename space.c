@@ -891,6 +891,7 @@ static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
     }
   }
   size -= (6 - cell_getSize(cell));
+  // 2 next lines: add a trailing 0
   geoalloc((char**)&tag, &max, &size, sizeof(char), size + 1);
   tag[size - 1] = 0;
   *lengthP = size - 1;
@@ -926,7 +927,8 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
 
 char* xl_strOf(Arrow a) {
   uint32_t lengthP;
-  return tagOrBlobOf(CATBITS_TAG, a, &lengthP);
+  char* p = xl_memOf(a, &lengthP);
+  return p;
 }
 
 
