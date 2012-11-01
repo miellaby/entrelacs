@@ -6,7 +6,7 @@
  * NOTE(lsm): this file follows Google style, not BSD style as the rest of
  * Mongoose code.
  */
-
+#define _POSIX_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -21,6 +21,9 @@
 #include "session.h"
 #include "mongoose.h"
 #include <string.h>
+#include <sys/stat.h> 
+#include <sys/mman.h> /* mmap() is defined in this header */
+
 #ifdef DEBUG
 #define SESSION_TTL 120
 #define HOUSECLEANING_PERIOD 6
@@ -31,6 +34,110 @@
 
 // Protects everything.
 static pthread_mutex_t mutex;
+
+static Arrow fdatom(int fd) {
+ Arrow a = EVE;
+ if (fd < 0) return EVE;
+ 
+ struct stat stat;
+ int r = fstat (fd, &stat);
+ assert (r >= 0);
+
+ size_t size = stat.st_size;
+ if (size > 0) {
+  char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
+  assert (data != (void*) -1);
+  
+  a = xl_natom(size, data);
+  munmap(data, size);
+ }
+
+ return a;
+}
+
+static const char *HTTP_500 = "HTTP/1.0 500 Server Error\r\n\r\n";
+
+static Arrow assimilateUploadedData(struct mg_connection *conn) {
+  const char* contentLengthHeader;
+  char postData[16 * 1024], path[999], fileName[1024], mimeType[100],
+       buf[BUFSIZ], *eop, *s, *p;
+  FILE *stream;
+  int64_t contentLength, written;
+  int n, postDataLength;
+
+  // Figure out total content length. Return if it is not present or invalid.
+  contentLengthHeader = mg_get_header(conn, "Content-Length");
+  if (contentLengthHeader == NULL)
+      return NIL;
+
+  if ((contentLength = strtoll(contentLengthHeader, NULL, 10)) < 0) {
+    mg_printf(conn, "%s%s", HTTP_500, "Invalid Content-Length");
+    return NIL;
+  }
+
+  // Read the initial chunk into memory. This should be multipart POST data.
+  // Parse headers, where we should find file name and content-type.
+  postDataLength = mg_read(conn, postData, sizeof(postData));
+  fileName[0] = mimeType[0] = '\0';
+  for (s = p = postData; p < &postData[postDataLength]; p++) {
+    if (p[0] == '\r' && p[1] == '\n') {
+      if (s == p) {
+        p += 2;
+        break;  // End of headers
+      }
+      p[0] = p[1] = '\0';
+      sscanf(s, "Content-Type: %99s", mimeType);
+      // TODO(lsm): don't expect filename to be the 3rd field,
+      // parse the header properly instead.
+      sscanf(s, "Content-Disposition: %*s %*s filename=\"%1023[^\"]",
+             fileName);
+      s = p + 2;
+    }
+  }
+  
+  if (!fileName[0])
+      return NIL;
+  
+  // Finished parsing headers. Now "p" points to the first byte of data.
+  // Calculate file size
+  contentLength -= p - postData;      // Subtract headers size
+  contentLength -= strlen(postData);  // Subtract the boundary marker at the end
+  contentLength -= 6;                  // Subtract "\r\n" before and after boundary
+
+  
+  if (contentLength <= 0) {
+    // Empty file
+    return xl_pair(xl_atom("Content-Typed"),
+                        xl_pair(xl_atom(mimeType), EVE));
+  }
+
+  stream = tmpfile();
+  
+  if (stream < 0) {
+    LOGPRINTF(LOG_ERROR, "Cannot create tmp file");
+    return EVE;
+  } else {
+  
+    // Success. Write data into the file.
+    eop = postData + postDataLength;
+    n = p + contentLength > eop ? (int) (eop - p) : (int) contentLength;
+    (void) fwrite(p, 1, n, stream);
+    written = n;
+    while (written < contentLength &&
+           (n = mg_read(conn, buf, contentLength - written > (int64_t) sizeof(buf) ?
+                        sizeof(buf) : contentLength - written)) > 0) {
+      (void) fwrite(buf, 1, n, stream);
+      written += n;
+    }
+    rewind(stream);
+    Arrow arrow = fdatom(fileno(stream));
+    fclose(stream);
+
+    arrow = xl_pair(xl_atom("Content-Typed"),
+                        xl_pair(xl_atom(mimeType), arrow));
+    return arrow;
+  }
+}
 
 // Get session object for the connection. Caller must hold the lock
 // HTTP Cookie "session" contains the session id.
@@ -105,8 +212,14 @@ static void *event_handler(enum mg_event event,
             mg_write(conn, "", (size_t)0);
             return processed;
         }
-
         Arrow method = xl_atom(request_info->request_method);
+        if (method != xl_atom("GET")) {
+            Arrow body = assimilateUploadedData(conn);
+            if (body != NIL) {
+                input = xl_pair(input, body);
+            }
+        }
+        
         Arrow output = xl_eval(session, xl_pair(method, input));
 
         dputs("Evaluated output is %O", output);
