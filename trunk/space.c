@@ -230,8 +230,7 @@ const Arrow Eve = EVE;
 #define cell_isSmall(C) (cell_getCatBits(C) == CATBITS_SMALL)
 #define cell_isTag(C) (cell_getCatBits(C) == CATBITS_TAG)
 #define cell_isBlob(C) (cell_getCatBits(C) == CATBITS_BLOB)
-// The next trick returns !0 for entrelacs type arrows
-#define cell_isEntrelacs(C) ((cell_getCatBits(C) + 7) & 0x0300000000000000LLU)
+#define cell_isEntrelacs(C) (cell_isTag(C) || cell_isBlob(C))
 #define cell_isSyncFrom(C, address, type) (cell_getCatBits(C) == CATBITS_SYNC && cell_getFrom(C) == (address) && cell_getSyncType(cell) == (type))
 
 // The loose stack.

@@ -23,8 +23,6 @@ e.g. http://miellaby.selfip.net:8008/escalate/escape//mudo.chut/set//demo.89e495
 Now /demo/ eval any argument within a shared context /.demo
 
 
-http://miellaby.selfip.net:8008/Content-Typed/text%2Fhtml.<html><body>Upload
-
- enctype="multipart%2Fform-data"><input type="file" name="file"%2F><br%2F><input type="submit" value="Upload" %2F><%2Fform><%2Fbody><%2Fhtml>
+http://miellaby.selfip.net:8008/Content-Typed/text%2Fhtml.<html><body>Upload<form method='POST' action='%2Fdemo%2Froot' enctype="multipart%2Fform-data"><input type="file" name="file"%2F><br%2F><input type="submit" value="Upload" %2F><%2Fform><%2Fbody><%2Fhtml>
 
 /demo/var.form
