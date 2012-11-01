@@ -12,7 +12,7 @@
 
 
 Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
-   /* $session =  /$s/session/$agent.$uuid */
+   /* $session =  /$s/session/$agent+$uuid */
    Arrow session = xls_root(s, a(atom("session"), a(agent, uuid)));
 
    return session;
@@ -36,7 +36,7 @@ Arrow xls_sessionMaybe(Arrow s, Arrow agent, Arrow uuid) {
 
 /* TODO: FIXME: We could parameter a maximal depth of deep rooting (meta-level)
    when reached, we could break the recursion and root directly to context
-   e.g. deepRoot(/s0.s1.s2.s3, a, depth=1) <=> root(/s0.s1.s2/s3.a) s0/s1/s2
+   e.g. deepRoot(/s0+s1+s2+s3, a, depth=1) <=> root(/s0+s1+s2/s3+a) s0/s1/s2
    NO. IT DOESN'T WORK UNLESS ONE SETS UP COUNTERS OR TTL
    */
 Arrow deepRoot(Arrow c, Arrow e) {
@@ -124,8 +124,8 @@ void xls_reset(Arrow c) {
 
 /** traditional "set-key-value".
 
-     1) unroot any arrow from $c.$key context path
-     2) root $value in /$c.$key context path
+     1) unroot any arrow from $c+$key context path
+     2) root $value in /$c+$key context path
 */
 Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     DEBUGPRINTF("xls_set(%O,%O,%O)", c, key, value);
@@ -136,7 +136,7 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
 
 /** traditional "unset-key".
 
-    reset $c.$key context path
+    reset $c+$key context path
 */
 void xls_unset(Arrow c, Arrow key) {
     Arrow slotContext = pairMaybe(c, key);
@@ -146,7 +146,7 @@ void xls_unset(Arrow c, Arrow key) {
 }
 
 /** traditional "get-key".
-    returns the rooted arrow in $c.$key context path
+    returns the rooted arrow in $c+$key context path
     (if several arrows, only one is returned)
 */
 static Arrow get(Arrow c, Arrow key) {
@@ -183,7 +183,7 @@ Arrow xls_get(Arrow c, Arrow key) {
 
 /** close a session $s */
 Arrow xls_close(Arrow s) {
-   /* $session =  /$s/session/$agent.$uuid */
+   /* $session =  /$s/session/$agent+$uuid */
    xls_reset(s);
    xls_unroot(tailOf(s), headOf(s));
    return s;
@@ -198,7 +198,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
         a = EVE;
         *urlEnd = url;
     } else switch (c) {
-    case '.': // Eve
+    case '+': // Eve
         a = EVE;
         *urlEnd = url;
         break;
@@ -206,7 +206,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
         if (url[1] == 'H') {
             unsigned char c;
             uint32_t urlLength = 2;
-            while ((c = url[urlLength]) > 32 && c != '.' && c != '/')
+            while ((c = url[urlLength]) > 32 && c != '+' && c != '/')
                 urlLength++;
             assert(urlLength);
 
@@ -251,7 +251,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
             a = tail;
             *urlEnd = tailUrlEnd;
         } else {
-            char* headUrlStart = *tailUrlEnd == '.' ? tailUrlEnd + 1 : tailUrlEnd;
+            char* headUrlStart = *tailUrlEnd == '+' ? tailUrlEnd + 1 : tailUrlEnd;
             head = _fromUrl(context, headUrlStart, &headUrlEnd, locateOnly);
             if (!headUrlEnd) {
                 *urlEnd = NULL;
@@ -270,7 +270,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
         unsigned char c;
         uint32_t urlLength = 0;
 
-        while ((c = url[urlLength]) > 32  && c != '.' && c != '/')
+        while ((c = url[urlLength]) > 32  && c != '+' && c != '/')
             urlLength++;
         assert(urlLength);
 
@@ -295,13 +295,13 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
     return a;
 }
 
-static char* skeepSpacesAndOneDot(char* urlEnd) {
+static char* skeepSpacesAndOnePlus(char* urlEnd) {
     char c;
     while ((c = *urlEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
         // white spaces are tolerated and ignored here
         urlEnd++;
     }
-    if (*urlEnd == '.') urlEnd++;
+    if (*urlEnd == '+') urlEnd++;
     return urlEnd;
 }
 
@@ -310,13 +310,13 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
     Arrow a = _fromUrl(context, url, &urlEnd, locateOnly);
     if (!urlEnd) return a; // NIL or EVE
 
-    urlEnd = skeepSpacesAndOneDot(urlEnd);
+    urlEnd = skeepSpacesAndOnePlus(urlEnd);
     while (*urlEnd) {
         DEBUGPRINTF("urlEnd = >%s<", urlEnd);
         Arrow b = _fromUrl(context, urlEnd, &urlEnd, locateOnly);
 
         if (!urlEnd) return b; // NIL or EVE
-        urlEnd = skeepSpacesAndOneDot(urlEnd);
+        urlEnd = skeepSpacesAndOnePlus(urlEnd);
         if (a == EVE && b == EVE) continue;
         a = (locateOnly ? pairMaybe(a, b) : pair(a, b)); // TODO: document actual design
         if (a == EVE) return EVE;
@@ -349,7 +349,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         char *headUrl = toURL(context, xl_headOf(e), depth - 1, &l2);
         char *url = malloc(2 + l1 + l2 + 1) ;
         assert(url);
-        sprintf(url, "/%s.%s", tailUrl, headUrl);
+        sprintf(url, "/%s+%s", tailUrl, headUrl);
         free(tailUrl);
         free(headUrl);
         *l = 2 + l1 + l2;

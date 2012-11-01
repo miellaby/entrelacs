@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     DEFATOM(world);
     DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
 
-    test_title("check /hello.world URI");
+    test_title("check /hello+world URI");
     {
         char *a = uriOf(_hello_world);
         assert(a);

@@ -58,8 +58,8 @@ static Arrow _load_binding(Arrow x, Arrow w, Arrow e) {
 static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M);
 
 /** unbuild an rebuild an arrow such as
-  * any /var.x ancester is replaced by env(x)
-  * /escape.x ancester by x
+  * any /var+x ancester is replaced by env(x)
+  * /escape+x ancester by x
   * other atoms are leaved as is (no substitution by default)
  */
 static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
@@ -133,8 +133,8 @@ static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
   Arrow w = _resolve(a, e, C, M);
 
   if (w == NIL) { // Not bound
-      if (tailOf(a) == var) { // var.a
-          w = EVE; // unbound var.x resolved to EVE
+      if (tailOf(a) == var) { // var+a
+          w = EVE; // unbound var+x resolved to EVE
       } else {
           w = a; // unbound atom (not variable casted) is let as is
       }
@@ -223,7 +223,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           // p == (let ((x v:t) s))
           dputs("     v (%O) == t trivial", v);
 
-          // FIXME: if v == /p.v where p resolve to a paddock, one should eval the bound value
+          // FIXME: if v == /p+v where p resolve to a paddock, one should eval the bound value
           if (w == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
 
@@ -298,13 +298,13 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       Arrow t1 = v1;
 
       if (w0_type == paddock && isTrivialOrBound(pair(t0, t1), e, C, M, &w)) {
-	        dputs("   t0 is bound to a paddock w0 and /w0.t1 is bound to %O, one evals this expression", w); 
-          // FIXME : pair(t0, t1) is v. See FIXME above
+	        dputs("   t0 is bound to a paddock w0 and /w0+t1 is bound to %O, one evals this expression", w); 
+          // FIXME : pair(t0, t1) is v+ See FIXME above
           M = a(w, a(evalOp, a(e, a(a(x, a(s, e)), k))));
 	        return M;
       } else if (w0_type != paddock && isTrivialOrBound(pair(t0, w1), e, C, M, &w)) {
 
-          dputs("   /t0 is not bound to a paddock and /t0.resolve(t1) is bound to %O", w);
+          dputs("   /t0 is not bound to a paddock and /t0+resolve(t1) is bound to %O", w);
 
           if (isEve(x)) { // #e# direct environment load
               dputs("          direct environment load");
@@ -356,7 +356,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           return M;
 
       } else { // not a closure thing
-          ONDEBUG(fprintf(stderr, "info: resolve(t0)=%O is not closure-like\n", w0));
+          DEBUGPRINTF("resolve(t0)=%O is not closure-like\n", w0);
           if (w == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
 
@@ -444,7 +444,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
 
   if (!isTrivialOrBound(s, e, C, M, &ws)) { // Not trivial closure in application #e#
-    dputs("p == (s v) where s is an application or such");
+    dputs("p == (s v) where s is not trivial");
     // rewriting rule: pp = (let ((M s) ((var M) v)))
     // ==> M = (s (e ((M (((var M) v) e)) k)))
     M = a(s, a(e, a(a(M, a(a(a(var, M), v), e)), k)));
@@ -491,18 +491,18 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow t0 = s;
   Arrow t1 = v;
   if (ws_type == paddock && isTrivialOrBound(pair(s, t1), e, C, M, &w)) {
-      dputs("s is bound to a paddock and /s.t1 is bound to %O, one evals the expression", w);
+      dputs("s is bound to a paddock and /s+t1 is bound to %O, one evals the expression", w);
       M = a(w, a(evalOp, ek));
       return M;
   } else if (ws_type != paddock && isTrivialOrBound(pair(s, wv), e, C, M, &w)) {
-      dputs("/s.resolve(v) is bound to something and s is not bound to a paddock!");
+      dputs("/s+resolve(v) is bound to something and s is not bound to a paddock!");
       M = a(a(escape, w), ek);
       return M;
   }
 
   if (ws_type == operator) { // System call case
       // resolve(t0) == (operator (hook context))
-      dputs("       resolve(t0) == /operator/hook.context (%O)", ws);
+      dputs("       resolve(t0) == /operator/hook+context (%O)", ws);
       Arrow operatorParameter = head(head(ws));
       XLCallBack hook;
       char* hooks = str(tail(head(ws)));
@@ -539,13 +539,13 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       return M;
 
   } else {
-      ONDEBUG(fprintf(stderr, "info: r(t0)=%O is not closure-like\n", ws));
+      DEBUGPRINTF("info: resolve(t0)=%O is not closure-like\n", ws);
       // not a closure, one let's the expression almost as if it was escaped
       if (w == brokenEnvironment)
           return a(swearWord,a(brokenEnvironment, M));
       else if (wv == NIL)
           wv = t1;
-      M = a(a(escape, a(t0, wv)), ek);
+      M = a(a(escape, a(ws, wv)), ek);
       return M;
   }
 
@@ -810,23 +810,23 @@ static void machine_init() {
     xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
   }
   if (xls_get(EVE, atom("if")) == NIL)
-      xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf.x/let//alternative/headOf.x/arrow/eval//ifHook/var.condition//escape.escape/var.alternative."));
+      xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval//ifHook/var+condition//escape+escape/var+alternative+"));
   if (xls_get(EVE, atom("equal")) == NIL)
-      xls_set(EVE, atom("equal"), xl_uri("/paddock//x/let//a/tailOf.x/let//b/headOf.x/arrow/let///tailOf/var.x/var.a/let///headOf/var.x/var.b/equalHook/arrow///escape.var/tailOf/var.x//escape.var/headOf/var.x."));
+      xls_set(EVE, atom("equal"), xl_uri("/paddock//x/let//a/tailOf+x/let//b/headOf+x/arrow/let///tailOf/var+x/var+a/let///headOf/var+x/var+b/equalHook/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
   if (xls_get(EVE, atom("get")) == NIL)
-      xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getHook//escape.escape/var.x."));
+      xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getHook//escape+escape/var+x+"));
   if (xls_get(EVE, atom("unset")) == NIL)
-      xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape.escape/var.x."));
+      xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape+escape/var+x+"));
   if (xls_get(EVE, atom("set")) == NIL)
-      xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf.x/let//exp/headOf.x/arrow/let///headOf/var.x/var.exp/setHook/arrow///escape.escape/var.slot//escape.var/headOf/var.x."));
+      xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setHook/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
   machine_init();
-  // M = //p/e.k
+  // M = //p/e+k
   chainSize = 0;
   Arrow w;
-  while (chainSize < 500 && tail(M) != swearWord && (!isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w) || /*k*/head(head(M)) != EVE)) {
+  while (chainSize < 500 && tail(M) != swearWord && (/*k*/head(head(M)) != EVE || !isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w))) {
       // only operators can produce fall/escalate states
       // TODO check secret here
 

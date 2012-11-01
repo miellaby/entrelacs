@@ -1,45 +1,33 @@
+Done:
 
-
-
-Did
+* Problem: Some web clients refuse to escape '.' character in %2E.
+   Radical solution: URI format has changed. Now '/tail+head'
+* merged API of: blob, tag et btag
+  * if size > 100 then blob else tag
 * operator, closure & paddock: now auto escaped, as typed litteral
 * xls_get now returns NIL (FFFFFF) when no arrow found
   * NIL is a undefined arrow. Different from Eve (0)
+* virtualized evaluation (root/get/set are confined in a nested hierarchy of contexts)
 * resolve now use xls_get to get "global" variable value
 * now rooting a pair won't make a global bound variable. Use xls_set(EVE,slot,value) instead.
   ===> root((EVE->slot)->value) ; root(EVE->(slot->value)))
 * xlg_get bug fix. Recursive get up to the root context might fail.
 * beware space.c show_cell return;
 * looseStack dumped in reverse order
-*
-
-
-locking point:
-*
+* new API to get and retrieve "uri" (no more xl_program)
 
 In progress:
 * doxygen integration
 
-To be done
-* merge API of: blob, tag et btag
-  * That is: if tag/btag > 128 chars, then blob
-* Merge API: xl_program/programOf <==> from/to_fingerprint
-* Leverage on arrows to find UA sessions
+To be done:
+ * locking point: Eval based recursion is terrible.
+ * xl_childrenOfCB : implementent map/fold variations
+ * xls_set: create less arrows (but also less indexation)
 
-* What an URI will be? Merge fingerprint and future URI concepts.
-* xl_childrenOfCB : implementent map/fold variations
-
-* run a program in a virtualization stack
- * v(k, a) = // where k a stack and a an arrow
-  *   isEve(k) ? a :
-  *       isEntrelacs(a) ? arrow(tail(k), v(head(k), a)) :
-  *           arrow(v(k, head(a)), v(k, tail(a)))
- * the virtualization stack won't be reflexive-able. Out of machine state.
+To fix latter:
+ * refresh all callback every time the server starts (because recompilation).
 
 In study:
-* xls_root to create less arrows (but also less indexation)
-  * e.g root x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
-* session is actually continuation
+ * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
+ * a session is actually a continuation
 
-To take care of:
-* call-backs has to be refreshen every time the server starts.
