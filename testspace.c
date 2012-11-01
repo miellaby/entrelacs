@@ -91,6 +91,7 @@ int basic() {
       Arrow bigAtom = atom(bigStr);
       char* bigStrBack = strOf(bigAtom);
       assert(0 == strcmp(bigStrBack, bigStr));
+      assert(xl_isAtom(bigAtom));
       free(bigStrBack);
     }
     
