@@ -325,7 +325,7 @@ int main(void) {
   if (get == NIL) {
       xls_set(EVE, xl_atom("GET"), xl_uri("/closure//x+x+"));
       xls_set(EVE, xl_atom("PUT"), xl_uri("/closure//x/root+x+"));
-      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x/eval+x+"));
+      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x/x+x+"));
       xls_set(EVE, xl_atom("DELETE"), xl_uri("/closure//x/unroot+x+"));
       xl_commit();
   }
