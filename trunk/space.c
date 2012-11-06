@@ -1090,16 +1090,10 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
                 *uriEnd = NULL;
             } else {
                 a = pair(tail, head, ifExist);
-                if (tail == EVE && head == EVE) {
-                    a = EVE;
-                    *uriEnd = headUriEnd;
-                } else {
-                    a = pair(tail, head, ifExist);
-                    if (a == EVE)
-                        *uriEnd = NULL;
-                    else
-                        *uriEnd = headUriEnd;
-                }
+                if (a == EVE)
+                   *uriEnd = NULL;
+                else
+                   *uriEnd = headUriEnd;
             }
         }
         break;
@@ -1156,8 +1150,6 @@ static Arrow uri(char *uri, int ifExist) { // TODO: document actual design
         Arrow b = fromUri(uriEnd, &uriEnd, ifExist);
         if (!uriEnd) return b; // return NIL (wrong URI) or EVE (not assimilated)
         uriEnd = skeepSpacesAndOnePlus(uriEnd);
-
-        if (a == EVE && b == EVE) continue;
 
         a = pair(a, b, ifExist);
         if (a == EVE) return EVE; // not assimilated pair
