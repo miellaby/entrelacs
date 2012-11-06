@@ -213,7 +213,7 @@ static void *event_handler(enum mg_event event,
             return processed;
         }
         Arrow method = xl_atom(request_info->request_method);
-        if (method != xl_atom("GET")) {
+        if (method == xl_atom("POST") || method == xl_atom("PUT")) {
             Arrow body = assimilateUploadedData(conn);
             if (body != NIL) {
                 input = xl_pair(input, body);
@@ -324,9 +324,9 @@ int main(void) {
   Arrow get = xls_get(EVE, xl_atom("GET"));
   if (get == NIL) {
       xls_set(EVE, xl_atom("GET"), xl_uri("/closure//x+x+"));
-      xls_set(EVE, xl_atom("PUT"), xl_uri("/closure//x/root+x+"));
-      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x/x+x+"));
-      xls_set(EVE, xl_atom("DELETE"), xl_uri("/closure//x/unroot+x+"));
+      xls_set(EVE, xl_atom("PUT"), xl_uri("/paddock//x/arrow/set+/var+x+"));
+      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x+x+"));
+      xls_set(EVE, xl_atom("DELETE"), xl_uri("/paddock//x/arrow/unset+/var+x+"));
       xl_commit();
   }
 

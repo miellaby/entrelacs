@@ -257,7 +257,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
                 *urlEnd = NULL;
             } else {
                 a = (locateOnly ? xl_pairMaybe(tail, head) : xl_pair(tail, head));
-                if (a == EVE && !(tail == EVE && head == EVE)) {
+                if (a == EVE) {
                     *urlEnd = NULL;
                 } else {
                     *urlEnd = headUrlEnd;
@@ -317,7 +317,6 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
 
         if (!urlEnd) return b; // NIL or EVE
         urlEnd = skeepSpacesAndOnePlus(urlEnd);
-        if (a == EVE && b == EVE) continue;
         a = (locateOnly ? pairMaybe(a, b) : pair(a, b)); // TODO: document actual design
         if (a == EVE) return EVE;
     }
