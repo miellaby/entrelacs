@@ -25,6 +25,8 @@ int main(int argc, char* argv[]) {
     childrenOfCB(context, print, EVE);
     xls_unset(context, hello);
     fprintf(stderr, "2: xl_unset\n");
+    print(uri("/a/b+c"), EVE);
+    xl_commit();
     childrenOfCB(context, print, EVE);
     xls_set(context, hello, world);
     fprintf(stderr, "3: xl_get\n");

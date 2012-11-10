@@ -2090,35 +2090,29 @@ static void forget(Arrow a) {
     Address hashLocation; // base address
     Address hashProbe; // probe offset
 
+    hash = xl_checksumOf(a);
+
     if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB || catBits == CATBITS_TUPLE) {
         // Compute content hash
-            hash = xl_checksumOf(a);
 
-    // Free chain
-    // FIXME this code doesn't erase reattachment cells :(
-  	Cell hChain = hashChain(a, cell) % PRIM1;
-    if (!hChain) hChain = 1; // offset can't be 0
-    Address next = jumpToFirst(cell, a, hChain, a);
-    cell = mem_get(next); ONDEBUG((show_cell('R', next, cell, 0)));
-    while (cell_getCatBits(cell) == CATBITS_CHAIN) {
-        mem_set(next, cell_free(cell)); ONDEBUG((show_cell('W', next, cell_free(cell), 0)));
-        next = jumpToNext(cell, next, hChain, a);
-        cell = mem_get(next); ONDEBUG((show_cell('R', next, cell, 0)));
+        // Free chain
+        // FIXME this code doesn't erase reattachment cells :(
+        Cell hChain = hashChain(a, cell) % PRIM1;
+        if (!hChain) hChain = 1; // offset can't be 0
+        Address next = jumpToFirst(cell, a, hChain, a);
+        Cell chained_cell = mem_get(next);
+        ONDEBUG((show_cell('R', next, chained_cell, 0)));
+        while (cell_getCatBits(chained_cell) == CATBITS_CHAIN) {
+            mem_set(next, cell_free(chained_cell));
+            ONDEBUG((show_cell('W', next, cell_free(chained_cell), 0)));
+            next = jumpToNext(chained_cell, next, hChain, a);
+            chained_cell = mem_get(next);
+            ONDEBUG((show_cell('R', next, chained_cell, 0)));
+        }
+        assert(cell_getCatBits(chained_cell) == CATBITS_LAST);
+        mem_set(next, cell_free(chained_cell));
+        ONDEBUG((show_cell('W', next, cell_free(chained_cell), 0)));
     }
-    assert(cell_getCatBits(cell) == CATBITS_LAST);
-    mem_set(next, cell_free(cell)); ONDEBUG((show_cell('W', next, cell_free(cell), 0)));
-    
-
-  } else {
-    // Compute content hash
-    if (catBits == CATBITS_ARROW) {
-       // Compute hash
-       hash = xl_checksumOf(a);
-    } else {
-		assert(catBits == CATBITS_SMALL);
-	    // TODO
-	}
-  }
 
   // Free definition start cell
   mem_set(a, cell_free(cell)); ONDEBUG((show_cell('W', a, cell_free(cell), 0)));
@@ -2130,7 +2124,7 @@ static void forget(Arrow a) {
 
   /* Now decremeting "more" counters in the probing path up to the forgotten singleton
   */
-  Cell probeAddress = hashLocation;
+  Address probeAddress = hashLocation;
   while (probeAddress != a) {
      cell = mem_get(probeAddress); ONDEBUG((show_cell('R', probeAddress, cell, 0)));
      cell = cell_unmore(cell);
