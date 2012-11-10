@@ -230,7 +230,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
 
             Arrow sa = ref;
             // Security check: no way to resolve a %x ref which hasn't been forged in the context
-            if (xl_typeOf(sa) == XL_PAIR && xl_tailOf(sa) == context) {
+            if (xl_isPair(sa) && xl_tailOf(sa) == context) {
                 a = xl_headOf(sa);
                 *urlEnd = url + 7;
             } else {
@@ -342,7 +342,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         sprintf(url, "$%06x", (int)sa);
         *l = 7;
         return url;
-    } else if (xl_typeOf(e) == XL_PAIR) { // TODO tuple
+    } else if (xl_isPair(e)) { // TODO tuple
         uint32_t l1, l2;
         char *tailUrl = toURL(context, xl_tailOf(e), depth - 1, &l1);
         char *headUrl = toURL(context, xl_headOf(e), depth - 1, &l2);
@@ -354,9 +354,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         *l = 2 + l1 + l2;
         return url;
     } else {
-        char* url = uriOf(e);
-        *l = strlen(url);
-        return url;
+        return uriOf(e, l);
     }
 }
 

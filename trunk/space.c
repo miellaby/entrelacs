@@ -384,8 +384,8 @@ uint32_t hashChild(Address address, CellData cell) { // Data chain hash offset
  * This function returns a string used to define a tag arrow.
  *
  */
-#define CRYPTO_SIZE 41
-char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE]) {
+#define CRYPTO_SIZE 40
+char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
   char h[20];
   sha1(data, size, h);
   sprintf(output,"%08x%08x%08x%08x%08x", *(uint32_t *)h, *(uint32_t *)(h + 4), *(uint32_t *)(h + 8), 
@@ -476,11 +476,13 @@ static Address jumpToChild0(Cell cell, Address address, Address offset, Address 
 /** return Eve */
 Arrow xl_Eve() { return EVE; }
 
+static char* payloadOf(Cell catBits, Arrow a, uint32_t* lengthP);
+
 /** retrieve the arrow corresponding to data at $str with size $length.
  * Will create the singleton if missing except if $ifExist is set.
  * data might be a blob signature or a tag content.
  */
-Arrow btagOrBlob(Cell catBits, int length, char* str, uint64_t hash, int ifExist) {
+Arrow payload(Cell catBits, int length, char* str, uint64_t hash, int ifExist) {
   Address hashLocation, hashProbe, hChain;
   uint32_t l;
   CellData checksum;
@@ -666,6 +668,60 @@ Arrow btagOrBlob(Cell catBits, int length, char* str, uint64_t hash, int ifExist
 }
 
 
+#define CHECKSUM_CACHE_SIZE 1024
+static struct s_checksumCacheEntry { uint64_t checksum; Arrow a; } *checksumCache = NULL;
+uint64_t xl_checksumOf(Arrow a) {
+    if (a == XL_EVE)
+       return 0x8200000000LU; // Eve checksum is not zero!
+       
+    if (a >= SPACE_SIZE) return 0;
+
+    Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+    if (!cell_isArrow(cell))
+        return 0;
+    
+    
+    // General case
+    if (!checksumCache) {
+        checksumCache = (struct s_checksumCacheEntry *)malloc(sizeof(struct s_checksumCacheEntry) * CHECKSUM_CACHE_SIZE); 
+        memset(checksumCache, 0, sizeof(struct s_checksumCacheEntry) * CHECKSUM_CACHE_SIZE);
+    } else if (checksumCache[a % CHECKSUM_CACHE_SIZE].a == a) { // cache hit!
+        return checksumCache[a % CHECKSUM_CACHE_SIZE].checksum;
+    }
+    checksumCache[a % CHECKSUM_CACHE_SIZE].a = a;
+        
+    if (cell_isPair(cell)) {
+        Arrow tail = cell_getTail(cell);
+        Arrow head = cell_getHead(cell);
+        uint64_t c1 = xl_checksumOf(tail);
+        uint64_t c2 = xl_checksumOf(head);
+        uint64_t checksum = hashArrow(c1, c2);
+        checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = checksum;
+        return checksum;
+        
+    } else if (cell_isTag(cell)) {
+        uint32_t tagLength;
+        char *tag = payloadOf(CATBITS_TAG, a, &tagLength);
+        uint64_t checksum = hashRaw(tag, tagLength);
+        free(tag);
+        checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = checksum;
+        return checksum;
+
+    } else if (cell_isBlob(cell)) {
+        uint32_t blobHashLength;
+        char *blobHash = payloadOf(CATBITS_BLOB, a, &blobHashLength);
+        uint64_t checksum = hashRaw(blobHash, blobHashLength);
+        free(blobHash);
+        checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = checksum;
+        return checksum;
+
+    } else {
+        assert(0);
+        checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = 0;
+        return 0;
+    }
+}
+
 /** retrieve tail->head pair
  * by creating the singleton if not found.
  * except if ifExist param is set.
@@ -685,7 +741,7 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     return NIL;
 
   // Compute hashs
-  hash = hashArrow(tail, head);
+  hash = hashArrow(xl_checksumOf(tail), xl_checksumOf(head));
   hashLocation = hash % PRIM0; // base address
   hashProbe = hash % PRIM1; // probe offset
   if (!hashProbe) hashProbe = 1; // offset can't be 0
@@ -762,7 +818,7 @@ Arrow xl_pairMaybe(Arrow tail, Arrow head) {
  * except if ifExist param is set.
  */
 static Arrow blob(uint32_t size, char* data, int ifExist) {
-  char signature[CRYPTO_SIZE];
+  char signature[CRYPTO_SIZE + 1];
   crypto(size, data, signature);
   uint32_t signature_size;
   uint64_t hash = hashStringAndGetSize(signature, &signature_size);
@@ -773,7 +829,7 @@ static Arrow blob(uint32_t size, char* data, int ifExist) {
   mem0_saveData(signature, size, data);
   // TODO: remove data when cell at h is recycled.
 
-  return btagOrBlob(CATBITS_BLOB, signature_size, signature, hash, ifExist);
+  return payload(CATBITS_BLOB, signature_size, signature, hash, ifExist);
 }
 
 Arrow xl_blob(uint32_t size, char* data) {
@@ -790,7 +846,7 @@ Arrow xl_atom(char* str) {
     if (size >= BLOB_MINSIZE)
         return blob(size, str, 0);
     else
-        return btagOrBlob(CATBITS_TAG, size, str, hash, 0);
+        return payload(CATBITS_TAG, size, str, hash, 0);
 }
 
 Arrow xl_atomMaybe(char* str) {
@@ -799,7 +855,7 @@ Arrow xl_atomMaybe(char* str) {
     if (size >= BLOB_MINSIZE)
         return blob(size, str, 1);
     else
-        return btagOrBlob(CATBITS_TAG, size, str, hash, 1);
+        return payload(CATBITS_TAG, size, str, hash, 1);
 }
 
 Arrow xl_natom(uint32_t size, char* mem) {
@@ -807,7 +863,7 @@ Arrow xl_natom(uint32_t size, char* mem) {
         return blob(size, mem, 0);
     else {
         uint64_t hash = hashRaw(mem, size);
-        return btagOrBlob(CATBITS_TAG, size, mem, hash, 0);
+        return payload(CATBITS_TAG, size, mem, hash, 0);
     }
 }
 
@@ -816,7 +872,7 @@ Arrow xl_natomMaybe(uint32_t size, char* mem) {
         return blob(size, mem, 1);
     else {
         uint64_t hash = hashRaw(mem, size);
-        return btagOrBlob(CATBITS_TAG, size, mem, hash, 1);
+        return payload(CATBITS_TAG, size, mem, hash, 1);
     }
 }
 
@@ -851,7 +907,7 @@ Arrow xl_tailOf(Arrow a) {
   return (Arrow)cell_getTail(cell);
 }
 
-static char* tagOrBlobOf(Cell catBits, Arrow a, uint32_t* lengthP) {
+static char* payloadOf(Cell catBits, Arrow a, uint32_t* lengthP) {
   Address current = a;
   if (a == EVE) {
      lengthP = 0;
@@ -910,17 +966,17 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
     }
 
     if (cell_isBlob(cell)) {
-        uint32_t hl;
-        char* h = tagOrBlobOf(CATBITS_BLOB, a, &hl);
-        if (!h) {
+        uint32_t blobHashLength;
+        char* blobHash = payloadOf(CATBITS_BLOB, a, &blobHashLength);
+        if (!blobHash) {
             *lengthP = 0;
             return (char *)0;
         }
-        char* data = mem0_loadData(h, lengthP);
-        free(h);
+        char* data = mem0_loadData(blobHash, lengthP);
+        free(blobHash);
         return data;
     } else {
-        return tagOrBlobOf(CATBITS_TAG, a, lengthP);
+        return payloadOf(CATBITS_TAG, a, lengthP);
     }
 }
 
@@ -981,28 +1037,39 @@ static void percent_decode(const char *src, size_t src_len, char *dst, size_t* d
 
 
 static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
-    int r;
-    int t = xl_typeOf(a);
-    assert(a != NIL);
-    switch(t) {
-        case XL_EVE: {
-            char *s = (char*)malloc(1);
-            assert(s);
-            s[0] = 0;
-            *l = 0;
-            return s;
+    if (a == XL_EVE) {
+        char *s = (char*)malloc(1);
+        assert(s);
+        s[0] = 0;
+        if (l) *l = 0;
+        return s;
+    }
+    
+    if (a >= SPACE_SIZE)
+       return NULL;
+
+    Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+    if (cell_isFree(cell))
+      return NULL;
+    
+    Cell catBits = cell_getCatBits(cell);
+
+    switch(catBits) {
+        case CATBITS_BLOB: {
+            return xl_digestOf(a, l);
         }
-        case XL_ATOM: {
-            uint32_t size;
-            char* data = xl_memOf(a, &size);
-            char *uri = malloc(3 * size + 1) ;
+        case CATBITS_TAG: case CATBITS_SMALL: {
+            uint32_t tagLength, encodedDataLength;
+            char* tag = xl_memOf(a, &tagLength);
+            char *uri = malloc(3 * tagLength + 1) ;
             assert(uri);
-            percent_encode(data, size, uri, l);
-            free(data);
-            uri = realloc(uri, 1 + *l);
+            percent_encode(tag, tagLength, uri, &encodedDataLength);
+            free(tag);
+            if (l) *l = encodedDataLength;
+            uri = realloc(uri, 1 + encodedDataLength);
             return uri;
         }
-        case XL_PAIR: {
+        case CATBITS_ARROW: {
             uint32_t l1, l2;
             char *tailUri = toURI(xl_tailOf(a), &l1);
 	    if (!tailUri) return NULL;
@@ -1014,10 +1081,10 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
             sprintf(uri, "/%s+%s", tailUri, headUri);
             free(tailUri);
             free(headUri);
-            *l = 2 + l1 + l2;
+            if (l) *l = 2 + l1 + l2;
             return uri;
         }
-        case XL_TUPLE:
+        case CATBITS_TUPLE:
             assert(0);
             return NULL; // Not yet supported TODO
         default:
@@ -1026,10 +1093,151 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
     }
 }
 
+#define DIGEST_CHECKSUM_SIZE 16
+#define DIGEST_SIZE (2 + CRYPTO_SIZE + DIGEST_CHECKSUM_SIZE)
+char* xl_digestOf(Arrow a, uint32_t *l) {
+    char *digest;
+    char* hashStr;
+    uint32_t hashLength, encodedHashLength;
+    uint64_t checksum;
+    if (a == XL_EVE) {
+        digest = (char*) malloc(1);
+        assert(digest);
+        digest[0] = 0;
+        *l = 0;
+        return digest;
+    }
+    
+    if (a >= SPACE_SIZE)
+       return NULL;
 
-char* xl_uriOf(Arrow a) {
-    uint32_t l;
-    return toURI(a, &l);
+    Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+    if (!cell_isArrow(cell))
+        return NULL;
+    
+    Cell catBits = cell_getCatBits(cell);
+    
+    switch(catBits) {
+        case CATBITS_ARROW: {
+            uint32_t uriLength;
+            char* uri = toURI(a, &uriLength);
+            hashStr = (char *)malloc(CRYPTO_SIZE + 1);
+            assert(hashStr);
+            crypto(uriLength, uri, hashStr);
+            free(uri);
+            hashLength = strlen(hashStr);
+            checksum = xl_checksumOf(a);
+            break;
+        }
+        case CATBITS_BLOB: {
+            hashStr = payloadOf(CATBITS_BLOB, a, &hashLength);
+            checksum = hashRaw(hashStr, hashLength);
+            break;
+        }
+        case CATBITS_TAG: {
+            uint32_t dataSize;
+            char* data = xl_memOf(a, &dataSize);
+            hashStr = (char *)malloc(CRYPTO_SIZE + 1);
+            assert(hashStr);
+            crypto(dataSize, data, hashStr);
+            free(data);
+            hashLength = strlen(hashStr);
+            checksum = hashRaw(data, dataSize);
+
+            break;
+        }
+        default: {
+            assert(0);
+        }
+    }
+    uint32_t encodedChecksumLength, digestLength;
+    digest = (char *)malloc(DIGEST_SIZE + 1);
+    assert(digest);
+    digest[0] = '$';
+    digest[1] = 'H';
+    digestLength = 2;
+
+    // TODO: more efficient
+    static const char *hex = "0123456789abcdef";
+    unsigned char checksumMap[DIGEST_CHECKSUM_SIZE] = {
+        hex[(checksum >> 60) && 0xF],
+        hex[(checksum >> 56) && 0xF],
+        hex[(checksum >> 52) && 0xF],
+        hex[(checksum >> 48) && 0xF],
+        hex[(checksum >> 44) && 0xF],
+        hex[(checksum >> 40) && 0xF],
+        hex[(checksum >> 36) && 0xF],
+        hex[(checksum >> 32) && 0xF],
+        hex[(checksum >> 28) && 0xF],
+        hex[(checksum >> 24) && 0xF],
+        hex[(checksum >> 20) && 0xF],
+        hex[(checksum >> 16) && 0xF],
+        hex[(checksum >> 12) && 0xF],
+        hex[(checksum >> 8) && 0xF],
+        hex[(checksum >> 4) && 0xF],
+        hex[checksum && 0xF]
+    };
+    strncpy(digest + digestLength, checksumMap, DIGEST_CHECKSUM_SIZE);
+    digestLength += DIGEST_CHECKSUM_SIZE;
+
+    strncpy(hashStr, digest + digestLength, hashLength);
+    free(hashStr);
+    digestLength += encodedHashLength;
+    digest = realloc(digest, 1 + digestLength);
+    *l = digestLength;
+    
+   return digest;
+}
+
+char* xl_uriOf(Arrow a, uint32_t *l) {
+    return toURI(a, l);
+}
+
+Arrow xl_digestMaybe(char* digest) {
+    int i = 0;
+    int j = 64;
+    uint64_t hash =   (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]) << (j -= 4))
+                        | (HEXTOI(digest[i++]));
+  Address hashLocation, hashProbe;
+  Address probeAddress;
+  Cell cell;
+
+  hashLocation = hash % PRIM0; // base address
+  hashProbe = hash % PRIM1; // probe offset
+  if (!hashProbe) hashProbe = 1; // offset can't be 0
+
+  // Probe for an existing singleton
+  probeAddress = hashLocation;
+  while (1) {	 // TODO: thinking about a probing limit
+     cell = mem_get(probeAddress); ONDEBUG((show_cell('R', probeAddress, cell, 0)));
+     if (cell_isArrow(cell) && xl_checksumOf(probeAddress) == hash) {
+         char* otherDigest = xl_digestOf(probeAddress, NULL);
+         if (!strcmp(otherDigest, digest)) {
+             free(otherDigest);
+             return probeAddress; // arrow found!
+         }
+     }
+
+     if (!more(cell)) {
+        return EVE; // Probing over. It's a miss.
+     }
+ 
+     growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+  }
 }
 
 
@@ -1055,12 +1263,12 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
             while ((c = uri[uriLength]) > 32 && c != '+' && c != '/')
                 uriLength++;
             assert(uriLength);
-            // FIXME: this old code needs to be moved in a global signature system
-            char *signature = malloc(uriLength /* + 1  useless, there's room */);
-            percent_decode(uri + 2, uriLength - 2, signature, &signatureLength);
-            uint64_t hash = hashRaw(signature, signatureLength);
-            a = btagOrBlob(CATBITS_BLOB, signatureLength, signature, hash, 1 /* always ifExist */);
-            free(signature);
+            if (uriLength != DIGEST_SIZE) {
+                a = NIL; // URI wrong
+                *uriEnd = NULL;
+            }
+            
+            a = xl_digestMaybe(uri);
             if (a == EVE && !ifExist) { // Non assimilated blob
                 a = NIL; // NIL because URI is not supposed to be wrong
                 *uriEnd = NULL;
@@ -1113,7 +1321,7 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
             a = blob(atomLength, atomStr, ifExist);
         else {
            uint64_t hash = hashRaw(atomStr, atomLength);
-            a = btagOrBlob(CATBITS_TAG, atomLength, atomStr, hash, ifExist);
+            a = payload(CATBITS_TAG, atomLength, atomStr, hash, ifExist);
         }
         free(atomStr);
         if (a == EVE) { // Non assimilated tag
@@ -1875,23 +2083,16 @@ int xl_equal(Arrow a, Arrow b) {
 
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a) {
-  Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
-  Cell catBits = cell_getCatBits(cell);
-  // Compute hashs
-  uint64_t hash;
-  Address hashLocation; // base address
-  Address hashProbe; // probe offset
+    Cell cell = mem_get(a); ONDEBUG((show_cell('R', a, cell, 0)));
+    Cell catBits = cell_getCatBits(cell);
+    // Compute hashs
+    uint64_t hash;
+    Address hashLocation; // base address
+    Address hashProbe; // probe offset
 
-  if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB || catBits == CATBITS_TUPLE) {
-    // Compute content hash
-	if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB) {
-	   uint32_t strl;
-	   char* str = tagOrBlobOf(catBits, a, &strl);
-       hash = hashRaw(str, strl);
-       free(str);
-	} else {
-	   // TODO Tuple
-	}
+    if (catBits == CATBITS_TAG || catBits == CATBITS_BLOB || catBits == CATBITS_TUPLE) {
+        // Compute content hash
+            hash = xl_checksumOf(a);
 
     // Free chain
     // FIXME this code doesn't erase reattachment cells :(
@@ -1912,7 +2113,7 @@ static void forget(Arrow a) {
     // Compute content hash
     if (catBits == CATBITS_ARROW) {
        // Compute hash
-       hash = hashArrow(cell_getTail(cell), cell_getHead(cell));
+       hash = xl_checksumOf(a);
     } else {
 		assert(catBits == CATBITS_SMALL);
 	    // TODO
@@ -1935,6 +2136,10 @@ static void forget(Arrow a) {
      cell = cell_unmore(cell);
      mem_set(probeAddress, cell); ONDEBUG((show_cell('W', probeAddress, cell, 0)));
      growingShift(probeAddress, probeAddress, hashProbe, hashLocation);
+  }
+  
+  if (checksumCache && checksumCache[a % CHECKSUM_CACHE_SIZE].a == a) {
+      checksumCache[a % CHECKSUM_CACHE_SIZE].a = 0;
   }
 }
 
@@ -1960,7 +2165,7 @@ static int printf_arrow_extension(FILE *stream,
                                     const void *const *args) {
   static char* nilFakeURI = "(NIL)";
   Arrow arrow = *((Arrow*) (args[0]));
-  char* uri = arrow != NIL ? xl_uriOf(arrow) : nilFakeURI;
+  char* uri = arrow != NIL ? xl_uriOf(arrow, NULL) : nilFakeURI;
   assert(uri);
   int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
   if (uri != nilFakeURI)
