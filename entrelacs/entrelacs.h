@@ -42,6 +42,7 @@ Arrow xl_pairMaybe(Arrow, Arrow); ///< return a pair of arrows if system-known, 
 Arrow xl_atomMaybe(char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
 Arrow xl_natomMaybe(uint32_t size, char*); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
 Arrow xl_uriMaybe(char*); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
+Arrow xl_digestMaybe(char*); ///< return a stored arrow corresponding to a digest, NIL if no match.
 
 /* Unbuilding */
 typedef enum e_xlType {
@@ -57,7 +58,9 @@ Arrow xl_headOf(Arrow); ///< return arrow head.
 Arrow xl_tailOf(Arrow); ///< return arrow tail.
 char* xl_strOf(Arrow);  ///< retrieve an atomic arrow as a C string. @return pointer to freed.
 char* xl_memOf(Arrow, uint32_t*); /// retrieve an atomic arrow as a piece of binary data. @return pointer to freed.
-char* xl_uriOf(Arrow); ///< Retrieve an arrow definition in URI notation. @return pointer to freed.
+char* xl_uriOf(Arrow, uint32_t*); ///< Retrieve an arrow definition in URI notation. @return pointer to freed.
+uint64_t xl_checksumOf(Arrow); ///< return an arrow checksum.
+char* xl_digestOf(Arrow, uint32_t*); ///< Retrieve an arrow digest. @return pointer to freed.
 
 /* Rooting */
 Arrow xl_root(Arrow); ///< root an arrow.

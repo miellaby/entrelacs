@@ -15,13 +15,15 @@
 #define atomMaybe(S) xl_atomMaybe(S)
 #define natomMaybe(N, S) xl_natomMaybe(N, S)
 #define uriMaybe(U)     xl_uriMaybe(U)
+#define digestMaybe(D)     xl_digestMaybe(D)
 
 #define typeOf(A)    xl_typeOf(A)
 #define headOf(A)    xl_headOf(A)
 #define tailOf(A)    xl_tailOf(A)
 #define strOf(A)     xl_strOf(A)
 #define memOf(A, N)  xl_memOf(A, N)
-#define uriOf(U)     xl_uriOf(U)
+#define uriOf(A, N)  xl_uriOf(A, N)
+#define digestOf(A, N) xl_digestOf(A, N)
 
 #define type(A)      xl_typeOf(A)
 #define head(A)      xl_headOf(A)
