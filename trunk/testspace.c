@@ -123,7 +123,7 @@ int basic() {
     // check uri assimilation
     test_title("check URI assimilation");
     {
-        Arrow uri = uri("/hello.world");
+        Arrow uri = uri("/hello+world");
         assert(uri == _hello_world);
     }
 
