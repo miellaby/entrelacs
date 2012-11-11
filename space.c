@@ -1275,7 +1275,7 @@ char* xl_uriOf(Arrow a, uint32_t *l) {
 }
 
 Arrow xl_digestMaybe(char* digest) {
-    int i = 0;
+    int i = 2; // $H
     int j = 64;
     uint64_t hash = (HEXTOI(digest[i++]) << (j -= 4))
             | (HEXTOI(digest[i++]) << (j -= 4))
@@ -1312,6 +1312,7 @@ Arrow xl_digestMaybe(char* digest) {
                 free(otherDigest);
                 return probeAddress; // arrow found!
             }
+            free(otherDigest);
         }
 
         if (!more(cell)) {
