@@ -10,13 +10,17 @@
 
 #define test_title(T) fprintf(stderr, T "\n")
 
-static struct s_buffer { int size; int max; char* buffer; } buffer = {0, 0, NULL} ;
+static struct s_buffer {
+    int size;
+    int max;
+    char* buffer;
+} buffer = {0, 0, NULL};
 
 Arrow _printArrow(Arrow a) {
 
     if (xl_isRooted(a)) {
         int size = buffer.size;
-        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + 1);
         sprintf(buffer.buffer + size - 1, "_");
     }
 
@@ -25,34 +29,33 @@ Arrow _printArrow(Arrow a) {
         int l;
         char* s = xl_memOf(a, &l);
         int size = buffer.size;
-        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + l + 2);
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + l + 2);
         sprintf(buffer.buffer + size - 1, "\"%s\"", s);
         free(s);
     } else if (t == XL_PAIR) {
         int size;
         size = buffer.size;
-        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + 1);
         sprintf(buffer.buffer + size - 1, "(");
         _printArrow(xl_tailOf(a));
         size = buffer.size;
-        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 2);
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + 2);
         sprintf(buffer.buffer + size - 1, ", ");
         _printArrow(xl_headOf(a));
         size = buffer.size;
-        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), size + 1);
+        geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + 1);
         sprintf(buffer.buffer + size - 1, ")");
     }
     return a;
 }
 
 Arrow printArrow(Arrow a, Arrow ctx) {
-    geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof(char), 1);
+    geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), 1);
     buffer.buffer[0] = '\0';
     _printArrow(a);
     fprintf(stderr, "%s\n", buffer.buffer);
     return 0;
 }
-
 
 int basic() {
     // assimilate arrows
@@ -68,56 +71,59 @@ int basic() {
     assert(typeOf(_hello_world) == XL_PAIR);
     assert(tail(_hello_world) == hello);
     assert(head(_hello_world) == world);
-    
+
+    test_title("Test Adam special case");
+    assert(pair(EVE, EVE) != EVE);
+
     // Check atoms
     test_title("check atoms");
     assert(typeOf(hello) == XL_ATOM && typeOf(world) == XL_ATOM);
-	char *s1 = str(hello);
-	char *s2 = str(world);
-	assert(!strcmp("hello", s1) && !strcmp("world", s2));
-	free(s1);
-	free(s2);
-    
+    char *s1 = str(hello);
+    char *s2 = str(world);
+    assert(!strcmp("hello", s1) && !strcmp("world", s2));
+    free(s1);
+    free(s2);
+
     // check rooting
     test_title("check rooting");
     root(_hello_world);
     root(more_bigger_string_11111111111111111111);
-    
+
     assert(isRooted(_hello_world));
     assert(isRooted(more_bigger_string_11111111111111111111));
 
     { // check very big string (blob)
-      char* bigStr = "11111111112222222222233333333333334444444444445555555555566666666666677777777777788888888888888999999999999999";
-      Arrow bigAtom = atom(bigStr);
-      char* bigStrBack = strOf(bigAtom);
-      assert(0 == strcmp(bigStrBack, bigStr));
-      assert(xl_isAtom(bigAtom));
-      free(bigStrBack);
+        char* bigStr = "11111111112222222222233333333333334444444444445555555555566666666666677777777777788888888888888999999999999999";
+        Arrow bigAtom = atom(bigStr);
+        char* bigStrBack = strOf(bigAtom);
+        assert(0 == strcmp(bigStrBack, bigStr));
+        assert(xl_isAtom(bigAtom));
+        free(bigStrBack);
     }
-    
+
     // check GC
     test_title("check GC");
-	DEFATOM(loose);
+    DEFATOM(loose);
     DEFA(hello, loose);
     commit();
     assert(typeOf(loose) == XL_UNDEF);
     assert(typeOf(_hello_loose) == XL_UNDEF);
-    
+
     // check rooting persistency
     test_title("check rooting persistency");
     assert(isRooted(_hello_world));
-    
+
     // check deduplication
     test_title("check deduplication");
     Arrow original = _hello_world;
     Arrow original_big_string = more_bigger_string_11111111111111111111;
     {
-       DEFATOM(more_bigger_string_11111111111111111111);
-       assert(original_big_string == more_bigger_string_11111111111111111111);
-       DEFATOM(hello);
-       DEFATOM(world);
-       DEFA(hello, world);
-       assert(original == _hello_world);
+        DEFATOM(more_bigger_string_11111111111111111111);
+        assert(original_big_string == more_bigger_string_11111111111111111111);
+        DEFATOM(hello);
+        DEFATOM(world);
+        DEFA(hello, world);
+        assert(original == _hello_world);
     }
 
     // check uri assimilation
@@ -134,7 +140,7 @@ int basic() {
         Arrow worldB = natom(5, "world");
         DEFA(helloB, worldB);
         assert(original == _helloB_worldB);
-   }
+    }
 
     // check natom dedup
     test_title("check natom dedup");
@@ -145,8 +151,8 @@ int basic() {
     {
         Arrow fooB = natom(6, "headOf");
         Arrow barB = natom(6, "tailOf");
-            DEFA(fooB, barB);
-            assert(originalB == _fooB_barB);
+        DEFA(fooB, barB);
+        assert(originalB == _fooB_barB);
     }
 
     // check pair connection
@@ -154,14 +160,14 @@ int basic() {
     DEFATOM(dude);
     DEFA(hello, dude);
     root(_hello_dude);
-    
+
     childrenOfCB(hello, printArrow, Eve());
-    
+
     // check unrooting
     test_title("check unrooting");
     unroot(_hello_world);
     assert(!isRooted(_hello_world));
-    
+
     // check GC after unrooting
     test_title("check GC after unrooting");
     commit();
@@ -172,7 +178,7 @@ int basic() {
     // check pair disconnection
     test_title("check pair disconnection");
     childrenOfCB(hello, printArrow, Eve());
-    
+
     unroot(_hello_dude);
     commit();
 
@@ -188,7 +194,7 @@ int stress() {
     // deduplication stress
     test_title("deduplication stress");
     {
-        for (int i = 0 ; i < 200; i++) {
+        for (int i = 0; i < 200; i++) {
             snprintf(buffer, 50, "This is the tag #%d", i);
             atoms[i] = atom(buffer);
             if (i % 2) {
@@ -200,7 +206,7 @@ int stress() {
             }
         }
 
-        for (int i = 0 ; i < 200; i++) {
+        for (int i = 0; i < 200; i++) {
             snprintf(buffer, 50, "This is the tag #%d", i);
             Arrow tagi = atom(buffer);
             assert(atoms[i] == tagi);
@@ -215,7 +221,7 @@ int stress() {
     // rooting stress (also preserve this material from GC for further tests)
     test_title("rooting stress");
     {
-        for (int i = 0 ; i < 200; i++) {
+        for (int i = 0; i < 200; i++) {
             root(atoms[i]);
             if (i % 2) {
                 int j = (i - 1) / 2;
@@ -231,11 +237,11 @@ int stress() {
     test_title("connection stress");
     {
         root(connectMe);
-        for (int i = 0 ; i < 200; i++) {
+        for (int i = 0; i < 200; i++) {
             Arrow child = pair(connectMe, atoms[i]);
             root(child);
         }
-        for (int j = 0 ; j < 100; j++) {
+        for (int j = 0; j < 100; j++) {
             printArrow(pairs[j], Eve());
             Arrow child = pair(connectMe, pairs[j]);
             root(child);
@@ -246,11 +252,11 @@ int stress() {
     // disconnection stress
     test_title("disconnection stress");
     {
-        for (int i = 0 ; i < 200; i++) {
+        for (int i = 0; i < 200; i++) {
             Arrow child = pair(connectMe, atoms[i]);
             unroot(child);
         }
-        for (int j = 0 ; j < 100; j++) {
+        for (int j = 0; j < 100; j++) {
             Arrow child = pair(connectMe, pairs[j]);
             unroot(child);
         }
@@ -262,13 +268,13 @@ int stress() {
     {
         Arrow loose = atom("save me!");
         big = loose;
-        for (int i = 0 ; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             if (i % 2)
                 big = pair(big, atoms[i]);
             else
                 big = pair(atoms[i], big);
         }
-        for (int j = 0 ; j < 100; j++) {
+        for (int j = 0; j < 100; j++) {
             if (j % 2)
                 big = pair(big, pairs[j]);
             else
@@ -290,7 +296,7 @@ int stress() {
 
         // unrooting stress
         test_title("unrooting stress");
-        for (int i = 0 ; i < 200; i++) {
+        for (int i = 0; i < 200; i++) {
             unroot(atoms[i]);
             if (i % 2) {
                 int j = (i - 1) / 2;
@@ -311,5 +317,5 @@ int main(int argc, char* argv[]) {
     xl_init();
     basic();
     stress();
-	return 0;
+    return 0;
 }

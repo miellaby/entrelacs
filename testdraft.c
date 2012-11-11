@@ -16,6 +16,8 @@ static Arrow print(Arrow arrow, Arrow context) {
 
 int main(int argc, char* argv[]) {
     xl_init();
+    log_init(NULL, "server,session,space,machine=debug");
+
     char output[255];
     DEFATOM(context);
     DEFATOM(hello);
@@ -25,7 +27,6 @@ int main(int argc, char* argv[]) {
     childrenOfCB(context, print, EVE);
     xls_unset(context, hello);
     fprintf(stderr, "2: xl_unset\n");
-    print(uri("/a/b+c"), EVE);
     xl_commit();
     childrenOfCB(context, print, EVE);
     xls_set(context, hello, world);

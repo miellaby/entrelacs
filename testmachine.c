@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     {"unboundedUncastedAtomLeftAsIs", "unboundedUncastedAtomLeftAsIs"},
     {"/let///anything/can/be/a/variable+id/arrow/deal/with+it+/var/anything/can/be/a/variable+id", "/deal/with+it"},
     {"/let//noCastingNeeded+anAtomWorksAsAVariable/noCastingNeeded", "anAtomWorksAsAVariable"},
-    {"/lambda/variable+body", "/closure//variable+body/+"},
+    {"/lambda/variable+body", "/closure//variable+body+"},
     {"/let//identity/lambda/x+x/identity+42", "42"},
     {"lambda/x/arrow/unboundedCastedVar/evaluated/as/var+x/var+unBoundedCastedVar", "/unboundedCastedVar/evaluated/as+"},
     {"/let//EscapePreventsEvaluation+dude/escape//lambda/x+x/EscapePreventsEvaluation", "//lambda/x+x/EscapePreventsEvaluation"},
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     {"//lambda/x+x/let//myHeadOf/lambda/x/headOf+x/myHeadOf/escape/1/2/3/4+5", "/2/3/4+5"},
     {"/arrow//var+unBoundedCastedAsVar+2", "/+2"},
     {"/load//escape/x+bound/arrow/x/equal//var+x", "/x/equal+bound"},
-    {"@M", "/@M+"}, // (p (e k) with p = @M, e=EVE, k=EVE
+    {"@M", "/@M+/+"}, // (p (e k) with p = @M, e=EVE, k=EVE
     {"/let//x+1/let//y+2/let//state+@M//lambda/x+x+state", "//let+//state+@M+//lambda+/x+x+state+///y+2+//x+1++"}, // environnement loaded but no continuation
     {"/let//x+build/arrow/I/can//var+x/any/arrow/even/with/lambda/or+such", "/I/can/build/any/arrow/even/with/lambda/or+such"},
     {"/let//x+foo/arrow//I/can/even/use//escape+escape/to/get///escape/var+x", "/I/can/even/use/escape/to/get/var+x"},

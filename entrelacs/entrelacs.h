@@ -49,8 +49,7 @@ typedef enum e_xlType {
     XL_UNDEF=-1,
     XL_EVE=0,
     XL_PAIR=1,
-    XL_ATOM=2,
-    XL_TUPLE=3 // Not implemented
+    XL_ATOM=2
 } XLType;
 
 XLType xl_typeOf(Arrow); ///< return arrow type. // TODO: could it be a SMALL arrow ?
