@@ -1064,8 +1064,8 @@ static void percent_encode(const char *src, size_t src_len, char *dst, size_t* d
     static const char *hex = "0123456789abcdef";
     static size_t i, j;
     for (i = j = 0; i < src_len; i++, src++, dst++, j++) {
-        if (isalnum(*(const unsigned char *) src) ||
-                strchr(dont_escape, * (const unsigned char *) src) != NULL) {
+        if (*src && (isalnum(*(const unsigned char *) src) ||
+                strchr(dont_escape, * (const unsigned char *) src) != NULL)) {
             *dst = *src;
         } else {
             dst[0] = '%';
@@ -1173,7 +1173,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 char* xl_digestOf(Arrow a, uint32_t *l) {
     char *digest;
     char* hashStr;
-    uint32_t hashLength, encodedHashLength;
+    uint32_t hashLength;
     uint64_t checksum;
     if (a == XL_EVE) {
         digest = (char*) malloc(1);
@@ -1240,29 +1240,30 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
     // TODO: more efficient
     static const char *hex = "0123456789abcdef";
     char checksumMap[DIGEST_CHECKSUM_SIZE] = {
-        hex[(checksum >> 60) && 0xF],
-        hex[(checksum >> 56) && 0xF],
-        hex[(checksum >> 52) && 0xF],
-        hex[(checksum >> 48) && 0xF],
-        hex[(checksum >> 44) && 0xF],
-        hex[(checksum >> 40) && 0xF],
-        hex[(checksum >> 36) && 0xF],
-        hex[(checksum >> 32) && 0xF],
-        hex[(checksum >> 28) && 0xF],
-        hex[(checksum >> 24) && 0xF],
-        hex[(checksum >> 20) && 0xF],
-        hex[(checksum >> 16) && 0xF],
-        hex[(checksum >> 12) && 0xF],
-        hex[(checksum >> 8) && 0xF],
-        hex[(checksum >> 4) && 0xF],
-        hex[checksum && 0xF]
+        hex[(checksum >> 60) & 0xF],
+        hex[(checksum >> 56) & 0xF],
+        hex[(checksum >> 52) & 0xF],
+        hex[(checksum >> 48) & 0xF],
+        hex[(checksum >> 44) & 0xF],
+        hex[(checksum >> 40) & 0xF],
+        hex[(checksum >> 36) & 0xF],
+        hex[(checksum >> 32) & 0xF],
+        hex[(checksum >> 28) & 0xF],
+        hex[(checksum >> 24) & 0xF],
+        hex[(checksum >> 20) & 0xF],
+        hex[(checksum >> 16) & 0xF],
+        hex[(checksum >> 12) & 0xF],
+        hex[(checksum >> 8)  & 0xF],
+        hex[(checksum >> 4)  & 0xF],
+        hex[checksum & 0xF]
     };
     strncpy(digest + digestLength, checksumMap, DIGEST_CHECKSUM_SIZE);
     digestLength += DIGEST_CHECKSUM_SIZE;
 
-    strncpy(hashStr, digest + digestLength, hashLength);
+    strncpy(digest + digestLength, hashStr, hashLength);
     free(hashStr);
-    digestLength += encodedHashLength;
+    digestLength += hashLength;
+    digest[digestLength] = '\0';
     digest = realloc(digest, 1 + digestLength);
     if (l) *l = digestLength;
 
