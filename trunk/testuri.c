@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 
     test_title("check /hello+world URI");
     {
-        char *a = uriOf(_hello_world);
+        char *a = uriOf(_hello_world, NULL);
         assert(a);
         fprintf(stderr, "%s\n", a);
         assert(uri(a) == _hello_world);
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     test_title("check Blob URI");
     {
         Arrow someBlob = blobFromFile(__FILE__);
-        char* a = uriOf(someBlob);
+        char* a = uriOf(someBlob, NULL);
         assert(a);
         fprintf(stderr, "%s\n", a);
         assert(uri(a) == someBlob);
