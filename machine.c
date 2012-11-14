@@ -129,7 +129,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
 }
 
 static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
-  DEBUGPRINTF("resolve a = %O in e = %O C = %O", a, e, C);
+  TRACEPRINTF("resolve a = %O in e = %O C = %O", a, e, C);
   Arrow w = _resolve(a, e, C, M);
 
   if (w == NIL) { // Not bound
@@ -140,7 +140,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
       }
   }
 
-  DEBUGPRINTF("resolved in w = %O", w);
+  TRACEPRINTF("resolved in w = %O", w);
   return w;
 }
 
@@ -157,12 +157,12 @@ static int isTrivial(Arrow s) {
 static int isTrivialOrBound(Arrow a, Arrow e, Arrow C, Arrow M, Arrow* w) {
     if (isTrivial(a)) {
         *w = resolve(a, e, C, M);
-        DEBUGPRINTF("isTrivialOrBound(%O) : is trivial and resolved to %O !!", a, *w);
+        TRACEPRINTF("isTrivialOrBound(%O) : is trivial and resolved to %O !!", a, *w);
         return (*w != NIL);
     } else {
         *w = _resolve(a, e, C, M);
         if (*w != NIL) {
-            DEBUGPRINTF("Arrow %O is bound to %O !!", a, *w);
+            TRACEPRINTF("Arrow %O is bound to %O !!", a, *w);
             return !0;
         }
         return 0;
@@ -172,7 +172,7 @@ static int isTrivialOrBound(Arrow a, Arrow e, Arrow C, Arrow M, Arrow* w) {
 static int chainSize = 0; // TODO thread safe
 
 static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
-  DEBUGPRINTF("transition M = %O", M);
+  TRACEPRINTF("transition M = %O", M);
 
   Arrow p = tailOf(M); // program
   Arrow ins = tailOf(p); // let,load,eval,lambda,macro,... instruction
@@ -181,7 +181,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow e = tailOf(ek);
   Arrow k = headOf(ek);
   Arrow w;
-  DEBUGPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
+  TRACEPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
 
 
   if (ins == load) { //load expression #e#
@@ -356,7 +356,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           return M;
 
       } else { // not a closure thing
-          DEBUGPRINTF("resolve(t0)=%O is not closure-like\n", w0);
+          TRACEPRINTF("resolve(t0)=%O is not closure-like\n", w0);
           if (w == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
 
@@ -539,7 +539,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       return M;
 
   } else {
-      DEBUGPRINTF("info: resolve(t0)=%O is not closure-like\n", ws);
+      TRACEPRINTF("info: resolve(t0)=%O is not closure-like\n", ws);
       // not a closure, one let's the expression almost as if it was escaped
       if (w == brokenEnvironment)
           return a(swearWord,a(brokenEnvironment, M));
@@ -569,7 +569,7 @@ Arrow xl_argInMachine(Arrow CM) {
   int bound = isTrivialOrBound(arg, e, C, M, &w);
   assert(bound);
   resolve(arg, e, C, M);
-  DEBUGPRINTF("   argument is %O resolved in %O", arg, w);
+  TRACEPRINTF("   argument is %O resolved in %O", arg, w);
   return w;
 }
 
@@ -579,17 +579,17 @@ Arrow xl_reduceMachine(Arrow CM, Arrow r) {
   Arrow ek = headOf(M);
   if (tail(p) == let) {
     // p == (let ((x (<operator> arg)) s))
-    DEBUGPRINTF("   let-application reduced to r = %O", r);
+    TRACEPRINTF("   let-application reduced to r = %O", r);
     Arrow x = tail(tail(head(p)));
     Arrow s = head(head(p));
-    DEBUGPRINTF("     s = %O", s);
+    TRACEPRINTF("     s = %O", s);
     Arrow e = tail(ek);
     Arrow k = head(ek);
-    DEBUGPRINTF("     k = %O", k);
+    TRACEPRINTF("     k = %O", k);
     Arrow ne = _load_binding(x, r, e);
     M = a(s, a(ne, k));                                      
   } else {
-    DEBUGPRINTF("   application reduced to r = %O", r);
+    TRACEPRINTF("   application reduced to r = %O", r);
     M = a(a(escape, r), ek);
   }
   return M;
@@ -851,21 +851,21 @@ Arrow xl_run(Arrow C, Arrow M) {
   }
 
   if (chainSize >= 500) {
-      DEBUGPRINTF("Continuation chain is too long (infinite loop?), p=%O", tail(M));
+      TRACEPRINTF("Continuation chain is too long (infinite loop?), p=%O", tail(M));
       return a(swearWord, atom("too long continuation chain"));
   } else  if (tail(M) == swearWord) {
-      DEBUGPRINTF("run finished with error : %O", head(M));
+      TRACEPRINTF("run finished with error : %O", head(M));
       return tail(head(M));
   }
 
-  DEBUGPRINTF("run finished with M = %O", M);
+  TRACEPRINTF("run finished with M = %O", M);
   if (w == NIL) w = EVE;
-  DEBUGPRINTF("run result is %O", w);
+  TRACEPRINTF("run result is %O", w);
   return w;
 }
 
 Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
-  DEBUGPRINTF("cl_eval C=%O p=%O", C, p);
+  TRACEPRINTF("cl_eval C=%O p=%O", C, p);
   machine_init();
   Arrow M = a(p, a(EVE, EVE));
   return xl_run(C /* ContextPath */, M);

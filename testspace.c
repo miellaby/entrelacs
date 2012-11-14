@@ -136,8 +136,8 @@ int basic() {
     // check natom/atom equivalency
     test_title("check natom/atom equivalency");
     {
-        Arrow helloB = natom(5, "hello");
-        Arrow worldB = natom(5, "world");
+        Arrow helloB = atomn(5, "hello");
+        Arrow worldB = atomn(5, "world");
         DEFA(helloB, worldB);
         assert(original == _helloB_worldB);
     }
@@ -149,8 +149,8 @@ int basic() {
     DEFA(fooB, barB);
     Arrow originalB = _fooB_barB;
     {
-        Arrow fooB = natom(6, "headOf");
-        Arrow barB = natom(6, "tailOf");
+        Arrow fooB = atomn(6, "headOf");
+        Arrow barB = atomn(6, "tailOf");
         DEFA(fooB, barB);
         assert(originalB == _fooB_barB);
     }

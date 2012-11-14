@@ -2,8 +2,9 @@
 #define Eve() xl_Eve()
 #define pair(T, H)  xl_pair(T, H)
 #define atom(S) xl_atom(S)
-#define natom(N, S) xl_natom(N, S)
+#define atomn(N, S) xl_atomn(N, S)
 #define uri(U)     xl_uri(U)
+#define urin(U)     xl_urin(N, U)
 
 #define t(S) xl_tag(S)
 #define a(T, H) xl_pair(T, H)
@@ -13,8 +14,9 @@
 
 #define pairMaybe(T, H)  xl_pairMaybe(T, H)
 #define atomMaybe(S) xl_atomMaybe(S)
-#define natomMaybe(N, S) xl_natomMaybe(N, S)
+#define natomMaybe(N, S) xl_atomnMaybe(N, S)
 #define uriMaybe(U)     xl_uriMaybe(U)
+#define urinMaybe(U)     xl_urinMaybe(N, U)
 #define digestMaybe(D)     xl_digestMaybe(D)
 
 #define typeOf(A)    xl_typeOf(A)

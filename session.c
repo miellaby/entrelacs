@@ -52,7 +52,7 @@ Arrow deepRoot(Arrow c, Arrow e) {
 
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
-    DEBUGPRINTF("xls_root(%O,%O)", c, e);
+    TRACEPRINTF("xls_root(%O,%O)", c, e);
     deepRoot(c, e);
     return root(a(c, e));
 }
@@ -92,7 +92,7 @@ void deepUnroot(Arrow c, Arrow e) {
 }
 
 Arrow xls_unroot(Arrow c, Arrow e) {
-    DEBUGPRINTF("xls_unroot(%O,%O)", c, e);
+    TRACEPRINTF("xls_unroot(%O,%O)", c, e);
     deepUnroot(c, e);
     Arrow u = unroot(a(c, e));
     // DEBUGPRINTF("xls_unroot(%O,%O) done.", c, e);
@@ -128,7 +128,7 @@ void xls_reset(Arrow c) {
      2) root $value in /$c+$key context path
 */
 Arrow xls_set(Arrow c, Arrow key, Arrow value) {
-    DEBUGPRINTF("xls_set(%O,%O,%O)", c, key, value);
+    TRACEPRINTF("xls_set(%O,%O,%O)", c, key, value);
 
     xls_unset(c, key);
     return xls_root(a(c, key), value);
@@ -177,7 +177,7 @@ static Arrow get(Arrow c, Arrow key) {
 
 Arrow xls_get(Arrow c, Arrow key) {
     Arrow value = get(c, key);
-    DEBUGPRINTF("xls_get(%O,%O) returned %O", c, key, value);
+    TRACEPRINTF("xls_get(%O,%O) returned %O", c, key, value);
     return value;
 }
 
@@ -190,7 +190,7 @@ Arrow xls_close(Arrow s) {
 }
 
 static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int locateOnly) {
-    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s')", context, url);
+    TRACEPRINTF("BEGIN _fromUrl(%06x, '%s')", context, url);
     Arrow a = EVE;
 
     char c = url[0];
@@ -198,100 +198,82 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
         a = EVE;
         *urlEnd = url;
     } else switch (c) {
-    case '+': // Eve
-        a = EVE;
-        *urlEnd = url;
-        break;
-    case '$': {
-        if (url[1] == 'H') {
-            unsigned char c;
-            uint32_t urlLength = 2;
-            while ((c = url[urlLength]) > 32 && c != '+' && c != '/')
-                urlLength++;
-            assert(urlLength);
-
-            // TODO a refaire
-            char *sub = malloc(urlLength + 1);
-            strncpy(sub, url, urlLength);
-            sub[urlLength]='\0';
-            a = (locateOnly ? xl_uriMaybe(sub) : xl_uri(sub));
-            free(sub);
-            if (a == NIL) {
-                *urlEnd = NULL;
-            } else if (a == EVE) {
-                *urlEnd = NULL;
-            } else {
-                *urlEnd = url + urlLength;
-            }
-            break;
-        } else {
-            int ref = 0;
-            sscanf(url + 1, "%x", &ref);
-
-            Arrow sa = ref;
-            // Security check: no way to resolve a %x ref which hasn't been forged in the context
-            if (xl_isPair(sa) && xl_tailOf(sa) == context) {
-                a = xl_headOf(sa);
-                *urlEnd = url + 7;
-            } else {
-                a = NIL;
-                *urlEnd = NULL;
-            }
-            break;
-        }
-    }
-    case '/': { // ARROW
-        char *tailUrlEnd, *headUrlEnd;
-        Arrow tail, head;
-        tail = _fromUrl(context, url + 1, &tailUrlEnd, locateOnly);
-        if (!tailUrlEnd) {
-            a = tail; // NIL or EVE
-            *urlEnd = NULL;
-        } else if (!*tailUrlEnd) { // no more char
-            a = tail;
-            *urlEnd = tailUrlEnd;
-        } else {
-            char* headUrlStart = *tailUrlEnd == '+' ? tailUrlEnd + 1 : tailUrlEnd;
-            head = _fromUrl(context, headUrlStart, &headUrlEnd, locateOnly);
-            if (!headUrlEnd) {
-                *urlEnd = NULL;
-            } else {
-                a = (locateOnly ? xl_pairMaybe(tail, head) : xl_pair(tail, head));
-                if (a == EVE) {
+            case '+': // Eve
+                a = EVE;
+                *urlEnd = url;
+                break;
+            case '/':
+            { // ARROW
+                char *tailUrlEnd, *headUrlEnd;
+                Arrow tail, head;
+                tail = _fromUrl(context, url + 1, &tailUrlEnd, locateOnly);
+                if (!tailUrlEnd) {
+                    a = tail; // NIL or EVE
                     *urlEnd = NULL;
-                } else {
-                    *urlEnd = headUrlEnd;
+                    break;
+                }
+                
+                if (!*tailUrlEnd) { // no more char
+                    a = tail;
+                    *urlEnd = tailUrlEnd;
+                    break;
+                }
+
+                char* headUrlStart = *tailUrlEnd == '+' ? tailUrlEnd + 1 : tailUrlEnd;
+                head = _fromUrl(context, headUrlStart, &headUrlEnd, locateOnly);
+                if (!headUrlEnd) {
+                    a = head;
+                    *urlEnd = NULL;
+                    break;
+                }
+                
+                a = (locateOnly ? xl_pairMaybe(tail, head) : xl_pair(tail, head));
+                if (a == EVE || a == NIL) {
+                    *urlEnd = NULL;
+                    break;
+                }
+                
+                *urlEnd = headUrlEnd;
+                break;
+            }
+            case '$':
+            {
+                if (url[1] != 'H') {
+                    int ref = 0;
+                    sscanf(url + 1, "%x", &ref);
+
+                    Arrow sa = ref;
+                    // Security check: no way to resolve a %x ref which hasn't been forged in the context
+                    if (xl_isPair(sa) && xl_tailOf(sa) == context) {
+                        a = xl_headOf(sa);
+                        *urlEnd = url + 7;
+                    } else {
+                        a = NIL;
+                        *urlEnd = NULL;
+                    }
+                    break;
                 }
             }
+            default:
+            { // TAG, BLOB
+                uint32_t urlLength = 0;
+
+                while ((c = url[urlLength]) > 32 && c != '+' && c != '/')
+                    urlLength++;
+                assert(urlLength);
+
+                a = (locateOnly ? xl_urinMaybe(urlLength, url) : xl_urin(urlLength, url));
+                if (a == NIL || a == EVE) {
+                    *urlEnd = NULL;
+                    break;
+                }
+                
+                *urlEnd = url + urlLength;
+                break;
+            }
         }
-        break;
-    }
-    default: { // TAG
-        unsigned char c;
-        uint32_t urlLength = 0;
 
-        while ((c = url[urlLength]) > 32  && c != '+' && c != '/')
-            urlLength++;
-        assert(urlLength);
-
-        // TODO a refaire
-        char *sub = malloc(urlLength + 1);
-        strncpy(sub, url, urlLength);
-        sub[urlLength]='\0';
-        a = (locateOnly ? xl_uriMaybe(sub) : xl_uri(sub));
-        free(sub);
-        if (a == NIL) {
-            *urlEnd = NULL;
-        } else if (a == EVE) {
-            *urlEnd = NULL;
-        } else {
-            *urlEnd = url + urlLength;
-        }
-        break;
-    }
-    }
-
-    DEBUGPRINTF("END fromUrl(%06x, '%s') = %06x", context, url, a);
+    TRACEPRINTF("END _fromUrl(%06x, '%s') = %06x", context, url, a);
     return a;
 }
 
@@ -301,26 +283,29 @@ static char* skeepSpacesAndOnePlus(char* urlEnd) {
         // white spaces are tolerated and ignored here
         urlEnd++;
     }
-    if (*urlEnd == '+') urlEnd++;
+    if (c == '+') urlEnd++;
     return urlEnd;
 }
 
 static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
-    char c, *urlEnd;
-    Arrow a = _fromUrl(context, url, &urlEnd, locateOnly);
-    if (!urlEnd) return a; // NIL or EVE
+    TRACEPRINTF("BEGIN fromUrl(%06x, '%s', %d)", context, url, locateOnly);
+    char c, *nextUrl;
+    Arrow a = _fromUrl(context, url, &nextUrl, locateOnly);
+    if (!nextUrl) return a; // NIL or EVE
 
-    urlEnd = skeepSpacesAndOnePlus(urlEnd);
-    while (*urlEnd) {
-        DEBUGPRINTF("urlEnd = >%s<", urlEnd);
-        Arrow b = _fromUrl(context, urlEnd, &urlEnd, locateOnly);
-
-        if (!urlEnd) return b; // NIL or EVE
-        urlEnd = skeepSpacesAndOnePlus(urlEnd);
+    nextUrl = skeepSpacesAndOnePlus(nextUrl);
+    while (*nextUrl) {
+        DEBUGPRINTF("nextUrl = >%s<", nextUrl);
+        Arrow b = _fromUrl(context, nextUrl, &nextUrl, locateOnly);
+        if (!nextUrl) return b; // NIL or EVE
+        
         a = (locateOnly ? pairMaybe(a, b) : pair(a, b)); // TODO: document actual design
         if (a == EVE) return EVE;
+        
+        nextUrl = skeepSpacesAndOnePlus(nextUrl);
     }
 
+    TRACEPRINTF("END fromUrl(%06x, '%s', %d) = %O", context, url, locateOnly, a);
     return a;
 }
 

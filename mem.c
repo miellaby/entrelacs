@@ -84,7 +84,7 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 
 /** Get a cell */
 Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
-  DEBUGPRINTF("mem_get(%06x) begin", a);
+  TRACEPRINTF("mem_get(%06x) begin", a);
   Address i;
   Address offset = a & 0xFFF;
   uint32_t  page = a >> 12;
@@ -126,7 +126,7 @@ Cell mem_get(Address a) {
 
 /** Set a cell */
 void mem_set(Address a, Cell c) {
-    DEBUGPRINTF("mem_set(%06x, %016llx) begin", a, c);
+    TRACEPRINTF("mem_set(%06x, %016llx) begin", a, c);
     Address offset = a & 0xFFF;
     uint32_t  page = a >> 12;
     m = mem[offset];
@@ -171,7 +171,7 @@ static int _addressCmp(const void *a, const void *b) {
 
 /** commit */
 void mem_commit() {
-  DEBUGPRINTF("mem_commit begin, logSize=%d", logSize);
+  TRACEPRINTF("mem_commit begin, logSize=%d", logSize);
   Address i;
   if (!logSize) {
       assert(reserveHead == 0);
@@ -203,7 +203,7 @@ uint32_t mem_pokes() {
   @return 1 if very first start, <0 if error, 0 otherwise
 */
 int mem_init() {
-  DEBUGPRINTF("mem_init (memSize = %d)");
+  TRACEPRINTF("mem_init (memSize = %d)");
   int rc = mem0_init();
   if (rc < 0) return rc;
   Address i;

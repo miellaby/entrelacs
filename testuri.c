@@ -30,7 +30,7 @@ Arrow blobFromFile(char *f) {
   char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
   assert (data != (void*) -1);
   
-  a = natom(size, data);
+  a = atomn(size, data);
   munmap(data, size);
  }
 

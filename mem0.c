@@ -120,7 +120,7 @@ static void computeJournalFilePath() {
        mem0_path(&mem0_journalFilePath, PERSISTENCE_DIR, PERSISTENCE_JOURNALFILE);
     }
     assert(mem0_journalFilePath);
-    DEBUGPRINTF("mem0_journalFilePath is '%s'", mem0_journalFilePath);
+    TRACEPRINTF("mem0_journalFilePath is '%s'", mem0_journalFilePath);
 }
 
 static int openJournal(int forWrite) {
@@ -178,14 +178,14 @@ int mem0_openPreviousJournal() {
     if (openJournal(JOURNAL_READING))
         goto corrupted;
 
-    DEBUGPRINTF("Previous journal found");
+    TRACEPRINTF("Previous journal found");
 
     fseek(JOURNAL, 0, SEEK_END);
-    DEBUGPRINTF("journal size is %ld", ftell(JOURNAL));
+    TRACEPRINTF("journal size is %ld", ftell(JOURNAL));
 
     fseek(JOURNAL, - sizeof(check), SEEK_END);
     journalEnd = ftell(JOURNAL);
-    DEBUGPRINTF("journal terminator at %ld", journalEnd);
+    TRACEPRINTF("journal terminator at %ld", journalEnd);
 
     size_t read = fread(&check, sizeof(check), 1, JOURNAL);
     if (read != 1) {
@@ -240,7 +240,7 @@ char* mem0_dirPath = NULL;
 
 int mem0_init() {
   if (F != NULL) {
-     DEBUGPRINTF("mem0_init as already been done");
+     TRACEPRINTF("mem0_init as already been done");
      return 0;
   }
 
@@ -261,7 +261,7 @@ int mem0_init() {
     mem0_path(&mem0_dirPath, PERSISTENCE_DIR, ".");
     mem0_path(&mem0_filePath, mem0_dirPath, PERSISTENCE_FILE);
   }
-  DEBUGPRINTF("mem0_filePath is %s", mem0_filePath);
+  TRACEPRINTF("mem0_filePath is %s", mem0_filePath);
 
   // open mem0 file (create it if non existant)
   F = fopen(mem0_filePath, "w+b");
@@ -324,7 +324,7 @@ void mem0_set(Address r, Cell v) {
 }
 
 void mem0_saveData(char *h, size_t size, char* data) {
-  DEBUGPRINTF("saving %ld bytes as '%s' hash", size, h);
+  TRACEPRINTF("saving %ld bytes as '%s' hash", size, h);
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size) return;
 
@@ -394,6 +394,7 @@ char* mem0_loadData(char* h, size_t* sizeP) {
 }
 
 int mem0_commit() {
+    TRACEPRINTF("mem0_commit");
     if (JOURNAL) {
         mem0_terminateJournal();
         int rc = mem0_openPreviousJournal();
