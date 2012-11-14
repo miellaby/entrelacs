@@ -6,7 +6,8 @@
 #define LOG_ERROR	  2
 #define LOG_WARN          3
 #define LOG_INFO          4
-#define LOG_DEBUG	  5
+#define LOG_TRACE	  5
+#define LOG_DEBUG	  6
 
 enum _log_facility
 {
@@ -42,6 +43,7 @@ char *level_name[] = {
     "error",
     "warn",
     "info",
+    "trace",
     "debug",
     0
 };
@@ -63,11 +65,19 @@ extern void log_msg(int level, enum _log_facility facility, char *fname, int lin
 
 
 #ifdef PRODUCTION
+#define TRACEPRINTF(format, arg...) (void)(0)
 #define DEBUGPRINTF(format, arg...) (void)(0)
 #define dputs(format, arg...) (void)(0)
 #else
+#ifdef DEBUG
+#define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
 #define DEBUGPRINTF(format, arg...) LOGPRINTF(LOG_DEBUG, format, ##arg)
-#define dputs(format, arg...) DEBUGPRINTF(format, ##arg)
+#else
+#define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
+#define DEBUGPRINTF(format, arg...) (void)(0)
 #endif
+#endif
+
+#define dputs(format, arg...) DEBUGPRINTF(format, ##arg)
 
 #endif /* __LOG_H__ */

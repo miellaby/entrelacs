@@ -1,5 +1,14 @@
+// Few URI path to experiment with the server
+
+// Set-up a shared demo context
 /escalate/escape//mudo+chut/set//demo+89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//fall+demo/,/var+x+
 /escalate/escape//mudo+chut/set/demo/escape/paddock//x/arrow/escalate//escape+escape//demo+demo/var+x+
 /demo/hello+world
 /demo/set/hello/Content-Typed/text%2Fhtml+<html>hello people<%2Fhtml>
 /demo/set/upload/Content-Typed/text%2Fhtml+<html><body>Upload<form%20method='POST'%20action='%2Flambda%2Fx%2Fdemo%2Froot%2Bx'%20enctype="multipart%2Fform-data"><input%20type="file"%20name="file"%2F><br%2F><input%20type="submit"%20value="Upload"%2F><%2Fform><%2Fbody><%2Fhtml>
+
+// I set up a server in my VM and check file upload with this
+http://192.168.0.2:8008/set/upload/Content-Typed/text%2Fhtml+<html><body>Upload<form%20method='POST'%20action='%2F'%20enctype="multipart%2Fform-data"><input%20type="file"%20name="file"%2F><br%2F><input%20type="submit"%20value="Upload"%2F><%2Fform><%2Fbody><%2Fhtml>
+http://192.168.0.2:8008/upload
+http://192.168.0.2:8008/$Hbc77e22820d15d71af5aa7635912045dc74b50e2223ac61e5967c5e5
+

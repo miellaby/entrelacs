@@ -48,7 +48,7 @@ static Arrow fdatom(int fd) {
   char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
   assert (data != (void*) -1);
   
-  a = xl_natom(size, data);
+  a = xl_atomn(size, data);
   munmap(data, size);
  }
 
@@ -198,7 +198,7 @@ static void *event_handler(enum mg_event event,
 
         dputs("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
-        xls_set(session, xl_atom("expire"), xl_natom(sizeof(time_t), (char *)&now));
+        xls_set(session, xl_atom("expire"), xl_atomn(sizeof(time_t), (char *)&now));
 
         Arrow input = xls_url(session, request_info->uri);
         dputs("input %s assimilated as %O", request_info->uri, input);
@@ -312,10 +312,10 @@ int main(void) {
   struct mg_context *ctx;
   pthread_mutex_init(&mutex, NULL);
 #ifdef DEBUG
-  log_init(NULL, "server,session,machine=debug");
+  log_init(NULL, "space,session,machine,server=debug");
 #else
 #ifndef PRODUCTION
-  log_init(NULL, "server=debug");
+  log_init(NULL, "space,session,machine=trace,server=debug");
 #endif
 #endif
 

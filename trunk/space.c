@@ -349,7 +349,7 @@ uint64_t hashStringAndGetSize(char *str, uint32_t* length) { // simple string ha
     //  hash = ((hash << 5) + hash) + c;
     //  l++;
 
-    DEBUGPRINTF("hashStringAndGetSize(\"%s\") = [ %016llx ; %d] ", str, hash, l);
+    TRACEPRINTF("hashStringAndGetSize(\"%s\") = [ %016llx ; %d] ", str, hash, l);
 
     *length = l;
     return hash;
@@ -367,7 +367,7 @@ uint64_t hashRaw(char *buffer, uint32_t length) { // simple string hash
         hash = ((hash << 5) + hash) + c;
     }
 
-    DEBUGPRINTF("hashRaw(%d, \"%.*s\") = %016llx", length, length, buffer, hash);
+    TRACEPRINTF("hashRaw(%d, \"%.*s\") = %016llx", length, length, buffer, hash);
     return hash;
 }
 
@@ -921,7 +921,7 @@ Arrow xl_atomMaybe(char* str) {
         return payload(CATBITS_TAG, size, str, hash, 1);
 }
 
-Arrow xl_natom(uint32_t size, char* mem) {
+Arrow xl_atomn(uint32_t size, char* mem) {
     if (size >= BLOB_MINSIZE)
         return blob(size, mem, 0);
     else {
@@ -930,7 +930,7 @@ Arrow xl_natom(uint32_t size, char* mem) {
     }
 }
 
-Arrow xl_natomMaybe(uint32_t size, char* mem) {
+Arrow xl_atomnMaybe(uint32_t size, char* mem) {
     if (size >= BLOB_MINSIZE)
         return blob(size, mem, 1);
     else {
@@ -1171,6 +1171,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 #define DIGEST_SIZE (2 + CRYPTO_SIZE + DIGEST_CHECKSUM_SIZE)
 
 char* xl_digestOf(Arrow a, uint32_t *l) {
+    TRACEPRINTF("BEGIN xl_digestOf(%06x)", a);
     char *digest;
     char* hashStr;
     uint32_t hashLength;
@@ -1275,24 +1276,14 @@ char* xl_uriOf(Arrow a, uint32_t *l) {
 }
 
 Arrow xl_digestMaybe(char* digest) {
+    TRACEPRINTF("BEGIN xl_digestMaybe(%.56s)", digest);
+
     int i = 2; // $H
-    int j = 64;
-    uint64_t hash = (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]) << (j -= 4))
-            | (HEXTOI(digest[i++]));
+    uint64_t hash = HEXTOI(digest[i]);
+    while (++i <= 17) {
+        hash = (hash << 4) | (uint64_t)HEXTOI(digest[i]);
+    }
+    
     Address hashLocation, hashProbe;
     Address probeAddress;
     Cell cell;
@@ -1302,6 +1293,7 @@ Arrow xl_digestMaybe(char* digest) {
     if (!hashProbe) hashProbe = 1; // offset can't be 0
 
     // Probe for an existing singleton
+    DEBUGPRINTF("hash is %llX so probe from %06x", hash, hashLocation);
     probeAddress = hashLocation;
     while (1) { // TODO: thinking about a probing limit
         cell = mem_get(probeAddress);
@@ -1323,80 +1315,106 @@ Arrow xl_digestMaybe(char* digest) {
     }
 }
 
-static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
-    DEBUGPRINTF("BEGIN fromUri(%s)", uri);
-    Arrow a = EVE;
+static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, int ifExist) {
+    TRACEPRINTF("BEGIN fromUri(%s)", uri);
+    Arrow a = NIL;
+#define NAN (uint32_t)(-1)
+    uint32_t uriLength = NAN;
 
     char c = uri[0];
-    if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
+    
+    if (c <= 32 || !size) { // Any control-caracters/white-spaces are considered as URI break
         a = EVE;
-        *uriEnd = uri;
+        uriLength = 0;
     } else switch (c) {
             case '+': // Eve
                 a = EVE;
-                *uriEnd = uri;
+                uriLength = 0;
                 break;
             case '$':
             {
-                if (uri[1] == 'H') { // Arrow signature
-                    unsigned char c;
-                    uint32_t uriLength = 2;
-                    uint32_t signatureLength;
-
-                    while ((c = uri[uriLength]) > 32 && c != '+' && c != '/')
-                        uriLength++;
-                    assert(uriLength);
-                    if (uriLength != DIGEST_SIZE) {
-                        a = NIL; // URI wrong
-                        *uriEnd = NULL;
-                    }
-
-                    a = xl_digestMaybe(uri);
-                    if (a == EVE && !ifExist) { // Non assimilated blob
-                        a = NIL; // NIL because URI is not supposed to be wrong
-                        *uriEnd = NULL;
-                    } else {
-                        *uriEnd = uri + uriLength;
-                    }
+                if (size != NAN && size < DIGEST_SIZE) {
+                    TRACEPRINTF("fromUri - not long enough for a digest: %d", size);
                     break;
-                } else {
-                    assert(0); // error TODO
                 }
+                
+                if (uri[1] != 'H') { // Only digest are allowed in URI
+                    break;
+                }
+
+                uriLength = 2;
+                while ((size == NAN || uriLength < size) 
+                        && (c = uri[uriLength]) > 32 && c != '+' && c != '/')
+                    uriLength++;
+                
+                if (uriLength != DIGEST_SIZE) {
+                    TRACEPRINTF("fromUri - wrong digest size %d", DIGEST_SIZE);
+                    break;
+                }
+
+                a = xl_digestMaybe(uri);
+                
+                if (a == NIL || a == EVE) // Non assimilated blob
+                    uriLength = NAN;
+                
+                break;
             }
             case '/':
             { // Pair
-                char *tailUriEnd, *headUriEnd;
+                uint32_t tailUriLength, headUriLength;
                 Arrow tail, head;
-                tail = fromUri(uri + 1, &tailUriEnd, ifExist);
-                if (tail == NIL) { // Non assimilated tail
-                    a = NIL;
-                    *uriEnd = NULL;
-                } else if (!*tailUriEnd /* no more char */) {
-                    a = tail;
-                    *uriEnd = tailUriEnd;
-                } else {
-                    char* headUriStart = *tailUriEnd == '+' ? tailUriEnd + 1 : tailUriEnd;
-                    head = fromUri(headUriStart, &headUriEnd, ifExist);
-                    if (!headUriEnd) { // Non assimilated head
-                        a = head; // NIL or EVE
-                        *uriEnd = NULL;
-                    } else {
-                        a = pair(tail, head, ifExist);
-                        if (a == EVE)
-                            *uriEnd = NULL;
-                        else
-                            *uriEnd = headUriEnd;
-                    }
+                
+                if (size != NAN) size--;
+                
+                tail = fromUri(size, uri + 1, &tailUriLength, ifExist);
+                if (tailUriLength == NAN) { // Non assimilated tail
+                    a = tail; // NIL or EVE
+                    uriLength = NAN;
+                    break;
                 }
+                
+                char tailUriEnd = uri[1 + tailUriLength];
+                if (tailUriEnd == '\0' || tailUriLength == size /* no more char */) {
+                    a = tail;
+                    uriLength = 1 + tailUriLength;
+                    break;
+                }
+
+                char* headUriStart;
+                if (tailUriEnd == '+') {
+                    if (size != NAN)
+                        size -= tailUriLength + 1;
+                    headUriStart = uri + 1 + tailUriLength + 1;
+                } else {
+                    if (size != NAN)
+                        size -= tailUriLength;
+                    headUriStart = uri + 1 + tailUriLength;
+                }
+                
+                head = fromUri(size, headUriStart, &headUriLength, ifExist);
+                if (headUriLength == NAN) { // Non assimilated head
+                    a = head; // NIL or EVE
+                    uriLength = NAN;
+                    break;
+                }
+
+                a = pair(tail, head, ifExist);
+                if (a == EVE || a == NIL) { // Non assimilated pair
+                    a = head; // NIL or EVE
+                    uriLength = NAN;
+                    break;
+                }
+                
+                uriLength = 1 + tailUriLength + (tailUriEnd == '+' /* 1/0 */) + headUriLength;
                 break;
             }
             default:
             { // ATOM
-                unsigned char c;
-                uint32_t uriLength = 0;
                 uint32_t atomLength;
 
-                while ((c = uri[uriLength]) > 32 && c != '+' && c != '/')
+                uriLength = 0;
+                while ((size == NAN || uriLength < size)
+                        && (c = uri[uriLength]) > 32 && c != '+' && c != '/')
                     uriLength++;
                 assert(uriLength);
 
@@ -1409,54 +1427,76 @@ static Arrow fromUri(unsigned char* uri, char** uriEnd, int ifExist) {
                     a = payload(CATBITS_TAG, atomLength, atomStr, hash, ifExist);
                 }
                 free(atomStr);
-                if (a == EVE) { // Non assimilated tag
-                    *uriEnd = NULL;
-                } else {
-                    *uriEnd = uri + uriLength;
+                
+                if (a == NIL || a == EVE) { // Non assimilated
+                    uriLength = NAN;
                 }
-                break;
             }
         }
 
-    DEBUGPRINTF("END fromUri(%s) = %O", uri, a);
+    DEBUGPRINTF("END fromUri(%s) = %O (length = %d)", uri, a, uriLength);
+    *uriLength_p = uriLength;
     return a;
 }
 
-static char* skeepSpacesAndOnePlus(char* uriEnd) {
+static uint32_t skeepSpacesAndOnePlus(uint32_t size, char* uriEnd) {
     char c;
-    while ((c = *uriEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
+    uint32_t l = 0;
+    while ((size == NAN || l < size)
+            && (c = uriEnd[l]) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
         // white spaces are tolerated and ignored here
-        uriEnd++;
+        l++;
     }
-    if (*uriEnd == '+') uriEnd++;
-    return uriEnd;
+    if (c == '+' && (size == NAN || l < size)) l++;
+    return l;
 }
 
-static Arrow uri(char *uri, int ifExist) { // TODO: document actual design
-    char c, *uriEnd;
-    Arrow a = fromUri(uri, &uriEnd, ifExist);
-    if (uriEnd == NULL) return a; // return NIL (wrong URI) or EVE (not assimilated)
-    uriEnd = skeepSpacesAndOnePlus(uriEnd);
-
-    while (*uriEnd) {
-        DEBUGPRINTF("uriEnd = >%s<", uriEnd);
-        Arrow b = fromUri(uriEnd, &uriEnd, ifExist);
-        if (!uriEnd) return b; // return NIL (wrong URI) or EVE (not assimilated)
-        uriEnd = skeepSpacesAndOnePlus(uriEnd);
-
+static Arrow uri(uint32_t size, char *uri, int ifExist) { // TODO: document actual design
+    char c;
+    uint32_t uriLength, gap;
+    Arrow a = fromUri(size, uri, &uriLength, ifExist);
+    if (uriLength == NAN)
+        return a; // return NIL (wrong URI) or EVE (not assimilated)
+    
+    if (size != NAN) size -= uriLength;
+    gap = skeepSpacesAndOnePlus(size, uri + uriLength);
+    if (size != NAN) size -= gap;
+    uriLength += gap;
+    while ((size == NAN || size--) && (c = uri[uriLength])) {
+        DEBUGPRINTF("nextUri = >%s<", uri + uriLength);
+        uint32_t nextUriLength;
+        Arrow b = fromUri(size, uri + uriLength, &nextUriLength, ifExist);
+        if (nextUriLength == NAN)
+            return b; // return NIL (wrong URI) or EVE (not assimilated)
+        uriLength += nextUriLength;
+        if (size != NAN) size -= nextUriLength;
+        gap = skeepSpacesAndOnePlus(size, uri + uriLength);
+        if (size != NAN) size -= gap;
+        uriLength += gap;
+    
         a = pair(a, b, ifExist);
-        if (a == EVE) return EVE; // not assimilated pair
+        if (a == EVE) {
+          return EVE; // not assimilated pair
+        }
     }
 
     return a;
 }
 
 Arrow xl_uri(char* aUri) {
-    return uri(aUri, 0);
+    return uri(NAN, aUri, 0);
 }
 
 Arrow xl_uriMaybe(char* aUri) {
-    return uri(aUri, 1);
+    return uri(NAN, aUri, 1);
+}
+
+Arrow xl_urin(uint32_t aSize, char* aUri) {
+    return uri(aSize, aUri, 0);
+}
+
+Arrow xl_urinMaybe(uint32_t aSize, char* aUri) {
+    return uri(aSize, aUri, 1);
 }
 
 int xl_isEve(Arrow a) {
@@ -1534,7 +1574,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  * TODO : when adding a new cell, try to reduce jumpers from time to time
  */
 static void connect(Arrow a, Arrow child) {
-    DEBUGPRINTF("connect child=%06x to a=%06x", child, a);
+    TRACEPRINTF("connect child=%06x to a=%06x", child, a);
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
     Cell cell = mem_get(a);
     ONDEBUG((show_cell('R', a, cell, 0)));
@@ -1612,7 +1652,7 @@ static void connect(Arrow a, Arrow child) {
     if (current == a) { // No child yet
         DEBUGPRINTF("new child0: %06x ", next);
         if (jump >= MAX_CHILD0) { // ohhh the pain
-            DEBUGPRINTF("MAX CHILD0!");
+            TRACEPRINTF("MAX CHILD0!");
             Address sync = next;
             Cell syncCell = nextCell;
             syncCell = sync_build(syncCell, a, 0, REATTACHMENT_CHILD0);
@@ -1645,9 +1685,9 @@ static void connect(Arrow a, Arrow child) {
         mem_set(a, cell);
         ONDEBUG((show_cell('W', a, cell, 0)));
     } else {
-        DEBUGPRINTF("new chain: %06x ", next);
+        TRACEPRINTF("new chain: %06x ", next);
         if (jump >= MAX_JUMP) {
-            DEBUGPRINTF(" MAX JUMP!");
+            TRACEPRINTF(" MAX JUMP!");
             nextCell = lastRefs_build(nextCell, cell_getRef1(cell), child);
             mem_set(next, nextCell);
             ONDEBUG((show_cell('W', next, nextCell, 0)));
@@ -1709,7 +1749,7 @@ static void connect(Arrow a, Arrow child) {
  *    in turn from its head and tail (recursive calls) and it gets recorded as a loose arrow (step 6.3).
  */
 static void disconnect(Arrow a, Arrow child) {
-    DEBUGPRINTF("disconnect child=%06x from a=%06x", child, a);
+    TRACEPRINTF("disconnect child=%06x from a=%06x", child, a);
     if (a == EVE) return; // One doesn't store Eve connectivity.
 
     // get parent arrow definition
@@ -1884,7 +1924,7 @@ static void disconnect(Arrow a, Arrow child) {
 }
 
 void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
-    DEBUGPRINTF("xl_childrenOf a=%06x", a);
+    TRACEPRINTF("xl_childrenOf a=%06x", a);
 
     if (a == EVE) {
         return; // Eve connectivity not traced
@@ -2077,7 +2117,7 @@ void xl_freeEnum(XLEnum e) {
 }
 
 XLEnum xl_childrenOf(Arrow a) {
-    DEBUGPRINTF("xl_childrenOf a=%06x", a);
+    TRACEPRINTF("xl_childrenOf a=%06x", a);
 
     if (a == EVE) {
         return NULL; // Eve connectivity not traced
@@ -2212,7 +2252,7 @@ int xl_equal(Arrow a, Arrow b) {
 
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a, uint64_t hash) {
-    DEBUGPRINTF("forget loose arrow %X hash %llX", a, hash);
+    TRACEPRINTF("forget loose arrow %X hash %llX", a, hash);
 
     Cell cell = mem_get(a);
     ONDEBUG((show_cell('R', a, cell, 0)));
@@ -2268,7 +2308,7 @@ static void forget(Arrow a, uint64_t hash) {
 }
 
 void xl_commit() {
-    DEBUGPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
+    TRACEPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
     unsigned i;
     for (i = looseStackSize; i > 0; i--) { // loose stack scanning
         Arrow a = looseStack[i - 1].a;
