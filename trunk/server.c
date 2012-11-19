@@ -259,7 +259,7 @@ static void *event_handler(enum mg_event event,
             output = xl_headOf(xl_headOf(output));
             dputs("Content-Type: %s, output: %O", content_type, output);
         } else {
-            Arrow application = xl_pair(xl_atom("Content-Type"), output);
+            Arrow application = xl_pair(xl_atom("Content-Type"), xl_pair(xl_atom("escape"), output));
             Arrow rta = xl_eval(session, application);
             if (rta != EVE && xl_isAtom(rta)) {
                contentTypeCopy = xl_strOf(rta);
