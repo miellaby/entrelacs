@@ -1,3 +1,7 @@
+/** @file log.h
+ Entrelacs log internal log sytem.
+ */
+
 #ifndef __LOG_H__
 #define __LOG_H__
 

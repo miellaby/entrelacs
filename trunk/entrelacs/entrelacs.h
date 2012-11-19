@@ -1,17 +1,20 @@
+/* File:   entrelacs.h
+ * Entrelacs core API
+ */
+
 #ifndef _ENTRELACS_H
 #define _ENTRELACS_H
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+
 /** @file
  * Entrelacs system public API.
  *
  * Everything but the Arrow type is XL prefixed to prevent name conflicts.
  * Consider including entrelacsm.h to get handy macros.
- *
- * TODO: remove tag/blob distinction. Blob storage is triggered by data size and is transparent.
- * TODO: Add a way to get the universal signature of an arrow.
- *   BLOB: sha1
- *   anything else: [ open address ; definition digest ]
- * -->  TODO preamble: open address must be now context-free.
- * ------>  TODO preamble to the preamble: ArrowId to contain the whole open address.
  */
 
 
@@ -103,5 +106,11 @@ Arrow xl_run(Arrow contextPath, Arrow M); ///< M == (<program> (<environment> <c
 
 /** Eval a program by building and running a machine */
 Arrow xl_eval(Arrow contextPath, Arrow program);
+
+
+#ifdef	__cplusplus
+}
+#endif
+
 
 #endif // entrelacs.h

@@ -1,3 +1,6 @@
+/* File:   entrelacsm.h
+ * Handy macro to entrelacs C API
+ */
 
 #define Eve() xl_Eve()
 #define pair(T, H)  xl_pair(T, H)

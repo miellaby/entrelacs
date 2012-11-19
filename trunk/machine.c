@@ -615,18 +615,38 @@ Arrow headOfHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, r);
 }
 
-Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
-   Arrow parent = xl_argInMachine(CM);
-   XLEnum e = childrenOf(parent);
-   if (!e) return xl_reduceMachine(CM, EVE);
+Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
+    Arrow parent = xl_argInMachine(CM);
+    XLEnum e;
+    if (!hookParameter) {
+        e = childrenOf(parent);
+        return xl_reduceMachine(CM, operator(childrenReviewOfHook, xl_atomn(sizeof(void*), (char *)&e)));
+    }
 
-   Arrow list = EVE;
-   while (xl_enumNext(e)) {
-      Arrow child = xl_enumGet(e);
-      list = a(child, list);
-   }
-   xl_freeEnum(e);
-   return xl_reduceMachine(CM, list);
+    XLEnum *savedEnumPointer = (XLEnum *)xl_memOf(hookParameter, NULL);
+    e = *savedEnumPointer;
+    Arrow child;
+    if (xl_enumNext(e)) {
+        child = xl_enumGet(e);
+    } else {
+        xl_freeEnum(e);
+        child = EVE;
+    }
+    return xl_reduceMachine(CM, child);
+}
+
+Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
+    Arrow parent = xl_argInMachine(CM);
+    XLEnum e = childrenOf(parent);
+    if (!e) return xl_reduceMachine(CM, EVE);
+
+    Arrow list = EVE;
+    while (xl_enumNext(e)) {
+        Arrow child = xl_enumGet(e);
+        list = a(child, list);
+    }
+    xl_freeEnum(e);
+    return xl_reduceMachine(CM, list);
 }
 
 Arrow rootHook(Arrow CM, Arrow hookParameter) {
@@ -737,6 +757,14 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     return a(a(a(expression, expr), EVE), escalate);
 }
 
+Arrow digestHook(Arrow CM, Arrow hookParameter) {
+   Arrow arrow = xl_argInMachine(CM);
+   uint32_t digestSize;
+   char* digest = xl_digestOf(arrow, &digestSize);
+   return xl_reduceMachine(CM, atomn(digestSize, digest));
+}
+
+
 static void machine_init() {
   if (let) return;
 
@@ -757,7 +785,7 @@ static void machine_init() {
   arrowWord = atom("arrow");
   fall = atom("fall");
   escalate = atom("escalate");
-  comma=atom(",");
+  comma = atom(",");
   it=atom("it");
   swearWord = atom("&!#");
   brokenEnvironment = pair(swearWord, atom("broken environment"));
@@ -790,6 +818,7 @@ static void machine_init() {
       {"tailOf", tailOfHook},
       {"headOf", headOfHook},
       {"childrenOf", childrenOfHook},
+      {"childrenReviewOf", childrenReviewOfHook},
       {"root", rootHook},
       {"unroot", unrootHook},
       {"isRooted", isRootedHook},
@@ -801,14 +830,17 @@ static void machine_init() {
       {"commit", commitHook},
       {"fall", fallHook},
       {"escalate", escalateHook},
+      {"digest", digestHook},
       {NULL, NULL}
   };
 
   for (int i = 0; systemFns[i].s != NULL ; i++) {
     Arrow operatorKey = atom(systemFns[i].s);
-    if (xls_get(EVE, operatorKey) != NIL) continue; // already set
+    // NO; Will always set a callback at every reboot
+    // if (xls_get(EVE, operatorKey) != NIL) continue; // already set
     xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
   }
+  
   if (xls_get(EVE, atom("if")) == NIL)
       xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval//ifHook/var+condition//escape+escape/var+alternative+"));
   if (xls_get(EVE, atom("equal")) == NIL)
@@ -819,6 +851,9 @@ static void machine_init() {
       xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape+escape/var+x+"));
   if (xls_get(EVE, atom("set")) == NIL)
       xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setHook/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+  
+  // System Init call
+  xl_eval(EVE, xl_uri("/init+"));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {

@@ -1997,7 +1997,13 @@ static int xl_enumNextChildOf(XLEnum e) {
     uint16_t stamp2;
     Cell cell;
     Arrow child;
-
+    // TODO it's possible to avoir this stamp thing in a simple way:
+    // just xls_set(a(atom("iterator"),natom(sizeof(void*),iterator)),current);
+    // in case of commit(), this will prevent the current child to be forgotten (as it's connected via the iterator)
+    // and its parent as well, obviously. So the current cell can't be altered. 
+    // - xls_unset() at iterator free
+    // - house-cleaning at server reboot ?
+    
     if (pos == EVE) { // First call to "next" for this enumeration
         cell = mem_get_advanced(a, &stamp2);
         ONDEBUG((show_cell('R', a, cell, 0)));

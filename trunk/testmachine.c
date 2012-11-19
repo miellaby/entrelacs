@@ -13,6 +13,7 @@ int main(int argc, char **argv) {
 
     xl_init();
     struct s_test { char* program; char* result; } *test, tests[] = {
+    {"/childrenOf+locked", "= //locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+"},
     {"/let//identity/lambda/x+x/identity+42", "42"},
     {"/any/unreducible/expression/is/left/as/is", "/any/unreducible/expression/is/left/as/is"},
     {"unboundedUncastedAtomLeftAsIs", "unboundedUncastedAtomLeftAsIs"},
