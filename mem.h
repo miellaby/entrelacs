@@ -1,8 +1,10 @@
-#ifndef MEM_H
-#define MEM_H
-/** @file
+/** @file mem.h
  Orthogonally persistent memory device.
  */
+
+#ifndef MEM_H
+#define MEM_H
+
 #include "mem0.h"
 
 /** "mem" initialization

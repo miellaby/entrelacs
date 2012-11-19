@@ -44,7 +44,7 @@ run: $(TESTS:%=run.test%)
 run.%: %
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
-	od -t x1z -w8 $(PERSISTENCE_FILE)
+	# od -t x1z -w8 $(PERSISTENCE_FILE)
 
 server: entrelacsd
 

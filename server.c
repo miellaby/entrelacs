@@ -7,6 +7,7 @@
  * Mongoose code.
  */
 #define _POSIX_SOURCE
+#define SERVER_C
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,6 +18,7 @@
 #include <pthread.h>
 #define LOG_CURRENT LOG_SERVER
 #include "log.h"
+#include "server.h"
 #include "entrelacs/entrelacs.h"
 #include "session.h"
 #include "mongoose.h"
@@ -300,13 +302,6 @@ static void *event_handler(enum mg_event event,
     return processed;
 }
 
-static const char *options[] = {
-  "document_root", "html",
-  "listening_ports", "8008", // "8008,4433s" activates SSL redirection
-  //"ssl_certificate", "ssl_cert.pem",
-  "num_threads", "5",
-  NULL
-};
 
 int main(void) {
   struct mg_context *ctx;
@@ -323,9 +318,9 @@ int main(void) {
 
   Arrow get = xls_get(EVE, xl_atom("GET"));
   if (get == NIL) {
-      xls_set(EVE, xl_atom("GET"), xl_uri("/closure//x+x+"));
+      xls_set(EVE, xl_atom("GET"), xl_uri("/paddock//x+x+"));
       xls_set(EVE, xl_atom("PUT"), xl_uri("/paddock//x/arrow/set+/var+x+"));
-      xls_set(EVE, xl_atom("POST"), xl_uri("/closure//x+x+"));
+      xls_set(EVE, xl_atom("POST"), xl_uri("/paddock//x+x+"));
       xls_set(EVE, xl_atom("DELETE"), xl_uri("/paddock//x/arrow/unset+/var+x+"));
       xl_commit();
   }
@@ -344,7 +339,7 @@ int main(void) {
   srand((unsigned) time(0));
 
   // Setup and start Mongoose
-  ctx = mg_start(&event_handler, NULL, options);
+  ctx = mg_start(&event_handler, NULL, server_options);
   assert(ctx != NULL);
 
   dputs("server started on ports %s.",

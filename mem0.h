@@ -1,8 +1,9 @@
-#ifndef MEM0_H
-#define MEM0_H
-/** @file
+/** @file mem0.h
  Persistent and journalized memory device.
  */
+
+#ifndef MEM0_H
+#define MEM0_H
 
 #include <stdint.h>
 #include <sys/types.h>
