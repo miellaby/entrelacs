@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "space.h"
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 #include "session.h"
