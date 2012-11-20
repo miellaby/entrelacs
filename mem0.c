@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include "log.h"
 #include "mem0.h"
 
@@ -271,8 +272,8 @@ int mem0_init() {
       LOGPRINTF(LOG_FATAL, "Can't open persistence file '%s'", mem0_filePath);
       return -1;
   }
-  flockfile(F);
-  if (0) { // FIXME
+  
+  if (flock(fileno(F), LOCK_EX)) { // FIXME
        perror("mem0 file lock failed. Probably concurrent access. Check processus list.");
       LOGPRINTF(LOG_FATAL, "Can't lock persistence file '%s'", mem0_filePath);
       return -1;      
@@ -418,8 +419,8 @@ int mem0_commit() {
     time_t last_mtime = 
      (stat(mem0_filePath, &st) == 0 ? st.st_mtime : 0);
  
-    funlockfile(F); // Give a chance to pending processes
-    flockfile(F); // Then get back the lock
+    flock(fileno(F), LOCK_UN); // Give a chance to pending processes
+    assert(!flock(fileno(F), LOCK_EX)); // Then get back the lock
     
     // Note if file has been modified by other processes
     time_t current_mtime = 

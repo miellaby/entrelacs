@@ -2443,19 +2443,21 @@ static int printf_arrow_arginfo_size(const struct printf_info *info, size_t n,
 
 /** initialize the Entrelacs system */
 int xl_init() {
-    LOCK();
-    int rc = mem_init();
-    if (rc < 0) { // problem
-       LOCK_END();
-       return rc;
-    }
-  
+    static int xl_init_done = 0;
+    if (xl_init_done) return 0;
+    xl_init_done = 1;
+
     pthread_cond_init(&api_now_active, NULL);
     pthread_cond_init(&api_now_dormant, NULL);
 
     pthread_mutexattr_init(&api_mutex_attr);
     pthread_mutexattr_settype(&api_mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
     pthread_mutex_init(&api_mutex, &api_mutex_attr);
+
+    int rc = mem_init();
+    if (rc < 0) { // problem
+       return rc;
+    }
 
     // register a printf extension for arrow (glibc only!)
     register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
@@ -2472,7 +2474,6 @@ int xl_init() {
     }
 
     geoalloc((char**) &looseStack, &looseStackMax, &looseStackSize, sizeof (struct s_loose), 0);
-    LOCK_END();
     return rc;
 }
 
