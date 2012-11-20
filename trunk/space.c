@@ -26,7 +26,7 @@ static pthread_cond_t api_now_active;    // Signaled once a thread has finished 
 static int api_activity = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
 #define ACTIVITY_BEGIN() (LOCK(), (!api_activity++ ? (void)pthread_cond_signal(&api_now_active) : (void)0), LOCK_END())
 #define ACTIVITY_OVER() (LOCK(), (api_activity ? (--api_activity ? (void)0 : (void)pthread_cond_signal(&api_now_dormant)) : (void)0), LOCK_END())
-#define WAIT_DORMANCY (LOCK(), (void)pthread_cond_wait(&api_now_dormant, &api_mutex))
+#define WAIT_DORMANCY() (LOCK(), (api_activity > 0 ? (void)pthread_cond_wait(&api_now_dormant, &api_mutex) : (void)0))
 
 /*
  * Size limit where data is stored as "blob" rather than "tag"

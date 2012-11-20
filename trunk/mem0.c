@@ -415,15 +415,16 @@ int mem0_commit() {
 
     // save file modification time before temporarly give the lock
     struct stat st;
-    assert(stat(mem0_filePath, &st));
-    time_t last_mtime = st.st_mtime;
+    time_t last_mtime = 
+     (stat(mem0_filePath, &st) == 0 ? st.st_mtime : 0);
  
     funlockfile(F); // Give a chance to pending processes
     flockfile(F); // Then get back the lock
     
     // Note if file has been modified by other processes
-    assert(stat(mem0_filePath, &st));
-    mem_is_out_of_sync = (last_mtime != st.st_mtime);
+    time_t current_mtime = 
+      (stat(mem0_filePath, &st) == 0? st.st_mtime : 0);
+    mem_is_out_of_sync = (last_mtime != current_mtime);
 }
 
 void mem0_destroy() {
