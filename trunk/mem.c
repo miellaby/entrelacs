@@ -189,7 +189,12 @@ void mem_commit() {
     mem[offset].a &= 0xEFFF; // reset changed flag for this offset (even if the changed cell is actually in reserve)
   }
   mem0_commit();
-
+  if (mem_is_out_of_sync) { // Reset cache because out of sync
+    for (i = 0; i < memSize; i++) {
+      mem[i].a = MEM1_EMPTY;
+      mem[i].stamp = 0;
+    }
+  }
   zeroalloc((char **)&log, &logMax, &logSize);
   reserveHead = 0;
   LOGPRINTF(LOG_WARN, "mem_commit done");
@@ -215,4 +220,9 @@ int mem_init() {
   geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), 0);
 
   return rc;
+}
+
+int mem_destroy() {
+    free(log);
+    mem0_destroy();
 }

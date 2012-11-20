@@ -1,5 +1,5 @@
 Current changes:
- * 1) Make a not-blocking childrenOf version
+ * 1) Make a not-blocking childrenOf version: DONE. TO BE CHECKED.
       * proposal: /let/enum/childReview+a
       * returns a new "dynamic" operator
           * returned operator carries a handler to the enumerator
@@ -10,24 +10,26 @@ Current changes:
                  then forget do call the operator with special *GC* atom
                      on *GC* argument, operator should test it's really a GC (global variable in_commit TODO)
                      and free anything
- * 2) make a lock on the persistent file to prevent concurrent clients
+ * 2) make a lock on the persistent file to prevent concurrent clients: DONE. TO BE CHECKED.
      (happen when running both entrelacsd or 2 entrelacsd and testshell or another libentrelacs-client)
       close-unlock file after commit and before the first next access
       when reopening-locking file check if timestamp changed. If changed, empty RAM cache!
-* 3) At last, make a local lock at every access of space.c/mem.c rather than machine or server.
- * 4) And we'll be done: parallelizable at last.
- * 5) Add a digest operator and few map/reduce like operators in machine
- * 6) implement a push thing
- * 7) Make a shared canvas demo where people put and link text pictures and other media together + timeline
+* 3) At last, make a local lock at every access of space.c/mem.c rather than machine or server.: DONE. TO BE CHECKED.
+ * 4) And to make commit parallelizable at last, a way to sync commit between // agents: DONE. TO BE CHECKED.
+ * 5) Add a digest operator : DONE. TO BE CHECKED.
+ * 6) Add map/reduce operators
+ * 7) Add fixed point operator (better recursion)
+ * 8) implement a push connector
+ * 9) Make a shared canvas demo where people put and link text pictures and other media together + timeline
 
-
-Changelog:
-
+Most recent previous changes:
 * Some web clients refuse to escape '.' character in %2E.
    Radical solution: URI format has changed. Now '/tail+head'
 * Public API hides implementation of atoms: blob, tag or btag
   * blob or tag according to data size
-* operator, closure & paddock: now auto escaped, as typed litteral
+* when an application is bound as is, it takes precedence over the corresponding closure evaluation.
+  * it's an attempt to merge intensive and extensive definitions, that is function and environment/object.
+* operator, closure & paddock: auto escaped and somewhat typed litterals. paddock is for macro.
 * xls_get now returns NIL (FFFFFF) when no arrow found
 * NIL is a undefined arrow. Different from Eve (0)
 * virtualized evaluation (root/get/set are confined in a nested hierarchy of contexts)
@@ -35,21 +37,15 @@ Changelog:
 * rooting a pair is not enough any more to make a global bound variable.
   * Use xls_set(EVE,slot,value) instead.
       * will do root((EVE->slot)->value) ; root(EVE->(slot->value)))
-* xlg_get bug fix. Recursive get up to the root context might fail.
-* beware space.c show_cell return;
 * looseStack dumped in reverse order
 * new API to get and retrieve "uri" (no more xl_program)
+* and much more ...
 
-
-To be done:
- * locking point: Eval based recursion is terrible.
- * xl_childrenOfCB : implementent map/fold variations
- * xls_set: create less arrows (but also less indexation)
-     * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
- * refresh all callback every time the server starts (because recompilation).
-* doxygen integration
+Future:
+ * doxygen integration
 
 In study:
  * a session is actually a continuation
  * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
-
+ * xls_set: create less arrows (but also less indexation)
+     * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
