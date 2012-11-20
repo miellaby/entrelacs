@@ -34,9 +34,6 @@
 #define HOUSECLEANING_PERIOD 60
 #endif
 
-// Protects everything.
-static pthread_mutex_t mutex;
-
 static Arrow fdatom(int fd) {
  Arrow a = EVE;
  if (fd < 0) return EVE;
@@ -176,9 +173,8 @@ static void *event_handler(enum mg_event event,
                            struct mg_connection *conn,
                            const struct mg_request_info *request_info) {
     void *processed = "yes";
-
+    xl_begin();
     if (event == MG_NEW_REQUEST) {
-        pthread_mutex_lock (&mutex);
         Arrow session = get_connection_session(conn);
         char* session_id;
         if (session == EVE) {
@@ -205,13 +201,13 @@ static void *event_handler(enum mg_event event,
         Arrow input = xls_url(session, request_info->uri);
         dputs("input %s assimilated as %O", request_info->uri, input);
         if (input == NIL) {
-            pthread_mutex_unlock (&mutex);
             free(session_id);
             mg_printf(conn, "HTTP/1.1 %d %s\r\n"
                       "Content-Type: text/plain\r\n"
                       "Content-Length: 0\r\n"
                       "\r\n", 400, "BAD REQUEST");
             mg_write(conn, "", (size_t)0);
+            xl_over();
             return processed;
         }
         Arrow method = xl_atom(request_info->request_method);
@@ -260,7 +256,7 @@ static void *event_handler(enum mg_event event,
             content_type = contentTypeCopy;
             output = xl_headOf(xl_headOf(output));
             dputs("Content-Type: %s, output: %O", content_type, output);
-        } else {
+        } else if (isAtomic) {
             Arrow application = xl_pair(xl_atom("Content-Type"), xl_pair(xl_atom("escape"), output));
             Arrow rta = xl_eval(session, application);
             if (rta != EVE && xl_isAtom(rta)) {
@@ -277,7 +273,6 @@ static void *event_handler(enum mg_event event,
             content = xls_urlOf(session, output, i_depth);
             content_length = strlen(content);
         }
-        pthread_mutex_unlock (&mutex);
 
         mg_printf(conn, "HTTP/1.1 200 OK\r\nCache: no-cache\r\n"
                   "Content-Location: %s\r\n"
@@ -298,6 +293,8 @@ static void *event_handler(enum mg_event event,
     } else {
         processed = NULL;
     }
+    
+    xl_over();
 
     return processed;
 }
@@ -305,7 +302,6 @@ static void *event_handler(enum mg_event event,
 
 int main(void) {
   struct mg_context *ctx;
-  pthread_mutex_init(&mutex, NULL);
 #ifdef DEBUG
   log_init(NULL, "space,session,machine,server=debug");
 #else
@@ -316,6 +312,7 @@ int main(void) {
 
   xl_init();
 
+  xl_begin();
   Arrow get = xls_get(EVE, xl_atom("GET"));
   if (get == NIL) {
       xls_set(EVE, xl_atom("GET"), xl_uri("/paddock//x+x+"));
@@ -333,6 +330,7 @@ int main(void) {
       // TODO unroot while house cleaning
       xl_commit();
   }
+  xl_over();
 
   // Initialize random number generator. It will be used later on for
   // the session identifier creation.
@@ -348,9 +346,9 @@ int main(void) {
   // TODO deep house cleaning at start-up
   while (1) {
       sleep(HOUSECLEANING_PERIOD);
+      xl_begin();
       time_t now = time(NULL);
       dputs("House Cleaning ...");
-      pthread_mutex_lock (&mutex);
 
       Arrow sessionTag = xl_atom("session");
       XLEnum e = xl_childrenOf(sessionTag);
@@ -389,12 +387,10 @@ int main(void) {
       }
       xl_freeEnum(e);
       xl_commit();
-      pthread_mutex_unlock (&mutex);
+      xl_over();
       dputs("House Cleaning done.");
   }
   dputs("%s", "server stopped.");
-
-  pthread_mutex_destroy(&mutex);
 
   return EXIT_SUCCESS;
 }

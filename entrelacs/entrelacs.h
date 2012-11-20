@@ -30,7 +30,8 @@ typedef uint32_t Arrow; ///< ArrowId = SpatialRef (may be enforced by a transact
 extern const Arrow Eve; // equals EVE
 
 /** initialize the system. */
-void xl_init();
+int  xl_init();
+void xl_destroy(); ///< release hardware locks and such.
 
 /* Assimilation */
 Arrow xl_Eve(); ///< returns Eve.
@@ -71,21 +72,24 @@ Arrow xl_root(Arrow); ///< root an arrow.
 Arrow xl_unroot(Arrow); ///< unroot an arrow.
 
 /* Transaction */
-void xl_commit(); /// commit. Loose arrows are recycled here. Don't use them anymore.
+void xl_begin(); ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_over)
+void xl_over(); ///< decrement the global transaction counter. For example, before thread termination. Any previously assimilated arrow should be assimilated again.
+void xl_commit(); ///< commit. wait for all transactions being over.
+                  ///< Previously assimilated arrow must be assimilated again as they may have been forgotten if loose.
 
 /* Testing */
 int xl_isEve(Arrow); ///< returns !0 if equals Eve.
 int xl_isRooted(Arrow); ///< returns !0 if rooted.
-int xl_equal(Arrow, Arrow); /// returns !0 if arrows are equal.
-Arrow xl_isAtom(Arrow); /// returns given arrow if an atom, else Eve.
-Arrow xl_isPair(Arrow); /// returns given arrow if a pair, else Eve.
+int xl_equal(Arrow, Arrow); ///< returns !0 if arrows are equal.
+Arrow xl_isAtom(Arrow); ///< returns given arrow if an atom, else Eve.
+Arrow xl_isPair(Arrow); ///< returns given arrow if a pair, else Eve.
 
 /* Browsing */
 #define EOE ((XLEnum)0xFFFFFFF)
 typedef void* XLEnum; ///< enumerator type, as returned by xl_childrenOf.
-int    xl_enumNext(XLEnum); /// iterate enumerator. Return 0 if exhausted. !0 otherwise.
-Arrow  xl_enumGet(XLEnum); /// get current arrow from enumerator.
-void   xl_freeEnum(XLEnum); /// free enumerator.
+int    xl_enumNext(XLEnum); ///< iterate enumerator. Return 0 if exhausted. !0 otherwise.
+Arrow  xl_enumGet(XLEnum); ///< get current arrow from enumerator.
+void   xl_freeEnum(XLEnum); ///< free enumerator.
 
 XLEnum xl_childrenOf(Arrow); ///< return all known children of an arrow as an enumerator.
                              ///< enumerator must be freed by xl_freeEnum

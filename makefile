@@ -9,7 +9,8 @@
 # make entrelacsd
 # make run.testshell
 .PHONY: help server clean all clean.% test.% run.% start
-CPPFLAGS += -std=c99
+CPPFLAGS += -std=c99 -pthread
+LDFLAGS += -lpthread
 
 TARGETS = libentrelacs.so libentrelacs.a server
 # entrelacsd

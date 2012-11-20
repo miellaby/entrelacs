@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
     xl_init();
     struct s_test { char* program; char* result; } *test, tests[] = {
-    {"/childrenOf+locked", "= //locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+"},
+    {"/childrenOf+locked", "//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+"},
     {"/let//identity/lambda/x+x/identity+42", "42"},
     {"/any/unreducible/expression/is/left/as/is", "/any/unreducible/expression/is/left/as/is"},
     {"unboundedUncastedAtomLeftAsIs", "unboundedUncastedAtomLeftAsIs"},
@@ -92,6 +92,7 @@ int main(int argc, char **argv) {
         "///myGet+join+2+3",
 #endif
     };
+    xl_begin();
     for (int i = 0; test = &tests[i], test->program; i++) {
         char* programUri = test->program;
         char* wantedUri = test->result;
@@ -107,6 +108,6 @@ int main(int argc, char **argv) {
             return EXIT_FAILURE;
         }
     }
-
+    xl_over();
     return EXIT_SUCCESS;
 }

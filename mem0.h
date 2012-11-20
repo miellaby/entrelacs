@@ -25,6 +25,10 @@ typedef uint32_t Address; ///< Actually 3 bytes (24 bits) max
  */
 int mem0_init();
 
+/** mem0 release.
+ */
+void mem0_destroy();
+
 ///
 /// A prim number used to limit arrow space size.
 /// Twin Prims are said to prevent data clustering when performing open-addressing
@@ -75,6 +79,10 @@ extern char* mem0_filePath;
 */
 extern char* mem0_journalFilePath;
 
+/** set by mem0_commit to notify that mem0 caches are out of sync
+*/
+extern int mem_is_out_of_sync;
+
 /** set binary content into memory cell.
  Change is actually buffered into a journal file.
  The journal file is created if not existent.
@@ -93,6 +101,7 @@ Cell mem0_get(Address);
 /** commit changes.
  write changes recorded in the journal file to the persistence file then remove the journal.
  nothing is done if no current journal.
+ Persistence file lock is temporarily released so check mem_is_out_of_sync!
 */
 int  mem0_commit();
 

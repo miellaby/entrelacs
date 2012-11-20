@@ -1,1 +1,0 @@
-int space_init();

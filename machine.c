@@ -906,8 +906,3 @@ Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
   return xl_run(C /* ContextPath */, M);
 }
 
-
-void xl_init() {
-  int rc = space_init();
-  assert(rc >= 0);
-}

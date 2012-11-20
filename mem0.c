@@ -11,6 +11,7 @@
 #include "mem0.h"
 
 static FILE* F = NULL;
+int mem_is_out_of_sync = 0;
 void _mem0_set(Address r, Cell v);
 
 // =========
@@ -266,11 +267,17 @@ int mem0_init() {
   // open mem0 file (create it if non existant)
   F = fopen(mem0_filePath, "w+b");
   if (!F) {
-      perror("");
+      perror("mem0 file open failed. Probably access rights or read-only target device.");
       LOGPRINTF(LOG_FATAL, "Can't open persistence file '%s'", mem0_filePath);
       return -1;
   }
-
+  flockfile(F);
+  if (0) { // FIXME
+       perror("mem0 file lock failed. Probably concurrent access. Check processus list.");
+      LOGPRINTF(LOG_FATAL, "Can't lock persistence file '%s'", mem0_filePath);
+      return -1;      
+  }
+  
   // set it up to its max size
   _mem0_set(SPACE_SIZE - 1, 0);
   if (ftell(F) <= 0) {
@@ -405,4 +412,22 @@ int mem0_commit() {
     } else {
         DEBUGPRINTF("Nothing to commit");
     }
+
+    // save file modification time before temporarly give the lock
+    struct stat st;
+    assert(stat(mem0_filePath, &st));
+    time_t last_mtime = st.st_mtime;
+ 
+    funlockfile(F); // Give a chance to pending processes
+    flockfile(F); // Then get back the lock
+    
+    // Note if file has been modified by other processes
+    assert(stat(mem0_filePath, &st));
+    mem_is_out_of_sync = (last_mtime != st.st_mtime);
+}
+
+void mem0_destroy() {
+    mem0_commit();
+    funlockfile(F);
+    fclose(F);
 }
