@@ -41,6 +41,15 @@ Arrow xl_atomn(uint32_t size, char*); ///< assimilate raw data
 Arrow xl_uri(char*); ///< assimilate an URI, returning an arrow (NIL if URI is wrong)
 Arrow xl_urin(uint32_t size, char*); ///< assimilate a piece of URI, returning an arrow (NIL if URI is wrong)
 
+/* Compound arrow assimilation */
+Arrow xl_anonymous();      ///< assimilate a randomized value so to get an unique "anonymous" arrow.
+                           ///< This is NOT the way to knowledge representation within Entrelacs.
+Arrow xl_hook(void* hook); ///< assimilate a C pointer and return an arrow.
+                           ///< unbuild with xl_pointerOf.
+                           ///< Bottom-rooted to distinguish from evil attack attempt.
+                           ///< Unroot to neutralize (xp_pointerOf returning NULL).
+                           ///< Auto-neutralized after reboot.
+
 /* Probe arrows without creating them if missing
  */
 Arrow xl_pairMaybe(Arrow, Arrow); ///< return a pair of arrows if system-known, Eve otherwise.
@@ -66,6 +75,7 @@ char* xl_memOf(Arrow, uint32_t* size_p); /// retrieve an atomic arrow as a piece
 char* xl_uriOf(Arrow, uint32_t* size_p); ///< Retrieve an arrow definition in URI notation. @return pointer to freed.
 uint64_t xl_checksumOf(Arrow); ///< return an arrow checksum.
 char* xl_digestOf(Arrow, uint32_t* size_p); ///< Retrieve an arrow digest. @return pointer to freed.
+void* xl_pointerOf(Arrow); //< Retrieve the C pointer corresponding to a "hook" arrow. @return pointer.
 
 /* Rooting */
 Arrow xl_root(Arrow); ///< root an arrow.
@@ -98,7 +108,7 @@ Arrow  xl_childOf(Arrow); ///< return only one child or Eve if there's none. If 
 typedef Arrow (*XLCallBack)(Arrow arrow, Arrow context); ///< generic callback type for arrow fetching
 void xl_childrenOfCB(Arrow, XLCallBack, Arrow context); ///< apply a given function to each children of an arrow
 
-/* C hook assimilation */
+/* Assimilate binding */
 Arrow xl_operator(XLCallBack hook, Arrow); ///< assimilate a C implemented operator.
 Arrow xl_continuation(XLCallBack hook, Arrow); ///< assimilate a C implemented continuation.
 

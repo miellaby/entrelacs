@@ -11,22 +11,16 @@
 
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, operator = 0,
-   continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0 ;
+   continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0;
 
 static void machine_init();
 
 Arrow xl_operator(XLCallBack hookp, Arrow context) {
-  char hooks[64];
-  snprintf(hooks, 64, "%p", hookp);
-  Arrow hook = atom(hooks);
-  return a(operator, a(hook, context));
+  return a(operator, a(xl_hook(hookp), context));
 }
 
 Arrow xl_continuation(XLCallBack hookp, Arrow context) {
-  char hooks[64];
-  snprintf(hooks, 64, "%p", hookp);
-  Arrow hook = atom(hooks);
-  return a(continuation, a(hook, context));
+  return a(continuation, a(xl_hook(hookp), context));
 }
 
 /** Load a binding into an environment arrow (list arrow), trying to remove a previous binding for this variable to limit its size */
@@ -318,12 +312,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           // r(t0) = (operator (hook context))
           dputs("  resolve(t0) = (operator (hook context))");
           Arrow operatorParameter = head(head(w0));
-          XLCallBack hook;
-          char* hooks = str(tail(head(w0)));
-          int n = sscanf(hooks, "%p", &hook);
-          assert(n == 1);
-          free(hooks);
-          M = hook(a(C, M), operatorParameter);
+          XLCallBack cb  = pointer(tail(head(w0)));
+          assert(cb);
+          M = cb(a(C, M), operatorParameter);
           return M;
 
       } else if (w0_type == paddock || w0_type == closure) {
@@ -377,12 +368,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
         // k == (continuation (<hook> <context>))
         dputs("    k == (continuation (<hook> <context>))");
         Arrow continuationParameter = head(head(k));
-        XLCallBack hook;
-        char *hooks = str(tail(head(k)));
-        int n = sscanf(hooks, "%p", &hook);
-        assert(n == 1);
-        free(hooks);
-        M = hook(a(C, M), continuationParameter);
+        XLCallBack cb = pointer(tail(head(k)));
+        assert(cb);
+        M = cb(a(C, M), continuationParameter);
         return M;
 
      } else if (tail(k) == evalOp) { // #e# special "eval" continuation
@@ -503,12 +491,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
       // resolve(t0) == (operator (hook context))
       dputs("       resolve(t0) == /operator/hook+context (%O)", ws);
       Arrow operatorParameter = head(head(ws));
-      XLCallBack hook;
-      char* hooks = str(tail(head(ws)));
-      int n = sscanf(hooks, "%p", &hook);
-      assert(n == 1);
-      free(hooks);
-      M = hook(a(C, M), operatorParameter);
+      XLCallBack cb = pointer(tail(head(ws)));
+      assert(cb);
+      M = cb(a(C, M), operatorParameter);
       return M;
 
   } else if (ws_type == paddock || ws_type == closure) {
@@ -617,18 +602,20 @@ Arrow headOfHook(Arrow CM, Arrow hookParameter) {
 Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     Arrow parent = xl_argInMachine(CM);
     XLEnum e;
-    if (!hookParameter) {
+    if (hookParameter == EVE) {
         e = childrenOf(parent);
-        return xl_reduceMachine(CM, operator(childrenReviewOfHook, xl_atomn(sizeof(void*), (char *)&e)));
+        return xl_reduceMachine(CM, operator(childrenReviewOfHook, xl_hook(e)));
     }
 
-    XLEnum *savedEnumPointer = (XLEnum *)xl_memOf(hookParameter, NULL);
-    e = *savedEnumPointer;
+    e = pointer(hookParameter);
     Arrow child;
-    if (xl_enumNext(e)) {
+    if (!e) {
+        child = EVE;
+    } else if (xl_enumNext(e)) {
         child = xl_enumGet(e);
     } else {
-        xl_freeEnum(e);
+        xl_freeEnum(e); // FIXME : only on forget
+        xl_unroot(hookParameter); // should made it unreadable
         child = EVE;
     }
     return xl_reduceMachine(CM, child);
@@ -788,7 +775,7 @@ static void machine_init() {
   it=atom("it");
   swearWord = atom("&!#");
   brokenEnvironment = pair(swearWord, atom("broken environment"));
-
+  
   // preserve keyarrows from GC
   Arrow locked = atom("locked");
   root(a(locked, let));
