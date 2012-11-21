@@ -2,7 +2,6 @@
 #include <stdlib.h> // free
 #include <assert.h>
 #include "log.h"
-
 #include "entrelacs/entrelacs.h"
 
 int main(int argc, char **argv) {

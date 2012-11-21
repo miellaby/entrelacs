@@ -1552,6 +1552,55 @@ Arrow xl_urinMaybe(uint32_t aSize, char* aUri) {
     return LOCK_OUT(a);
 }
 
+Arrow xl_anonymous() {
+    char anonymous[CRYPTO_SIZE + 1];
+    do {
+        char random[80];
+        snprintf(random, sizeof(random), "an0nymouse:)%lx", (long)rand() ^ (long)time(NULL));
+        crypto(80, random,  anonymous); // Access to unitialized data is wanted
+    } while (xl_atomMaybe(anonymous));
+    return xl_atom(anonymous);
+}
+
+static Arrow unrootChild(Arrow child, Arrow context) {
+    xl_unroot(child);
+    return EVE;
+}
+
+static Arrow getHookBadge() {
+    static Arrow hookBadge = EVE;
+    if (hookBadge != EVE) return hookBadge; // try to avoid the costly lock.
+    LOCK();
+    if (hookBadge != EVE) return LOCK_OUT(hookBadge);
+    hookBadge = xl_atom("XLhO0K");
+    xl_root(hookBadge); 
+    
+    // prevent previous hooks to survive the reboot.
+    xl_childrenOfCB(hookBadge, unrootChild, EVE);
+    
+    return LOCK_OUT(hookBadge);
+}
+
+Arrow xl_hook(void* hookp) {
+  char hooks[64]; 
+  snprintf(hooks, 64, "%p", hookp);
+  // Note: hook must be bottom-rooted to be valid
+  Arrow hook = xl_root(xl_pair(getHookBadge(), xl_atom(hooks)));
+  return hook;
+}
+
+void* xl_pointerOf(Arrow a) { // Only bottom-rooted hook is accepted to limit hook forgery
+    if (!xl_isPair(a) || xl_tailOf(a) != getHookBadge() || !xl_isRooted(a))
+        return NULL;
+    
+    char* hooks = xl_strOf(xl_headOf(a));
+    void* hookp;
+    int n = sscanf(hooks, "%p", &hookp);
+    if (!n) hookp = NULL;
+    free(hooks);
+    return hookp;
+}
+
 int xl_isEve(Arrow a) {
     return (a == EVE);
 }
@@ -2461,18 +2510,16 @@ int xl_init() {
 
     // register a printf extension for arrow (glibc only!)
     register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
-
+    
     if (rc) { // very first start
-        ACTIVITY_BEGIN();
         // Eve
         Cell cellEve = pair_build(0, EVE, EVE);
         cellEve = cell_setRootBit(cellEve, ROOTBIT_ROOTED);
         mem_set(EVE, cellEve);
         ONDEBUG((show_cell('W', EVE, cellEve, 0)));
         mem_commit();
-        ACTIVITY_OVER();
     }
-
+    
     geoalloc((char**) &looseStack, &looseStackMax, &looseStackSize, sizeof (struct s_loose), 0);
     return rc;
 }
