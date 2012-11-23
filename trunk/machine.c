@@ -677,6 +677,13 @@ Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, headOf(r)); // no context
 }
 
+Arrow isPairHook(Arrow CM, Arrow hookParameter) {
+   Arrow contextPath = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   Arrow r = xl_isPair(arrow) ? arrow : EVE;
+   return xl_reduceMachine(CM, r);
+}
+
 Arrow ifHook(Arrow CM, Arrow hookParameter) {
   // the ifHook performs some magic
   Arrow condition = xl_argInMachine(CM);
@@ -808,6 +815,7 @@ static void machine_init() {
       {"root", rootHook},
       {"unroot", unrootHook},
       {"isRooted", isRootedHook},
+      {"isPair", isPairHook},
       {"setHook", setHook},
       {"unsetHook", unsetHook},
       {"getHook", getHook},

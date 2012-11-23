@@ -33,16 +33,15 @@ clean.server:
 $(TESTS:%=clean.test%):
 	-rm $(@:clean.%=%) $(@:clean.%=%.o)
 
-tests: all $(TESTS:%=test%.o) $(TESTS:%=test%)
+tests: all $(TESTS:%=test%)
 
-#$(TESTS:%=test%): libentrelacs.so
-$(TESTS:%=test%): libentrelacs.a
-testdraft: testdraft.o libentrelacs.a
+test%: test%.o libentrelacs.a
+	$(CC) $(LDFLAGS) $^ -o $(@)
 
 
-run: $(TESTS:%=run.test%)
+run: $(TESTS:%=run.%)
 
-run.%: %
+run.%: test%
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
@@ -52,7 +51,9 @@ server: entrelacsd
 entrelacsd: mongoose.o session.o server.o libentrelacs.a
 	$(CC) -lpthread -ldl -o $(@) $^
 
-draft: testdraft.o testdraft run.testdraft
+draft: testdraft.o testdraft run.draft
+shell: testshell
+prompt: run.shell
 
 libentrelacs.a: $(OBJECTS)
 	ar rvs $(@) $^

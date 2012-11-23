@@ -10,8 +10,8 @@
 #include "log.h"
 #include "mem.h"
 
-#define MEMSIZE 0x2000
-static const Address memSize = MEMSIZE ; ///< mem size (8192 records)
+#define MEMSIZE 0x20000
+static const Address memSize = MEMSIZE ; ///< mem size (256 * 8192 records)
 
 /** The main RAM cache, aka "mem".
  mem is an array of MEMSIZE records.
@@ -130,7 +130,7 @@ void mem_set(Address a, Cell c) {
     Address offset = a & 0xFFF;
     uint32_t  page = a >> 12;
     m = mem[offset];
-    if (memIsEmpty(m) || memPageOf(m) != page)  { // Uhh that's not fun
+    if (!memIsEmpty(m) && memPageOf(m) != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
             if (reserve[i].a == a) {
                 DEBUGPRINTF("mem cell found in reserve");
@@ -151,10 +151,7 @@ void mem_set(Address a, Cell c) {
             reserveHead++;
         }
         // No need to load the cell from mem0 since one overwrites it
-        m.a = 0;
-    }
-    
-    if (!memIsChanged(m)) { // Log it
+    } else if (!memIsEmpty(m) && !memIsChanged(m)) { // Log change
         geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
         log[logSize - 1] = a;
     }

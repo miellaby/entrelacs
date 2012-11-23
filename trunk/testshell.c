@@ -12,12 +12,14 @@ int main(int argc, char **argv) {
 
   xl_init();
   while (fgets(buffer, 1024, stdin) != NULL) {
-
+    xl_begin();
 //   Arrow p = xls_url(EVE, buffer);
     Arrow p = xl_uri(buffer);
     if (!p) continue;
     Arrow r = xl_eval(EVE, p);
     fprintf(stderr, "eval %O =\n\t%O\n", p, r);
+    xl_commit();
+    xl_over();
   }
 
   return EXIT_SUCCESS;
