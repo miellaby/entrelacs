@@ -71,7 +71,6 @@ extern void log_msg(int level, enum _log_facility facility, char *fname, int lin
 #ifdef PRODUCTION
 #define TRACEPRINTF(format, arg...) (void)(0)
 #define DEBUGPRINTF(format, arg...) (void)(0)
-#define dputs(format, arg...) (void)(0)
 #else
 #ifdef DEBUG
 #define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)

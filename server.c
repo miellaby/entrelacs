@@ -294,6 +294,7 @@ static void *event_handler(enum mg_event event,
         processed = NULL;
     }
     
+    xl_commit();
     xl_over();
 
     return processed;

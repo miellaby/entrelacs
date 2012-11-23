@@ -1,10 +1,17 @@
 Current changes:
  * fixed point operator (better recursion)
+
+/set/Y/lambda/f//lambda/x/f/lambda/v/let//a/x+x/a+v/lambda/x/f/lambda/v/let//a/x+x/a+v
+/set//rec+set/macro/binding/let//name/tailOf+binding/let//body/headOf+binding/arrow/set//var+name/Y/lambda//var+name+/var+body
+//rec+set/reverse/lambda/x/let//test/isPair+x/if/test//let//h/headOf+x/let//h/reverse+h/let//t/tailOf+x/let//t/reverse+t/arrow//var+h/var+t+x
+/reverse//4+3/2+1
+/reverse/9/8/7/6/5/4/3/2/1+0
+ * don't work: /reverse/escape/a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z
  * map/reduce operators
  * Sexy demo
    * shared canvas to put and arrow-link anything: text, pictures, ...
    * atomic objects are spatially connected to tiles to limit browsing
-   * clients sync with tiles every couple of seconds
+      * clients sync with tiles every couple of seconds
    * timeline
 
 Most recent previous changes:
