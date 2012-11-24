@@ -10,7 +10,7 @@
 #include "sha1.h"
 
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
-   evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, operator = 0,
+   evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, rlambda = 0, operator = 0,
    continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0;
 
 static void machine_init();
@@ -95,6 +95,9 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
         } else if (t == lambda) {
             Arrow xs = headOf(a);
             return pair(closure, pair(xs, e));
+        } else if (t == rlambda) {
+            Arrow xs = headOf(a);
+            return pair(closure, pair(EVE, pair(xs, e))); // recursive closure
         } else if (t == macro) {
             Arrow xs = headOf(a);
             return pair(paddock, pair(xs, e));
@@ -321,6 +324,12 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           dputs("    w0_type = %O", w0_type);
           Arrow yse = head(w0);
           Arrow ee = head(yse);
+          Arrow ys = tail(yse);
+          int recursive = (ys == EVE);
+          if (recursive) {
+              yse = head(yse);
+              ys = tail(yse);
+          }
           Arrow y = tail(tail(yse));
           Arrow ss = head(tail(yse));
           if (w0_type == paddock) { // #e# paddock special closure
@@ -333,14 +342,20 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
               // second one is to eval expression result in caller closure
               // that is the evaluation of the expression after macro-substitution
               chainSize+=2;
-              M = a(ss, a(_load_binding(y, t1, ee), a(evalOp, a(e, a(a(x, a(s, e)), k)))));
+              ee = _load_binding(y, t1, ee);
+              if (recursive)
+                   ee = _load_binding(atom("it"), w0, ee);
+              M = a(ss, a(ee, a(evalOp, a(e, a(a(x, a(s, e)), k)))));
           } else {
               // r(t0) == (closure ((y ss) ee))
               dputs("  resolve(t0) == %O", w0);
               if (w1 == brokenEnvironment)
                   return a(swearWord,a(brokenEnvironment, M));
               chainSize++;
-              M = a(ss, a(_load_binding(y, w1, ee), a(a(x, a(s, e)), k))); // stacks up a continuation
+              ee = _load_binding(y, w1, ee);
+              if (recursive)
+                   ee = _load_binding(atom("it"), w0, ee);
+              M = a(ss, a(ee, a(a(x, a(s, e)), k))); // stacks up a continuation
           }
 
           return M;
@@ -499,6 +514,12 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   } else if (ws_type == paddock || ws_type == closure) {
       // closure/paddock case
       Arrow yse = head(ws);
+      Arrow ys = tail(yse);
+      int recursive = (ys == EVE);
+      if (recursive) {
+          yse = head(yse);
+          ys = tail(yse);
+      }
       Arrow ee = head(yse);
       Arrow x = tail(tail(yse));
       Arrow ss = head(tail(yse));
@@ -510,14 +531,20 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
           // stacks up one continuation to eval the expression after macro-substitution
           chainSize++;
-          M = a(ss, a(_load_binding(x, wv, ee), a(evalOp, ek)));
+          ee = _load_binding(x, wv, ee);
+          if (recursive)
+               ee = _load_binding(atom("it"), ws, ee);
+          M = a(ss, a(ee, a(evalOp, ek)));
       } else {
           // r(t0) == (closure ((x ss) ee))
           dputs("        resolve(t0) == (closure ((x ss) ee))");
           if (wv == brokenEnvironment)
               return a(swearWord,a(brokenEnvironment, M));
           //chainSize--;
-          M = a(ss, a(_load_binding(x, wv, ee), k));
+          ee = _load_binding(x, wv, ee);
+          if (recursive)
+               ee = _load_binding(atom("it"), ws, ee);
+          M = a(ss, a(ee, k));
       }
 
       return M;
@@ -772,6 +799,7 @@ static void machine_init() {
   macro = atom("macro");
   closure = atom("closure");
   paddock = atom("paddock"); // closure for macro
+  rlambda = atom("rlambda");
   operator = atom("operator");
   continuation = atom("continuation");
   selfM = atom("@M");
@@ -793,6 +821,7 @@ static void machine_init() {
   root(a(locked, lambda));
   root(a(locked, macro));
   root(a(locked, closure));
+  root(a(locked, rlambda));
   root(a(locked, paddock));
   root(a(locked, operator));
   root(a(locked, continuation));

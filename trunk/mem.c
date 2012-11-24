@@ -46,6 +46,21 @@ static Address* log = NULL; ///< dynamically allocated
 static size_t   logMax = 0; ///< heap allocated log size
 static size_t   logSize = 0; ///< significative log size
 
+static struct s_mem_stats {
+    int notFounds;
+    int mainFounds;
+    int reserveFounds;
+    int reserveMovesBecauseSet;
+    int reserveMovesBecauseGet;
+    int mainReplaces;
+    int getCounts;
+    int setCounts;
+    int dontKnown;
+} mem_stats_zero = {
+    0, 0, 0, 0, 0, 0, 0, 0
+}, mem_stats = {
+    0, 0, 0, 0, 0, 0, 0, 0    
+};
 
 
 #define MEM1_CHANGED 0x1000
@@ -88,10 +103,12 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   Address i;
   Address offset = a & 0xFFF;
   uint32_t  page = a >> 12;
+  mem_stats.getCounts++;
   m = mem[offset];
   if (!memIsEmpty(m) && memPageOf(m) == page) {
     DEBUGPRINTF("mem_get returns %016llx from cache", m.c);
     if (stamp_p != NULL) *stamp_p = m.stamp;
+    mem_stats.mainFounds++;
     return m.c;
   }
   
@@ -99,6 +116,7 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
     if (reserve[i].a == a) {
       DEBUGPRINTF("mem_get returns %016llx from reserve", reserve[i].c);
       if (stamp_p != NULL) *stamp_p = reserve[i].stamp;
+      mem_stats.reserveFounds++;
       return reserve[i].c;
     }
   }
@@ -107,15 +125,24 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
     // When replacing a modified cell, move it to reserve
     Address moved = (memPageOf(m) << 12) | offset;
     DEBUGPRINTF("mem_get moves %06x to reserve", moved);
-    assert(reserveHead < reserveSize);
+    if (reserveHead >= reserveSize){
+        LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d notFounds=%d mainFounds=%d reserveFounds=%d reserveMovesBecauseSet=%d"
+             " reserveMovesBecauseGet=%d mainReplaces=%d getCounts=%d setCounts=%d ",
+             logSize, mem_stats.notFounds, mem_stats.mainFounds, mem_stats.reserveFounds,
+             mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
+             mem_stats.getCounts, mem_stats.setCounts);
+        assert(reserveHead < reserveSize);
+    }
     reserve[reserveHead].a = moved;
     reserve[reserveHead].stamp = m.stamp;
     reserve[reserveHead++].c = m.c;
+    mem_stats.reserveMovesBecauseGet++;
   }
 
   mem[offset].a = page;
   mem[offset].stamp = pokes;
   if (stamp_p != NULL) *stamp_p = pokes;
+  mem_stats.notFounds++;
   return (mem[offset].c = mem0_get(a));
 }
 
@@ -129,6 +156,7 @@ void mem_set(Address a, Cell c) {
     TRACEPRINTF("mem_set(%06x, %016llx) begin", a, c);
     Address offset = a & 0xFFF;
     uint32_t  page = a >> 12;
+    mem_stats.setCounts++;
     m = mem[offset];
     if (!memIsEmpty(m) && memPageOf(m) != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
@@ -137,6 +165,7 @@ void mem_set(Address a, Cell c) {
                 // one changes data in the reserve cell
                 reserve[i].c = c;
                 reserve[i].stamp = ++pokes;
+                mem_stats.reserveFounds++;
                 return; // no need to log it (it's already done)
             }
         }
@@ -144,13 +173,24 @@ void mem_set(Address a, Cell c) {
         if (memIsChanged(m)) { // one replaces a modificied cell that one moves to reserve
             Address moved = (memPageOf(m) << 12) | offset;
             DEBUGPRINTF("mem_set moved %06x to reserve", moved);
+            if (reserveHead >= reserveSize) {
+                LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d notFounds=%d mainFounds=%d reserveFounds=%d reserveMovesBecauseSet=%d"
+                     " reserveMovesBecauseGet=%d mainReplaces=%d getCounts=%d setCounts=%d ",
+                     logSize, mem_stats.notFounds, mem_stats.mainFounds, mem_stats.reserveFounds,
+                     mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
+                     mem_stats.getCounts, mem_stats.setCounts);
+                assert(reserveHead < reserveSize);
+            }
             assert(reserveHead < reserveSize);
             reserve[reserveHead].a = moved;
             reserve[reserveHead].stamp = m.stamp;
             reserve[reserveHead].c = m.c;
             reserveHead++;
+            mem_stats.reserveMovesBecauseSet++;
+        } else {
+            mem_stats.mainReplaces++;
+            // No need to load the cell from mem0 since one overwrites it
         }
-        // No need to load the cell from mem0 since one overwrites it
     } else if (!memIsEmpty(m) && !memIsChanged(m)) { // Log change
         geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
         log[logSize - 1] = a;
@@ -192,9 +232,14 @@ void mem_commit() {
       mem[i].stamp = 0;
     }
   }
+  LOGPRINTF(LOG_WARN, "mem_commit done, logSize=%d notFounds=%d mainFounds=%d reserveFounds=%d reserveMovesBecauseSet=%d"
+          " reserveMovesBecauseGet=%d mainReplaces=%d getCounts=%d setCounts=%d ",
+          logSize, mem_stats.notFounds, mem_stats.mainFounds, mem_stats.reserveFounds,
+          mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
+          mem_stats.getCounts, mem_stats.setCounts);
   zeroalloc((char **)&log, &logMax, &logSize);
+  mem_stats = mem_stats_zero;
   reserveHead = 0;
-  LOGPRINTF(LOG_WARN, "mem_commit done");
 }
 
 uint32_t mem_pokes() {
