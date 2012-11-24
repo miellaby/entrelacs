@@ -306,7 +306,9 @@ int main(void) {
 #ifdef DEBUG
   log_init(NULL, "space,session,machine,server=debug");
 #else
-#ifndef PRODUCTION
+#ifdef PRODUCTION
+  log_init(NULL, "space,session,machine,server=warn");
+#else
   log_init(NULL, "space,session,machine=trace,server=debug");
 #endif
 #endif
