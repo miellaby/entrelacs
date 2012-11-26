@@ -20,9 +20,16 @@ static struct s_machine_stats {
 
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, rlambda = 0, operator = 0,
-   continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0;
+   continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0,
+        tempVar;
 
 static void machine_init();
+
+Arrow tmp(Arrow M) {
+  char memRef[64]; 
+  snprintf(memRef, 64, "%d", (int)M);
+  return a(tempVar, atom(memRef));
+}
 
 Arrow xl_operator(XLCallBack hookp, Arrow context) {
   return a(operator, a(xl_hook(hookp), context));
@@ -190,7 +197,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow e = tailOf(ek);
   Arrow k = headOf(ek);
   Arrow w;
-  TRACEPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
+
+  LOGPRINTF(LOG_WARN, "=== P %O ===\n", p);
+  TRACEPRINTF("   e = %O\n   k = %O", p, e, k);
   machine_stats.transition++;
 
   if (ins == load) { //load expression #e#
@@ -277,8 +286,8 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           dputs("p == (let ((x v:(v0 v1)) s)) where v0 not trivial");
           // rewriting program to stage s0 evaluation
           // TODO use (tailOf v) instead of p as variable name
-          // pp = (let ((M v0) (let ((x ((var M) v1)) s))))
-          Arrow pp = a(let, a(a(M, v0), a(let, a(a(x, a(a(var, M), v1)), s))));
+          // pp = (let ((tmp v0) (let ((x ((var tmp) v1)) s))))
+          Arrow pp = a(let, a(a(tmp(M), v0), a(let, a(a(x, a(a(var, tmp(M)), v1)), s))));
           M = a(pp, ek);
           return M;
       }
@@ -294,9 +303,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
     	    dputs("p == (let ((x v:(t0 v1)) s)) where v1 not trivial");
 
           // rewriting program to stage v1 and (v0 v1) evaluation
-          // pp = (let ((M v1) (let ((x (v0 (var M))) s))))
+          // pp = (let ((tmp v1) (let ((x (v0 (var tmp))) s))))
           // TODO use (headOf v) instead of p as variable name
-          Arrow pp = a(let, a(a(M, v1), a(let, a(a(x, a(v0, a(var, M))), s))));
+          Arrow pp = a(let, a(a(tmp(M), v1), a(let, a(a(x, a(v0, a(var, tmp(M)))), s))));
           M = a(pp, ek);
           return M;
       }
@@ -357,7 +366,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
               chainSize+=2;
               ee = _load_binding(y, t1, ee);
               if (recursive)
-                   ee = _load_binding(atom("it"), w0, ee);
+                   ee = _load_binding(it, w0, ee);
               M = a(ss, a(ee, a(evalOp, a(e, a(a(x, a(s, e)), k)))));
           } else {
               // r(t0) == (closure ((y ss) ee))
@@ -367,7 +376,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
               chainSize++;
               ee = _load_binding(y, w1, ee);
               if (recursive)
-                   ee = _load_binding(atom("it"), w0, ee);
+                   ee = _load_binding(it, w0, ee);
               M = a(ss, a(ee, a(a(x, a(s, e)), k))); // stacks up a continuation
           }
 
@@ -460,9 +469,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   if (!isTrivialOrBound(s, e, C, M, &ws)) { // Not trivial closure in application #e#
     dputs("p == (s v) where s is not trivial");
-    // rewriting rule: pp = (let ((M s) ((var M) v)))
-    // ==> M = (s (e ((M (((var M) v) e)) k)))
-    M = a(s, a(e, a(a(M, a(a(a(var, M), v), e)), k)));
+    // rewriting rule: pp = (let ((tmp s) ((var tmp) v)))
+    // ==> M = (s (e ((tmp (((var tmp) v) e)) k)))
+    M = a(s, a(e, a(a(tmp(M), a(a(a(var, tmp(M)), v), e)), k)));
     return M;
   }
 
@@ -471,9 +480,9 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
 
   if (tail(v) == let) { // let expression as application argument #e#
       dputs("    p == (s v:(let ((x vv) ss))");
-    // rewriting rule: pp = (let ((M v) (s (var M))))
-    // ==> M = (v (e ((M ((s (var M)) e)) k))))
-    M = a(v, a(e, a(a(M, a(a(a(escape,ws), a(var, M)), e)), k)));
+    // rewriting rule: pp = (let ((tmp v) (s (var tmp))))
+    // ==> M = (v (e ((tmp ((s (var tmp)) e)) k))))
+    M = a(v, a(e, a(a(tmp(M), a(a(a(escape, ws), a(var, tmp(M))), e)), k)));
     return M;
   }
 
@@ -490,10 +499,10 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow wv = NIL;
   if (!isTrivialOrBound(v, e, C, M, &wv) && ws_type != paddock) { // Not trivial argument in application #e#
     dputs("    v (%O) == something not trivial", v);
-    // rewriting rule: pp = (let ((M v) (s (var M))))
-    // ==> M = (v (e ((M ((s (var M)) e)) k))))
+    // rewriting rule: pp = (let ((tmp v) (s (var tmp))))
+    // ==> M = (v (e ((tmp ((s (var tmp)) e)) k))))
     chainSize++;
-    M = a(v, a(e, a(a(M, a(a(s, a(var, M)), e)), k)));
+    M = a(v, a(e, a(a(tmp(M), a(a(s, a(var, tmp(M))), e)), k)));
     return M;
   }
 
@@ -546,7 +555,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           chainSize++;
           ee = _load_binding(x, wv, ee);
           if (recursive)
-               ee = _load_binding(atom("it"), ws, ee);
+               ee = _load_binding(it, ws, ee);
           M = a(ss, a(ee, a(evalOp, ek)));
       } else {
           // r(t0) == (closure ((x ss) ee))
@@ -556,7 +565,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
           //chainSize--;
           ee = _load_binding(x, wv, ee);
           if (recursive)
-               ee = _load_binding(atom("it"), ws, ee);
+               ee = _load_binding(it, ws, ee);
           M = a(ss, a(ee, k));
       }
 
@@ -823,7 +832,7 @@ static void machine_init() {
   it=atom("it");
   swearWord = atom("&!#");
   brokenEnvironment = pair(swearWord, atom("broken environment"));
-  
+  tempVar = atom("XLR3SuLT");
   // preserve keyarrows from GC
   Arrow locked = atom("locked");
   root(a(locked, let));
@@ -846,7 +855,8 @@ static void machine_init() {
   root(a(locked, it));
   root(a(locked, swearWord));
   root(a(locked, brokenEnvironment));
-
+  root(a(locked, tempVar));
+  
   // root basic operators into the global context
   static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
       {"run", runHook},
@@ -878,7 +888,7 @@ static void machine_init() {
   }
   
   if (xls_get(EVE, atom("if")) == NIL)
-      xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval//ifHook/var+condition//escape+escape/var+alternative+"));
+      xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval/let//it/ifHook/var+condition/it//escape+escape/var+alternative+"));
   if (xls_get(EVE, atom("equal")) == NIL)
       xls_set(EVE, atom("equal"), xl_uri("/paddock//x/let//a/tailOf+x/let//b/headOf+x/arrow/let///tailOf/var+x/var+a/let///headOf/var+x/var+b/equalHook/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
   if (xls_get(EVE, atom("get")) == NIL)
