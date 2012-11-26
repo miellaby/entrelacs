@@ -9,6 +9,15 @@
 #include "log.h"
 #include "sha1.h"
 
+static struct s_machine_stats {
+    int transition;
+    int i1, i2, i3, i4, i5, i6, i7, i8, i9;
+} machine_stats_zero = {
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+}, machine_stats = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, rlambda = 0, operator = 0,
    continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0;
@@ -30,7 +39,11 @@ static Arrow _load_binding(Arrow x, Arrow w, Arrow e) {
     Arrow et = e;
     Arrow temp = EVE;
 #define MAX_SEARCH_PREVIOUS_BINDING 10
+    return a(a(x, w), e);
 
+    //
+    // BAD IDEA ! :O !!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //
     for (i = 0; i < MAX_SEARCH_PREVIOUS_BINDING; i++) {
        if (isEve(et)) break;
        Arrow c = tailOf(et);
@@ -178,7 +191,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow k = headOf(ek);
   Arrow w;
   TRACEPRINTF("   p = %O\n   e = %O\n   k = %O", p, e, k);
-
+  machine_stats.transition++;
 
   if (ins == load) { //load expression #e#
      // p == (load (s0 s1))
@@ -919,6 +932,11 @@ Arrow xl_run(Arrow C, Arrow M) {
   TRACEPRINTF("run finished with M = %O", M);
   if (w == NIL) w = EVE;
   TRACEPRINTF("run result is %O", w);
+
+  LOGPRINTF(LOG_WARN, "xl_run done, transition=%d",
+              machine_stats.transition);
+  machine_stats = machine_stats_zero;
+
   return w;
 }
 
