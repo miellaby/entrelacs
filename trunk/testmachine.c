@@ -12,7 +12,10 @@ int main(int argc, char **argv) {
 
     xl_init();
     struct s_test { char* program; char* result; } *test, tests[] = {
-    {"/childrenOf+locked", "//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+"},
+        {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1"},
+    //{NULL, NULL},
+        
+    //{"/childrenOf+locked", "//locked+XLR3SuLT+//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+"},
     {"/let//identity/lambda/x+x/identity+42", "42"},
     {"/any/unreducible/expression/is/left/as/is", "/any/unreducible/expression/is/left/as/is"},
     {"unboundedUncastedAtomLeftAsIs", "unboundedUncastedAtomLeftAsIs"},

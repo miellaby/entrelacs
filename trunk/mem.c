@@ -47,14 +47,14 @@ static size_t   logMax = 0; ///< heap allocated log size
 static size_t   logSize = 0; ///< significative log size
 
 static struct s_mem_stats {
-    int notFounds;
-    int mainFounds;
-    int reserveFounds;
+    int notFound;
+    int mainFound;
+    int reserveFound;
     int reserveMovesBecauseSet;
     int reserveMovesBecauseGet;
     int mainReplaces;
-    int getCounts;
-    int setCounts;
+    int getCount;
+    int setCount;
     int dontKnown;
 } mem_stats_zero = {
     0, 0, 0, 0, 0, 0, 0, 0
@@ -103,12 +103,12 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   Address i;
   Address offset = a & 0xFFF;
   uint32_t  page = a >> 12;
-  mem_stats.getCounts++;
+  mem_stats.getCount++;
   m = mem[offset];
   if (!memIsEmpty(m) && memPageOf(m) == page) {
     DEBUGPRINTF("mem_get returns %016llx from cache", m.c);
     if (stamp_p != NULL) *stamp_p = m.stamp;
-    mem_stats.mainFounds++;
+    mem_stats.mainFound++;
     return m.c;
   }
   
@@ -116,7 +116,7 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
     if (reserve[i].a == a) {
       DEBUGPRINTF("mem_get returns %016llx from reserve", reserve[i].c);
       if (stamp_p != NULL) *stamp_p = reserve[i].stamp;
-      mem_stats.reserveFounds++;
+      mem_stats.reserveFound++;
       return reserve[i].c;
     }
   }
@@ -126,11 +126,11 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
     Address moved = (memPageOf(m) << 12) | offset;
     DEBUGPRINTF("mem_get moves %06x to reserve", moved);
     if (reserveHead >= reserveSize){
-        LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d notFounds=%d mainFounds=%d reserveFounds=%d reserveMovesBecauseSet=%d"
-             " reserveMovesBecauseGet=%d mainReplaces=%d getCounts=%d setCounts=%d ",
-             logSize, mem_stats.notFounds, mem_stats.mainFounds, mem_stats.reserveFounds,
-             mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
-             mem_stats.getCounts, mem_stats.setCounts);
+        LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
+          " reserveMovesBecauseGet=%d mainReplaces=%d notFound=%d mainFound=%d reserveFound=%d",
+          logSize, mem_stats.getCount, mem_stats.setCount,
+          mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
+          mem_stats.notFound, mem_stats.mainFound, mem_stats.reserveFound);
         assert(reserveHead < reserveSize);
     }
     reserve[reserveHead].a = moved;
@@ -142,7 +142,7 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   mem[offset].a = page;
   mem[offset].stamp = pokes;
   if (stamp_p != NULL) *stamp_p = pokes;
-  mem_stats.notFounds++;
+  mem_stats.notFound++;
   return (mem[offset].c = mem0_get(a));
 }
 
@@ -156,7 +156,7 @@ void mem_set(Address a, Cell c) {
     TRACEPRINTF("mem_set(%06x, %016llx) begin", a, c);
     Address offset = a & 0xFFF;
     uint32_t  page = a >> 12;
-    mem_stats.setCounts++;
+    mem_stats.setCount++;
     m = mem[offset];
     if (!memIsEmpty(m) && memPageOf(m) != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
@@ -165,7 +165,7 @@ void mem_set(Address a, Cell c) {
                 // one changes data in the reserve cell
                 reserve[i].c = c;
                 reserve[i].stamp = ++pokes;
-                mem_stats.reserveFounds++;
+                mem_stats.reserveFound++;
                 return; // no need to log it (it's already done)
             }
         }
@@ -174,11 +174,12 @@ void mem_set(Address a, Cell c) {
             Address moved = (memPageOf(m) << 12) | offset;
             DEBUGPRINTF("mem_set moved %06x to reserve", moved);
             if (reserveHead >= reserveSize) {
-                LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d notFounds=%d mainFounds=%d reserveFounds=%d reserveMovesBecauseSet=%d"
-                     " reserveMovesBecauseGet=%d mainReplaces=%d getCounts=%d setCounts=%d ",
-                     logSize, mem_stats.notFounds, mem_stats.mainFounds, mem_stats.reserveFounds,
-                     mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
-                     mem_stats.getCounts, mem_stats.setCounts);
+                LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
+                  " reserveMovesBecauseGet=%d mainReplaces=%d notFound=%d mainFound=%d reserveFound=%d",
+                  logSize, mem_stats.getCount, mem_stats.setCount,
+                  mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
+                  mem_stats.notFound, mem_stats.mainFound, mem_stats.reserveFound);
+
                 assert(reserveHead < reserveSize);
             }
             assert(reserveHead < reserveSize);
@@ -232,11 +233,11 @@ void mem_commit() {
       mem[i].stamp = 0;
     }
   }
-  LOGPRINTF(LOG_WARN, "mem_commit done, logSize=%d notFounds=%d mainFounds=%d reserveFounds=%d reserveMovesBecauseSet=%d"
-          " reserveMovesBecauseGet=%d mainReplaces=%d getCounts=%d setCounts=%d ",
-          logSize, mem_stats.notFounds, mem_stats.mainFounds, mem_stats.reserveFounds,
+  LOGPRINTF(LOG_WARN, "mem_commit done, logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
+          " reserveMovesBecauseGet=%d mainReplaces=%d notFound=%d mainFound=%d reserveFound=%d",
+          logSize, mem_stats.getCount, mem_stats.setCount,
           mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,
-          mem_stats.getCounts, mem_stats.setCounts);
+          mem_stats.notFound, mem_stats.mainFound, mem_stats.reserveFound);
   zeroalloc((char **)&log, &logMax, &logSize);
   mem_stats = mem_stats_zero;
   reserveHead = 0;
