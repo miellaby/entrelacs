@@ -13,6 +13,24 @@
 #define LOG_CURRENT LOG_SPACE
 #include "log.h"
 
+
+static struct s_space_stats {
+  int get;
+  int root;
+  int unroot;
+  int new;
+  int found;
+  int connect;
+  int disconnect;
+  int atom;
+  int pair;
+  int forget;
+} space_stats_zero = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+}, space_stats = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 static pthread_mutexattr_t api_mutex_attr;
 static pthread_mutex_t api_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -520,6 +538,9 @@ Arrow payload(Cell catBits, int length, char* str, uint64_t hash, int ifExist) {
     Cell cell, nextCell, content;
     unsigned i, jump;
     char c, *p;
+
+    space_stats.atom++;
+
     if (!length) {
         return EVE;
     }
@@ -564,8 +585,10 @@ Arrow payload(Cell catBits, int length, char* str, uint64_t hash, int ifExist) {
                         i++;
                 }
             }
-            if (!l && cell_getCatBits(cell) == CATBITS_LAST && cell_getSize(cell) == i)
+            if (!l && cell_getCatBits(cell) == CATBITS_LAST && cell_getSize(cell) == i) {
+              space_stats.found++;
                 return probeAddress; // found arrow
+            }
         }
         // Not the singleton
 
@@ -578,6 +601,8 @@ Arrow payload(Cell catBits, int length, char* str, uint64_t hash, int ifExist) {
 
     if (ifExist)
         return EVE;
+    space_stats.new++;
+    space_stats.atom++;
 
     if (firstFreeCell == EVE) {
         while (1) {
@@ -812,6 +837,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     //  }
     if (tail == NIL || head == NIL)
         return NIL;
+ 
+    space_stats.get++;
 
     // Compute hashs
     hash = hashPair(xl_checksumOf(tail), xl_checksumOf(head));
@@ -831,6 +858,7 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
                 && cell_getTail(cell) == tail
                 && cell_getHead(cell) == head
                 && probeAddress /* ADAM case, can't be put at EVE place! TODO: optimize */) {
+            space_stats.found++;
             return probeAddress; // OK: arrow found!
         }
         // Not the singleton
@@ -845,6 +873,9 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
 
     if (ifExist) // one only want to test for singleton existence in the arrows space
         return EVE; // Eve means not found
+
+    space_stats.new++;
+    space_stats.pair++;
 
     if (firstFreeCell == EVE) {
         while (1) {
@@ -1685,6 +1716,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  */
 static void connect(Arrow a, Arrow child) {
     TRACEPRINTF("connect child=%06x to a=%06x", child, a);
+    space_stats.connect++;
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
     Cell cell = mem_get(a);
     ONDEBUG((show_cell('R', a, cell, 0)));
@@ -1860,6 +1892,7 @@ static void connect(Arrow a, Arrow child) {
  */
 static void disconnect(Arrow a, Arrow child) {
     TRACEPRINTF("disconnect child=%06x from a=%06x", child, a);
+    space_stats.disconnect++;
     if (a == EVE) return; // One doesn't store Eve connectivity.
 
     // get parent arrow definition
@@ -2292,6 +2325,7 @@ Arrow xl_childOf(Arrow a) {
 
 /** root an arrow */
 Arrow xl_root(Arrow a) {
+    space_stats.root++;
     if (a == EVE) {
         return EVE; // no
     }
@@ -2322,6 +2356,8 @@ Arrow xl_root(Arrow a) {
 
 /** unroot a rooted arrow */
 Arrow xl_unroot(Arrow a) {
+    space_stats.unroot++;
+
     if (a == EVE)
         return EVE; // stop dreaming!
 
@@ -2386,6 +2422,7 @@ int xl_equal(Arrow a, Arrow b) {
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a, uint64_t hash) {
     TRACEPRINTF("forget loose arrow %X hash %llX", a, hash);
+    space_stats.forget++;
 
     Cell cell = mem_get(a);
     ONDEBUG((show_cell('R', a, cell, 0)));
@@ -2455,8 +2492,17 @@ void xl_commit() {
             forget(a, looseStack[i - 1].checksum);
         }
     }
-    zeroalloc((char**) &looseStack, &looseStackMax, &looseStackSize);
     mem_commit();
+
+    LOGPRINTF(LOG_WARN, "xl_commit done, looseStackSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
+        looseStackSize, space_stats.get, space_stats.root,
+        space_stats.unroot, space_stats.new, 
+        space_stats.pair, space_stats.atom, space_stats.found,
+        space_stats.connect, space_stats.disconnect, space_stats.forget);
+    space_stats = space_stats_zero;
+
+    zeroalloc((char**) &looseStack, &looseStackMax, &looseStackSize);
+
     LOCK_END();
     ACTIVITY_BEGIN();
 }
