@@ -366,7 +366,7 @@ static void looseStackRemove(Address a) {
 
 /* hash function to get H1 from a regular pair definition */
 uint64_t hashPair(uint64_t tail, uint64_t head) {
-    return (tail << 20) ^ (tail >> 4) ^ head;
+   return PRIM1 + tail << 20 + head << 4 + tail + head; // (tail << 20) ^ (tail >> 4) ^ head;
 }
 
 /* hash function to get H1 from a tag arrow definition */
