@@ -10,8 +10,9 @@
 #include "log.h"
 #include "mem.h"
 
-#define MEMSIZE 0x20000
-static const Address memSize = MEMSIZE ; ///< mem size (256 * 8192 records)
+#define MEMSIZE (8192<<3)
+// 0x20000
+static const Address memSize = MEMSIZE ; ///< mem size
 
 /** The main RAM cache, aka "mem".
  mem is an array of MEMSIZE records.
@@ -101,8 +102,8 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   TRACEPRINTF("mem_get(%06x) begin", a);
   Address i;
-  Address offset = a & 0xFFF;
-  uint32_t  page = a >> 12;
+  Address offset = a % MEMSIZE;
+  uint32_t  page = a / MEMSIZE;
   mem_stats.getCount++;
   m = mem[offset];
   if (!memIsEmpty(m) && memPageOf(m) == page) {
@@ -122,8 +123,12 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   }
 
   if (memIsChanged(m)) {
+    // FIXME: should we cache a cell read in place of modified cell?
+    if (stamp_p != NULL) *stamp_p = pokes;
+    return mem0_get(a);
+        
     // When replacing a modified cell, move it to reserve
-    Address moved = (memPageOf(m) << 12) | offset;
+    Address moved = memPageOf(m) * MEMSIZE + offset;
     DEBUGPRINTF("mem_get moves %06x to reserve", moved);
     if (reserveHead >= reserveSize){
         LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
@@ -154,8 +159,8 @@ Cell mem_get(Address a) {
 /** Set a cell */
 void mem_set(Address a, Cell c) {
     TRACEPRINTF("mem_set(%06x, %016llx) begin", a, c);
-    Address offset = a & 0xFFF;
-    uint32_t  page = a >> 12;
+    Address offset = a % MEMSIZE;
+    uint32_t  page = a / MEMSIZE;
     mem_stats.setCount++;
     m = mem[offset];
     if (!memIsEmpty(m) && memPageOf(m) != page)  { // Uhh that's not fun
@@ -171,7 +176,7 @@ void mem_set(Address a, Cell c) {
         }
         // no copy in the reserve, one puts the modified cell in mem0
         if (memIsChanged(m)) { // one replaces a modificied cell that one moves to reserve
-            Address moved = (memPageOf(m) << 12) | offset;
+            Address moved = memPageOf(m) * MEMSIZE + offset;
             DEBUGPRINTF("mem_set moved %06x to reserve", moved);
             if (reserveHead >= reserveSize) {
                 LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
@@ -222,7 +227,7 @@ void mem_commit() {
   // TODO: optimize by commiting all reserved cells first then all logged cells found in mem
   for (i = 0; i < logSize; i++) {
     Address a = log[i];
-    Address offset = a & 0xFFF;
+    Address offset = a % MEMSIZE;
     mem0_set(a, mem_get(a));
     mem[offset].a &= 0xEFFF; // reset changed flag for this offset (even if the changed cell is actually in reserve)
   }

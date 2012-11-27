@@ -198,8 +198,7 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   Arrow k = headOf(ek);
   Arrow w;
 
-  LOGPRINTF(LOG_WARN, "=== P %O ===\n", p);
-  TRACEPRINTF("   e = %O\n   k = %O", p, e, k);
+  TRACEPRINTF("=== P %O ===\n   e = %O\n   k = %O", p, e, k);
   machine_stats.transition++;
 
   if (ins == load) { //load expression #e#
