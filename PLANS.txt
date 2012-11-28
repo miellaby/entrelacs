@@ -1,12 +1,44 @@
 Current changes:
  * map/reduce operators
+   * do we put them in machine.c or not?
+   * what if I moved all non trivial definition like if macro elsewhere?
  * Sexy demo
    * shared canvas to put and arrow-link anything: text, pictures, ...
    * atomic objects are spatially connected to tiles to limit browsing
       * clients sync with tiles every couple of seconds
    * timeline
+   * old objects may slowly move out of screen
+ * site.sh
+   * pkill entrelacsd && echo restart... || echo start...
+   * entrelacsd &
+   * sleep 5
+   * for each line in $(cat site.xl) do
+        curl GET $SITE/$line
+     done ; # define some functions
+   * for each filename in glob site/* do
+        cat $filename | curl PUT $SITE/$filename --stdin
+     done ; # assimilate demo assets
+ * MessageBox
+   * new operator box
+     a hook to a cond lock
+   * new operator observe param=box
+     wait for the condition lock during 20s
+     then/or
+     unroot and return childrenOf box rooted
+     and paused machine (see hereafter)
+   * new operator trigger
+     get/create the box arrow if non existant
+     root (box, output)
+     trigger condition variable
+   * new operator pause
+     stop the machine and return as /machine/... (new litteral)
+      * resume ... restore machine
+      * abort ... free machine
+
 
 Most recent previous changes:
+ * lowest level operators renamed to reflect their behavior
+ * example.xl
  * rlambda (closure can access to itself as "it")
  * anonymous arrow API (avoid it as long as you can!)
  * hook API. Root flag is used to prevent attack proof or invalidate a hook

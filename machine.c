@@ -21,7 +21,7 @@ static struct s_machine_stats {
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, rlambda = 0, operator = 0,
    continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0,
-        tempVar;
+        tempVar, tailOfOperator = EVE, headOfOperator = EVE;
 
 static void machine_init();
 
@@ -697,21 +697,21 @@ Arrow unrootHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, headOf(r)); // one doesn't show the context
 }
 
-Arrow setHook(Arrow CM, Arrow hookParameter) {
+Arrow setTailWithHeadInHook(Arrow CM, Arrow hookParameter) {
    Arrow C = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_set(C, xl_tailOf(arrow), xl_headOf(arrow));
    return xl_reduceMachine(CM, headOf(r)); // one doesn't show the context
 }
 
-Arrow unsetHook(Arrow CM, Arrow hookParameter) {
+Arrow unsetVarHook(Arrow CM, Arrow hookParameter) {
    Arrow contextPath = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    xls_unset(contextPath, arrow);
    return xl_reduceMachine(CM, arrow);
 }
 
-Arrow getHook(Arrow CM, Arrow hookParameter) {
+Arrow getVarHook(Arrow CM, Arrow hookParameter) {
    Arrow C = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_get(C, arrow);
@@ -732,18 +732,16 @@ Arrow isPairHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, r);
 }
 
-Arrow ifHook(Arrow CM, Arrow hookParameter) {
-  // the ifHook performs some magic
+Arrow branchHook(Arrow CM, Arrow hookParameter) {
   Arrow condition = xl_argInMachine(CM);
-  Arrow branch = xl_operator(isEve(condition) ? headOfHook: tailOfHook, EVE);
-
+  Arrow branch = isEve(condition) ? headOfOperator : tailOfOperator;
   return xl_reduceMachine(CM, branch);
 }
 
-Arrow equalHook(Arrow CM, Arrow hookParameter) {
+Arrow isCloneHook(Arrow CM, Arrow hookParameter) {
    Arrow contextPath = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
-   Arrow r = xl_equal(tailOf(arrow), headOf(arrow)) ? tailOf(arrow) : EVE;
+   Arrow r = xl_isPair(arrow) && xl_equal(tailOf(arrow), headOf(arrow)) ? arrow : EVE;
    return xl_reduceMachine(CM, r);
 }
 
@@ -805,154 +803,167 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, atomn(digestSize, digest));
 }
 
-
 static void machine_init() {
-  if (let) return;
+    char* keyword;
+    XLCallBack callBack;
 
-  // initialize key arrows
-  // environment = atom("environment");
-  let = atom("let");
-  load = atom("load");
-  var = atom("var");
-  escape = atom("escape");
-  evalOp = atom("eval");
-  lambda = atom("lambda");
-  macro = atom("macro");
-  closure = atom("closure");
-  paddock = atom("paddock"); // closure for macro
-  rlambda = atom("rlambda");
-  operator = atom("operator");
-  continuation = atom("continuation");
-  selfM = atom("@M");
-  arrowWord = atom("arrow");
-  fall = atom("fall");
-  escalate = atom("escalate");
-  comma = atom(",");
-  it=atom("it");
-  swearWord = atom("&!#");
-  brokenEnvironment = pair(swearWord, atom("broken environment"));
-  tempVar = atom("XLR3SuLT");
-  // preserve keyarrows from GC
-  Arrow locked = atom("locked");
-  root(a(locked, let));
-  root(a(locked, load));
-  root(a(locked, var));
-  root(a(locked, escape));
-  root(a(locked, evalOp));
-  root(a(locked, lambda));
-  root(a(locked, macro));
-  root(a(locked, closure));
-  root(a(locked, rlambda));
-  root(a(locked, paddock));
-  root(a(locked, operator));
-  root(a(locked, continuation));
-  root(a(locked, selfM));
-  root(a(locked, arrowWord));
-  root(a(locked, fall));
-  root(a(locked, escalate));
-  root(a(locked, comma));
-  root(a(locked, it));
-  root(a(locked, swearWord));
-  root(a(locked, brokenEnvironment));
-  root(a(locked, tempVar));
-  
-  // root basic operators into the global context
-  static struct fnMap_s {char *s; XLCallBack fn;} systemFns[] = {
-      {"run", runHook},
-      {"tailOf", tailOfHook},
-      {"headOf", headOfHook},
-      {"childrenOf", childrenOfHook},
-      {"childrenReviewOf", childrenReviewOfHook},
-      {"root", rootHook},
-      {"unroot", unrootHook},
-      {"isRooted", isRootedHook},
-      {"isPair", isPairHook},
-      {"setHook", setHook},
-      {"unsetHook", unsetHook},
-      {"getHook", getHook},
-      {"ifHook", ifHook},
-      {"equalHook", equalHook},
-      {"commit", commitHook},
-      {"fall", fallHook},
-      {"escalate", escalateHook},
-      {"digest", digestHook},
-      {NULL, NULL}
-  };
+    if (let) return;
 
-  for (int i = 0; systemFns[i].s != NULL ; i++) {
-    Arrow operatorKey = atom(systemFns[i].s);
-    // NO; Will always set a callback at every reboot
-    // if (xls_get(EVE, operatorKey) != NIL) continue; // already set
-    xls_set(EVE,operatorKey, operator(systemFns[i].fn, EVE));
-  }
-  
-  if (xls_get(EVE, atom("if")) == NIL)
-      xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval/let//it/ifHook/var+condition/it//escape+escape/var+alternative+"));
-  if (xls_get(EVE, atom("equal")) == NIL)
-      xls_set(EVE, atom("equal"), xl_uri("/paddock//x/let//a/tailOf+x/let//b/headOf+x/arrow/let///tailOf/var+x/var+a/let///headOf/var+x/var+b/equalHook/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
-  if (xls_get(EVE, atom("get")) == NIL)
-      xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getHook//escape+escape/var+x+"));
-  if (xls_get(EVE, atom("unset")) == NIL)
-      xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetHook//escape+escape/var+x+"));
-  if (xls_get(EVE, atom("set")) == NIL)
-      xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setHook/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
-  
-  // System Init call
-  xl_eval(EVE, xl_uri("/init+"));
+    // initialize key arrows
+    // environment = atom("environment");
+    let = atom("let");
+    load = atom("load");
+    var = atom("var");
+    escape = atom("escape");
+    evalOp = atom("eval");
+    lambda = atom("lambda");
+    macro = atom("macro");
+    closure = atom("closure");
+    paddock = atom("paddock"); // closure for macro
+    rlambda = atom("rlambda");
+    operator = atom("operator");
+    continuation = atom("continuation");
+    selfM = atom("@M");
+    arrowWord = atom("arrow");
+    fall = atom("fall");
+    escalate = atom("escalate");
+    comma = atom(",");
+    it = atom("it");
+    swearWord = atom("&!#");
+    brokenEnvironment = pair(swearWord, atom("broken environment"));
+    tempVar = atom("XLR3SuLT");
+    // preserve keyarrows from GC
+    Arrow locked = atom("locked");
+    root(a(locked, let));
+    root(a(locked, load));
+    root(a(locked, var));
+    root(a(locked, escape));
+    root(a(locked, evalOp));
+    root(a(locked, lambda));
+    root(a(locked, macro));
+    root(a(locked, closure));
+    root(a(locked, rlambda));
+    root(a(locked, paddock));
+    root(a(locked, operator));
+    root(a(locked, continuation));
+    root(a(locked, selfM));
+    root(a(locked, arrowWord));
+    root(a(locked, fall));
+    root(a(locked, escalate));
+    root(a(locked, comma));
+    root(a(locked, it));
+    root(a(locked, swearWord));
+    root(a(locked, brokenEnvironment));
+    root(a(locked, tempVar));
+
+    // root basic operators into the global context
+
+    static struct fnMap_s {
+        char *s;
+        XLCallBack fn;
+    } systemFns[] = {
+        {"run", runHook},
+        {"tailOf", tailOfHook},
+        {"headOf", headOfHook},
+        {"childrenOf", childrenOfHook},
+        {"childrenReviewOf", childrenReviewOfHook},
+        {"root", rootHook},
+        {"unroot", unrootHook},
+        {"isRooted", isRootedHook},
+        {"isPair", isPairHook},
+        {"setTailWithHeadIn", setTailWithHeadInHook},
+        {"unsetVar", unsetVarHook},
+        {"getVar", getVarHook},
+        {"branch", branchHook},
+        {"isClone", isCloneHook},
+        {"commit", commitHook},
+        {"fall", fallHook},
+        {"escalate", escalateHook},
+        {"digest", digestHook},
+        {NULL, NULL}
+    };
+
+    for (int i = 0; (callBack = systemFns[i].fn) != NULL; i++) {
+        keyword = systemFns[i].s;
+        Arrow operatorKeyword = atom(keyword);
+        Arrow operatorArrow = operator(callBack, EVE);
+        // always reset a callback at every reboot because moving pointers
+        // NOT A GOOD IDEA: if (xls_get(EVE, operatorKey) != NIL) continue;
+        xls_set(EVE, operatorKeyword, operatorArrow);
+        if (callBack == tailOfHook)
+            tailOfOperator = operatorArrow;
+        if (callBack == headOfHook)
+            headOfOperator = operatorArrow;
+    }
+
+    if (xls_get(EVE, atom("if")) == NIL)
+        xls_set(EVE, atom("if"), xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval/let//it/branch/var+condition/it//escape+escape/var+alternative+"));
+    if (xls_get(EVE, atom("equal")) == NIL)
+        xls_set(EVE, atom("equal"), xl_uri("/paddock//x/let//a/tailOf+x/let//b/headOf+x/arrow/let///tailOf/var+x/var+a/let///headOf/var+x/var+b/isClone/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
+    if (xls_get(EVE, atom("get")) == NIL)
+        xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getVar//escape+escape/var+x+"));
+    if (xls_get(EVE, atom("unset")) == NIL)
+        xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
+
+    if (xls_get(EVE, atom("set")) == NIL)
+        xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setTailWithHeadIn/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+
+    // System Init call
+    xl_eval(EVE, xl_uri("/init+"));
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
-  machine_init();
-  // M = //p/e+k
-  chainSize = 0;
-  Arrow w;
-  while (chainSize < 500 && tail(M) != swearWord && (/*k*/head(head(M)) != EVE || !isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w))) {
-      // only operators can produce fall/escalate states
-      // TODO check secret here
+    machine_init();
+    // M = //p/e+k
+    chainSize = 0;
+    Arrow w;
+    while (chainSize < 500 && tail(M) != swearWord && (/*k*/head(head(M)) != EVE || !isTrivialOrBound(tail(M) /*p*/, tail(head(M)) /*e*/, C, M, &w))) {
+        // only operators can produce fall/escalate states
+        // TODO check secret here
 
-      if (head(M) == fall) {
-          Arrow VM = tail(M);
-          Arrow V = tail(VM);
-          C=a(C,V); // Fall into context
-          M = head(VM);
-          LOGPRINTF(LOG_WARN, "machine context fall to %O", V);
-          continue;
-      }
+        if (head(M) == fall) {
+            Arrow VM = tail(M);
+            Arrow V = tail(VM);
+            C = a(C, V); // Fall into context
+            M = head(VM);
+            LOGPRINTF(LOG_WARN, "machine context fall to %O", V);
+            continue;
+        }
 
-      // only operators can produce such a state
-      if (head(M) == escalate) {
-          C = tail(C); // Escape from enclosing context
-          LOGPRINTF(LOG_WARN, "machine context escalate to %O", C);
-          M = tail(M);
-          continue;
-      }
+        // only operators can produce such a state
+        if (head(M) == escalate) {
+            C = tail(C); // Escape from enclosing context
+            LOGPRINTF(LOG_WARN, "machine context escalate to %O", C);
+            M = tail(M);
+            continue;
+        }
 
-      M = transition(C, M);
-  }
+        M = transition(C, M);
+    }
 
-  if (chainSize >= 500) {
-      TRACEPRINTF("Continuation chain is too long (infinite loop?), p=%O", tail(M));
-      return a(swearWord, atom("too long continuation chain"));
-  } else  if (tail(M) == swearWord) {
-      TRACEPRINTF("run finished with error : %O", head(M));
-      return tail(head(M));
-  }
+    if (chainSize >= 500) {
+        TRACEPRINTF("Continuation chain is too long (infinite loop?), p=%O", tail(M));
+        return a(swearWord, atom("too long continuation chain"));
+    } else if (tail(M) == swearWord) {
+        TRACEPRINTF("run finished with error : %O", head(M));
+        return tail(head(M));
+    }
 
-  TRACEPRINTF("run finished with M = %O", M);
-  if (w == NIL) w = EVE;
-  TRACEPRINTF("run result is %O", w);
+    TRACEPRINTF("run finished with M = %O", M);
+    if (w == NIL) w = EVE;
+    TRACEPRINTF("run result is %O", w);
 
-  LOGPRINTF(LOG_WARN, "xl_run done, transition=%d",
-              machine_stats.transition);
-  machine_stats = machine_stats_zero;
+    LOGPRINTF(LOG_WARN, "xl_run done, transition=%d",
+            machine_stats.transition);
+    machine_stats = machine_stats_zero;
 
-  return w;
+    return w;
 }
 
 Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
-  TRACEPRINTF("cl_eval C=%O p=%O", C, p);
-  machine_init();
-  Arrow M = a(p, a(EVE, EVE));
-  return xl_run(C /* ContextPath */, M);
+    TRACEPRINTF("cl_eval C=%O p=%O", C, p);
+    machine_init();
+    Arrow M = a(p, a(EVE, EVE));
+    return xl_run(C /* ContextPath */, M);
 }
 

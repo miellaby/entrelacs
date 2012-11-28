@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     {"/unset+wave", "wave"},
     {"//lambda/x+x/let//myHeadOf/lambda/x/headOf+x/myHeadOf/escape/1/2/3/4+5", "/2/3/4+5"},
     {"/arrow//var+unBoundedCastedAsVar+2", "/+2"},
-    {"/load//escape/x+bound/arrow/x/equal//var+x", "/x/equal+bound"},
+    {"/load//escape/x+bound/arrow/x/is/var+x", "/x/is+bound"},
     {"@M", "/@M+/+"}, // (p (e k) with p = @M, e=EVE, k=EVE
     {"/let//x+1/let//y+2/let//state+@M//lambda/x+x+state", "//let+//state+@M+//lambda+/x+x+state+///y+2+//x+1++"}, // environnement loaded but no continuation
     {"/let//x+build/arrow/I/can//var+x/any/arrow/even/with/lambda/or+such", "/I/can/build/any/arrow/even/with/lambda/or+such"},
