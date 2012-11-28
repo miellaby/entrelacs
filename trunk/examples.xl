@@ -1,6 +1,6 @@
 /+Few URI path to experiment with the server
 
-// Set-up a shared demo context
+/Set-up a shared demo context
 /escalate/escape//mudo+chut/set//demo+89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//fall+demo/,/var+x+
 /escalate/escape//mudo+chut/set/demo/escape/paddock//x/arrow/escalate//escape+escape//demo+demo/var+x+
 /demo/hello+world
@@ -12,7 +12,7 @@ http://192.168.0.2:8008/set/upload/Content-Typed/text%2Fhtml+<html><body>Upload<
 http://192.168.0.2:8008/upload
 http://192.168.0.2:8008/$Hbc77e22820d15d71af5aa7635912045dc74b50e2223ac61e5967c5e5
 
-/+Experiments with fixed point combinator (recursion theory)
+/Experiments with fixed point combinator (recursion theory)
 
 /set/Y/lambda/f//lambda/x/f/lambda/v/let//a/x+x/a+v/lambda/x/f/lambda/v/let//a/x+x/a+v
 /set//set+rec/macro/binding/let//name/tailOf+binding/let//body/headOf+binding/arrow/set//var+name/Y/lambda//var+name+/var+body
@@ -20,5 +20,17 @@ http://192.168.0.2:8008/$Hbc77e22820d15d71af5aa7635912045dc74b50e2223ac61e5967c5
 /reverse//4+3/2+1
 /reverse/9/8/7/6/5/4/3/2/1+0
 
-/+reverse function by using the rlambda operator 
+/reverse function by using the rlambda operator 
 /set/reverse/rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x
+
+/map function
+/set/or/lambda/x/lambda/y/if/x/x/if/y/y+
+/set/map/lambda/sieve/lambda/fn/rlambda/list/let//rec+it/let//test/sieve+list/if/test//fn+list/let//test/isAtom+list/if/test//var+list/let//t/tailOf+list/let//t/rec+t/let//h/headOf+list/let//h/rec+h/arrow//var+t/var+h
+/set/isAtom/lambda/a/let//test/isPair+a/if/test/+true
+/set/clone/lambda/x/arrow//var+x/var+x
+///map+isAtom+clone+//1+2/3+4
+/set/equality/lambda/ref/lambda/x/equal/x+ref
+/set/constant/lambda/c/lambda/x+c
+///map/equality+1/constant+un//1+2/3+4
+/set/replace/lambda/from/lambda/to/lambda/in///map/equality+from/constant+to/var+in
+///replace+2+two//1+2/3+4
