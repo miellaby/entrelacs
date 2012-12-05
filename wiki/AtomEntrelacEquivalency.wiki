@@ -1,31 +1,31 @@
-#summary how atoms (especially binary sequences) can be stored within the EntrelacsSystem in accordance with the "everything is an arrow" paradigm
+#summary how atoms (especially binary sequences) are handled by an arrows based system without denying the "everything is an arrow" paradigm
 
 == entrelacs ==
 
-According to the ArrowParadigm, "everything is an arrow". In other words, any piece of information can be expressed in the form of a connected set of arrows linked to each others. Such constructs don't relay on "nodes". The system only deals with one building block: *arrows*.
+According to the [ArrowParadigm Arrow paradigm], _everything is an arrow_. It means that information is expressed in the form of *arrows* linked to each others. There is nothing like "nodes".
 
-Now, please look at these few signs on Wikipedia:
+However, arrows can be used to form signs. See:
   * http://en.wikipedia.org/wiki/Ouroboros
   * http://en.wikipedia.org/wiki/Taijitu
   * http://en.wikipedia.org/wiki/Triquetra
   * http://en.wikipedia.org/wiki/Celtic_knot
 
-These are so interlaced it's impossible to find smaller closed constructs inside. The EntrelacsSystem's theory helps us to understand why these ancestral signs look so attractive. One calls such non-decomposable arrows structures "entrelacs".
+The idea is to define a set of interlaced arrows so to make it impossible to find smaller closed constructs inside. One calls such a construct an "entrelacs".
 
-== entrelacs are terms ==
+== entrelacs are atoms ==
 
-An "entrelacs" is fully defined and can't be divided. It doesn't contain any smaller entrelacs. That's why we can say an entrelacs is equivalent to a term. 
+An "entrelacs" is fully defined and can't be divided. It doesn't contain any smaller entrelacs. One may say an entrelacs is equivalent to an atom. 
 
-And even more important: it's actually possible to identify each kind of entrelacs. For example, the arrow whose both ends links to itself is usually named "Ouroboros" (or Eve in Entrelacs documentation). Next time you'll see it, you'll be able to put a name on it. Considering two drawings of "Ouroboros", we may say that the second drawing depicts the same entrelacs as the first one.
+And even more important: it's actually possible to distinguish entrelacs from each other.
 
-Consequently, even in a pure space of relations, entrelacs can be used as terms to build a _Domain Specific Language_ dictionary.
+For example, the arrow whose both ends links to itself is usually named "_Ouroboros_" (or _Eve_ in Entrelacs documentation). Two drawings of "_Ouroboros_" are two physical representations of the same entrelacs.
 
-== atoms are entrelacs ==
+Consequently, even in a pure space of relations, entrelacs can be used as atoms so to define further _Domain Specific Languages_, like lambda-calculus.
 
-The set of entrelacs is a _*countable set*_. It implies that by defining an adequate bijection, one can easily prove that any binary sequence is equivalent to a corresponding "entrelacs". In short, one may say each binary sequence is a condensed form of some corresponding entrelacs.
+== atoms / entrelacs correspondence ==
 
-== equivalency ==
+The set of entrelacs is a _*countable set*_. It implies that by defining an adequate bijection, one can easily prove that any binary sequence is equivalent to a corresponding "entrelacs". In conclusion, a binary sequence may be seen as the condensed form of a corresponding entrelacs.
 
-The conclusion is that handling such binary sequences doesn't deny the fundamentals of Entrelacs. All in all, everything is an arrow, even raw data.
+== conclusion ==
 
-But it also implies raw data must be proceed like regular arrows, especially regarding arrows uniqueness within the ArrowsSpace.
+A practical conclusion is that handling binary sequences in an arrows based system doesn't deny the overall paradigm. All in all, everything is *still* an arrow. But it also implies that raw data should be proceed like regular arrows, especially regarding uniqueness and immutability.
