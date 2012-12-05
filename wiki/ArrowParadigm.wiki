@@ -120,7 +120,7 @@ From a theoretical perspective, _arrows_ are the only building blocks needed to 
 
 However, a realist system should handle raw data -like binary strings- as well.
 
-Thanks to the _Entrelacs-Atoms Correspondence_, this doesn't deny the initial paradigm as _data_ eventually correspond to arrows.
+Thanks to the [AtomEntrelacEquivalency  Entrelacs-Atoms Correspondence], this doesn't deny the initial paradigm as _data_ eventually correspond to arrows.
 
 <img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 
@@ -130,8 +130,6 @@ For instance, when assimilating the "hello world" character string, an arrow bas
  * there is no more than one copy of the string in the whole storage space, 
  * the string can't be modified in place,
  * one may browse all the arrows connected to this string, like the programs which make use of "Hello world".
-
-See EntrelacEquivalences for further reading.
 
 ==Orthogonal persistence==
 
