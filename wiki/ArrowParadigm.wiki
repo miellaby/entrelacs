@@ -3,22 +3,53 @@
 
 =Introduction=
 
-The *Entrelacs Manifesto* proposes to follow the _*Entrelacs paradigm*_. It consists in modeling information in the form of _arrows_ made constructs.
+The way current computer systems are managing information is shaped by the old [BoxValueParadigm Box/Value paradigm] which consists in turning information into graphs of boxed data values.
 
-==Arrows==
+The [http://code.google.com/p/entrelacs/ Entrelacs Manifesto] proposes to build up a brand new computing stack based upon a radically different paradigm introduced hereafter: the _*Arrow paradigm*_.
+
+====At a glance====
+ * no more than one building block to _tell_ everything: the *arrow*
+ * an arrow is an oriented pair of ... arrows. That's all.
+ * an arrow is considered in its "canonical" or "unique" form. Every definable arrow is mapped to at most one physical representation per system.
+ * an arrow is considered "immutable". The physical representation of an arrow can't be modified once placed.
+ * an arrow is "connected" with its ends. The system may browse these connections in both way to explore all the information attached to every arrow.
+ * one doesn't need anything else than arrows to represent information. The old "nodes vs. edges" duality from graph theory is rejected.
+ * But raw data can still be handled as particular sorts of arrows, that is re-entrant constructs of arrows named _entrelacs_.
+
+==Arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows1.png' align=right>   
 
-_Arrows_ are the only information building block one needs for to store information.
- 
-An _arrow_ is:
-  * _a pair of arrows_: both ends of an arrow are not _nodes_ but  *arrows* as well. *An arrow made structure consequently doesn't belong to [http://en.wikipedia.org/wiki/Graph_theory graph theory].*
-  *  _oriented_: the pair (A,B) is distinct from (B,A). Please note this point is not so critical as one might build oriented arrows by combining non-oriented arrows. 
-  * _unique_: There is only one arrow (A,B) from A to B, whatever A and B two formerly defined arrows. Self-referring arrows, like _entrelacs_ introduced hereafter, are also uniquely identified.
-  * _immutable_: An arrow is to be considered as a pure mathematical object. One can't "modify" a natural number like 2. So work arrows. One can't _modify_ them. But an _Entrelacs system_ may assimilate new arrows and dismiss old ones.
-  * _connected_: Within a knowledge system, a certain arrow may be connected to many children arrows. One must be able to efficiently browse all these children as it forms _emerging information_. It's the basis of a new kind of system abilities.
+    ===a pair===
+    An _arrow_ is basically a pair of arrows. *Arrow ends are not nodes but other arrows*. [http://en.wikipedia.org/wiki/Graph_theory Graph theory]^W^ doesn't cover arrow made constructs.
 
-==Arrow connectivity and wording==
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/></p>
+    ===oriented===
+
+    The pair (A,B) is distinct from (B,A).
+
+    Note that one may dismiss this requirement and build back oriented pairs by combining non-oriented pairs.
+
+    ===unique===
+    Syn. canonical, normed, hashed.
+
+    An arrow-based system stores only one physical representation of the arrow (A,B) from A to B, whatever A and B two known arrows.
+
+    Self-referring sets of arrows -that is _entrelacs_ as introduced hereafter- are also uniquely identified.
+
+    ===immutable===
+
+    An arrow is to be considered as a pure mathematical object. And in the same way that one can't "modify" a natural number like 2, one can't _modify_ an arrow within a system
+
+    The system dynamic goes by assimilating new arrows and forgetting old ones.
+
+    ===connected===
+
+    Inside a given system, a certain arrow may be connected to many _children_ arrows, that is arrows whose one of both ends are the considered arrow.
+
+    The system must be able to efficiently browse all these children as it forms _emerging information_. It's the basis of a new kind of system abilities.
+
+==Wordlist==
+
+<img align=right src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrow1.png'/>
 
 Each arrow is an oriented pair of arrows.
   * The first arrow is the _tail_.
@@ -36,86 +67,87 @@ Each arrow is an oriented pair of arrows.
 
 An _entrelacs_ is a set of intricated arrows forming an unique discrete connected construct. It means that any arrow from the set is the descendant/ancestor of all the other arrows of the set.
 
-In other words: a set of arrows E is an entrelacs if and only if whatever A & B two arrows of the set, A is a descendant/ancestor of B, and B is a descendant/ancestor of A.
+Theorem: (to be completed)
 
-One characterizes an entrelacs according to its topology, that is how many arrows it contains and how these arrows are connected together. One considers that *entrelacs which are isomorph are equal*.
+     A set of arrows E forms an entrelacs if and only if
+         * whatever A, B 2 arrows in E,
+         * A is a descendant B
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png   '/><br/>this entrelacs is named _Eve_ (Eve has no ancestor but itself)</p>
+One characterizes an entrelacs according to its topology, that is how many arrows it contains and how these arrows are connected together. One considers that *entrelacs which are isomorphic are identical*.
 
-<p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png'/><br/>an arrow from _yin-yang_ to _triskel_ (two distinct entrelacs)</p>
 
-Entrelacs act as atomistic pieces of information.
+
+|| Examples || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png ||
+|| || [http://en.wikipedia.org/wiki/Orobouros Orobouros]^W^ which has no ancestor but itself || [https://en.wikipedia.org/wiki/Yin_and_yang Yin and yang]^W^ and [Triskele], linked in a regular arrow ||
+
+=== Entrelacs-Atoms Correspondence ===
+
+Entrelacs act as atomic pieces of information.
  * They got finished boundaries
  * One can't identify smaller isolated components in them.
- * One can *enumerate* them.
+ * But one can *enumerate* them
+ * They are no reason to discern its inner component. For example, Yin and Yang are not discernible from each other (what's true for one is true for the other). One may see such an entrelacs as a unique arrow.
 
-To conclude, _Entrelacs_ are equivalent in all respects to [http://en.wikipedia.org/wiki/S-expression atoms in S-expression]^W^.
+To conclude, _Entrelacs_ are equivalent in all respects to *atoms* like those found in [http://en.wikipedia.org/wiki/S-expression S-expression]^W^.
 
-==Uniqueness==
+== Practicality considerations ==
 
-<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/average1.png' align='right'/>
+===Assimilation process===
 
-Each definable arrow is unique. The _entrelacs paradigm_ proposes to enforce this uniqueness within the information system. Each mathematically definable arrow is mapped at most once into the information storage space. In other world, arrows are [http://en.wikipedia.org/wiki/Singleton_pattern Singletons]^W^.
-||Arrows equality||
-|| queue(A) = queue(B) and head(A) = head(B) ⇔ A = B ||
+All the inputs (network events, user inputs, ...) must be _assimilated_ into arrows before being processed by the system. It guarantees arrows uniqueness by checking that no arrow copy exists in the storage space before adding one.
 
-==Immutability==
+This "Assimilation" process takes place at system boundaries. But it also occurs when low-level processes produce new data, e.g. numbers obtained by mathematical operations.
 
-As one arrow might be the ancestor of many other arrows, it can't be modified once stored in the information system.
+===Rooting===
 
-Modifying an statement within the knowledge system consists in _rooting_  a new arrow and unrooting the old one. This process luckily recycles most of the arrow ancestors thanks to the arrow uniqueness rule of assimilation.
+Considering a given system at given time, its whole knowledge might reside in a single arrow *S* whose definition would include all known arrows. *S* would be the only movable "variable" of the computer system.
 
-==Rooting==
+But, for practicability, one may rather represent the system knowledge as a set of distinct arrows, namely the _rooted arrows_.
 
-The whole system knowledge may be represented by a single arrow whose definition embeds all known information.
-
-But it's more convenient to represent the system top-level context as a set of distinct arrows.
-
-Such arrow are call _rooted arrows_. They simply are regular arrows flagged with a "root" mark, that is a "root" mutable boolean property added to the arrow definition.
+An arrow decorated with a "root" mark is considered "true" in the top-level context of the considered system.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png'/><br/>some rooted arrow. Note the check mark (Lambda) notation.</p>
 
-Arrows uniqueness induces rooted arrows are likely ancestors of other  rooted arrows as well.
+The way to assimilate arrows induces that rooted arrows are often ancestors of other rooted arrows as well.
 
-An Entrelacs system garbage collector simply needs to reclaim storage resources of arrows which are neither a rooted arrow nor an ancestor of any remaining rooted arrow.
-
-
-==Assimilation process==
-
-At each system iteration, system inputs (network events, user inputs, ...) are converted into arrows before being processed. This translation process is called "assimilation".
-
-"Assimilation" ensures arrows uniqueness. Any definable arrow must correspond to a _singleton_. There can't be more than one copy in the whole system space.
-
-"Assimilation" takes place at system boundaries. But it also deals with information produced by system processes, like when some software get a new number by adding two natural numbers.
+Thus, a system-level garbage collector must reclaim storage space by removing physical representation of arrows which are neither a rooted arrow nor an ancestor of any other rooted arrow.
 
 ==More complex objects==
 
-Though the _arrows paradigm_ only deals with _arrows_, it may handle raw data -like binary strings- as well. The point is that raw data are equivalent to natural numbers, which may in turn be seen as _Entrelacs_ as introduced before.
+From a theoretical perspective, _arrows_ are the only building block needed to represent information within a system.
+
+However, a system may handle raw data -like binary strings- as well.
+
+Thanks to the _Entrelacs-Atoms Correspondence_, this doesn't deny the _everything is an arrow_ credo as _data_ eventually correspond to arrows.
 
 <img align='right' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/bin1.png'/>
 
-So handling raw data within an arrows structure doesn't deny the _everything is an arrow_ credo since such _pieces of data_ correspond to arrows as well.
+More generally, the arrow paradigm may be extended to take into consideration advanced building blocks like _tuples_ or _bags_ *as long as* these complex objects are handled exactly in the same way as their equivalent arrow constructs, especially in terms of uniqueness, immutability, and connectivity.
 
-Mathematically, one says there is an *isomorphism* between the set of _entrelacs_ and the set of natural numbers.
-
-More generally, the arrow paradigm may be extended to take into consideration more complex information building blocks, like _tuples_ or _bags_.
-
-But these complex objects must be considered exactly in the same way as their arrow based equivalent constructs, especially in terms of uniqueness, and immutability, and connectivity.
-
-For instance, by considering the "hello world" character string:
- * there can't be more than one copy of this string in the whole information space, 
- * this string may not be modified in place,
- * one may browse all the arrows connected to this string, i.e. its children arrows.
+For instance, when assimilating the "hello world" character string, an arrow based system must ensure that:
+ * there is no more than one copy of the string in the whole storage space, 
+ * the string can't be modified in place,
+ * one may browse all the arrows connected to this string, like the programs which make use of "Hello world".
 
 See EntrelacEquivalences for further reading.
 
+====Orthogonal persistence===
+
+A practical arrow-based system must necessarily ensure the orthogonal persistence of arrows. It means that neither programs nor users must be concerned by information persistence. The management of RAM, disks, caches, pages, and all the related garbage collection mechanisms must be  a totally transparent process.
+
 ==Knowledge representation with arrows==
 
-To get useful information structures with arrows, one may adapt many classical models and even invent new ones. See ArrowModeling for further readings.
+To get useful information structures with arrows, one may adapt many classical meta-models or even invent new ones. See ArrowModeling for further readings.
 
-==Similarity with existing theories==
-Arrows are somewhat similar to [http://en.wikipedia.org/wiki/Cons cons cells]^W^, also represented as [http://c2.com/cgi/wiki?DottedPair dotted pairs]^W^. However, the Arrow definition doesn't relay on atoms, even if atoms are eventually reconsidered as closed re-entrant cons structures.
+==Similarity with existing concepts==
 
-In addition, the Entrelacs theory comprehends _cons structures_ as immutable and unique formal objects. The assimilation process described herein consequently perfoms [http://en.wikipedia.org/wiki/Hash_consing Hash consing]^W^ and arrows may be seen as _hashed cons_.
+Arrows are somewhat similar to [http://en.wikipedia.org/wiki/Cons cons cells]^W^, especially "hons" obtained by [http://en.wikipedia.org/wiki/Hash_consing "hash consing"]^W^. A definition of "hons" is given by the documentation of  [http://www.cs.utexas.edu/~moore/acl2/current/HONS.html the ACL2 system].
 
-All in all, the Entrelacs proposal consists in hash consing information globally and transparently within an homoiconic information system. The system also manages arrows connectivity, making the information graph _browsable_.
+All in all, the Entrelacs proposal simply consists in performing system-wide and transparent _hash consing_ of information, combined with transparent persistence and indexation.
+
+The only invention of this paradigm might be that one considers non reducible systems of equations as materials to "bootstrap" the information system. For example the equation
+_x = x x_ defines "Orobouros" while the simultaneous equations _x = y . y & y = x . x & x != y _ defines an arrow out of the Yin-Yang structure.
+
+It's like "lambda calculus" without free variables as one may use lambda abstractions as constants and alpha-equivalence to check constant equality.
+
+This approach is motivated by the desire to definitively merge relations and related elements in a single and same set. It leads to design a system where information is homogeneous and "scale-invariant" on the "meta" complexity scale.
