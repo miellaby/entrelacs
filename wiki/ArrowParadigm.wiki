@@ -78,7 +78,7 @@ One characterizes an entrelacs according to its topology, that is how many arrow
 
 
 || Examples: || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/eve.png || http://entrelacs.googlecode.com/svn/trunk/doc/pictures/composed1.png ||
-|| || [http://en.wikipedia.org/wiki/Orobouros Orobouros]^W^ which has no ancestor but itself || [https://en.wikipedia.org/wiki/Yin_and_yang Yin and yang]^W^ and [https://en.wikipedia.org/wiki/Triskele Triskele]^W^, linked by a regular arrow ||
+|| || [http://en.wikipedia.org/wiki/Orobouros Orobouros]^W^ which has no ancestor but itself ||<p align=center> 2 entrelacs linked by a regular arrow</p> ||
 
 === Entrelacs-Atoms Correspondence ===
 
