@@ -13,7 +13,8 @@
 #define LOG_CURRENT LOG_SPACE
 #include "log.h"
 
-
+/** statistic structure and variables
+ */
 static struct s_space_stats {
   int get;
   int root;
@@ -31,23 +32,31 @@ static struct s_space_stats {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static pthread_mutexattr_t api_mutex_attr;
-static pthread_mutex_t api_mutex = PTHREAD_MUTEX_INITIALIZER;
+/** Things to make the API parallelizable 
+ */
+static pthread_mutexattr_t apiMutexAttr;
+static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define LOCK() pthread_mutex_lock(&api_mutex)
-#define LOCK_END() pthread_mutex_unlock(&api_mutex)
-#define LOCK_OUT(X) (pthread_mutex_unlock(&api_mutex), X)
+#define LOCK() pthread_mutex_lock(&apiMutex)
+#define LOCK_END() pthread_mutex_unlock(&apiMutex)
+#define LOCK_OUT(X) ((Arrow)pthread_mutex_unlock(&apiMutex), X)
+#define LOCK_OUT64(X) ((uint64_t)pthread_mutex_unlock(&apiMutex), X)
+#define LOCK_OUTSTR(X) ((char*)pthread_mutex_unlock(&apiMutex), X)
 
 
-static pthread_cond_t api_now_dormant;   // Signaled when all thread are ready to commit
-static pthread_cond_t api_now_active;    // Signaled once a thread has finished commit
-static int api_activity = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
-#define ACTIVITY_BEGIN() (LOCK(), (!api_activity++ ? (void)pthread_cond_signal(&api_now_active) : (void)0), LOCK_END())
-#define ACTIVITY_OVER() (LOCK(), (api_activity ? (--api_activity ? (void)0 : (void)pthread_cond_signal(&api_now_dormant)) : (void)0), LOCK_END())
-#define WAIT_DORMANCY() (LOCK(), (api_activity > 0 ? (void)pthread_cond_wait(&api_now_dormant, &api_mutex) : (void)0))
+static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
+static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
+static int apiActivity = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
+static int spaceGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC done
+static int memCommitNeeded = 0; // 0->1 when a thread is wait for commit, 1->0 when commit done
+
+
+#define ACTIVITY_BEGIN() (LOCK(), (!apiActivity++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0), LOCK_END())
+#define ACTIVITY_OVER() (LOCK(), (apiActivity ? (--apiActivity ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0), LOCK_END())
+#define WAIT_DORMANCY() (LOCK(), (apiActivity > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0))
 
 /*
- * Size limit where data is stored as "blob" rather than "tag"
+ * Size limit from where data is stored as "blob" rather than "tag"
  */
 #define BLOB_MINSIZE 100
 
@@ -366,7 +375,7 @@ static void looseStackRemove(Address a) {
 
 /* hash function to get H1 from a regular pair definition */
 uint64_t hashPair(uint64_t tail, uint64_t head) {
-   return PRIM1 + tail << 20 + head << 4 + tail + head; // (tail << 20) ^ (tail >> 4) ^ head;
+   return PRIM1 + (tail << 20) + (head << 4) + tail + head; // (tail << 20) ^ (tail >> 4) ^ head;
 }
 
 /* hash function to get H1 from a tag arrow definition */
@@ -767,7 +776,7 @@ uint64_t xl_checksumOf(Arrow a) {
     Cell cell = mem_get(a);
     ONDEBUG((show_cell('R', a, cell, 0)));
     if (!cell_isArrow(cell))
-        return LOCK_OUT(0);
+        return LOCK_OUT64(0);
 
 
     // General case
@@ -777,7 +786,7 @@ uint64_t xl_checksumOf(Arrow a) {
     } else if (checksumCache[a % CHECKSUM_CACHE_SIZE].a == a) { // cache hit!
         uint64_t checksum = checksumCache[a % CHECKSUM_CACHE_SIZE].checksum;
         // DEBUGPRINTF("Cache('checksum(%06x)) = %016llx", a, checksum);
-        return LOCK_OUT(checksum);
+        return LOCK_OUT64(checksum);
     }
 
     if (cell_isPair(cell)) {
@@ -789,7 +798,7 @@ uint64_t xl_checksumOf(Arrow a) {
         checksumCache[a % CHECKSUM_CACHE_SIZE].a = a;
         checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = checksum;
         // DEBUGPRINTF("Cache(checksum(%06x), %016llx))", a, checksum);
-        return LOCK_OUT(checksum);
+        return LOCK_OUT64(checksum);
 
     } else if (cell_isTag(cell)) {
         uint32_t tagLength;
@@ -799,7 +808,7 @@ uint64_t xl_checksumOf(Arrow a) {
         checksumCache[a % CHECKSUM_CACHE_SIZE].a = a;
         checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = checksum;
         // DEBUGPRINTF("Cache(checksum(%06x), %016llx))", a, checksum);
-        return LOCK_OUT(checksum);
+        return LOCK_OUT64(checksum);
         
     } else if (cell_isBlob(cell)) {
         uint32_t blobHashLength;
@@ -809,14 +818,14 @@ uint64_t xl_checksumOf(Arrow a) {
         checksumCache[a % CHECKSUM_CACHE_SIZE].a = a;
         checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = checksum;
         // DEBUGPRINTF("Cache(checksum(%06x), %016llx))", a, checksum);
-        return LOCK_OUT(checksum);
+        return LOCK_OUT64(checksum);
 
     } else {
         assert(0);
         checksumCache[a % CHECKSUM_CACHE_SIZE].a = a;
         checksumCache[a % CHECKSUM_CACHE_SIZE].checksum = 0;
         // DEBUGPRINTF("Cache(checksum(%06x, %016llx))", a, 0);
-        return LOCK_OUT(0);
+        return LOCK_OUT64(0);
     }
 }
 
@@ -1261,7 +1270,7 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
     Cell cell = mem_get(a);
     ONDEBUG((show_cell('R', a, cell, 0)));
     if (!cell_isArrow(cell))
-        return LOCK_OUT(NULL);
+        return LOCK_OUTSTR(NULL);
 
     Cell catBits = cell_getCatBits(cell);
 
@@ -1339,13 +1348,13 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
     digest = realloc(digest, 1 + digestLength);
     if (l) *l = digestLength;
 
-    return LOCK_OUT(digest);
+    return LOCK_OUTSTR(digest);
 }
 
 char* xl_uriOf(Arrow a, uint32_t *l) {
     LOCK();
     char *str = toURI(a, l);
-    return LOCK_OUT(str);
+    return LOCK_OUTSTR(str);
 }
 
 Arrow xl_digestMaybe(char* digest) {
@@ -2481,20 +2490,35 @@ void xl_begin() {
     ACTIVITY_BEGIN();
 }
 
-void xl_commit() {
-    TRACEPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
-    unsigned i;
-    ACTIVITY_OVER();
-    WAIT_DORMANCY();
-    for (i = looseStackSize; i > 0; i--) { // loose stack scanning
+/** type an arrow as a "state" arrow.
+ *  TODO: is it necessary?
+ */
+Arrow xl_state(Arrow a) {
+    static Arrow systemStateBadge = EVE;
+    if (systemStateBadge == EVE) { // to avoid locking in most cases
+            LOCK();
+            if (systemStateBadge == EVE) {
+                systemStateBadge = xl_atom("XLsTAT3");
+                xl_root(systemStateBadge);
+
+                // prevent previous session saved states to survive the reboot.
+                xl_childrenOfCB(systemStateBadge, unrootChild, EVE);
+            }
+            LOCK_END();
+    }
+    return xl_pair(systemStateBadge, a);
+}
+
+
+void spaceGC() {
+    for (unsigned i = looseStackSize; i > 0; i--) { // loose stack scanning
         Arrow a = looseStack[i - 1].a;
         if (xl_isLoose(a)) { // a loose arrow is removed NOW
             forget(a, looseStack[i - 1].checksum);
         }
     }
-    mem_commit();
 
-    LOGPRINTF(LOG_WARN, "xl_commit done, looseStackSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
+    LOGPRINTF(LOG_WARN, "spaceGC done, looseStackSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
         looseStackSize, space_stats.get, space_stats.root,
         space_stats.unroot, space_stats.new, 
         space_stats.pair, space_stats.atom, space_stats.found,
@@ -2503,12 +2527,58 @@ void xl_commit() {
 
     zeroalloc((char**) &looseStack, &looseStackMax, &looseStackSize);
 
+    spaceGCNeeded = 0;
+}
+
+void xl_over() {
+    spaceGCNeeded = 1;
+
+    ACTIVITY_OVER();
+    do {
+        WAIT_DORMANCY();
+    } while (apiActivity > 0); // spurious wakeup check
+    
+    if (spaceGCNeeded) {
+        spaceGC();
+    }
+    LOCK_END();
+}
+
+void xl_commit() {
+    TRACEPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
+    spaceGCNeeded = 1;
+    memCommitNeeded = 1;
+    ACTIVITY_OVER();
+    do {
+        WAIT_DORMANCY();
+    } while (apiActivity > 0); // spurious wakeup check
+    
+    if (spaceGCNeeded) {
+        spaceGC();
+    }
+    
+    if (memCommitNeeded) {
+        mem_commit();
+        memCommitNeeded = 0;
+    }
     LOCK_END();
     ACTIVITY_BEGIN();
 }
 
-void xl_over() {
-    ACTIVITY_OVER();
+/** xl_yield */
+void xl_yield(Arrow a) {
+    Arrow stateArrow = EVE;
+    TRACEPRINTF("xl_yield (looseStackSize = %d)", looseStackSize);
+    if (a != EVE) {
+        stateArrow = xl_state(a);
+        xl_root(stateArrow);
+    }
+    
+    xl_over();
+    ACTIVITY_BEGIN();
+    if (stateArrow != EVE) {
+        xl_unroot(stateArrow);
+    }
 }
 
 /** printf extension for arrow (%O specifier) */
@@ -2542,12 +2612,12 @@ int xl_init() {
     if (xl_init_done) return 0;
     xl_init_done = 1;
 
-    pthread_cond_init(&api_now_active, NULL);
-    pthread_cond_init(&api_now_dormant, NULL);
+    pthread_cond_init(&apiNowActive, NULL);
+    pthread_cond_init(&apiNowDormant, NULL);
 
-    pthread_mutexattr_init(&api_mutex_attr);
-    pthread_mutexattr_settype(&api_mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
-    pthread_mutex_init(&api_mutex, &api_mutex_attr);
+    pthread_mutexattr_init(&apiMutexAttr);
+    pthread_mutexattr_settype(&apiMutexAttr, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutex_init(&apiMutex, &apiMutexAttr);
 
     int rc = mem_init();
     if (rc < 0) { // problem
@@ -2574,10 +2644,10 @@ void xl_destroy() {
     // TODO complete
     free(looseStack);
     
-    pthread_cond_destroy(&api_now_active);
-    pthread_cond_destroy(&api_now_dormant);
-    pthread_mutexattr_destroy(&api_mutex_attr);
-    pthread_mutex_destroy(&api_mutex);
+    pthread_cond_destroy(&apiNowActive);
+    pthread_cond_destroy(&apiNowDormant);
+    pthread_mutexattr_destroy(&apiMutexAttr);
+    pthread_mutex_destroy(&apiMutex);
 
     mem_destroy();
 }

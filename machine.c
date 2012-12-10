@@ -23,7 +23,7 @@ static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0,
    continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0,
         tempVar, tailOfOperator = EVE, headOfOperator = EVE;
 
-static void machine_init();
+static void machine_init(Arrow);
 
 Arrow tmp(Arrow M) {
   char memRef[64]; 
@@ -803,7 +803,7 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
    return xl_reduceMachine(CM, atomn(digestSize, digest));
 }
 
-static void machine_init() {
+static void machine_init(Arrow CM) {
     char* keyword;
     XLCallBack callBack;
 
@@ -909,11 +909,12 @@ static void machine_init() {
         xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setTailWithHeadIn/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
 
     // System Init call
-    xl_eval(EVE, xl_uri("/init+"));
+    xl_eval(EVE, pair(atom("init"), pair(escape, CM))); // we pass CM at parameter to preserve it from GC
 }
 
 Arrow xl_run(Arrow C, Arrow M) {
-    machine_init();
+    machine_init(pair(C,M));
+
     // M = //p/e+k
     chainSize = 0;
     Arrow w;
@@ -939,6 +940,7 @@ Arrow xl_run(Arrow C, Arrow M) {
         }
 
         M = transition(C, M);
+        xl_yield(pair(C,M));
     }
 
     if (chainSize >= 500) {
@@ -962,7 +964,6 @@ Arrow xl_run(Arrow C, Arrow M) {
 
 Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
     TRACEPRINTF("cl_eval C=%O p=%O", C, p);
-    machine_init();
     Arrow M = a(p, a(EVE, EVE));
     return xl_run(C /* ContextPath */, M);
 }

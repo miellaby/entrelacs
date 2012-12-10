@@ -37,6 +37,11 @@ Current changes:
 
 
 Most recent previous changes:
+ * xl_yield(arrow state) (in replacement of xl_over)
+   * sync with all threads then GC
+   * but in addition: preserve "state" arrow from GC (temporary root)
+   * TBC: maybe timeout for yielding
+   * is used between each transition of the machine
  * lowest level operators renamed to reflect their behavior
  * example.xl
  * rlambda (closure can access to itself as "it")
@@ -82,6 +87,7 @@ Future:
    * use in the demo
 
 In study:
+ * the very first child should be attached to the main arrow definition, as most non-rooted arrow are made to be attached to at least one child.
  * a session is actually a continuation
  * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
  * xls_set: create less arrows (but also less indexation)

@@ -256,13 +256,13 @@ static void *event_handler(enum mg_event event,
             content_type = contentTypeCopy;
             output = xl_headOf(xl_headOf(output));
             dputs("Content-Type: %s, output: %O", content_type, output);
-        } else if (isAtomic) {
-            Arrow application = xl_pair(xl_atom("Content-Type"), xl_pair(xl_atom("escape"), output));
-            Arrow rta = xl_eval(session, application);
-            if (rta != EVE && xl_isAtom(rta)) {
-               contentTypeCopy = xl_strOf(rta);
-               content_type = contentTypeCopy;
-            }
+//        } else if (isAtomic) {
+//            Arrow application = xl_pair(xl_atom("Content-Type"), xl_pair(xl_atom("escape"), output));
+//            Arrow rta = xl_eval(session, application);
+//            if (rta != EVE && xl_isAtom(rta)) {
+//               contentTypeCopy = xl_strOf(rta);
+//               content_type = contentTypeCopy;
+//            }
         }
         uint32_t content_length;
         char* content = NULL;
@@ -293,10 +293,8 @@ static void *event_handler(enum mg_event event,
     } else {
         processed = NULL;
     }
-    
-    xl_commit();
+    //xl_commit();
     xl_over();
-
     return processed;
 }
 
@@ -346,10 +344,13 @@ int main(void) {
   dputs("server started on ports %s.",
          mg_get_option(ctx, "listening_ports"));
 
+
   // TODO deep house cleaning at start-up
   while (1) {
       sleep(HOUSECLEANING_PERIOD);
+      
       xl_begin();
+
       time_t now = time(NULL);
       dputs("House Cleaning ...");
 
@@ -387,13 +388,15 @@ int main(void) {
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           }
+      
       }
-      xl_freeEnum(e);
-      xl_commit();
       xl_over();
+      xl_freeEnum(e);
       dputs("House Cleaning done.");
   }
   dputs("%s", "server stopped.");
+
+  xl_over();
 
   return EXIT_SUCCESS;
 }
