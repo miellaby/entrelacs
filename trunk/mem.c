@@ -123,9 +123,10 @@ Cell mem_get_advanced(Address a, uint16_t* stamp_p) {
   }
 
   if (memIsChanged(m)) {
-    // FIXME: should we cache a cell read in place of modified cell?
-    if (stamp_p != NULL) *stamp_p = pokes;
-    return mem0_get(a);
+    // FIXME: we're obliged to cache a cell read in place of modified cell
+    // because mem_write doesn't work otherwise.
+    // if (stamp_p != NULL) *stamp_p = pokes;
+    // return mem0_get(a);
         
     // When replacing a modified cell, move it to reserve
     Address moved = memPageOf(m) * MEMSIZE + offset;

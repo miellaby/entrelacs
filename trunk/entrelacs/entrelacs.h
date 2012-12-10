@@ -82,8 +82,9 @@ Arrow xl_root(Arrow); ///< root an arrow.
 Arrow xl_unroot(Arrow); ///< unroot an arrow.
 
 /* Transaction */
-void xl_begin(); ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_over)
-void xl_over(); ///< decrement the global transaction counter. For example, before thread termination. Any previously assimilated arrow should be assimilated again.
+void xl_begin();  ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_over)
+void xl_yield(Arrow); ///< perform GC, only preserving one "state" arrow. wait for all threads being ready.
+void xl_over();   ///< decrement the global transaction counter. For example, before thread termination. Any previously assimilated arrow should be assimilated again.
 void xl_commit(); ///< commit. wait for all transactions being over.
                   ///< Previously assimilated arrow must be assimilated again as they may have been forgotten if loose.
 
