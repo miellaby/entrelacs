@@ -6,12 +6,12 @@ You can experiment with the arrow paradigm using only a sheet of paper and a pen
  # takes information to pieces so to get a structure of pairs of atomic concepts. For example: (babies (drink milk)).
  # Put atomic concepts on the paper by using some signs (words, numbers or doodles). But be careful, represent each concept only once.
  # Then draw arrows between paired signs, like (drink → milk)
- # Then draw arrows between paired arrows, like (babies (make → milk))
+ # Then draw arrows between paired arrows, like (babies → (make → milk))
  # repeat previous steps til all arrows are drawn. But be careful, don't do as with _Writing_! Every arrow (e.g. make → milk) must be drawn only once! A pencil drawing doesn't mimic an arrows space if several arrows share the same ends.
 
 Once finished, you may enjoy your work by noticing that
  * Whatever a value (says _milk_), it is connected to all the information it belongs to.
- * It works the same with a relation (says _drink milk_).
+ * It works the same with a relation (says _drink  →  milk_).
  * One can add new information without erasing or modifying anything already drawn! More specifically, one can consider an existing piece of information in a more abstract level. Says: (at → (sea → level))  → ((water → (boiling → point)) → 100°C)
 
 Extra step: replace signs by _entrelacs_, that is discrete closed structures of arrows like 'orobouros', 'Yin-Yang', 'Triketra'... Now there's only arrows on your page and yet the drawing still represents information.
