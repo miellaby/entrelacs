@@ -8,7 +8,7 @@
 # make run.testmachine
 # make entrelacsd
 # make run.testshell
-.PHONY: help server clean all clean.% test% run.% start
+.PHONY: help server clean all clean.% test% run.% tests run start
 CPPFLAGS += -std=c99 -pthread
 LDFLAGS += -lpthread
 
