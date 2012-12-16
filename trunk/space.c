@@ -51,9 +51,9 @@ static int spaceGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC
 static int memCommitNeeded = 0; // 0->1 when a thread is wait for commit, 1->0 when commit done
 
 
-#define ACTIVITY_BEGIN() (LOCK(), (!apiActivity++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0), LOCK_END())
-#define ACTIVITY_OVER() (LOCK(), (apiActivity ? (--apiActivity ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0), LOCK_END())
-#define WAIT_DORMANCY() (LOCK(), (apiActivity > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0))
+#define ACTIVITY_BEGIN() (!apiActivity++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
+#define ACTIVITY_OVER() (apiActivity ? (--apiActivity ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0)
+#define WAIT_DORMANCY() (apiActivity > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0)
 
 /*
  * Size limit from where data is stored as "blob" rather than "tag"
@@ -2487,7 +2487,9 @@ static void forget(Arrow a, uint64_t hash) {
 }
 
 void xl_begin() {
+    LOCK();
     ACTIVITY_BEGIN();
+    LOCK_END();
 }
 
 /** type an arrow as a "state" arrow.
@@ -2510,7 +2512,7 @@ Arrow xl_state(Arrow a) {
 }
 
 
-void spaceGC() {
+static void spaceGC() {
     for (unsigned i = looseStackSize; i > 0; i--) { // loose stack scanning
         Arrow a = looseStack[i - 1].a;
         if (xl_isLoose(a)) { // a loose arrow is removed NOW
@@ -2528,11 +2530,15 @@ void spaceGC() {
     zeroalloc((char**) &looseStack, &looseStackMax, &looseStackSize);
 
     spaceGCNeeded = 0;
+    
+    if (mem_yield())
+        memCommitNeeded = 0;
 }
 
 void xl_over() {
     spaceGCNeeded = 1;
 
+    LOCK();
     ACTIVITY_OVER();
     do {
         WAIT_DORMANCY();
@@ -2548,6 +2554,8 @@ void xl_commit() {
     TRACEPRINTF("xl_commit (looseStackSize = %d)", looseStackSize);
     spaceGCNeeded = 1;
     memCommitNeeded = 1;
+    
+    LOCK();
     ACTIVITY_OVER();
     do {
         WAIT_DORMANCY();
@@ -2561,8 +2569,9 @@ void xl_commit() {
         mem_commit();
         memCommitNeeded = 0;
     }
-    LOCK_END();
     ACTIVITY_BEGIN();
+    LOCK_END();
+    
 }
 
 /** xl_yield */
@@ -2573,9 +2582,8 @@ void xl_yield(Arrow a) {
         stateArrow = xl_state(a);
         xl_root(stateArrow);
     }
-    
     xl_over();
-    ACTIVITY_BEGIN();
+    xl_begin();
     if (stateArrow != EVE) {
         xl_unroot(stateArrow);
     }

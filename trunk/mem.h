@@ -42,6 +42,11 @@ Cell mem_get_advanced(Address, uint16_t* stamp_p);
  */
 void mem_commit();
 
+/** yield current micro-transaction, allowing disk flush
+ return !0 if disk flush occurs because MEMn resources are scare
+ */
+int mem_yield();
+
 /** get a counter of write operation
  @return Pokes
  */

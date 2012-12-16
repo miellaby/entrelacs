@@ -249,6 +249,14 @@ void mem_commit() {
   reserveHead = 0;
 }
 
+int mem_yield() {
+    if (reserveHead > reserveSize  / 4) {
+        mem_commit();
+        return 1;
+    }
+    return 0;
+}
+
 uint32_t mem_pokes() {
     return pokes;
 }

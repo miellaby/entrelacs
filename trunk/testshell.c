@@ -15,10 +15,10 @@ int main(int argc, char **argv) {
     xl_begin();
 //   Arrow p = xls_url(EVE, buffer);
     Arrow p = xl_uri(buffer);
-    if (!p) continue;
-    Arrow r = xl_eval(EVE, p);
-    fprintf(stderr, "eval %O =\n\t%O\n", p, r);
-    xl_commit();
+    if (p) {
+        Arrow r = xl_eval(EVE, p);
+        fprintf(stderr, "eval %O =\n\t%O\n", p, r);
+    }
     xl_over();
   }
 
