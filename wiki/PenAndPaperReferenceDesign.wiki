@@ -2,7 +2,7 @@
 
 You can experiment with the arrow paradigm using only a sheet of paper and a pencil.
 
- # Choose an interesting sample of information. I suggest an intricate set of predicates like: "cows make milk" ; "babies drink milk" ; "cows drink water" ; "drink is a verb" ; "water boiling point is 100°C", etc.
+ # Pick a sample of information. Prefer some intricate predicates like: "cows make milk" ; "babies drink milk" ; "cows drink water" ; "drink is a verb" ; "water boiling point is 100°C", etc.
  # takes information to pieces so to get a structure of pairs of atomic concepts. For example: (babies (drink milk)).
  # Put atomic concepts on the paper by using some signs (words, numbers or doodles). But be careful, represent each concept only once.
  # Then draw arrows between paired signs, like (drink → milk)
