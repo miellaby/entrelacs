@@ -5,6 +5,8 @@
 
 The way current computer systems are managing information is shaped by the old [BoxValueParadigm Box/Value paradigm] which consists in turning information into graphs of boxed data values.
 
+<img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/versus.png'/>
+
 The [http://code.google.com/p/entrelacs/ Entrelacs Manifesto] proposes to build up a brand new computing stack based upon a radically different paradigm introduced hereafter: the _*Arrow paradigm*_.
 
 ====At a glance====
