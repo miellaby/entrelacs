@@ -1,22 +1,26 @@
-Question: Since an arrow can easily be modeled as a node with two edges, an arrow system is nothing else than a particular kind of graphs. Where is the novelty then?
+===Question===
+A computer is equivalent to a Turing Machine whatever its inner engineering. So, what makes you claim that Entrelacs systems will be somewhat "clever" that current computer systems?
 
-Answer:
+===Answer===
+You've failed into the "[http://c2.com/cgi/wiki?TuringTrap Turing Trap]".
 
-    Arrows structures may be -and have probably been- studied as a constrained subset of graphs.
+-----
+
+===Question===
+An arrow may be modeled as a node with two edges. An arrow structure is consequently a particular kind of graph. Where is the novelty then?
+
+===Answer===
+You've failed into the "Graph Theory Trap" (I've just invented it :) ). 
+
+    More seriously, arrows structures may be -and have probably been- studied as a constrained subset of graphs.
 
     But this approach is likely going to miss the key specificity of the Entrelacs paradigm. Arrow constructs are primarily seen as a set of enumerable objects by themselves. The paradigm shift consists in directly handle each of these objects uniquely and individually.
 
     Concretely, an Entrelacs system constantly and incrementally maintains the [http://en.wikipedia.org/wiki/Transitive_reduction Transitive Reduction]^W^ of the overall graph formed by stored arrows constructs.
 
-    The good new is that this task can be actually trivial (reads O(1) complexity) by cautiously avoiding existing graph-oriented technologies.
+    The good new is that this task may actually be trivial (reads O(1) complexity) as long as one cautiously avoids graph-oriented technologies.
 
 -----
+===Other questions?===
 
-Question: Any computer is equivalent to a Turing Machine whatever its inner engineering. So, what makes you claim that Entrelacs systems will be "clever" that current computer systems?
-
-Answer:
-    You failed into the "[http://c2.com/cgi/wiki?TuringTrap Turing Trap]".
-
-
------
-Other questions? Try http://www.reddit.com/r/entrelacs
+Try http://www.reddit.com/r/entrelacs
