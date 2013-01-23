@@ -203,7 +203,7 @@ static void *event_handler(enum mg_event event,
         if (input == NIL) {
             free(session_id);
             mg_printf(conn, "HTTP/1.1 %d %s\r\n"
-                      "Access-Control-Allow-Origin: *\r\n",
+                      "Access-Control-Allow-Origin: *\r\n"
                       "Content-Type: text/plain\r\n"
                       "Content-Length: 0\r\n"
                       "\r\n", 400, "BAD REQUEST");
@@ -276,7 +276,7 @@ static void *event_handler(enum mg_event event,
         }
 
         mg_printf(conn, "HTTP/1.1 200 OK\r\nCache: no-cache\r\n"
-                  "Access-Control-Allow-Origin: *\r\n",
+                  "Access-Control-Allow-Origin: *\r\n"
                   "Content-Location: %s\r\n"
                   "Content-Length: %d\r\n",
                   output_url,
