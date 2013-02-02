@@ -205,9 +205,10 @@ static void *event_handler(enum mg_event event,
             mg_printf(conn, "HTTP/1.1 %d %s\r\n"
                       "Access-Control-Allow-Origin: %s\r\n"
                       "Access-Control-Allow-Credentials: true\r\n"
+                      "Access-Control-Allow-Credentials: true\r\n"
                       "Content-Type: text/plain\r\n"
                       "Content-Length: 0\r\n"
-                      "\r\n", 400, mg_get_header(conn, "Origin"),
+                      "\r\n", 400, mg_get_header(conn, "Origin") || "*",
                       "BAD REQUEST");
             mg_write(conn, "", (size_t)0);
             xl_over();
@@ -282,7 +283,7 @@ static void *event_handler(enum mg_event event,
                   "Access-Control-Allow-Credentials: true\r\n"
                   "Content-Location: %s\r\n"
                   "Content-Length: %d\r\n",
-                  mg_get_header(conn, "Origin"),
+                  mg_get_header(conn, "Origin") || "*",
                   output_url,
                   content_length);
         if (content_type) {
