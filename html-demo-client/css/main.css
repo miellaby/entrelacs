@@ -70,7 +70,20 @@ textarea {
       padding-right: 10px;
       display: none;
 }
-.close {
+
+.pairDiv .close {
+    z-index: 15;
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    line-height: 8px;
+    font-size: 10px;
+    margin-left: 15px;
+    opacity: 0.3;
+}
+
+
+.atomDiv .close {
     z-index: 15;
     position: absolute;
     right: 7px;
@@ -104,10 +117,11 @@ textarea {
 
 #toaster {
     position: absolute;
-    background-color: #666;
+    background-color: #A66;
     foreground-color: white;
     opacity: 0.25;
     border 0;
+    border-radius: 5px;
 }
 
 
@@ -135,13 +149,13 @@ textarea {
 .hook {
    z-index: 15;
    width: 56px;
-   height: 30px;
+   height: 24px;
 }
 
 .atomDiv .hook {
    position: absolute;
    margin-left: -28px;
-   bottom: -30px;
+   bottom: -24px;
    left: 50%;
 }
 
@@ -154,7 +168,7 @@ textarea {
    z-index: 15;
    position: absolute;
    margin-left: -28px;
-   bottom: -30px;
+   bottom: -24px;
    left: 50%;
 }
 
@@ -165,9 +179,8 @@ textarea {
    bottom: 0px;
    border-style: solid;
 }
-
 .tailDiv {
-   left: 0px;
+   right: 50%;
    width: 50%;
    border-left-width: 2px;
    border-bottom-width: 2px;
@@ -186,7 +199,7 @@ textarea {
 }
 
 .headDiv {
-   right: 0;
+   left: 50%;
    width: 50%;
    border-left-width: 0;
    border-bottom-width: 2px;
@@ -195,7 +208,27 @@ textarea {
    border-bottom-right-radius: 6px;
 }
 
+.unfoldTail, .unfoldHead {
+   position: absolute;
+   border-style: plain;
+   background-color: black;
+   color: white;
+   border-radius: 6px;
+   width: 30px;
+   height: 25px;
+   bottom: -10px;
+}
 
+.unfoldTail {
+  right: 50%;
+  margin-right: 25px;
+}
+
+.unfoldHead {
+  left: 50%;
+  margin-left: 25px;
+}
+ 
 
 
 
