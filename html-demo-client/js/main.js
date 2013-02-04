@@ -579,7 +579,7 @@ function moveArrow(d, offsetX, offsetY) {
        if (d.data('head')) {
            moveArrow(d.data('head'), offsetX, offsetY);
        }
-       if (d.data('tail') && !(d.data('head') && d.data('tail')[0] !== d.data('head')[0])) {
+       if (d.data('tail') && !(d.data('head') && d.data('tail')[0] === d.data('head')[0])) {
            moveArrow(d.data('tail'), offsetX, offsetY);
        }
     }
