@@ -86,6 +86,21 @@ Arrow xls_isRooted(Arrow c, Arrow a);
 */
 Arrow xls_unroot(Arrow c, Arrow a);
 
+
+/** traditional edge storage
+ *  root $destination in /$c+$source context path
+ */
+Arrow xls_link(Arrow c, Arrow source, Arrow destination);
+
+/** traditional edge removal
+ *  unroot $destination from /$c+$source context path
+ */
+Arrow xls_unlink(Arrow c, Arrow source, Arrow destination);
+
+/** returns a list-arrow of all rooted arrows within context path "/$c+$key"
+*/
+Arrow xls_partnerOf(Arrow c, Arrow slot);
+
 /** unroot all arrows within a context defined by its path $c,
     and recursivly reset any sub-contexts.
 */

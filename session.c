@@ -122,6 +122,21 @@ void xls_reset(Arrow c) {
     xl_freeEnum(childrenEnum);
 }
 
+/** traditional edge storage
+ *  root $destination in /$c+$source context path
+ */
+Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
+    return xls_root(a(c, source), destination);
+}
+
+/** traditional edge removal
+ *  unroot $destination from /$c+$source context path
+ */
+Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
+    return xls_unroot(a(c, source), destination);
+}
+
+
 /** traditional "set-key-value".
 
      1) unroot any arrow from $c+$key context path
@@ -131,7 +146,7 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     TRACEPRINTF("xls_set(%O,%O,%O)", c, key, value);
 
     xls_unset(c, key);
-    return xls_root(a(c, key), value);
+    return xls_link(c, key, value);
 }
 
 /** traditional "unset-key".
@@ -351,6 +366,8 @@ char* xls_urlOf(Arrow s, Arrow e, int depth) {
     return toURL(locked, e, depth, &l);
 }
 
+/** returns a list-arrow of all rooted arrows within context path "/$c+$key"
+*/
 Arrow xls_partnersOf(Arrow c, Arrow key) {
     Arrow value = NIL;
     Arrow keyContext = pairMaybe(c, key);

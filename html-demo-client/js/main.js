@@ -218,7 +218,7 @@ function assimilateArrow(d) {
        toast(d, data);
        // save position
        var p = d.position();
-       var instruction = server + 'root/position+' + d.data('url') + '/escape/' + parseInt(p.left) + '+' + parseInt(p.top);
+       var instruction = server + 'root/position/escape/' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
        $.ajax({url: instruction, xhrFields: { withCredentials: true }});
     });
 }
