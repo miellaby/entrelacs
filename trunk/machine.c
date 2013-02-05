@@ -683,6 +683,20 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
     return xl_reduceMachine(CM, list);
 }
 
+Arrow linkTailWithHeadHook(Arrow CM, Arrow hookParameter) {
+   Arrow C = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   Arrow r = xls_link(C, xl_tailOf(arrow), xl_headOf(arrow));
+   return xl_reduceMachine(CM, headOf(r)); // one doesn't show the context
+}
+
+Arrow unlinkTailAndHeadHook(Arrow CM, Arrow hookParameter) {
+   Arrow C = tailOf(CM);
+   Arrow arrow = xl_argInMachine(CM);
+   Arrow r = xls_unlink(C, xl_tailOf(arrow), xl_headOf(arrow));
+   return xl_reduceMachine(CM, headOf(r)); // one doesn't show the context
+}
+
 Arrow partnersOfHook(Arrow CM, Arrow hookParameter) {
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
@@ -877,6 +891,8 @@ static void machine_init(Arrow CM) {
         {"partnersOf", partnersOfHook},
         {"root", rootHook},
         {"unroot", unrootHook},
+        {"linkTailWithHead", linkTailWithHeadHook},
+        {"unlinkTailAndHead", unlinkTailAndHeadHook},
         {"isRooted", isRootedHook},
         {"isPair", isPairHook},
         {"setTailWithHeadIn", setTailWithHeadInHook},
@@ -912,9 +928,12 @@ static void machine_init(Arrow CM) {
         xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getVar//escape+escape/var+x+"));
     if (xls_get(EVE, atom("unset")) == NIL)
         xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
-
     if (xls_get(EVE, atom("set")) == NIL)
         xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setTailWithHeadIn/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+    if (xls_get(EVE, atom("link")) == NIL)
+        xls_set(EVE, atom("link"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/linkTailWithHead/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+    if (xls_get(EVE, atom("unlink")) == NIL)
+        xls_set(EVE, atom("unlink"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/unlinkTailAndHead/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
 
     // System Init call
     xl_eval(EVE, pair(atom("init"), pair(escape, CM))); // we pass CM at parameter to preserve it from GC
