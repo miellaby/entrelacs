@@ -350,3 +350,23 @@ char* xls_urlOf(Arrow s, Arrow e, int depth) {
 
     return toURL(locked, e, depth, &l);
 }
+
+Arrow xls_partnerOf(Arrow c, Arrow key) {
+    Arrow value = NIL;
+    Arrow keyContext = pairMaybe(c, key);
+    Arrow list = EVE;
+    if (keyContext != EVE) {
+        XLEnum enumChildren = xl_childrenOf(keyContext);
+        while (xl_enumNext(enumChildren)) {
+            Arrow keyValue = xl_enumGet(enumChildren);
+            if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
+            if (isRooted(keyValue)) {
+                value = headOf(keyValue);
+            }
+            list = a(value, list);
+        }
+        xl_freeEnum(enumChildren);
+    }
+
+    return list;
+}

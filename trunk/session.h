@@ -128,4 +128,9 @@ Arrow xls_url(Arrow s, char* url);
 */
 Arrow xls_urlMaybe(Arrow s, char* url);
 
+/** returns a list-arrow of all "the" rooted arrows in context of path "/$c+$key"
+*/
+Arrow xls_partnerOf(Arrow c, Arrow slot);
+
+
 #endif /* SESSION_H */
