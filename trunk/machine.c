@@ -683,10 +683,10 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
     return xl_reduceMachine(CM, list);
 }
 
-Arrow partnerOfHook(Arrow CM, Arrow hookParameter) {
+Arrow partnersOfHook(Arrow CM, Arrow hookParameter) {
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow list = xls_partnerOf(C, arrow);
+    Arrow list = xls_partnersOf(C, arrow);
     return xl_reduceMachine(CM, list);
 }
 
@@ -874,7 +874,7 @@ static void machine_init(Arrow CM) {
         {"headOf", headOfHook},
         {"childrenOf", childrenOfHook},
         {"childrenReviewOf", childrenReviewOfHook},
-        {"partnerOf", partnerOfHook},
+        {"partnersOf", partnersOfHook},
         {"root", rootHook},
         {"unroot", unrootHook},
         {"isRooted", isRootedHook},
