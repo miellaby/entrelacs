@@ -125,6 +125,15 @@ textarea {
     border-radius: 5px;
 }
 
+.ghost {
+    position: absolute;
+    background-color: #6A6;
+    foreground-color: white;
+    opacity: 1;
+    border 0;
+    border-radius: 5px;
+}
+
 
 .atomDiv {
    z-index: 10;
