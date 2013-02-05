@@ -351,7 +351,7 @@ char* xls_urlOf(Arrow s, Arrow e, int depth) {
     return toURL(locked, e, depth, &l);
 }
 
-Arrow xls_partnerOf(Arrow c, Arrow key) {
+Arrow xls_partnersOf(Arrow c, Arrow key) {
     Arrow value = NIL;
     Arrow keyContext = pairMaybe(c, key);
     Arrow list = EVE;
