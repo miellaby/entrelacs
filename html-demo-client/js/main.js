@@ -82,7 +82,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
    // for guard
    d.data('detached', true);
 
-   if (d.hasClass('pairDiv')) {
+   if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) {
         // propagate deletion to tail
         var t = d.data('tail');
         if (t) {
@@ -190,7 +190,7 @@ function unlooseArrow(d, c) {
        turnInputIntoText(d);
     }
 
-    if (d.hasClass('pairDiv')) { // pair?
+    if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) {
        // unloose its end
        unlooseArrow(d.data('tail'), d);
        unlooseArrow(d.data('head'), d);
@@ -218,7 +218,7 @@ function assimilateArrow(d) {
        toast(d, data);
        // save position
        var p = d.position();
-       var instruction = server + 'root/position/escape/' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
+       var instruction = server + 'linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
        $.ajax({url: instruction, xhrFields: { withCredentials: true }});
     });
 }
@@ -234,7 +234,7 @@ function recordArrow(d) {
 // search for the next editable atom
 function findNext(d, from, leftOnly) {
    var f = d.data('for');
-   if (d.hasClass('pairDiv') && d.data('head') && d.data('head')[0] !== from[0]) { // search into head
+   if ((d.hasClass('pairDiv') || d.hasClass('ipairDiv')) && d.data('head') && d.data('head')[0] !== from[0]) { // search into head
       var n = findNextInto(d.data('head'));
       if (n) return n;
    }
@@ -449,7 +449,7 @@ var toaster, toasterHeight;
 function toast(source, text) {
     var p = source.position();
     var w = source.width();
-    var topStart = (source.hasClass('pairDiv') ? p.top + source.height() : p.top) - toasterHeight;
+    var topStart = ((source.hasClass('pairDiv') || source.hasClass('ipairDiv')) ? p.top + source.height() : p.top) - toasterHeight;
     toaster.animate({ left: p.left + w / 2, top: topStart}, 50, 'linear', function() { toaster.show().text(text).css('left', '-=' + (toaster.width()/2)+'px').css('opacity', 0.5).animate({ top: "-=50px", opacity: 0}, 2000);});
     
 }
@@ -603,7 +603,7 @@ function findPositions(d) {
            findPositions(d);
         });
     } else {
-        var request = $.ajax({url: server + 'childrenOf/escape/position+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
+        var request = $.ajax({url: server + 'partnersOf/escape/position+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
         var id;
         request.done(function(data, textStatus, jqXHR) {
             console.log(data);
@@ -616,7 +616,7 @@ function findPositions(d) {
 
 function moveArrow(d, offsetX, offsetY) {
     d.css('opacity', 1).css('left', (d.position().left  + offsetX) + 'px').css('top', (d.position().top + offsetY) +'px');
-    if (d.hasClass('pairDiv')) {
+    if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
        if (d.data('head')) {
            moveArrow(d.data('head'), offsetX, offsetY);
        }
@@ -633,7 +633,7 @@ function onDragEnd(e) {
 }
 
 function addFoldedPair(x, y) {
-    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>�</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
+    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>�</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
     area.append(d);
     d.css('left', x + 'px');
     d.css('top', y + 'px');
@@ -662,11 +662,11 @@ function addPair(tail, head, animate) {
     var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
     var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 3;
     var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
+    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
     area.append(d);
-    d.css('left', x0 + 'px');
+    d.css('left', Math.min(x0, x1) + 'px');
     d.css('top', Math.min(y0, y1) + 'px');
-    d.css('width', (x1 - x0) + 'px');
+    d.css('width', Math.abs(x1 - x0) + 'px');
     d.css('height', (Math.abs(y1 - y0) + 50) + 'px');
     if (animate) {
         d.hide();
