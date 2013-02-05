@@ -106,37 +106,33 @@ function dismissArrow(d, direction /* false = down true = up */) {
    // propagate to loose child
    if (!direction) { //  when going "down"
        var f = d.data('for'); 
-       if (f) {
-            for (var i = 0; i < f.length; i++) {
-               dismissArrow(f[i]);
-            }
+       while (f.length) {
+            dismissArrow(f[0]);
        }
    }
 
    // fold children
    var children = d.data('children');
-   if (children) {
-       for (var i = 0; i < children.length; i++) {
-            var c = children[i];
-            // var subchildren = c.data('children');
-            // TODO show unfold buttons
-            if (c.data('head')[0] === d[0]) {
-                c.children('.headDiv').height(0).width(20).css('border-style', 'dashed');
-                u = $("<button class='unfoldHead'>+</button>");
-                u.click(unfoldClick);
-                u.appendTo(c);
-                c.removeData('head');
-                continue;
-            }
-            if (c.data('tail')[0] === d[0]) {
-                c.children('.tailDiv').height(0).width(20).css('border-style', 'dashed');
-                u = $("<button class='unfoldTail'>+</button>");
-                u.click(unfoldClick);
-                u.appendTo(c);
-                c.removeData('tail');
-                continue;
-            }
-       }
+   for (var i = 0; i < children.length; i++) {
+        var c = children[i];
+        // var subchildren = c.data('children');
+        // TODO show unfold buttons
+        if (c.data('head')[0] === d[0]) {
+            c.children('.headDiv').height(0).width(20).css('border-style', 'dashed');
+            u = $("<button class='unfoldHead'>+</button>");
+            u.click(unfoldClick);
+            u.appendTo(c);
+            c.removeData('head');
+            continue;
+        }
+        if (c.data('tail')[0] === d[0]) {
+            c.children('.tailDiv').height(0).width(20).css('border-style', 'dashed');
+            u = $("<button class='unfoldTail'>+</button>");
+            u.click(unfoldClick);
+            u.appendTo(c);
+            c.removeData('tail');
+            continue;
+        }
     }
 
     d.detach();
@@ -179,6 +175,7 @@ function turnInputIntoText(d) {
     d.children('.close').show();
     i.detach();
     var s = $("<span style='display: inline-block;'></span>").text(v).appendTo(d);
+    s.click(onAtomClick);
     var w = s.width();
     s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
@@ -209,7 +206,7 @@ function unlooseArrow(d, c) {
 function assimilateArrow(d) {
     var uri = buildUri(d);
     // assimilation request
-    var request = $.ajax({url: server + 'escape/' /* not one escapes for now */ + uri + '?iDepth=0', xhrFields: { withCredentials: true }});
+    var request = $.ajax({url: server + 'escape/' /* please not that one ever escapes submited arrow */ + uri + '?iDepth=0', xhrFields: { withCredentials: true }});
     var id;
     d.data('url','pending...');
     
@@ -221,12 +218,13 @@ function assimilateArrow(d) {
        toast(d, data);
        // save position
        var p = d.position();
-       var instruction = server + 'root/position/' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
+       var instruction = server + 'root/position+' + d.data('url') + '/escape/' + parseInt(p.left) + '+' + parseInt(p.top);
        $.ajax({url: instruction, xhrFields: { withCredentials: true }});
     });
 }
 
 function recordArrow(d) {
+    // System upload
     assimilateArrow(d);
     
     // unloose arrow
@@ -275,14 +273,21 @@ function onEntryKeypress(e) {
              return;
            }
         }
-            
+        if (!f.length) {
+            var a = leave(d, false /* out */);
+            d.data('for').push(a);
+            return false;
+        }
+        
         // overloading + ==> open a pair with the whole loose child arrow
         var ff;
         while ((ff = f[f.length - 1].data('for')) && ff.length) {
            f = ff ;
         }
         var a = leave(f[f.length - 1], false /* out */);
-        f.data('for').push(a);
+        f[f.length - 1].data('for').push(a);
+        return false;
+        
      } else if (e.which == 13 /* return */) {
         var d = $(this).parent();
         e.preventDefault();
@@ -297,21 +302,23 @@ function onEntryKeypress(e) {
         } else {
            recordArrow(d);
         }
+        return false;
     }
 }
 
 function onEntryFocus(e) {
     var i = $(this);
     var d = i.parent();
-    if (d.data('children').length) {
-       i.blur();
-    }
+    if (d.data('children').length) throw 'cant be';
     return true;
 }
 
-function onEntryClick(e) {
+function onAtomClick(e) {
     var d = $(this).parent();
+    if (d.data('for').length || d.children('input').length) // filter out unfinished atom
+        return false;
     d.css('marginTop','-10px').animate({marginTop: 0});
+    findPositions(d);
     //e.preventDefault();
     return false;
 }
@@ -342,15 +349,11 @@ function leave(d, inOut) {
    return a;
 }
 
-function unfold(d, unfoldTail) {
-    // restore end
-    d.children(unfoldTail ? '.tailDiv' : '.headDiv').height('100%').width('').css('border-style', '');
-    d.children(unfoldTail ? '.unfoldTail' : '.unfoldHead').detach();
-
-    // compute unfolded arrow definition as a headOf/tailOf sequence
-    var def = (unfoldTail ? '/tailOf+' : '/headOf+');
+// compute arrow definition as a headOf/tailOf sequence
+function getDefinition(d) {
+    var def = '';
     if (d.data('url')) { // reuse url
-        def += d.data('url');
+        def = '/escape+' + d.data('url');
     } else {
         var c = d;
         var cc = c.data('children')[0];
@@ -363,8 +366,18 @@ function unfold(d, unfoldTail) {
         if (!cc) {
            throw 'undef';
         }
-        def += cc.data('url');
+        def += '/escape+' + cc.data('url');
     }
+    return def;
+}
+
+function unfold(d, unfoldTail) {
+    // restore end
+    d.children(unfoldTail ? '.tailDiv' : '.headDiv').height('100%').width('').css('border-style', '');
+    d.children(unfoldTail ? '.unfoldTail' : '.unfoldHead').detach();
+
+    // compute unfolded arrow definition as a headOf/tailOf sequence
+    var def = (unfoldTail ? '/tailOf+' : '/headOf+') + getDefinition(d);
        
     // request
     var request = $.ajax({url: server + def + '?iDepth=1', xhrFields: { withCredentials: true }});
@@ -410,11 +423,19 @@ function onHookClick(e) {
    var i = $(this);
    var d = i.parent().parent();
    var a;
+   if (i.hasClass('poke')) {
+       d.css('marginTop','-10px').animate({marginTop: 0});
+       if (d.data('for').length) return false; // filter out unfinished atom
+       findPositions(d);
+       return false;
+   }
+   
    if (i.hasClass('in'))
       a = leave(d, true);
    else if (i.hasClass('out'))
       a = leave(d, false);
-   d.data('for').push(a);
+   if (a)
+       d.data('for').push(a);
    return false;
 }
 
@@ -573,6 +594,26 @@ function turnAtomIntoPair(d) {
     d.detach();
 }
 
+function findPositions(d) {
+    if (!d.data('url')) {
+        var def = getDefinition(d);
+        var request = $.ajax({url: server + def + '?iDepth=0', xhrFields: { withCredentials: true }});
+        request.done(function(data, textStatus, jqXHR) {
+           d.data('url', data);
+           findPositions(d);
+        });
+    } else {
+        var request = $.ajax({url: server + 'childrenOf/escape/position+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
+        var id;
+        request.done(function(data, textStatus, jqXHR) {
+            console.log(data);
+        });
+        
+    }
+    
+    
+}
+
 function moveArrow(d, offsetX, offsetY) {
     d.css('opacity', 1).css('left', (d.position().left  + offsetX) + 'px').css('top', (d.position().top + offsetY) +'px');
     if (d.hasClass('pairDiv')) {
@@ -592,7 +633,7 @@ function onDragEnd(e) {
 }
 
 function addFoldedPair(x, y) {
-    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
+    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>�</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
     area.append(d);
     d.css('left', x + 'px');
     d.css('top', y + 'px');
@@ -600,8 +641,8 @@ function addFoldedPair(x, y) {
     d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
 
     // set listeners
-    d.children('.hook').hover(function(){$(this).children('.in,.out').fadeIn(100);}, function() {$(this).children('.in,.out').fadeOut(500);});
-    d.children('.hook').children('.in,.out').click(onHookClick);
+    d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
+    d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     d.on('dragstart', function(e) { $(this).css('opacity', 0.4); });
     d.on('dragend', onDragEnd);
@@ -621,7 +662,7 @@ function addPair(tail, head, animate) {
     var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
     var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 3;
     var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
+    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
     area.append(d);
     d.css('left', x0 + 'px');
     d.css('top', Math.min(y0, y1) + 'px');
@@ -638,8 +679,8 @@ function addPair(tail, head, animate) {
     }
     
     // set listeners
-    d.children('.hook').hover(function(){$(this).children('.in,.out').fadeIn(100);}, function() {$(this).children('.in,.out').fadeOut(500);});
-    d.children('.hook').children('.in,.out').click(onHookClick);
+    d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
+    d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     d.on('dragstart', function(e) { $(this).css('opacity', 0.4); });
     d.on('dragend', onDragEnd);
@@ -670,7 +711,7 @@ function addPair(tail, head, animate) {
 }
 
 function addAtom(x, y, initialValue) {
-    var d = $("<div class='atomDiv'><input type='text'></input><div class='close'>&times;</div><div class='hook'><div class='in'>&uarr;</div> <div class='out'>&darr;</div></div></div>");
+    var d = $("<div class='atomDiv'><input type='text'></input><div class='close'>&times;</div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div>  <div class='out'>&darr;</div></div></div>");
     area.append(d);
     if (animatePlease) {
         d.css('opacity', 0.1).animate({ opacity: 1});
@@ -683,14 +724,15 @@ function addAtom(x, y, initialValue) {
 
     // set listeners
     i.blur(onEntryBlur);
-    i.click(onEntryClick);
+    i.click(onAtomClick);
     i.focus(onEntryFocus);
     i.keypress(onEntryKeypress);
     i.keydown(onEntryKeydown);
-    d.children('.hook').hover(function(){$(this).children('.in,.out').fadeIn(100);}, function() {$(this).children('.in,.out').fadeOut(500);});
-    d.children('.hook').children('.in,.out').click(onHookClick);
+    d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
+    d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
-    d.on('dragstart', function(e) { $(this).css('opacity', 0.4); });
+    i.on('drop', function(e) {console.log(e);});
+    d.on('dragstart', function(e) { /* $(this).css('opacity', 0.4);*/ console.log(e); return true;});
     d.on('dragend', onDragEnd);
     d.children('.close').click(onCloseClick);
     
