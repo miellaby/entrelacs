@@ -73,7 +73,7 @@ textarea {
       float: left;
 }
 
-.pairDiv .close {
+.pairDiv .close, .ipairDiv .close {
     z-index: 15;
     position: absolute;
     left: 50%;
@@ -160,12 +160,12 @@ textarea {
    left: 50%;
 }
 
-.pairDiv {
+.pairDiv, .ipairDiv {
    z-index: 0;
    position: absolute;
 }
 
-.pairDiv .hook {
+.pairDiv .hook, .ipairDiv .hook {
    z-index: 15;
    position: absolute;
    margin-left: -28px;
@@ -180,7 +180,7 @@ textarea {
    bottom: 0px;
    border-style: solid;
 }
-.tailDiv {
+.pairDiv .tailDiv, .ipairDiv .headDiv {
    right: 50%;
    width: 50%;
    border-left-width: 2px;
@@ -190,16 +190,24 @@ textarea {
    border-bottom-left-radius: 6px;
 }
 
-
 .tailEnd {
    background-color: black;
-   margin-left: -6px;
    width: 12px;
    height: 8px;
    border-radius: 6px;
 }
 
-.headDiv {
+.pairDiv .tailEnd {
+   float: left;
+   margin-left: -6px;
+}
+
+.ipairDiv .tailEnd {
+   float: right;
+   margin-right: -6px;
+}
+
+.pairDiv .headDiv, .ipairDiv .tailDiv {
    left: 50%;
    width: 50%;
    border-left-width: 0;
@@ -220,12 +228,12 @@ textarea {
    bottom: -10px;
 }
 
-.unfoldTail {
+.pairDiv .unfoldTail, .ipairDiv unfoldHead {
   right: 50%;
   margin-right: 25px;
 }
 
-.unfoldHead {
+.pairDiv .unfoldHead, .ipairDiv .unfoldTail {
   left: 50%;
   margin-left: 25px;
 }
