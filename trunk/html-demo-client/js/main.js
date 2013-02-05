@@ -3,6 +3,7 @@ var area = null;
 var animatePlease = true;
 var defaultEntryWidth;
 var defaultEntryHeight;
+var dragStartX, dragStartY;
 
 function isFor(d, a) {
     var list = d.data('for');
@@ -77,8 +78,6 @@ function removeChild(d, a) {
 function dismissArrow(d, direction /* false = down true = up */) {
    // guard double detach
    if (d.data('detached')) return;
-   //// only detach loose arrow
-   // if (d.data('children')) return;
    // for guard
    d.data('detached', true);
 
@@ -134,6 +133,11 @@ function dismissArrow(d, direction /* false = down true = up */) {
             continue;
         }
     }
+    var lastPosition = d.data('lastPosition');
+    if (lastPosition) {
+       var instruction = server + '/unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition;
+       $.ajax({url: instruction, xhrFields: { withCredentials: true }});
+    }
 
     d.detach();
 }
@@ -188,12 +192,11 @@ function unlooseArrow(d, c) {
     if (d.hasClass('atomDiv')) { // atom
        // make it immutable
        turnInputIntoText(d);
-    }
-
-    if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) {
+    } else if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) { // pair
        // unloose its end
        unlooseArrow(d.data('tail'), d);
        unlooseArrow(d.data('head'), d);
+       d.addClass('kept');
     }
 
     removeFor(d, c);
@@ -219,7 +222,11 @@ function assimilateArrow(d) {
        // save position
        var p = d.position();
        var instruction = server + 'linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
-       $.ajax({url: instruction, xhrFields: { withCredentials: true }});
+       $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(lastPosition) {
+            d.data('lastPosition', lastPosition);
+            findPositions(d);
+       });
+       
     });
 }
 
@@ -309,17 +316,15 @@ function onEntryKeypress(e) {
 function onEntryFocus(e) {
     var i = $(this);
     var d = i.parent();
-    if (d.data('children').length) throw 'cant be';
     return true;
 }
 
 function onAtomClick(e) {
     var d = $(this).parent();
-    if (d.data('for').length || d.children('input').length) // filter out unfinished atom
+    if (!d.hasClass('kept')) // filter out unfinished atom
         return false;
     d.css('marginTop','-10px').animate({marginTop: 0});
     findPositions(d);
-    //e.preventDefault();
     return false;
 }
 
@@ -425,7 +430,7 @@ function onHookClick(e) {
    var a;
    if (i.hasClass('poke')) {
        d.css('marginTop','-10px').animate({marginTop: 0});
-       if (d.data('for').length) return false; // filter out unfinished atom
+       if (!d.hasClass('kept')) return false; // filter out unfinished atom
        findPositions(d);
        return false;
    }
@@ -450,14 +455,14 @@ function toast(source, text) {
     var p = source.position();
     var w = source.width();
     var topStart = ((source.hasClass('pairDiv') || source.hasClass('ipairDiv')) ? p.top + source.height() : p.top) - toasterHeight;
-    toaster.animate({ left: p.left + w / 2, top: topStart}, 50, 'linear', function() { toaster.show().text(text).css('left', '-=' + (toaster.width()/2)+'px').css('opacity', 0.5).animate({ top: "-=50px", opacity: 0}, 2000);});
+    toaster.animate({ left: p.left + w / 2, top: topStart}, 50, 'linear', function() { toaster.show().text(text).css({left: '-=' + (toaster.width()/2)+'px', opacity: 0.5}).animate({ top: "-=50px", opacity: 0}, 2000);});
     
 }
 
 function recordOrDetachAtom(d) {
     if (isLoose(d)) {
         setTimeout(function() {
-            if (isLoose(d) && !d.data('url'))
+            if (!d.children('input').is(':focus') && isLoose(d) && !d.data('url'))
                  dismissArrow(d);
         }, 1000);
     }
@@ -527,6 +532,12 @@ function rewirePair(a, oldOne, newOne) {
    var newA = addPair(newTail, newHead);
    
    // data copy
+   var oldData = a.data();
+   for (var dataKey in oldData) {
+      if (dataKey == 'head' || dataKey == 'tail') continue;
+      newA.data(dataKey, oldData[dataKey]);
+   }
+   
    var f = a.data('for');
    newA.data('for', f);
    var children = a.data('children');
@@ -594,6 +605,14 @@ function turnAtomIntoPair(d) {
     d.detach();
 }
 
+function showMovingGhost(x, y, d) {
+     var p = d.position();
+     var nx = p.left + (d.width() - toaster.width()) / 2;
+     var ny = p.top + d.height();
+     var ghost = $("<div class='ghost'>" + d.data('url') + '</div>').appendTo(area).css({left: (x  + (d.width() - toaster.width()) / 2) + 'px', top: (y + d.height()) + 'px'});
+     ghost.animate({left: nx, top: ny, opacity: 0.5}, function() { ghost.detach(); });
+}
+
 function findPositions(d) {
     if (!d.data('url')) {
         var def = getDefinition(d);
@@ -604,9 +623,15 @@ function findPositions(d) {
         });
     } else {
         var request = $.ajax({url: server + 'partnersOf/escape/position+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
-        var id;
+        var lp = d.data('lastPosition');
         request.done(function(data, textStatus, jqXHR) {
             console.log(data);
+            var p = data.match(/\/[0-9]*\+[0-9]*/g);
+            for (var i = 0; i < p.length; i++) {
+                if (p[i] == lp) continue;
+                var xy = p[i].match(/[0-9]+/g);
+                showMovingGhost(parseInt(xy[0]), parseInt(xy[1]), d);
+            }
         });
         
     }
@@ -615,7 +640,10 @@ function findPositions(d) {
 }
 
 function moveArrow(d, offsetX, offsetY) {
-    d.css('opacity', 1).css('left', (d.position().left  + offsetX) + 'px').css('top', (d.position().top + offsetY) +'px');
+    d.css({ 'opacity': 1,
+            'left': (d.position().left  + offsetX) + 'px',
+            'top': (d.position().top + offsetY) +'px'
+    });
     if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
        if (d.data('head')) {
            moveArrow(d.data('head'), offsetX, offsetY);
@@ -624,27 +652,44 @@ function moveArrow(d, offsetX, offsetY) {
            moveArrow(d.data('tail'), offsetX, offsetY);
        }
     }
+    var lastPosition = d.data('lastPosition');
+    if (lastPosition) {
+       var p = d.position();
+       var instruction = server + '/unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition
+                              + '/,/linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
+       $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(newPosition) {
+            d.data('lastPosition', newPosition);
+       });
+    }
+}
+
+function onDragStart(e) {
+    dragStartX = e.originalEvent.pageX;
+    dragStartY = e.originalEvent.pageY;
+    return true;
 }
 
 function onDragEnd(e) {
     var d = $(this);
-    moveArrow(d, e.originalEvent.offsetX, e.originalEvent.offsetY);
+    console.log(e);
+    moveArrow(d, e.originalEvent.pageX - dragStartX, e.originalEvent.pageY - dragStartY);
     updateDescendants(d, d);
+    return true;
 }
 
 function addFoldedPair(x, y) {
     var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>�</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
     area.append(d);
-    d.css('left', x + 'px');
-    d.css('top', y + 'px');
-    d.css('width', '50px');
+    d.css({'left': x + 'px',
+            'top': y + 'px',
+            'width': '50px'});
     d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
 
     // set listeners
     d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
-    d.on('dragstart', function(e) { $(this).css('opacity', 0.4); });
+    d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.children('.close').click(onCloseClick);
     d.children('.unfoldTail,.unfoldHead').click(unfoldClick);
@@ -664,10 +709,12 @@ function addPair(tail, head, animate) {
     var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
     var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
     area.append(d);
-    d.css('left', Math.min(x0, x1) + 'px');
-    d.css('top', Math.min(y0, y1) + 'px');
-    d.css('width', Math.abs(x1 - x0) + 'px');
-    d.css('height', (Math.abs(y1 - y0) + 50) + 'px');
+    d.css({
+        'left': Math.min(x0, x1) + 'px',
+        'top': Math.min(y0, y1) + 'px',
+        'width': Math.abs(x1 - x0) + 'px',
+        'height': (Math.abs(y1 - y0) + 50) + 'px'
+    });
     if (animate) {
         d.hide();
         d.children('.tailDiv').animate({'height': (50 + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
@@ -682,7 +729,7 @@ function addPair(tail, head, animate) {
     d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
-    d.on('dragstart', function(e) { $(this).css('opacity', 0.4); });
+    d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.children('.close').click(onCloseClick);
 
@@ -716,8 +763,8 @@ function addAtom(x, y, initialValue) {
     if (animatePlease) {
         d.css('opacity', 0.1).animate({ opacity: 1});
     }
-    d.css('left', x + 'px');
-    d.css('top', y + 'px');
+    d.css({ 'left': x + 'px',
+            'top': y + 'px' });
     
     var i = d.children('input');
     if (initialValue) i.val(initialValue);
@@ -732,7 +779,7 @@ function addAtom(x, y, initialValue) {
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     i.on('drop', function(e) {console.log(e);});
-    d.on('dragstart', function(e) { /* $(this).css('opacity', 0.4);*/ console.log(e); return true;});
+    d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.children('.close').click(onCloseClick);
     
