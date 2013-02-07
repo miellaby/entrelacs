@@ -4,6 +4,7 @@ var animatePlease = true;
 var defaultEntryWidth;
 var defaultEntryHeight;
 var dragStartX, dragStartY;
+var dragOver = null;
 
 function isFor(d, a) {
     var list = d.data('for');
@@ -87,7 +88,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         if (t) {
            removeFor(t, d);
            removeChild(t, d);
-           if (isLoose(t) && !t.data('url'))
+           if (isLoose(t) && !t.data('lastPosition'))
                dismissArrow(t, true);
         }
 
@@ -96,7 +97,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         if (h) {
            removeFor(h, d);
            removeChild(h, d);
-           if (isLoose(h) && !h.data('url'))
+           if (isLoose(h) && !h.data('lastPosition'))
                dismissArrow(h, true);
         }
 
@@ -116,7 +117,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         var c = children[i];
         // var subchildren = c.data('children');
         // TODO show unfold buttons
-        if (c.data('head')[0] === d[0]) {
+        if (c.data('head') && c.data('head')[0] === d[0]) {
             c.children('.headDiv').height(0).width(20).css('border-style', 'dashed');
             u = $("<button class='unfoldHead'>+</button>");
             u.click(unfoldClick);
@@ -124,7 +125,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
             c.removeData('head');
             continue;
         }
-        if (c.data('tail')[0] === d[0]) {
+        if (c.data('tail') && c.data('tail')[0] === d[0]) {
             c.children('.tailDiv').height(0).width(20).css('border-style', 'dashed');
             u = $("<button class='unfoldTail'>+</button>");
             u.click(unfoldClick);
@@ -162,7 +163,14 @@ function buildUri(d) {
       // reuse known url if any
       return uri
     } else if (d.hasClass('atomDiv')) { // atom
-       return encodeURIComponent(d.children('input').val());
+        var v;
+        if (d.hasClass('kept'))
+            v = d.children('span').text();
+        else {
+            v = d.children('input').val();
+        }
+        return encodeURIComponent(v);
+       
     } else { // pair ends URI
        var tailUri = buildUri(d.data('tail'));
        var headUri = buildUri(d.data('head'));
@@ -174,15 +182,17 @@ function turnInputIntoText(d) {
     var i = d.children('input');
     if (!i.length) return;
     var v = i.val() || 'EVE';
+    
     var w0 = i.width();
     d.addClass('kept');
     d.children('.close').show();
     i.detach();
-    var s = $("<span style='display: inline-block;'></span>").text(v).appendTo(d);
+    var s = $("<span></span>").text(v).appendTo(d);
     s.click(onAtomClick);
     var w = s.width();
     s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
+    d.children('.fileinput-button').detach();
 }
 
 function unlooseArrow(d, c) {
@@ -263,13 +273,13 @@ function findNext(d, from, leftOnly) {
 function onEntryKeypress(e) {
     var next = null;
     console.log(e);
-
-    if (e.which == 47 /* / */) {
+    
+    if (e.which == 47 /* / */ && !$(this).data('escape')) {
         var d = $(this).parent();
         e.preventDefault();
-        turnAtomIntoPair(d);
+        turnEntryIntoPair(d);
         return false;
-    } else if (e.which == 43 /* + */) {
+    } else if (e.which == 43 /* + */ && !$(this).data('escape')) {
         var d = $(this).parent();
         e.preventDefault();
         var f = d.data('for');
@@ -311,11 +321,13 @@ function onEntryKeypress(e) {
         }
         return false;
     }
+    return true;
 }
 
 function onEntryFocus(e) {
     var i = $(this);
     var d = i.parent();
+    d.removeData('preserve')
     return true;
 }
 
@@ -363,7 +375,7 @@ function getDefinition(d) {
         var c = d;
         var cc = c.data('children')[0];
         while (cc) {
-            def += (cc.data('head')[0] === c) ? '/headOf+' : '/tailOf+';
+            def += (cc.data('head') && cc.data('head')[0] === c[0] || cc.data('tail') && cc.data('tail')[0] !== c[0]) ? '/headOf+' : '/tailOf+';
             if (cc.data('url')) break;
             c = cc;
             cc = c.data('children')[0];
@@ -393,13 +405,13 @@ function unfold(d, unfoldTail) {
         var p = d.position();
         if (data[0] == '/') { // parent is a pair
             if (unfoldTail) {
-                a = addFoldedPair(p.left - 50, p.top);
+                a = addFoldedPair(p.left, p.top);
                 d.data('tail', a);
             } else {
-                a = addFoldedPair(p.left + d.width() - 50, p.top);
+                a = addFoldedPair(p.left + d.width(), p.top);
                 d.data('head', a);
             }
-           // save url
+            // save url
            a.data('url', data);
            // toast url
            toast(a, data);
@@ -413,6 +425,7 @@ function unfold(d, unfoldTail) {
             }
             turnInputIntoText(a);
         }
+        // connectivity
         a.data('children').push(d);
     });
 }
@@ -462,7 +475,7 @@ function toast(source, text) {
 function recordOrDetachAtom(d) {
     if (isLoose(d)) {
         setTimeout(function() {
-            if (!d.children('input').is(':focus') && isLoose(d) && !d.data('url'))
+            if (!d.children('input').is(':focus') && isLoose(d) && !d.data('url') && !d.data('preserve'))
                  dismissArrow(d);
         }, 1000);
     }
@@ -531,6 +544,9 @@ function rewirePair(a, oldOne, newOne) {
    var newHead = headChanged ? newOne : oldHead;
    var newA = addPair(newTail, newHead);
    
+   // class copy
+   if (a.hasClass('kept'))
+      newA.addClass('kept');
    // data copy
    var oldData = a.data();
    for (var dataKey in oldData) {
@@ -561,7 +577,29 @@ function rewirePair(a, oldOne, newOne) {
    return newA;
 }
 
-function turnAtomIntoPair(d) {
+function turnEntryIntoExistingArrow(d, a) {
+    if (d.data('children').length) {
+       throw "connected arrows are immutable";
+    }
+    
+    var p = d.position();
+    var w = d.width();
+    var f = d.data('for');
+
+    // merge for list
+    a.data('for', a.data('for').concat(d.data('for')));
+     
+    // if entry belonged to a loose arrow, one rewires to a
+    for (var i = 0; i < f.length; i++) { // search into loose children
+       rewirePair(f[i], d, a);
+    }
+    
+    // detach entry-atom
+    d.detach();
+}
+
+
+function turnEntryIntoPair(d) {
     if (d.data('children').length) {
        throw "connected arrows are immutable";
     }
@@ -570,7 +608,6 @@ function turnAtomIntoPair(d) {
     var p = d.position();
     var w = d.width();
     var f = d.data('for');
-
     // peek a counting circle point
     var c = getPointOnCircle(50);
     
@@ -596,7 +633,7 @@ function turnAtomIntoPair(d) {
     // if atom had content, it went to the pair tail (see addAtom call)
     if (v !== '') {
        // and one builds a second pair
-       turnAtomIntoPair(h);
+       turnEntryIntoPair(h);
     } else {
        t.children('input').focus();
     }
@@ -626,7 +663,7 @@ function findPositions(d) {
         var lp = d.data('lastPosition');
         request.done(function(data, textStatus, jqXHR) {
             console.log(data);
-            var p = data.match(/\/[0-9]*\+[0-9]*/g);
+            var p = data.match(/\/[0-9]*\+[0-9]*/g) || [];
             for (var i = 0; i < p.length; i++) {
                 if (p[i] == lp) continue;
                 var xy = p[i].match(/[0-9]+/g);
@@ -639,19 +676,22 @@ function findPositions(d) {
     
 }
 
-function moveArrow(d, offsetX, offsetY) {
+function moveArrow(d, offsetX, offsetY, movingChild) {
     d.css({ 'opacity': 1,
             'left': (d.position().left  + offsetX) + 'px',
             'top': (d.position().top + offsetY) +'px'
     });
     if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
        if (d.data('head')) {
-           moveArrow(d.data('head'), offsetX, offsetY);
+           moveArrow(d.data('head'), offsetX, offsetY, d);
        }
        if (d.data('tail') && !(d.data('head') && d.data('tail')[0] === d.data('head')[0])) {
-           moveArrow(d.data('tail'), offsetX, offsetY);
+           moveArrow(d.data('tail'), offsetX, offsetY, d);
        }
     }
+    
+    updateDescendants(d, d, movingChild);
+    
     var lastPosition = d.data('lastPosition');
     if (lastPosition) {
        var p = d.position();
@@ -672,17 +712,22 @@ function onDragStart(e) {
 function onDragEnd(e) {
     var d = $(this);
     console.log(e);
-    moveArrow(d, e.originalEvent.pageX - dragStartX, e.originalEvent.pageY - dragStartY);
-    updateDescendants(d, d);
+    if (dragOver && $(this).hasClass('kept')) {
+        var d = $(dragOver).parent();
+        turnEntryIntoExistingArrow(d, $(this));
+    } else {
+        moveArrow(d, e.originalEvent.pageX - dragStartX, e.originalEvent.pageY - dragStartY, null /* no moving child */);
+    }
     return true;
 }
 
 function addFoldedPair(x, y) {
-    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>�</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
+    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
     area.append(d);
-    d.css({'left': x + 'px',
-            'top': y + 'px',
-            'width': '50px'});
+    d.css({left: (x - 75) + 'px',
+           top: (y - 45) + 'px',
+           height: '45px',
+           width: '150px'});
     d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
 
     // set listeners
@@ -709,20 +754,21 @@ function addPair(tail, head, animate) {
     var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
     var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
     area.append(d);
+    var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
     d.css({
         'left': Math.min(x0, x1) + 'px',
         'top': Math.min(y0, y1) + 'px',
         'width': Math.abs(x1 - x0) + 'px',
-        'height': (Math.abs(y1 - y0) + 50) + 'px'
+        'height': (Math.abs(y1 - y0) + marge) + 'px'
     });
     if (animate) {
         d.hide();
-        d.children('.tailDiv').animate({'height': (50 + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
-        d.children('.headDiv').animate({'height': (50 + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
+        d.children('.tailDiv').animate({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
+        d.children('.headDiv').animate({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
         d.fadeIn(500);
     } else {
-        d.children('.tailDiv').css({'height': (50 + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
-        d.children('.headDiv').css({'height': (50 + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
+        d.children('.tailDiv').css({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
+        d.children('.headDiv').css({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
     }
     
     // set listeners
@@ -757,6 +803,33 @@ function addPair(tail, head, animate) {
     return d;
 }
 
+function onDragEnterEntry(e) {
+    dragOver = this;
+    console.log(e);
+
+    $(this).animate({'border-width': 6, left: "-=3px"}, 100);
+}
+
+function onDragLeaveEntry(e) {
+    console.log(e);
+    $(this).animate({'border-width': 2, left: "+=3px"}, 100);
+    setTimeout(function() { dragOver = null; }, 0); // my gosh
+}
+
+function onFileInputClick(e) {
+    e.stopPropagation();
+    var d = $(this).parent();
+    setTimeout(function() { // terrible trick
+        d.children('input').focus();
+        d.data('preserve', true);
+    }, 0); // my gosh
+}
+
+function onFileInputChange(e) {
+    $(this).appendTo('#upload_form');
+    $('#upload_form').submit();
+}
+
 function addAtom(x, y, initialValue) {
     var d = $("<div class='atomDiv'><input type='text'></input><div class='close'>&times;</div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div>  <div class='out'>&darr;</div></div></div>");
     area.append(d);
@@ -778,7 +851,8 @@ function addAtom(x, y, initialValue) {
     d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
-    i.on('drop', function(e) {console.log(e);});
+    i.on('dragenter', onDragEnterEntry);
+    i.on('dragleave', onDragLeaveEntry);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.children('.close').click(onCloseClick);
@@ -786,7 +860,16 @@ function addAtom(x, y, initialValue) {
     // data
     d.data('for', []);
     d.data('children', []);
+    
+    // file uploading
+    d.append("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>");
+    d.children('.fileinput-button').click(onFileInputClick).change(onFileInputChange);
+    d
     return d;
+}
+
+function onUploadDone() {
+    console.log($(this).contents());
 }
 
 function areaOnClick(event) {
@@ -807,6 +890,7 @@ function init() {
     defaultEntryHeight = $('#proto_entry').height();
     $('#proto_entry').detach();
     setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
+    $('#hidden_upload').load(onUploadDone);
 }
  
 $(document).ready(init);
