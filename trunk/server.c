@@ -256,7 +256,7 @@ static void *event_handler(enum mg_event event,
                        ? "text/plain"
                        : URI_CONTENT_TYPE));
         char* contentTypeCopy = NULL;
-        if (!isAtomic && xl_tailOf(output) == xl_atom("Content-Typed")) {
+        if (i_depth != 0 && !isAtomic && xl_tailOf(output) == xl_atom("Content-Typed")) {
             contentTypeCopy = xl_strOf(xl_tailOf(xl_headOf(output)));
             content_type = contentTypeCopy;
             output = xl_headOf(xl_headOf(output));

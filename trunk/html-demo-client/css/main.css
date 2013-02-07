@@ -61,7 +61,6 @@ textarea {
    ========================================================================== */
 
 .in, .out, .poke {
-      z-index: 15;
       background-color: black;
       color: white;
       text-align: center;
@@ -86,7 +85,7 @@ textarea {
 
 
 .atomDiv .close {
-    z-index: 15;
+    z-index: 25;
     position: absolute;
     right: 7px;
     top: 3px;
@@ -136,7 +135,6 @@ textarea {
 
 
 .atomDiv {
-   z-index: 10;
    position: absolute;
    border-style: solid;
    border-width: 2px;
@@ -144,11 +142,17 @@ textarea {
 }
 
 .atomDiv input {
+   z-index: 20;
+   position: relative;
    border-style: solid;
    border-width: 2px;
+   padding-right: 14px;
 }
 
 .kept span {
+   z-index: 20;
+   display: block;
+   position: relative;
    background-color: #DDF;
    cursor: move;
    border-style: solid;
@@ -170,7 +174,6 @@ textarea {
 }
 
 .pairDiv, .ipairDiv {
-   z-index: 0;
    position: absolute;
 }
 
@@ -247,6 +250,26 @@ textarea {
   margin-left: 25px;
 }
  
+.fileinput-button {
+  z-index: 30;
+  position: absolute;
+  overflow: hidden;
+  right: 0;
+  margin-right: 4px;
+}
+.fileinput-button input {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  opacity: 0;
+  filter: alpha(opacity=0);
+  transform: translate(-300px, 0) scale(4);
+  font-size: 23px;
+  direction: ltr;
+  cursor: pointer;
+  width: 100%;
+}
 
 
 
