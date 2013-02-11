@@ -178,7 +178,7 @@ function buildUri(d) {
     }
 }
 
-function turnInputIntoText(d) {
+function turnEntryIntoText(d) {
     var i = d.children('input');
     if (!i.length) return;
     var v = i.val() || 'EVE';
@@ -195,13 +195,30 @@ function turnInputIntoText(d) {
     d.children('.fileinput-button').detach();
 }
 
+function turnEntryIntoHtmlObject(d) {
+    var i = d.children('input');
+    if (!i.length) return;
+    var w0 = i.width();
+    d.addClass('kept');
+    d.children('.close').addClass('outedClose').show();
+    i.detach();
+    var o = $("<object></object>").attr('data', server + d.data('url')).appendTo(d);
+    o.click(onAtomClick);
+    var w = o.width();
+    var h = o.height();
+    o.css({width: (w < 100 ? 100 : w) + 'px', height: (h < 100 ? 100 : h) + 'px'});
+    d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
+    d.children('.hook').css('bottom', '-18px');
+    d.children('.fileinput-button').detach();
+}
+
 function unlooseArrow(d, c) {
     // already connected arrow?
     if (c && !isFor(d, c)) return;
 
     if (d.hasClass('atomDiv')) { // atom
        // make it immutable
-       turnInputIntoText(d);
+       turnEntryIntoText(d);
     } else if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) { // pair
        // unloose its end
        unlooseArrow(d.data('tail'), d);
@@ -402,6 +419,7 @@ function unfold(d, unfoldTail) {
     
     request.done(function(data, textStatus, jqXHR) {
         console.log(data);
+        console.log(jqXHR);
         var p = d.position();
         if (data[0] == '/') { // parent is a pair
             if (unfoldTail) {
@@ -423,7 +441,7 @@ function unfold(d, unfoldTail) {
                 a = addAtom(p.left + d.width() - defaultEntryWidth / 2 + 3, p.top - defaultEntryHeight, data);
                 d.data('head', a);
             }
-            turnInputIntoText(a);
+            turnEntryIntoText(a);
         }
         // connectivity
         a.data('children').push(d);
@@ -458,7 +476,7 @@ function onHookClick(e) {
 }
 
 function onCloseClick(e) {
-    var d = $(this).parent();
+    var d = $(this).parent().parent();
     dismissArrow(d);
     return false;
 }
@@ -722,7 +740,7 @@ function onDragEnd(e) {
 }
 
 function addFoldedPair(x, y) {
-    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'>&times;</div></div>");
+    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'><a href='#'>&times;</a></div></div>");
     area.append(d);
     d.css({left: (x - 75) + 'px',
            top: (y - 45) + 'px',
@@ -736,7 +754,7 @@ function addFoldedPair(x, y) {
     d.attr('draggable', true);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
-    d.children('.close').click(onCloseClick);
+    d.find('.close a').click(onCloseClick);
     d.children('.unfoldTail,.unfoldHead').click(unfoldClick);
 
     // data
@@ -752,7 +770,7 @@ function addPair(tail, head, animate) {
     var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
     var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 3;
     var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'>&times;</div></div>");
+    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'><a href='#'>&times;</a></div></div>");
     area.append(d);
     var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
     d.css({
@@ -777,7 +795,7 @@ function addPair(tail, head, animate) {
     d.attr('draggable', true);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
-    d.children('.close').click(onCloseClick);
+    d.find('.close a').click(onCloseClick);
 
     // data
     if (tail) {
@@ -825,13 +843,20 @@ function onFileInputClick(e) {
     }, 0); // my gosh
 }
 
+var waitedUploads = [];
 function onFileInputChange(e) {
+    // Cross-domain form post can't be queried back
+    // So we build up a secret and pair it with our uploaded file, then we get back the children of our secret
+    secret = ('' + Math.random()).substring(2) + Date.now();
+    waitedUploads[secret] = $(this).parent();
+    $('#upload_form').attr('action', 'http://miellaby.selfip.net:8008/' + secret);
+    $('#upload_form').children('input').detach();
     $(this).appendTo('#upload_form');
     $('#upload_form').submit();
 }
 
 function addAtom(x, y, initialValue) {
-    var d = $("<div class='atomDiv'><input type='text'></input><div class='close'>&times;</div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div>  <div class='out'>&darr;</div></div></div>");
+    var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div>  <div class='out'>&darr;</div></div></div>");
     area.append(d);
     if (animatePlease) {
         d.css('opacity', 0.1).animate({ opacity: 1});
@@ -855,7 +880,7 @@ function addAtom(x, y, initialValue) {
     i.on('dragleave', onDragLeaveEntry);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
-    d.children('.close').click(onCloseClick);
+    d.find('.close a').click(onCloseClick);
     
     // data
     d.data('for', []);
@@ -869,7 +894,28 @@ function addAtom(x, y, initialValue) {
 }
 
 function onUploadDone() {
-    console.log($(this).contents());
+    var i = 0;
+    for (var secret in waitedUploads) {
+        var d = waitedUploads[secret];
+        var request = $.ajax({url: server + 'headOf/tailOf/childrenOf/escape+' + secret + '?iDepth=0', xhrFields: { withCredentials: true }});
+        request.done(function(data, textStatus, jqXHR) {
+            delete waitedUploads[secret];
+            console.log(d);
+            console.log(data);
+            d.data('url', data);
+            // toast url
+            toast(d, data);
+            turnEntryIntoHtmlObject(d);
+            // save position
+            var p = d.position();
+            var instruction = server + 'linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
+            $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(lastPosition) {
+                d.data('lastPosition', lastPosition);
+                findPositions(d);
+            });
+            $('#hidden_upload').attr('src', 'about:blank');
+        });
+    }
 }
 
 function areaOnClick(event) {

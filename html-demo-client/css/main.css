@@ -97,8 +97,20 @@ textarea {
     opacity: 0.3;
 }
 
+.atomDiv .close.outedClose {
+    right: -10px;
+    border-width: 1px;
+    border-radius: 3px;
+    border-style: solid;
+}
+
+
 .close:hover {
     opacity: 1;
+}
+
+.close  a {
+    
 }
 
 .in {
@@ -136,9 +148,6 @@ textarea {
 
 .atomDiv {
    position: absolute;
-   border-style: solid;
-   border-width: 2px;
-   border-color: white;
 }
 
 .atomDiv input {
@@ -147,6 +156,8 @@ textarea {
    border-style: solid;
    border-width: 2px;
    padding-right: 14px;
+   border-color: black;
+   border-radius: 5px;
 }
 
 .kept span {
@@ -157,6 +168,16 @@ textarea {
    cursor: move;
    border-style: solid;
    border-width: 2px;
+}
+
+.kept object {
+   z-index: 20;
+   background-color: #DDF;
+   cursor: move;
+   border-style: solid;
+   border-width: 2px;
+   border-radius: 20px;
+   display: inline-block;
 }
 
 
@@ -271,7 +292,9 @@ textarea {
   width: 100%;
 }
 
-
+.close a, .close a:visited {
+        text-decoration: none;
+}
 
 /* ==========================================================================
    Media Queries
