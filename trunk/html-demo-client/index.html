@@ -23,15 +23,16 @@
                 <input id='proto_entry' style='visibility: hidden;'></input>
         </div>
         <div id='killme' style='z-index: 0; position: fixed; margin:35%'><h2 style='color: gray;'>Please click anywhere to interact</div>
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
         <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
 
         <script src="js/plugins.js"></script>
         <script src="js/main.js"></script>
         <div id='toaster'>...</div>
-        <form id='upload_form' action='http://miellaby.selfip.net:8008/escape?iDepth=0' method=post enctype='multipart/form-data' target='hidden_upload' style='display: none'>
-           <iframe id='hidden_upload' name='hidden_upload' src=''></iframe>
-        </form>
-
+        <div id='upload_form_areas' style='display: none'>
+            <form id='upload_form' action='http://miellaby.selfip.net:8008/escape?iDepth=0' method=post enctype='multipart/form-data' target='hidden_upload' style='display: none'>
+            <iframe id='hidden_upload' name='hidden_upload' src=''></iframe>
+            </form>
+        </div>
     </body>
 </html>
