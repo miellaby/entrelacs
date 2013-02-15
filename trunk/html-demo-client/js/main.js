@@ -243,13 +243,19 @@ function buildUri(d) {
     uri = d.data('uri');
     if (uri) // reuse known uri if any
       return uri
-    
-    if (d.hasClass('atomDiv')) { // atom
-        if (d.hasClass('kept'))
-            throw "kept atom has uri";
 
-        uri = encodeURIComponent(d.children('input').val());
-        return uri;
+      
+    if (d.hasClass('atomDiv')) { // atom
+        if (d.hasClass('kept')) {
+            // kept witouth uri = blob
+            uri = d.data('url');
+            if (uri) // reuse known url if any
+                return uri
+            throw "kept atom without url";
+        } else {
+            uri = encodeURIComponent(d.children('input').val());
+            return uri;
+        }
     } else if (d.data('tail') && d.data('head')) { // pair ends URI
        var tailUri = buildUri(d.data('tail'));
        var headUri = buildUri(d.data('head'));
@@ -816,22 +822,23 @@ function findPartners(d) {
             while (struct) {
                var c = getPointOnCircle(100);
                var link = struct[0];
-               var partner = (link[0] == d.data('url') || encodeArrowUri(link[0]) == dUri) ? link[1] : link[0];
+               var outgoing = (link[0] == d.data('url') || encodeArrowUri(link[0]) == dUri);
+               var partner = outgoing ? link[1] : link[0];
                
                if (typeof partner != 'string') { // partner is a pair
-                  a = addFoldedPair(p.left, p.top);
+                  a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
                   a.data('uri', encodeArrowUri(partner));
                   
                } else if (partner[0] == '$') { // partner is folded
-                  a = addFoldedPair(p.left, p.top);
+                  a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
                   a.data('url', partner);
                   
                } else { // partner is an atom
-                  a = addAtom(p.left + d.width() + 100 + c.x, p.top + d.height() / 2 + c.y, decodeURIComponent(partner));
+                  a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, decodeURIComponent(partner));
                   turnEntryIntoText(a);
                   a.data('uri', encodeArrowUri(partner));
                }
-               pair = addPair(d, a);
+               pair = outgoing ? addPair(d, a) : addPair(a, d);
                d.data('children').push(pair);
                a.data('children').push(pair);
                pair.addClass('known');
