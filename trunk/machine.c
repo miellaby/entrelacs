@@ -931,9 +931,9 @@ static void machine_init(Arrow CM) {
     if (xls_get(EVE, atom("set")) == NIL)
         xls_set(EVE, atom("set"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setTailWithHeadIn/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
     if (xls_get(EVE, atom("link")) == NIL)
-        xls_set(EVE, atom("link"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/linkTailWithHead/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+        xls_set(EVE, atom("link"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/linkTailWithHead/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
     if (xls_get(EVE, atom("unlink")) == NIL)
-        xls_set(EVE, atom("unlink"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/unlinkTailAndHead/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+        xls_set(EVE, atom("unlink"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/unlinkTailAndHead/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
 
     // System Init call
     xl_eval(EVE, pair(atom("init"), pair(escape, CM))); // we pass CM at parameter to preserve it from GC

@@ -5,7 +5,7 @@
 
  A "context path" is a way to represent a hierarchical structure of nested contexts.
 
- It's an arrow in the form "/C0+C1+C2+++Cn" where
+ It's an arrow in the form "/C0+C1+C2..+Cn" where
   - C0 is Eve or an atom
   - each Cx is an identifier of some nested context in a parent context
   - C0=Eve is the root context path.
@@ -18,8 +18,8 @@
 
  One can root/unroot an arrow "$a" within a context path "$c".
  It consists in rooting 2 arrows:
-   - $r1 = "/C0/C1/++/Cn+$a"
-   - $r2 = "/C0+C1+++Cn+$a" (that is "/$c+$a")
+   - $r1 = "/C0/C1/../Cn+$a"
+   - $r2 = "/C0+C1..+Cn+$a" (that is "/$c+$a")
 
   $r1 is costly to build and store as each ancester up to $a is likely to
   be created. But $r1 contributes to index arrows and contexts whatever the abstraction levels.
@@ -69,7 +69,7 @@ Arrow xls_close(Arrow s);
 
 /** root an arrow $a in the context defined by path $c and return the resulting path "/$c+$a"
     Two arrows are actually rooted:
-    $r1 = /C0/C1/++/Cn+a
+    $r1 = /C0/C1/../Cn+a
     $r2 = /$c+$a
 */
 Arrow xls_root(Arrow c, Arrow a);
@@ -81,25 +81,29 @@ Arrow xls_isRooted(Arrow c, Arrow a);
 
 /** unroot an arrow $a within a context defined by its path $c, then returns it.
     Two arrows are actually unrooted:
-    $r1 = /C0/C1/++/Cn+a
+    $r1 = /C0/C1/../Cn+a
     $r2 = /$c+$a
 */
 Arrow xls_unroot(Arrow c, Arrow a);
 
 
-/** traditional edge storage
- *  root $destination in /$c+$source context path
+/** traditional edge storage;
+    root a pair from $source to $destination in the context defined by $c path.
+    Two arrows are actually rooted:
+    $r1 = /C0/C1/../Cn+/$source+$destination
+    $r2 = //$c+$source+/$c+$destination
  */
 Arrow xls_link(Arrow c, Arrow source, Arrow destination);
 
-/** traditional edge removal
- *  unroot $destination from /$c+$source context path
+/** traditional edge removal;
+    unroot a pair from $source to $destination in the context defined by $c path.
  */
 Arrow xls_unlink(Arrow c, Arrow source, Arrow destination);
 
-/** returns a list-arrow of all rooted arrows within context path "/$c+$key"
-*/
-Arrow xls_partnerOf(Arrow c, Arrow slot);
+/** returns a list of all children of $a rooted within context path $c
+    via link/unlink functions
+ */
+Arrow xls_partnerOf(Arrow c, Arrow a);
 
 /** unroot all arrows within a context defined by its path $c,
     and recursivly reset any sub-contexts.
@@ -143,9 +147,9 @@ Arrow xls_url(Arrow s, char* url);
 */
 Arrow xls_urlMaybe(Arrow s, char* url);
 
-/** returns a list-arrow of all "the" rooted arrows in context of path "/$c+$key"
+/** returns a list of all rooted pairs within context path "/$c+$key"
 */
-Arrow xls_partnersOf(Arrow c, Arrow slot);
+Arrow xls_partnersOf(Arrow c, Arrow a);
 
 
 #endif /* SESSION_H */
