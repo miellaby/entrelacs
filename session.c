@@ -126,14 +126,22 @@ void xls_reset(Arrow c) {
  *  root $destination in /$c+$source context path
  */
 Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
-    return xls_root(a(c, source), destination);
+    Arrow p = pair(source, destination);
+ // TODO is not the best way to do it? should not set/unset merges with this?
+    deepRoot(c, p);
+    xl_root(a(a(c, source), a(c, destination)));
+    return p;
 }
 
 /** traditional edge removal
  *  unroot $destination from /$c+$source context path
  */
 Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
-    return xls_unroot(a(c, source), destination);
+    Arrow p = pair(source, destination);
+ // TODO is not the best way to do it? should not set/unset merges with this?
+    deepUnroot(c, p);
+    xl_unroot(a(a(c, source), a(c, destination)));
+    return p;
 }
 
 
@@ -194,6 +202,30 @@ Arrow xls_get(Arrow c, Arrow key) {
     Arrow value = get(c, key);
     TRACEPRINTF("xls_get(%O,%O) returned %O", c, key, value);
     return value;
+}
+
+
+/** returns a list of all children of $a rooted within context path $c
+    via link/unlink functions
+ */
+Arrow xls_partnersOf(Arrow c, Arrow a) {
+    Arrow value = NIL;
+    Arrow contextPair = xl_pairMaybe(c, a);
+    if (contextPair == EVE) return EVE;
+    
+    Arrow list = EVE;
+    XLEnum enumChildren = xl_childrenOf(contextPair);
+    while (xl_enumNext(enumChildren)) {
+        Arrow pair = xl_enumGet(enumChildren);
+        int outgoing = (xl_headOf(pair) != contextPair);
+        Arrow other = (outgoing ? xl_headOf(pair) : xl_tailOf(pair));
+        if (xl_isRooted(pair) && xl_tailOf(other) == c) {
+            value = headOf(other);
+            list = xl_pair(outgoing ? xl_pair(a, value) : xl_pair(value, a), list);
+        }
+    }
+    xl_freeEnum(enumChildren);
+    return list;
 }
 
 /** close a session $s */
@@ -364,26 +396,4 @@ char* xls_urlOf(Arrow s, Arrow e, int depth) {
     Arrow locked = a(s, atom("locked"));
 
     return toURL(locked, e, depth, &l);
-}
-
-/** returns a list-arrow of all rooted arrows within context path "/$c+$key"
-*/
-Arrow xls_partnersOf(Arrow c, Arrow key) {
-    Arrow value = NIL;
-    Arrow keyContext = pairMaybe(c, key);
-    Arrow list = EVE;
-    if (keyContext != EVE) {
-        XLEnum enumChildren = xl_childrenOf(keyContext);
-        while (xl_enumNext(enumChildren)) {
-            Arrow keyValue = xl_enumGet(enumChildren);
-            if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
-            if (isRooted(keyValue)) {
-                value = headOf(keyValue);
-            }
-            list = a(value, list);
-        }
-        xl_freeEnum(enumChildren);
-    }
-
-    return list;
 }
