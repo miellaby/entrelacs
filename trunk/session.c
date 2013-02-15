@@ -154,7 +154,7 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     TRACEPRINTF("xls_set(%O,%O,%O)", c, key, value);
 
     xls_unset(c, key);
-    return xls_link(c, key, value);
+    return xls_root(a(c, key), value);
 }
 
 /** traditional "unset-key".
