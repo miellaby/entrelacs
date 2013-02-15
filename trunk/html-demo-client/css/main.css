@@ -198,6 +198,10 @@ textarea {
    position: absolute;
 }
 
+.known  .tailDiv, .known .headDiv {
+   border-style: dashed;
+}
+
 .pairDiv .hook, .ipairDiv .hook {
    z-index: 15;
    position: absolute;

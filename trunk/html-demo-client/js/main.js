@@ -6,6 +6,87 @@ var defaultEntryHeight;
 var dragStartX, dragStartY;
 var dragOver = null;
 
+// Simple recursive descent parser for Entrelacs URI
+var decodeArrowUri = function () {
+    // We define it inside a closure to keep bits private.
+
+     var at,     // The index of the current character
+         ch,     // The current character
+         text,   // the text being parsed
+
+         error = function (m) { // when something is wrong.
+             throw {
+                 name:    'SyntaxError',
+                 message: m,
+                 at:      at,
+                 text:    text
+             };
+         },
+
+         next = function () { // Get the next character
+             ch = text.charAt(at);
+             at += 1;
+             return ch;
+         },
+
+         atom = function () { // Parse an atom.
+             var hex, i, ff, string = '';
+
+             // stop at + or / characters.
+             while (ch !== '+' && ch !== '/' && ch != '') {
+                 if (ch === '%') {
+                     next();
+                     ff = 0;
+                     for (i = 0; i < 2; i++) {
+                        hex = parseInt(next(), 16);
+                        if (!isFinite(hex)) {
+                            error('not hexadecimal');
+                         }
+                        ff = ff * 16 + hex;
+                    }
+                    string += String.fromCharCode(ff);
+                 } else {
+                    string += ch;
+                 }
+                 next();
+             }
+             return string;
+         },
+
+         arrow,  // Place holder for the value function.
+
+         pair = function () { // Parse a pair.
+             var head, tail;
+             if (ch === '/') {
+                 next();
+                 head = arrow();
+                 if (ch === '+')
+                    next();
+                 tail = arrow();
+                 return [ head, tail ];
+             }
+         };
+
+     arrow = function () { // Parse a pair or an atom
+        return (ch == '/' ? pair() : atom());
+     };
+
+    // Return the overall parsing function
+     return function (source, reviver) {
+         text = source;
+         at = 0;
+         next();
+         return arrow();
+     };
+}();
+
+function encodeArrowUri(struct) {
+    if (typeof struct == 'string')
+        return encodeURIComponent(struct);
+    else
+        return '/' + encodeArrowUri(struct[0]) + '+' + encodeArrowUri(struct[1]);
+}
+
 function isFor(d, a) {
     var list = d.data('for');
     for (var i = 0; i < list.length; i++) {
@@ -136,7 +217,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
     }
     var lastPosition = d.data('lastPosition');
     if (lastPosition) {
-       var instruction = server + '/unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition;
+       var instruction = server + 'unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition;
        $.ajax({url: instruction, xhrFields: { withCredentials: true }});
     }
 
@@ -158,24 +239,28 @@ function findNextInto(d) {
 
 // get an arrow uri
 function buildUri(d) {
-    var uri = d.data('url');
-    if (uri) {
-      // reuse known url if any
+    var uri;
+    uri = d.data('uri');
+    if (uri) // reuse known uri if any
       return uri
-    } else if (d.hasClass('atomDiv')) { // atom
-        var v;
+    
+    if (d.hasClass('atomDiv')) { // atom
         if (d.hasClass('kept'))
-            v = d.children('span').text();
-        else {
-            v = d.children('input').val();
-        }
-        return encodeURIComponent(v);
-       
-    } else { // pair ends URI
+            throw "kept atom has uri";
+
+        uri = encodeURIComponent(d.children('input').val());
+        return uri;
+    } else if (d.data('tail') && d.data('head')) { // pair ends URI
        var tailUri = buildUri(d.data('tail'));
        var headUri = buildUri(d.data('head'));
-       return '/' + tailUri + '+' + headUri;
-    }
+       uri = '/' + tailUri + '+' + headUri;
+       return uri;
+    } 
+    uri = d.data('url');
+    if (uri) // reuse known url if any
+      return uri
+
+    throw "undef";
 }
 
 function turnEntryIntoText(d) {
@@ -193,6 +278,7 @@ function turnEntryIntoText(d) {
     s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.fileinput-button').detach();
+    d.data('uri', v);
 }
 
 function turnEntryIntoHtmlObject(d) {
@@ -233,10 +319,21 @@ function unlooseArrow(d, c) {
     }
 }
 
-function assimilateArrow(d) {
+
+
+function rootArrow(d) {
+    // already assimilated
+    if (d.data('url')) return;
+    
     var uri = buildUri(d);
     // assimilation request
-    var request = $.ajax({url: server + 'escape/' /* please not that one ever escapes submited arrow */ + uri + '?iDepth=0', xhrFields: { withCredentials: true }});
+    var ope;
+    if (d.hasClass('atomDiv')) {
+        code = '/root/escape+' /* please not that one ever escapes submited arrow */ + uri
+    } else {
+        code = '//linkTailWithHead/escape+' /* please not that one ever escapes submited arrow */ + uri + '/,/escape+' + uri;
+    }
+    var request = $.ajax({url: server + code + '?iDepth=0', xhrFields: { withCredentials: true }});
     var id;
     d.data('url','pending...');
     
@@ -248,18 +345,41 @@ function assimilateArrow(d) {
        toast(d, data);
        // save position
        var p = d.position();
-       var instruction = server + 'linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
+       var instruction = server + 'linkTailWithHead/escape+//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
        $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(lastPosition) {
             d.data('lastPosition', lastPosition);
             findPositions(d);
+            findPartners(d);
        });
        
     });
 }
 
+
+function assimilateArrow(d) {
+    // already assimilated
+    if (d.data('url')) return;
+    
+    // assimilation request
+    var uri = buildUri(d);
+    var request = $.ajax({url: server + '/escape+' + uri + '?iDepth=0', xhrFields: { withCredentials: true }});
+    var id;
+    d.data('url','pending...');
+    
+    request.done(function(data, textStatus, jqXHR) {
+       console.log(data);
+       // save url
+       d.data('url', data);
+       // toast url
+       toast(d, data);
+    });
+}
+
+
+
 function recordArrow(d) {
     // System upload
-    assimilateArrow(d);
+    rootArrow(d);
     
     // unloose arrow
     unlooseArrow(d);
@@ -354,6 +474,7 @@ function onAtomClick(e) {
         return false;
     d.css('marginTop','-10px').animate({marginTop: 0});
     findPositions(d);
+    findPartners(d);
     return false;
 }
 
@@ -461,8 +582,15 @@ function onHookClick(e) {
    var a;
    if (i.hasClass('poke')) {
        d.css('marginTop','-10px').animate({marginTop: 0});
-       if (!d.hasClass('kept')) return false; // filter out unfinished atom
-       findPositions(d);
+       if (d.hasClass('known')) { // know link
+            d.removeClass('known');
+            d.addClass('kept');
+            findPositions(d);
+            findPartners(d);
+       } else if (d.hasClass('kept')) { // finished atom
+           findPositions(d);
+           findPartners(d);
+       }
        return false;
    }
    
@@ -565,6 +693,8 @@ function rewirePair(a, oldOne, newOne) {
    // class copy
    if (a.hasClass('kept'))
       newA.addClass('kept');
+   if (a.hasClass('known'))
+      newA.addClass('known');
    // data copy
    var oldData = a.data();
    for (var dataKey in oldData) {
@@ -668,6 +798,51 @@ function showMovingGhost(x, y, d) {
      ghost.animate({left: nx, top: ny, opacity: 0.5}, function() { ghost.detach(); });
 }
 
+function findPartners(d) {
+    if (!d.data('url')) {
+        var def = getDefinition(d);
+        var request = $.ajax({url: server + def + '?iDepth=0', xhrFields: { withCredentials: true }});
+        request.done(function(data, textStatus, jqXHR) {
+           d.data('url', data);
+           findPartners(d);
+        });
+    }
+    
+    var p = d.position();
+    var dUri = buildUri(d);
+    var request = $.ajax({url: server + 'partnersOf/escape+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
+    request.done(function(data, textStatus, jqXHR) {
+            var struct = decodeArrowUri(data);
+            while (struct) {
+               var c = getPointOnCircle(100);
+               var link = struct[0];
+               var partner = (link[0] == d.data('url') || encodeArrowUri(link[0]) == dUri) ? link[1] : link[0];
+               
+               if (typeof partner != 'string') { // partner is a pair
+                  a = addFoldedPair(p.left, p.top);
+                  a.data('uri', encodeArrowUri(partner));
+                  
+               } else if (partner[0] == '$') { // partner is folded
+                  a = addFoldedPair(p.left, p.top);
+                  a.data('url', partner);
+                  
+               } else { // partner is an atom
+                  a = addAtom(p.left + d.width() + 100 + c.x, p.top + d.height() / 2 + c.y, decodeURIComponent(partner));
+                  turnEntryIntoText(a);
+                  a.data('uri', encodeArrowUri(partner));
+               }
+               pair = addPair(d, a);
+               d.data('children').push(pair);
+               a.data('children').push(pair);
+               pair.addClass('known');
+               assimilateArrow(pair);
+               struct = struct[1];
+            }
+        });
+    
+}
+
+
 function findPositions(d) {
     if (!d.data('url')) {
         var def = getDefinition(d);
@@ -685,7 +860,7 @@ function findPositions(d) {
             for (var i = 0; i < p.length; i++) {
                 if (p[i] == lp) continue;
                 var xy = p[i].match(/[0-9]+/g);
-                showMovingGhost(parseInt(xy[0]), parseInt(xy[1]), d);
+                xy && showMovingGhost(parseInt(xy[0]), parseInt(xy[1]), d);
             }
         });
         
@@ -713,7 +888,7 @@ function moveArrow(d, offsetX, offsetY, movingChild) {
     var lastPosition = d.data('lastPosition');
     if (lastPosition) {
        var p = d.position();
-       var instruction = server + '/unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition
+       var instruction = server + 'unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition
                               + '/,/linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
        $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(newPosition) {
             d.data('lastPosition', newPosition);
@@ -722,19 +897,25 @@ function moveArrow(d, offsetX, offsetY, movingChild) {
 }
 
 function onDragStart(e) {
-    dragStartX = e.originalEvent.pageX;
-    dragStartY = e.originalEvent.pageY;
+    console.log(e);
+    dragStartX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX);
+    dragStartY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY);
+    e.originalEvent.dataTransfer.setData('text/plain', "arrow");
+    e.originalEvent.dataTransfer.effectAllowed = "move";
+    e.originalEvent.dataTransfer.dropEffect = "move";
     return true;
 }
 
 function onDragEnd(e) {
     var d = $(this);
     console.log(e);
+    if (e.originalEvent.dropEffect == "none") return false;
+    
     if (dragOver && $(this).hasClass('kept')) {
         var d = $(dragOver).parent();
         turnEntryIntoExistingArrow(d, $(this));
     } else {
-        moveArrow(d, e.originalEvent.pageX - dragStartX, e.originalEvent.pageY - dragStartY, null /* no moving child */);
+        moveArrow(d, ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX) - dragStartX , ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY) - dragStartY, null /* no moving child */);
     }
     return true;
 }
@@ -826,12 +1007,14 @@ function onDragEnterEntry(e) {
     console.log(e);
 
     $(this).animate({'border-width': 6, left: "-=3px"}, 100);
+    e.preventDefault();
 }
 
 function onDragLeaveEntry(e) {
     console.log(e);
     $(this).animate({'border-width': 2, left: "+=3px"}, 100);
     setTimeout(function() { dragOver = null; }, 0); // my gosh
+    e.preventDefault();
 }
 
 function onFileInputClick(e) {
