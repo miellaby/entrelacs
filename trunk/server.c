@@ -103,7 +103,8 @@ static Arrow assimilateUploadedData(struct mg_connection *conn) {
   contentLength -= strlen(postData);  // Subtract the boundary marker at the end
   contentLength -= 6;                  // Subtract "\r\n" before and after boundary
 
-  
+ LOGPRINTF(LOG_WARN, "upload content-length %d", contentLength);
+
   if (contentLength <= 0) {
     // Empty file
     return xl_pair(xl_atom("Content-Typed"),
