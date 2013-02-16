@@ -170,7 +170,7 @@ textarea {
    border-width: 2px;
 }
 
-.kept object {
+.kept object, .kept img {
    z-index: 20;
    background-color: #DDF;
    cursor: move;
