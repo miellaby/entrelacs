@@ -6,6 +6,7 @@ var defaultEntryHeight;
 var dragStartX, dragStartY;
 var dragOver = null;
 
+
 // Simple recursive descent parser for Entrelacs URI
 var decodeArrowUri = function () {
     // We define it inside a closure to keep bits private.
@@ -14,6 +15,15 @@ var decodeArrowUri = function () {
          ch,     // The current character
          text,   // the text being parsed
 
+         refToString = function() {
+            return this.ref;
+         },
+         
+         Ref = function(string) {
+            this.ref = string;
+            this.toString = refToString;
+         },
+        
          error = function (m) { // when something is wrong.
              throw {
                  name:    'SyntaxError',
@@ -29,13 +39,24 @@ var decodeArrowUri = function () {
              return ch;
          },
 
+         ref = function () { // Parse a ref.
+             var hex, i, ff, string = '';
+             if (ch === '$') {
+                 // stop at + or / characters.
+                 while (ch !== '+' && ch !== '/' && ch != '') {
+                     string += ch;
+                     next();
+                 }
+                 return new Ref(string);
+             }
+         },
+         
          atom = function () { // Parse an atom.
              var hex, i, ff, string = '';
 
              // stop at + or / characters.
              while (ch !== '+' && ch !== '/' && ch != '') {
                  if (ch === '%') {
-                     next();
                      ff = 0;
                      for (i = 0; i < 2; i++) {
                         hex = parseInt(next(), 16);
@@ -68,11 +89,12 @@ var decodeArrowUri = function () {
          };
 
      arrow = function () { // Parse a pair or an atom
-        return (ch == '/' ? pair() : atom());
+        return (ch === '/' ? pair() : (ch === '$' ? ref() : atom()));
      };
 
     // Return the overall parsing function
      return function (source, reviver) {
+         console.log(source);
          text = source;
          at = 0;
          next();
@@ -81,10 +103,15 @@ var decodeArrowUri = function () {
 }();
 
 function encodeArrowUri(struct) {
-    if (typeof struct == 'string')
+    if (typeof struct == 'object') {
+        if (struct.push !== undefined)
+            return '/' + encodeArrowUri(struct[0]) + '+' + encodeArrowUri(struct[1]);
+        else
+            return struct.ref;
+    } else if (typeof struct == 'string')
         return encodeURIComponent(struct);
     else
-        return '/' + encodeArrowUri(struct[0]) + '+' + encodeArrowUri(struct[1]);
+        throw "what";
 }
 
 function isFor(d, a) {
@@ -294,7 +321,9 @@ function turnEntryIntoHtmlObject(d) {
     d.addClass('kept');
     d.children('.close').addClass('outedClose').show();
     i.detach();
-    var o = $("<object></object>").attr('data', server + d.data('url')).appendTo(d);
+    var o =  (d.data('uri').match(/\/Content-Typed\+\/image%2F/) ?
+      $("<img></img>").attr('src', server + '/escape+' + d.data('uri'))
+    : $("<object></object>").attr('data', server + '/escape+' + d.data('uri'))).appendTo(d);
     o.click(onAtomClick);
     var w = o.width();
     var h = o.height();
@@ -585,6 +614,8 @@ function unfoldClick(e) {
 function onHookClick(e) {
    var i = $(this);
    var d = i.parent().parent();
+   console.log(d);
+   console.log(d.data());
    var a;
    if (i.hasClass('poke')) {
        d.css('marginTop','-10px').animate({marginTop: 0});
@@ -825,13 +856,13 @@ function findPartners(d) {
                var outgoing = (link[0] == d.data('url') || encodeArrowUri(link[0]) == dUri);
                var partner = outgoing ? link[1] : link[0];
                
-               if (typeof partner != 'string') { // partner is a pair
+               if (partner.push !== undefined) { // partner is a pair
                   a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
                   a.data('uri', encodeArrowUri(partner));
                   
-               } else if (partner[0] == '$') { // partner is folded
+               } else if (partner.ref) { // partner is folded
                   a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
-                  a.data('url', partner);
+                  a.data('url', partner.ref);
                   
                } else { // partner is an atom
                   a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, decodeURIComponent(partner));
@@ -842,7 +873,7 @@ function findPartners(d) {
                d.data('children').push(pair);
                a.data('children').push(pair);
                pair.addClass('known');
-               assimilateArrow(pair);
+               // assimilateArrow(pair); TBC
                struct = struct[1];
             }
         });
@@ -1039,8 +1070,8 @@ function onFileInputChange(e) {
     // So we build up a secret and pair it with our uploaded file, then we get back the children of our secret
     secret = ('' + Math.random()).substring(2) + Date.now();
     waitedUploads[secret] = $(this).parent();
-    $('#upload_form').attr('action', 'http://miellaby.selfip.net:8008/' + secret);
-    $('#upload_form').children('input').detach();
+    $('#upload_form').attr('action', 'http://miellaby.selfip.net:8008/escape/' + secret); // don't forget the escape!
+    $('#upload_form').find('input').detach();
     $(this).appendTo('#upload_form');
     $('#upload_form').submit();
 }
@@ -1087,22 +1118,14 @@ function onUploadDone() {
     var i = 0;
     for (var secret in waitedUploads) {
         var d = waitedUploads[secret];
-        var request = $.ajax({url: server + 'headOf/tailOf/childrenOf/escape+' + secret + '?iDepth=0', xhrFields: { withCredentials: true }});
+        var request = $.ajax({url: server + 'tailOf/childrenOf/escape+' + secret, xhrFields: { withCredentials: true }});
         request.done(function(data, textStatus, jqXHR) {
             delete waitedUploads[secret];
             console.log(d);
             console.log(data);
-            d.data('url', data);
-            // toast url
-            toast(d, data);
+            d.data('uri', encodeArrowUri(decodeArrowUri(data)[1]));
             turnEntryIntoHtmlObject(d);
-            // save position
-            var p = d.position();
-            var instruction = server + 'linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
-            $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(lastPosition) {
-                d.data('lastPosition', lastPosition);
-                findPositions(d);
-            });
+            rootArrow(d);
             $('#hidden_upload').attr('src', 'about:blank');
         });
     }
