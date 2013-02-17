@@ -687,14 +687,14 @@ Arrow linkTailWithHeadHook(Arrow CM, Arrow hookParameter) {
    Arrow C = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_link(C, xl_tailOf(arrow), xl_headOf(arrow));
-   return xl_reduceMachine(CM, headOf(r)); // one doesn't show the context
+   return xl_reduceMachine(CM, r);
 }
 
 Arrow unlinkTailAndHeadHook(Arrow CM, Arrow hookParameter) {
    Arrow C = tailOf(CM);
    Arrow arrow = xl_argInMachine(CM);
    Arrow r = xls_unlink(C, xl_tailOf(arrow), xl_headOf(arrow));
-   return xl_reduceMachine(CM, headOf(r)); // one doesn't show the context
+   return xl_reduceMachine(CM, r);
 }
 
 Arrow partnersOfHook(Arrow CM, Arrow hookParameter) {
