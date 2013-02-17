@@ -126,7 +126,7 @@ void xls_reset(Arrow c) {
  *  root $destination in /$c+$source context path
  */
 Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
-    Arrow p = pair(source, destination);
+    Arrow p = xl_pair(source, destination);
  // TODO is not the best way to do it? should not set/unset merges with this?
     deepRoot(c, p);
     xl_root(a(a(c, source), a(c, destination)));
@@ -137,7 +137,7 @@ Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
  *  unroot $destination from /$c+$source context path
  */
 Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
-    Arrow p = pair(source, destination);
+    Arrow p = xl_pair(source, destination);
  // TODO is not the best way to do it? should not set/unset merges with this?
     deepUnroot(c, p);
     xl_unroot(a(a(c, source), a(c, destination)));

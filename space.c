@@ -1358,7 +1358,7 @@ char* xl_uriOf(Arrow a, uint32_t *l) {
 }
 
 Arrow xl_digestMaybe(char* digest) {
-    TRACEPRINTF("BEGIN xl_digestMaybe(%.56s)", digest);
+    TRACEPRINTF("BEGIN xl_digestMaybe(%.58s)", digest);
 
     int i = 2; // $H
     uint64_t hash = HEXTOI(digest[i]);
@@ -1385,7 +1385,7 @@ Arrow xl_digestMaybe(char* digest) {
         ONDEBUG((show_cell('R', probeAddress, cell, 0)));
         if (cell_isArrow(cell) && xl_checksumOf(probeAddress) == hash) {
             char* otherDigest = xl_digestOf(probeAddress, NULL);
-            if (!strcmp(otherDigest, digest)) {
+            if (!strncmp(otherDigest, digest, DIGEST_SIZE)) {
                 free(otherDigest);
                 return LOCK_OUT(probeAddress); // arrow found!
             }
@@ -1544,8 +1544,12 @@ static Arrow uri(uint32_t size, char *uri, int ifExist) { // TODO: document actu
         return a; // return NIL (wrong URI) or EVE (not assimilated)
     
     if (size != NAN) size -= uriLength;
+    if (size == 0)
+         return a;
+
     gap = skeepSpacesAndOnePlus(size, uri + uriLength);
-    if (size != NAN) size -= gap;
+    if (size != NAN)
+       size = (gap > size ? 0 : size - gap);
     uriLength += gap;
     while ((size == NAN || size--) && (c = uri[uriLength])) {
         DEBUGPRINTF("nextUri = >%s<", uri + uriLength);
