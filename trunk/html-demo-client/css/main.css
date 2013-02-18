@@ -255,6 +255,7 @@ textarea {
 }
 
 .unfoldTail, .unfoldHead {
+   z-index: 15;
    position: absolute;
    border-style: plain;
    background-color: black;
