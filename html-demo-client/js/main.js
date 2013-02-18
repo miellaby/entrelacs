@@ -331,6 +331,7 @@ function turnEntryIntoHtmlObject(d) {
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.hook').css('bottom', '-18px');
     d.children('.fileinput-button').detach();
+    updateDescendants(d, d);
 }
 
 function unlooseArrow(d, c) {
@@ -388,6 +389,9 @@ function rootArrow(d) {
        });
        
     });
+    request.fail(function() {
+       d.removeData('url');
+    });
 }
 
 
@@ -408,6 +412,9 @@ function assimilateArrow(d) {
        // toast url
        toast(d, data);
     });
+    request.fail(function() {
+       d.removeData('url');
+    });
 }
 
 
@@ -418,6 +425,20 @@ function recordArrow(d) {
     
     // unloose arrow
     unlooseArrow(d);
+}
+
+
+function recordChildren(d) {
+    var f = d.data('for');
+    if (f.length) {
+       var ff;
+       for (var i = 0 ; i < f.length; i++) {
+          toBeRecorded = f[i];
+          recordChildren(toBeRecorded);
+       }
+    } else {
+       recordArrow(d);
+    }
 }
 
 // search for the next editable atom
@@ -477,20 +498,11 @@ function onEntryKeypress(e) {
         f[f.length - 1].data('for').push(a);
         return false;
         
-     } else if (e.which == 13 /* return */) {
+     } else if (e.which == 13 /* enter */) {
         var d = $(this).parent();
         e.preventDefault();
         // record the whole child arrow
-        var f = d.data('for');
-        if (f.length) {
-           var ff;
-           while ((ff = f[f.length - 1].data('for')) && ff.length) {
-              f = ff ;
-           }
-           recordArrow(f[f.length - 1]);
-        } else {
-           recordArrow(d);
-        }
+        recordChildren(d);
         return false;
     }
     return true;
@@ -544,19 +556,22 @@ function getDefinition(d) {
     var def = '';
     if (d.data('url')) { // reuse url
         def = '/escape+' + d.data('url');
+    } else if (d.data('uri')) { // reuse uri
+        def = '/escape+' + d.data('uri');
     } else {
         var c = d;
         var cc = c.data('children')[0];
         while (cc) {
             def += (cc.data('head') && cc.data('head')[0] === c[0] || cc.data('tail') && cc.data('tail')[0] !== c[0]) ? '/headOf+' : '/tailOf+';
             if (cc.data('url')) break;
+            if (cc.data('uri')) break;
             c = cc;
             cc = c.data('children')[0];
         }
         if (!cc) {
            throw 'undef';
         }
-        def += '/escape+' + cc.data('url');
+        def += '/escape+' + (cc.data('url') ? cc.data('url') : cc.data('uri'));
     }
     return def;
 }
@@ -566,41 +581,46 @@ function unfold(d, unfoldTail) {
     d.children(unfoldTail ? '.tailDiv' : '.headDiv').height('100%').width('').css('border-style', '');
     d.children(unfoldTail ? '.unfoldTail' : '.unfoldHead').detach();
 
-    // compute unfolded arrow definition as a headOf/tailOf sequence
-    var def = (unfoldTail ? '/tailOf+' : '/headOf+') + getDefinition(d);
-       
+    var p = d.position();
+    
+    // define d relatively from a known child as a headOf/tailOf sequence
+    var def = getDefinition(d);
+    // because x-domain, content-type is not readable, one can't distinguish an atom beginning with $ from an id
+    // so we run a little prog which returns /say+x for any x, so to never get an atom
+    var prog = '//lambda/x/arrow/say+/var+x+' + def;
     // request
-    var request = $.ajax({url: server + def + '?iDepth=1', xhrFields: { withCredentials: true }});
+    var request = $.ajax({url: server + prog + '?iDepth=5', xhrFields: { withCredentials: true }});
     var id;
     
     request.done(function(data, textStatus, jqXHR) {
         console.log(data);
-        console.log(jqXHR);
-        var p = d.position();
-        if (data[0] == '/') { // parent is a pair
-            if (unfoldTail) {
-                a = addFoldedPair(p.left, p.top);
-                d.data('tail', a);
-            } else {
-                a = addFoldedPair(p.left + d.width(), p.top);
-                d.data('head', a);
-            }
-            // save url
-           a.data('url', data);
-           // toast url
-           toast(a, data);
-        } else { // parent is an atom: TODO fix API can't detect /$ string
-            if (unfoldTail) {
-                a = addAtom(p.left - defaultEntryWidth / 2 - 3, p.top - defaultEntryHeight, data);
-                d.data('tail', a);
-            } else {
-                a = addAtom(p.left + d.width() - defaultEntryWidth / 2 + 3, p.top - defaultEntryHeight, data);
-                d.data('head', a);
-            }
-            turnEntryIntoText(a);
+        var struct = decodeArrowUri(data);
+        // struct[0] = 'say'
+        var structOfUnfolded = struct[1][unfoldTail ? 0 : 1];
+        if (structOfUnfolded.push !== undefined) { // unfolded is a pair
+           var o =  (structOfUnfolded[0] == 'Content-Typed');
+           if (o) { // It's a content-typed atom
+              a = addAtom(p.left + (unfoldTail ?  - defaultEntryWidth / 2 - 3 : d.width() - defaultEntryWidth / 2 + 3), p.top - defaultEntryHeight, structOfUnfolded);
+              a.data('uri', encodeArrowUri(structOfUnfolded));
+              turnEntryIntoHtmlObject(a);
+           } else {
+              a = addFoldedPair(p.left + (unfoldTail ? -3 : 3 + d.width()), p.top);
+              a.data('uri', encodeArrowUri(structOfUnfolded));
+           }
+        } else if (structOfUnfolded.ref) { // unfolded is itself folded
+           a = addFoldedPair(p.left + (unfoldTail ? -3 : 3 + d.width()), p.top);
+           a.data('url', structOfUnfolded.ref);
+           
+        } else { // unfolded is an atom
+           a = addAtom(p.left + (unfoldTail ?  - defaultEntryWidth / 2 - 3 : d.width() - defaultEntryWidth / 2 + 3), p.top - defaultEntryHeight, structOfUnfolded);
+           turnEntryIntoText(a);
+           a.data('uri', encodeArrowUri(structOfUnfolded));
         }
+
         // connectivity
+        d.data(unfoldTail ? 'tail' : 'head', a);
         a.data('children').push(d);
+        rewirePair(d, a, a);
     });
 }
 
@@ -843,6 +863,7 @@ function findPartners(d) {
            d.data('url', data);
            findPartners(d);
         });
+        return;
     }
     
     var p = d.position();
@@ -857,15 +878,21 @@ function findPartners(d) {
                var partner = outgoing ? link[1] : link[0];
                
                if (partner.push !== undefined) { // partner is a pair
-                  a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
-                  a.data('uri', encodeArrowUri(partner));
-                  
+                  var o =  (partner[0] == 'Content-Typed');
+                  if (o) { // It's a content-typed atom
+                      a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, partner);
+                      a.data('uri', encodeArrowUri(partner));
+                      turnEntryIntoHtmlObject(a);
+                  } else {
+                      a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
+                      a.data('uri', encodeArrowUri(partner));
+                  }
                } else if (partner.ref) { // partner is folded
                   a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
                   a.data('url', partner.ref);
                   
                } else { // partner is an atom
-                  a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, decodeURIComponent(partner));
+                  a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, partner);
                   turnEntryIntoText(a);
                   a.data('uri', encodeArrowUri(partner));
                }
@@ -873,6 +900,7 @@ function findPartners(d) {
                d.data('children').push(pair);
                a.data('children').push(pair);
                pair.addClass('known');
+               pair.data('uri', encodeArrowUri(link));
                // assimilateArrow(pair); TBC
                struct = struct[1];
             }
@@ -889,6 +917,7 @@ function findPositions(d) {
            d.data('url', data);
            findPositions(d);
         });
+        return;
     } else {
         var request = $.ajax({url: server + 'partnersOf/escape/position+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
         var lp = d.data('lastPosition');
@@ -921,7 +950,7 @@ function moveArrow(d, offsetX, offsetY, movingChild) {
        }
     }
     
-    updateDescendants(d, d, movingChild);
+    updateDescendants(d, d);
     
     var lastPosition = d.data('lastPosition');
     if (lastPosition) {
@@ -952,6 +981,7 @@ function onDragEnd(e) {
     if (dragOver && $(this).hasClass('kept')) {
         var d = $(dragOver).parent();
         turnEntryIntoExistingArrow(d, $(this));
+        recordChildren(d); // TODO Need a confirm button
     } else {
         moveArrow(d, ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX) - dragStartX , ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY) - dragStartY, null /* no moving child */);
     }
@@ -1068,9 +1098,12 @@ var waitedUploads = [];
 function onFileInputChange(e) {
     // Cross-domain form post can't be queried back
     // So we build up a secret and pair it with our uploaded file, then we get back the children of our secret
-    secret = ('' + Math.random()).substring(2) + Date.now();
+    var secret = ('' + Math.random()).substring(2) + Date.now();
     waitedUploads[secret] = $(this).parent();
-    $('#upload_form').attr('action', 'http://miellaby.selfip.net:8008/escape/' + secret); // don't forget the escape!
+    
+    // One doesn't wan the blob to be evaluated ; so here is a prog
+    var prog = '/macro/x/arrow//escape+escape/' + secret + '/var+x';
+    $('#upload_form').attr('action', server + prog);
     $('#upload_form').find('input').detach();
     $(this).appendTo('#upload_form');
     $('#upload_form').submit();
@@ -1125,7 +1158,7 @@ function onUploadDone() {
             console.log(data);
             d.data('uri', encodeArrowUri(decodeArrowUri(data)[1]));
             turnEntryIntoHtmlObject(d);
-            rootArrow(d);
+            recordChildren(d); // TODO Need a confirm button
             $('#hidden_upload').attr('src', 'about:blank');
         });
     }
