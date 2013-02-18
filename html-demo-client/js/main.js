@@ -872,7 +872,7 @@ function findPartners(d) {
     request.done(function(data, textStatus, jqXHR) {
             var struct = decodeArrowUri(data);
             while (struct) {
-               var c = getPointOnCircle(100);
+               var c = getPointOnCircle(50);
                var link = struct[0];
                var outgoing = (link[0] == d.data('url') || encodeArrowUri(link[0]) == dUri);
                var partner = outgoing ? link[1] : link[0];
@@ -880,11 +880,11 @@ function findPartners(d) {
                if (partner.push !== undefined) { // partner is a pair
                   var o =  (partner[0] == 'Content-Typed');
                   if (o) { // It's a content-typed atom
-                      a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, partner);
+                      a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x), p.top + d.height() / 2 + c.y);
                       a.data('uri', encodeArrowUri(partner));
                       turnEntryIntoHtmlObject(a);
                   } else {
-                      a = addFoldedPair(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
+                      a = addFoldedPair(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x), p.top + d.height() / 2 + c.y);
                       a.data('uri', encodeArrowUri(partner));
                   }
                } else if (partner.ref) { // partner is folded
@@ -892,7 +892,7 @@ function findPartners(d) {
                   a.data('url', partner.ref);
                   
                } else { // partner is an atom
-                  a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - c.x), p.top + d.height() / 2 + c.y, partner);
+                  a = addAtom(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x), p.top + d.height() / 2 + c.y, partner);
                   turnEntryIntoText(a);
                   a.data('uri', encodeArrowUri(partner));
                }
