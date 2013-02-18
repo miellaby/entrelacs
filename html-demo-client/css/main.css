@@ -171,6 +171,7 @@ textarea {
 }
 
 .kept object, .kept img {
+   position: relative;
    z-index: 20;
    background-color: #DDF;
    cursor: move;
