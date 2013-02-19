@@ -5,7 +5,7 @@ var defaultEntryWidth;
 var defaultEntryHeight;
 var dragStartX, dragStartY;
 var dragOver = null;
-
+var uploadCount = 0;
 
 // Simple recursive descent parser for Entrelacs URI
 var decodeArrowUri = function () {
@@ -311,7 +311,7 @@ function turnEntryIntoText(d) {
     s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.fileinput-button').detach();
-    d.data('uri', v);
+    d.data('uri', encodeArrowUri(v));
 }
 
 function turnEntryIntoHtmlObject(d) {
@@ -321,13 +321,19 @@ function turnEntryIntoHtmlObject(d) {
     d.addClass('kept');
     d.children('.close').addClass('outedClose').show();
     i.detach();
-    var o =  (d.data('uri').match(/\/Content-Typed\+\/image%2F/) ?
+    var isImage = d.data('uri').match(/\/Content-Typed\+\/image%2F/);
+    var o = (isImage ?
       $("<img></img>").attr('src', server + '/escape+' + d.data('uri'))
     : $("<object></object>").attr('data', server + '/escape+' + d.data('uri'))).appendTo(d);
+    o.css('height', 100);
     o.click(onAtomClick);
+    o.dblclick(function() { $(this).colorbox({href: server + '/escape+' + d.data('uri'), open: true, photo: isImage }); });
     var w = o.width();
     var h = o.height();
-    o.css({width: (w < 100 ? 100 : w) + 'px', height: (h < 100 ? 100 : h) + 'px'});
+    if (w > h)
+        o.css({width: '100px', 'max-height': 'auto'});
+    else
+        o.css({height: '100px', 'max-width': 'auto'});
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.hook').css('bottom', '-18px');
     d.children('.fileinput-button').detach();
@@ -465,7 +471,7 @@ function findNext(d, from, leftOnly) {
 
 function onEntryKeypress(e) {
     var next = null;
-    console.log(e);
+    //console.log(e);
     
     if (e.which == 47 /* / */ && !$(this).data('escape')) {
         var d = $(this).parent();
@@ -531,7 +537,7 @@ function getPointOnCircle(radius) {
    var x = radius * Math.sin(2 * Math.PI * circleAngle / 23);
    var y = radius * Math.cos(2 * Math.PI * circleAngle / 23);
    var p = { x: parseInt(x), y: parseInt(y)};
-   console.log(p);
+   //console.log(p);
    return p;
 }
 
@@ -690,7 +696,7 @@ function onEntryBlur(event) {
 }
 
 function onEntryKeydown(e) {
-    console.log(e);
+    //console.log(e);
     if (e.keyCode == 27) {
         e.preventDefault();
         dismissArrow($(this).parent());
@@ -758,15 +764,6 @@ function rewirePair(a, oldOne, newOne) {
       if (dataKey == 'head' || dataKey == 'tail') continue;
       newA.data(dataKey, oldData[dataKey]);
    }
-   
-   var f = a.data('for');
-   newA.data('for', f);
-   var children = a.data('children');
-   newA.data('children', children);
-   var url = a.data('url');
-   if (url)
-      newA.data('url', url);
-   
    // back refs updating
    if (newTail)
        updateRefs(newTail, a, newA);
@@ -1076,6 +1073,8 @@ function onDragEnterEntry(e) {
 
     $(this).animate({'border-width': 6, left: "-=3px"}, 100);
     e.preventDefault();
+    e.stopPropagation();
+    return false;
 }
 
 function onDragLeaveEntry(e) {
@@ -1083,6 +1082,7 @@ function onDragLeaveEntry(e) {
     $(this).animate({'border-width': 2, left: "+=3px"}, 100);
     setTimeout(function() { dragOver = null; }, 0); // my gosh
     e.preventDefault();
+    return false;
 }
 
 function onFileInputClick(e) {
@@ -1099,14 +1099,20 @@ function onFileInputChange(e) {
     // Cross-domain form post can't be queried back
     // So we build up a secret and pair it with our uploaded file, then we get back the children of our secret
     var secret = ('' + Math.random()).substring(2) + Date.now();
-    waitedUploads[secret] = $(this).parent();
     
     // One doesn't wan the blob to be evaluated ; so here is a prog
     var prog = '/macro/x/arrow//escape+escape/' + secret + '/var+x';
-    $('#upload_form').attr('action', server + prog);
-    $('#upload_form').find('input').detach();
-    $(this).appendTo('#upload_form');
-    $('#upload_form').submit();
+    var form2 = $("<form id='upload_form' action='" + server + prog + "' method=post enctype='multipart/form-data' target='"
+                    + secret + "' style='display: none'><iframe id='" + secret + "' name='" + secret  + "' src=''></iframe></form>");
+            
+    form2.appendTo('#upload_form_areas');
+    $(this).children('input').appendTo(form2);
+    var iframe2 = form2.children('iframe');
+    iframe2.data('secret', secret).data('atom', $(this).parent());
+    iframe2.load(onUploadDone);
+    uploadCount++;
+    $("#loading").show();
+    form2.submit(); 
 }
 
 function addAtom(x, y, initialValue) {
@@ -1148,20 +1154,20 @@ function addAtom(x, y, initialValue) {
 }
 
 function onUploadDone() {
+    if (!--uploadCount) $("#loading").hide();
+    var secret = $(this).data('secret');
+    var atom = $(this).data('atom');
+    console.log(atom);
+    $(this).detach(); // remove the dedicated form and iframe
     var i = 0;
-    for (var secret in waitedUploads) {
-        var d = waitedUploads[secret];
-        var request = $.ajax({url: server + 'tailOf/childrenOf/escape+' + secret, xhrFields: { withCredentials: true }});
-        request.done(function(data, textStatus, jqXHR) {
-            delete waitedUploads[secret];
-            console.log(d);
-            console.log(data);
-            d.data('uri', encodeArrowUri(decodeArrowUri(data)[1]));
-            turnEntryIntoHtmlObject(d);
-            recordChildren(d); // TODO Need a confirm button
-            $('#hidden_upload').attr('src', 'about:blank');
-        });
-    }
+    var request = $.ajax({url: server + 'tailOf/childrenOf/escape+' + secret, xhrFields: { withCredentials: true }});
+    request.done(function(data, textStatus, jqXHR) {
+        console.log(data);
+        atom.data('uri', encodeArrowUri(decodeArrowUri(data)[1]));
+        turnEntryIntoHtmlObject(atom);
+        recordChildren(atom); // TODO Need a confirm button
+    });
+    
 }
 
 function areaOnClick(event) {
@@ -1182,7 +1188,18 @@ function init() {
     defaultEntryHeight = $('#proto_entry').height();
     $('#proto_entry').detach();
     setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
-    $('#hidden_upload').load(onUploadDone);
+
+    $(document).ajaxStart(function(){
+        $("#loading").show();
+    }).ajaxStop(function(){
+        if (!uploadCount) $("#loading").hide();
+    });
+    
+    $(document).ajaxError(function (event, jqXHR) {
+        if (jqXHR.status == 400) {
+            $('.atomDiv,.pairDiv,.ipairDiv').removeData('url');
+        }
+    });
 }
  
 $(document).ready(init);
