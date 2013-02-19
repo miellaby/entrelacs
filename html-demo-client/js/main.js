@@ -234,7 +234,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
             continue;
         }
         if (c.data('tail') && c.data('tail')[0] === d[0]) {
-            c.children('.tailDiv').height(0).width(20).css('border-style', 'dashed');
+            c.children('.tailDiv').height(0).width(20).css('border-style', 'dashed').children('.tailEnd').hide();
             u = $("<button class='unfoldTail'>+</button>");
             u.click(unfoldClick);
             u.appendTo(c);
@@ -586,7 +586,7 @@ function unfold(d, unfoldTail) {
     // restore end
     d.children(unfoldTail ? '.tailDiv' : '.headDiv').height('100%').width('').css('border-style', '');
     d.children(unfoldTail ? '.unfoldTail' : '.unfoldHead').detach();
-
+    if (unfoldTail)  d.children('.tailDiv').children('.tailEnd').show();
     var p = d.position();
     
     // define d relatively from a known child as a headOf/tailOf sequence
