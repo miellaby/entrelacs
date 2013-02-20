@@ -1143,7 +1143,7 @@ function onFileInputChange(e) {
     iframe2.data('secret', secret).data('atom', $(this).parent());
     iframe2.load(onUploadDone);
     uploadCount++;
-    var d = e.parent().parent();
+    var d = $(this).parent().parent();
     moveLoadingOnArrow(d);
     form2.submit(); 
 }
