@@ -94,7 +94,7 @@ var decodeArrowUri = function () {
 
     // Return the overall parsing function
      return function (source, reviver) {
-         console.log(source);
+         //console.log(source);
          text = source;
          at = 0;
          next();
@@ -184,6 +184,12 @@ function removeChild(d, a) {
     return list;
 }
 
+function moveLoadingOnArrow(d) {
+   var p = d.position();
+   $("#loading").css('top', parseInt(p.top + d.height() - defaultEntryHeight / 2) + 'px').css('left', parseInt(p.left + d.width() / 2) + 'px');
+}
+
+
 function dismissArrow(d, direction /* false = down true = up */) {
    // guard double detach
    if (d.data('detached')) return;
@@ -196,7 +202,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         if (t) {
            removeFor(t, d);
            removeChild(t, d);
-           if (isLoose(t) && !t.data('lastPosition'))
+           if (isLoose(t) && !t.data('kept'))
                dismissArrow(t, true);
         }
 
@@ -205,7 +211,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         if (h) {
            removeFor(h, d);
            removeChild(h, d);
-           if (isLoose(h) && !h.data('lastPosition'))
+           if (isLoose(h) && !h.data('kept'))
                dismissArrow(h, true);
         }
 
@@ -241,11 +247,6 @@ function dismissArrow(d, direction /* false = down true = up */) {
             c.removeData('tail');
             continue;
         }
-    }
-    var lastPosition = d.data('lastPosition');
-    if (lastPosition) {
-       var instruction = server + 'unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition;
-       $.ajax({url: instruction, xhrFields: { withCredentials: true }});
     }
 
     d.detach();
@@ -301,7 +302,7 @@ function turnEntryIntoText(d) {
     if (!i.length) return;
     var v = i.val() || 'EVE';
     
-    var w0 = i.width();
+    var w0 = d.width();
     d.addClass('kept');
     d.children('.close').show();
     i.detach();
@@ -363,74 +364,86 @@ function unlooseArrow(d, c) {
 
 
 
-function rootArrow(d) {
-    // already assimilated
-    if (d.data('url')) return;
-    
-    var uri = buildUri(d);
-    // assimilation request
-    var ope;
-    if (d.hasClass('atomDiv')) {
-        code = '/root/escape+' /* please not that one ever escapes submited arrow */ + uri
+function rootArrow(d, unroot) {
+    if (unroot) {
+          var instruction = d.hasClass('atomDiv') ? 'unroot' : 'unlinkTailAndHead';
+          var lastPosition = d.data('lastPosition');
+          if (lastPosition) {
+             // delete position
+             var code = server + '/let//a/escape+' + d.data('url') +'/let//u/unlinkTailAndHead/arrow//position/var+a/escape+' + lastPosition
+                + '/if//getVar/arrow/position/var+a/+/' + instruction + '+a';
+             moveLoadingOnArrow(d);
+             $.ajax({url: code + '?iDepth=0', xhrFields: { withCredentials: true }}).done(function(result) {
+                d.data('rooted', false);
+                d.removeData('lastPosition'); 
+                d.find('.hook .poke').text('o');
+                toast(d, 'o');
+             });
+          }
     } else {
-        code = '//linkTailWithHead/escape+' /* please not that one ever escapes submited arrow */ + uri + '/,/escape+' + uri;
+        var uri = buildUri(d);
+        var instruction = d.hasClass('atomDiv') ? 'root' : 'linkTailWithHead';
+        var p = d.position();
+        var position = '/' + parseInt(p.left) + '+' + parseInt(p.top);
+        var code = server + '/let//a/escape+' + uri + '/let//p/linkTailWithHead/arrow//position/var+a/escape+' + position + '/' + instruction + '+a';
+        moveLoadingOnArrow(d);
+        $.ajax({url: code + '?iDepth=0', xhrFields: { withCredentials: true }}).done(function(data) {
+            d.data('url', data);
+            d.data('rooted', true);
+            d.data('lastPosition', position);
+            d.find('.hook .poke').text('_');
+            toast(d, '_');
+        }).fail(function() {
+            d.removeData('url');
+        });
     }
-    var request = $.ajax({url: server + code + '?iDepth=0', xhrFields: { withCredentials: true }});
-    var id;
-    d.data('url','pending...');
-    
-    request.done(function(data, textStatus, jqXHR) {
-       console.log(data);
-       // save url
-       d.data('url', data);
-       // toast url
-       toast(d, data);
-       // save position
-       var p = d.position();
-       var instruction = server + 'linkTailWithHead/escape+//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
-       $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(lastPosition) {
-            d.data('lastPosition', lastPosition);
-            findPositions(d);
-            findPartners(d);
-       });
-       
-    });
-    request.fail(function() {
-       d.removeData('url');
-    });
 }
 
 
 function assimilateArrow(d) {
     // already assimilated
     if (d.data('url')) return;
+    var dfd = new $.Deferred();
     
     // assimilation request
     var uri = buildUri(d);
+    moveLoadingOnArrow(d);
     var request = $.ajax({url: server + '/escape+' + uri + '?iDepth=0', xhrFields: { withCredentials: true }});
     var id;
     d.data('url','pending...');
     
     request.done(function(data, textStatus, jqXHR) {
-       console.log(data);
+       //console.log(data);
        // save url
        d.data('url', data);
        // toast url
        toast(d, data);
+       dfd.resolve(data);
     });
     request.fail(function() {
        d.removeData('url');
+       dfd.reject();
     });
+    
+    return dfd.promise();
 }
 
 
 
 function recordArrow(d) {
     // System upload
-    rootArrow(d);
+    var promise = assimilateArrow(d);
     
     // unloose arrow
     unlooseArrow(d);
+
+    promise.done(function(url) {
+        // get known positions
+        findPositions(d);
+        // get partners
+        findPartners(d);
+    });
+
 }
 
 
@@ -473,38 +486,7 @@ function onEntryKeypress(e) {
     var next = null;
     //console.log(e);
     
-    if (e.which == 47 /* / */ && !$(this).data('escape')) {
-        var d = $(this).parent();
-        e.preventDefault();
-        turnEntryIntoPair(d);
-        return false;
-    } else if (e.which == 43 /* + */ && !$(this).data('escape')) {
-        var d = $(this).parent();
-        e.preventDefault();
-        var f = d.data('for');
-        for (var i = 0; i < f.length; i++) { // search into loose children
-           var next = findNext(f[i], d, true /* leftOnly */);
-           if (next) {
-             next.children('input').focus();
-             return;
-           }
-        }
-        if (!f.length) {
-            var a = leave(d, false /* out */);
-            d.data('for').push(a);
-            return false;
-        }
-        
-        // overloading + ==> open a pair with the whole loose child arrow
-        var ff;
-        while ((ff = f[f.length - 1].data('for')) && ff.length) {
-           f = ff ;
-        }
-        var a = leave(f[f.length - 1], false /* out */);
-        f[f.length - 1].data('for').push(a);
-        return false;
-        
-     } else if (e.which == 13 /* enter */) {
+    if (e.which == 13 /* enter */) {
         var d = $(this).parent();
         e.preventDefault();
         // record the whole child arrow
@@ -525,7 +507,7 @@ function onAtomClick(e) {
     var d = $(this).parent();
     if (!d.hasClass('kept')) // filter out unfinished atom
         return false;
-    d.css('marginTop','-10px').animate({marginTop: 0});
+    d.css('marginTop','-5px').animate({marginTop: 0});
     findPositions(d);
     findPartners(d);
     return false;
@@ -595,11 +577,12 @@ function unfold(d, unfoldTail) {
     // so we run a little prog which returns /say+x for any x, so to never get an atom
     var prog = '//lambda/x/arrow/say+/var+x+' + def;
     // request
+    moveLoadingOnArrow(d);
     var request = $.ajax({url: server + prog + '?iDepth=5', xhrFields: { withCredentials: true }});
     var id;
     
     request.done(function(data, textStatus, jqXHR) {
-        console.log(data);
+        //console.log(data);
         var struct = decodeArrowUri(data);
         // struct[0] = 'say'
         var structOfUnfolded = struct[1][unfoldTail ? 0 : 1];
@@ -644,15 +627,18 @@ function onHookClick(e) {
    console.log(d.data());
    var a;
    if (i.hasClass('poke')) {
-       d.css('marginTop','-10px').animate({marginTop: 0});
-       if (d.hasClass('known')) { // know link
+       d.css('marginTop','-5px').animate({marginTop: 0});
+       if (d.data('rooted')) {
+            rootArrow(d, true /* unroot */);
+            
+       } else if (d.hasClass('known')) { // know link
             d.removeClass('known');
             d.addClass('kept');
-            findPositions(d);
             findPartners(d);
+            findPositions(d);
+            
        } else if (d.hasClass('kept')) { // finished atom
-           findPositions(d);
-           findPartners(d);
+            rootArrow(d);
        }
        return false;
    }
@@ -696,8 +682,39 @@ function onEntryBlur(event) {
 }
 
 function onEntryKeydown(e) {
-    //console.log(e);
-    if (e.keyCode == 27) {
+    console.log(e);
+    if (e.ctrlKey && e.keyCode == 191 /* / */) {
+        var d = $(this).parent();
+        e.preventDefault();
+        turnEntryIntoPair(d);
+        return false;
+    } else if (e.ctrlKey && e.keyCode == 187 /* + */) {
+        var d = $(this).parent();
+        e.preventDefault();
+        var f = d.data('for');
+        for (var i = 0; i < f.length; i++) { // search into loose children
+           var next = findNext(f[i], d, true /* leftOnly */);
+           if (next) {
+             next.children('input').focus();
+             return;
+           }
+        }
+        if (!f.length) {
+            var a = leave(d, false /* out */);
+            d.data('for').push(a);
+            return false;
+        }
+        
+        // overloading + ==> open a pair with the whole loose child arrow
+        var ff;
+        while ((ff = f[f.length - 1].data('for')) && ff.length) {
+           f = ff ;
+        }
+        var a = leave(f[f.length - 1], false /* out */);
+        f[f.length - 1].data('for').push(a);
+        return false;
+        
+     } else if (e.keyCode == 27) {
         e.preventDefault();
         dismissArrow($(this).parent());
     } else if (e.keyCode == 9) {
@@ -752,7 +769,8 @@ function rewirePair(a, oldOne, newOne) {
    var newTail = tailChanged ? newOne : oldTail;
    var newHead = headChanged ? newOne : oldHead;
    var newA = addPair(newTail, newHead);
-   
+   newA.find('.hook .poke').text(a.find('.hook .poke').text());
+
    // class copy
    if (a.hasClass('kept'))
       newA.addClass('kept');
@@ -855,6 +873,7 @@ function showMovingGhost(x, y, d) {
 function findPartners(d) {
     if (!d.data('url')) {
         var def = getDefinition(d);
+        moveLoadingOnArrow(d);
         var request = $.ajax({url: server + def + '?iDepth=0', xhrFields: { withCredentials: true }});
         request.done(function(data, textStatus, jqXHR) {
            d.data('url', data);
@@ -865,6 +884,7 @@ function findPartners(d) {
     
     var p = d.position();
     var dUri = buildUri(d);
+    moveLoadingOnArrow(d);
     var request = $.ajax({url: server + 'partnersOf/escape+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
     request.done(function(data, textStatus, jqXHR) {
             var struct = decodeArrowUri(data);
@@ -909,6 +929,7 @@ function findPartners(d) {
 function findPositions(d) {
     if (!d.data('url')) {
         var def = getDefinition(d);
+        moveLoadingOnArrow(d);
         var request = $.ajax({url: server + def + '?iDepth=0', xhrFields: { withCredentials: true }});
         request.done(function(data, textStatus, jqXHR) {
            d.data('url', data);
@@ -916,6 +937,7 @@ function findPositions(d) {
         });
         return;
     } else {
+        moveLoadingOnArrow(d);
         var request = $.ajax({url: server + 'partnersOf/escape/position+' + d.data('url') + '?iDepth=10', xhrFields: { withCredentials: true }});
         var lp = d.data('lastPosition');
         request.done(function(data, textStatus, jqXHR) {
@@ -934,9 +956,10 @@ function findPositions(d) {
 }
 
 function moveArrow(d, offsetX, offsetY, movingChild) {
+    var p = d.position();
     d.css({ 'opacity': 1,
-            'left': (d.position().left  + offsetX) + 'px',
-            'top': (d.position().top + offsetY) +'px'
+            'left': (p.left  + offsetX) + 'px',
+            'top': (p.top + offsetY) +'px'
     });
     if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
        if (d.data('head')) {
@@ -948,15 +971,16 @@ function moveArrow(d, offsetX, offsetY, movingChild) {
     }
     
     updateDescendants(d, d);
-    
-    var lastPosition = d.data('lastPosition');
-    if (lastPosition) {
-       var p = d.position();
-       var instruction = server + 'unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition
-                              + '/,/linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left) + '+' + parseInt(p.top);
-       $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(newPosition) {
-            d.data('lastPosition', newPosition);
-       });
+    if (d.data('rooted')) {
+        var lastPosition = d.data('lastPosition');
+        if (lastPosition) {
+           var instruction = server + 'unlinkTailAndHead/escape//position+' + d.data('url') + lastPosition
+                                  + '/,/linkTailWithHead/escape//position+' + d.data('url') + '/' + parseInt(p.left + offsetX) + '+' + parseInt(p.top + offsetY);
+           moveLoadingOnArrow(d);
+           $.ajax({url: instruction, xhrFields: { withCredentials: true }}).done(function(newPosition) {
+                d.data('lastPosition', newPosition);
+           });
+        }
     }
 }
 
@@ -985,6 +1009,14 @@ function onDragEnd(e) {
     return true;
 }
 
+function hookEnter() {
+    $(this).children('.in,.out,.poke').show().css({'height': '0px', 'opacity': 0}).animate({'height': '20px', opacity: 1}, 50);
+}
+function hookLeave() {
+    $(this).children('.in,.out,.poke').css({'height': '20px', 'opacity': 1}).animate({'height': '0px', opacity: 0}, 200);
+}
+
+
 function addFoldedPair(x, y) {
     var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'><a href='#'>&times;</a></div></div>");
     area.append(d);
@@ -995,7 +1027,7 @@ function addFoldedPair(x, y) {
     d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
 
     // set listeners
-    d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
+    d.children('.hook').hover(hookEnter, hookLeave);
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     d.on('dragstart', onDragStart);
@@ -1036,7 +1068,7 @@ function addPair(tail, head, animate) {
     }
     
     // set listeners
-    d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
+    d.children('.hook').hover(hookEnter, hookLeave);
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     d.on('dragstart', onDragStart);
@@ -1111,18 +1143,19 @@ function onFileInputChange(e) {
     iframe2.data('secret', secret).data('atom', $(this).parent());
     iframe2.load(onUploadDone);
     uploadCount++;
-    $("#loading").show();
+    var d = e.parent().parent();
+    moveLoadingOnArrow(d);
     form2.submit(); 
 }
 
-function addAtom(x, y, initialValue) {
+function addAtom(x, y, initialValue, animatePlease) {
     var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div>  <div class='out'>&darr;</div></div></div>");
     area.append(d);
-    if (animatePlease) {
-        d.css('opacity', 0.1).animate({ opacity: 1});
-    }
     d.css({ 'left': x + 'px',
             'top': y + 'px' });
+    if (animatePlease) {
+        d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(defaultEntryWidth / 2) + "px", width: defaultEntryWidth}, 200, 'swing', function() { d.css('width', 'auto');});
+    }
     
     var i = d.children('input');
     if (initialValue) i.val(initialValue);
@@ -1133,7 +1166,7 @@ function addAtom(x, y, initialValue) {
     i.focus(onEntryFocus);
     i.keypress(onEntryKeypress);
     i.keydown(onEntryKeydown);
-    d.children('.hook').hover(function(){$(this).children('.in,.out,.poke').fadeIn(100);}, function() {$(this).children('.in,.out,.poke').fadeOut(500);});
+    d.children('.hook').hover(hookEnter, hookLeave);
     d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     i.on('dragenter', onDragEnterEntry);
@@ -1160,6 +1193,8 @@ function onUploadDone() {
     console.log(atom);
     $(this).detach(); // remove the dedicated form and iframe
     var i = 0;
+
+    moveLoadingOnArrow(atom);
     var request = $.ajax({url: server + 'tailOf/childrenOf/escape+' + secret, xhrFields: { withCredentials: true }});
     request.done(function(data, textStatus, jqXHR) {
         console.log(data);
@@ -1173,7 +1208,7 @@ function onUploadDone() {
 function areaOnClick(event) {
     var x = event.pageX;
     var y = event.pageY;
-    addAtom(x, y).children('input').focus();
+    addAtom(x, y, '', animatePlease).children('input').focus();
 }
 
 function init() {

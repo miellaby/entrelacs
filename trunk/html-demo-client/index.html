@@ -17,22 +17,23 @@
         <script src="js/vendor/modernizr-2.6.2.min.js"></script>
     </head>
     <body>
+        <div id='background'></div>
         <!--[if lt IE 7]>
             <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
         <![endif]-->
-        <div class="loading bar" id="loading">
-             <div></div>
-             <div></div>
-             <div></div>
-             <div></div>
-             <div></div>
-             <div></div>
-             <div></div>
-             <div></div>
-        </div>
         <div id='killme' style='position: fixed; margin:35%'><h2 style='color: gray;'>Please click anywhere to interact</div>
         <div id='area' class='area'>
-                <input id='proto_entry' style='visibility: hidden;'></input>
+            <div class="loading bar" id="loading">
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+            </div>
+            <input id='proto_entry' style='visibility: hidden;'><span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span></input>
         </div>
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
         <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
