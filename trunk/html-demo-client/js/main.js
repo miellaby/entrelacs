@@ -1191,7 +1191,7 @@ function onUploadDone() {
     var secret = $(this).data('secret');
     var atom = $(this).data('atom');
     console.log(atom);
-    $(this).detach(); // remove the dedicated form and iframe
+    $(this).parent().detach(); // remove the dedicated form and iframe
     var i = 0;
 
     moveLoadingOnArrow(atom);
