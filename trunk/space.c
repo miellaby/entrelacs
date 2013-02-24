@@ -305,7 +305,7 @@ static void show_cell(char operation, Address address, Cell C, int ofSliceChain)
     Address from = cell_getFrom(C);
     Address next = cell_getNext(C);
 
-    static char* cats[] = {"Empty", "Arrow", "Small", "Tag", "Blob", "Chain", "Last", "Sync"};
+    static const char* cats[] = {"Empty", "Arrow", "Small", "Tag", "Blob", "Chain", "Last", "Sync"};
     char* cat = cats[catI];
 
     if (cell_isFree(C)) {
@@ -319,7 +319,7 @@ static void show_cell(char operation, Address address, Cell C, int ofSliceChain)
     } else if (catBits == CATBITS_SYNC) {
         dputs("%c%06x M=%02x C=%1x from@=%06x next@=%06x T=%1x (%s)", operation, address, more, catI, from, next, syncType, cat); // Sync cell
     } else if (catBits == CATBITS_CHAIN) {
-        static char c;
+        char c;
 #define charAt(SLICE, POS) ((c = ((char*)&SLICE)[POS]) ? c : '.')
         if (ofSliceChain) {
             dputs("%c%06x M=%02x C=%1x slice=%012llx <%c%c%c%c%c%c> J=%02x (%s)", operation, address, more, catI, slice,
@@ -328,7 +328,7 @@ static void show_cell(char operation, Address address, Cell C, int ofSliceChain)
             dputs("%c%06x M=%02x C=%1x ref0@=%06x ref1@=%06x J=%02x (%s)", operation, address, more, catI, ref0, ref1, jumpNext, cat); // Chained cell with refs
         }
     } else if (catBits == CATBITS_LAST) {
-        static char c;
+        char c;
         if (ofSliceChain) {
             dputs("%c%06x M=%02x C=%1x slice=%012llx <%c%c%c%c%c%c> S=%02x (%s)", operation, address, more, catI, slice,
                     charAt(slice, 0), charAt(slice, 1), charAt(slice, 2), charAt(slice, 3), charAt(slice, 4), charAt(slice, 5),
@@ -1140,7 +1140,7 @@ char* xl_strOf(Arrow a) {
 static void percent_encode(const char *src, size_t src_len, char *dst, size_t* dst_len_p) {
     static const char *dont_escape = "_-,;~()";
     static const char *hex = "0123456789abcdef";
-    static size_t i, j;
+    size_t i, j;
     for (i = j = 0; i < src_len; i++, src++, dst++, j++) {
         if (*src && (isalnum(*(const unsigned char *) src) ||
                 strchr(dont_escape, * (const unsigned char *) src) != NULL)) {
@@ -1163,7 +1163,7 @@ static void percent_encode(const char *src, size_t src_len, char *dst, size_t* d
 // 0-terminate the destination buffer.
 
 static void percent_decode(const char *src, size_t src_len, char *dst, size_t* dst_len_p) {
-    static size_t i, j;
+    size_t i, j;
     int a, b;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
 
@@ -1686,7 +1686,7 @@ enum e_xlType xl_typeOf(Arrow a) {
     if (cell_isFree(cell))
         return XL_UNDEF;
 
-    static enum e_xlType map[] = {XL_UNDEF, XL_PAIR, XL_ATOM, XL_ATOM, XL_ATOM, XL_UNDEF, XL_UNDEF, XL_UNDEF};
+    static const enum e_xlType map[] = {XL_UNDEF, XL_PAIR, XL_ATOM, XL_ATOM, XL_ATOM, XL_UNDEF, XL_UNDEF, XL_UNDEF};
 
     Cell catBits = cell_getCatBits(cell);
     int catI = catBits >> 56;
@@ -2597,7 +2597,7 @@ void xl_yield(Arrow a) {
 static int printf_arrow_extension(FILE *stream,
         const struct printf_info *info,
         const void *const *args) {
-    static char* nilFakeURI = "(NIL)";
+    static const char* nilFakeURI = "(NIL)";
     Arrow arrow = *((Arrow*) (args[0]));
     char* uri = arrow != NIL ? xl_uriOf(arrow, NULL) : nilFakeURI;
     if (uri == NULL)
