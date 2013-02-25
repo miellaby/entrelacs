@@ -323,12 +323,15 @@ function turnEntryIntoHtmlObject(d) {
     d.children('.close').addClass('outedClose').show();
     i.detach();
     var isImage = d.data('uri').match(/\/Content-Typed\+\/image%2F/);
+    var isOctetStream = d.data('uri').match(/\/Content-Typed\+\/application%2Foctet/);
     var o = (isImage ?
       $("<img></img>").attr('src', server + '/escape+' + d.data('uri'))
-    : $("<object></object>").attr('data', server + '/escape+' + d.data('uri'))).appendTo(d);
+    : (isOctetStream ?
+            $("<a target='_blank'></a>").attr('href', server + '/escape+' + d.data('uri')).text(d.data('uri'))
+         : $("<object></object>").attr('data', server + '/escape+' + d.data('uri')))).appendTo(d);
     o.css('height', 100);
-    o.click(onAtomClick);
-    o.dblclick(function() { $(this).colorbox({href: server + '/escape+' + d.data('uri'), open: true, photo: isImage }); });
+    //o.click(onAtomClick);
+    o.colorbox({href: server + '/escape+' + d.data('uri'), photo: isImage });
     var w = o.width();
     var h = o.height();
     if (w > h)
