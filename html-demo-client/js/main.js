@@ -148,7 +148,7 @@ function removeFor(d, a) {
 }
 
 function isLoose(d) {
-    return (!d.data('for').length && !d.data('children').length);
+    return (!d.data('for').length && !d.data('children').length && !d.data('rooted'));
 }
 
 function hasChild(d, a) {
@@ -202,7 +202,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         if (t) {
            removeFor(t, d);
            removeChild(t, d);
-           if (isLoose(t) && !t.data('kept'))
+           if (isLoose(t))
                dismissArrow(t, true);
         }
 
@@ -211,7 +211,7 @@ function dismissArrow(d, direction /* false = down true = up */) {
         if (h) {
            removeFor(h, d);
            removeChild(h, d);
-           if (isLoose(h) && !h.data('kept'))
+           if (isLoose(h))
                dismissArrow(h, true);
         }
 
@@ -313,6 +313,7 @@ function turnEntryIntoText(d) {
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.fileinput-button').detach();
     d.data('uri', encodeArrowUri(v));
+    d.find('.hook .rooted input').prop('disabled', false);
 }
 
 function turnEntryIntoHtmlObject(d) {
@@ -341,6 +342,7 @@ function turnEntryIntoHtmlObject(d) {
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.hook').css('bottom', '-18px');
     d.children('.fileinput-button').detach();
+    d.find('.hook .rooted input').prop('disabled', false);
     updateDescendants(d, d);
 }
 
@@ -356,6 +358,7 @@ function unlooseArrow(d, c) {
        unlooseArrow(d.data('tail'), d);
        unlooseArrow(d.data('head'), d);
        d.addClass('kept');
+       d.find('.hook .rooted input').prop('disabled', false);
     }
 
     removeFor(d, c);
@@ -379,8 +382,10 @@ function rootArrow(d, unroot) {
              $.ajax({url: code + '?iDepth=0', xhrFields: { withCredentials: true }}).done(function(result) {
                 d.data('rooted', false);
                 d.removeData('lastPosition'); 
-                d.find('.hook .poke').text('o');
-                toast(d, 'o');
+                d.find('.hook .rooted input').prop('checked', false);
+                toast(d, 'unrooted');
+                if (isLoose(d))
+                   dismissArrow(d);
              });
           }
     } else {
@@ -394,8 +399,8 @@ function rootArrow(d, unroot) {
             d.data('url', data);
             d.data('rooted', true);
             d.data('lastPosition', position);
-            d.find('.hook .poke').text('_');
-            toast(d, '_');
+            d.find('.hook .rooted input').prop('checked', true);
+            toast(d, 'rooted');
         }).fail(function() {
             d.removeData('url');
         });
@@ -437,10 +442,12 @@ function recordArrow(d) {
     // System upload
     var promise = assimilateArrow(d);
     
-    // unloose arrow
     unlooseArrow(d);
 
     promise.done(function(url) {
+        // root arrow
+        rootArrow(d);
+        
         // get known positions
         findPositions(d);
         // get partners
@@ -623,25 +630,46 @@ function unfoldClick(e) {
    return false;
 }
 
+function onRootedChange(e) {
+   var d = $(this).parent().parent().parent();
+   console.log(d);
+   console.log(d.data());
+  if (d.data('rooted')) {
+       rootArrow(d, true /* unroot */);
+  } else if (d.hasClass('kept')) { // finished atom
+       rootArrow(d);
+  } else if (d.hasClass('known')) { // know link
+       d.removeClass('known');
+       d.addClass('kept');
+       d.find('.hook .rooted input').prop('disabled', false);
+       findPartners(d);
+       findPositions(d);
+  }
+  e.stopPropagation();
+  return false;
+}
+
 function onHookClick(e) {
    var i = $(this);
    var d = i.parent().parent();
    console.log(d);
    console.log(d.data());
    var a;
+   if (i.hasClass('.rooted')) {
+       return false;
+   }
+
    if (i.hasClass('poke')) {
        d.css('marginTop','-5px').animate({marginTop: 0});
-       if (d.data('rooted')) {
-            rootArrow(d, true /* unroot */);
-            
-       } else if (d.hasClass('known')) { // know link
-            d.removeClass('known');
-            d.addClass('kept');
-            findPartners(d);
-            findPositions(d);
-            
-       } else if (d.hasClass('kept')) { // finished atom
-            rootArrow(d);
+      if (d.hasClass('known')) { // know link
+          d.removeClass('known');
+          d.addClass('kept');
+          d.find('.hook .rooted input').prop('disabled', false);
+
+      }
+      if (d.hasClass('kept')) {
+          findPartners(d);
+          findPositions(d);
        }
        return false;
    }
@@ -779,6 +807,11 @@ function rewirePair(a, oldOne, newOne) {
       newA.addClass('kept');
    if (a.hasClass('known'))
       newA.addClass('known');
+
+   // props copy
+   newA.find('.hook .rooted input').prop('disabled', a.find('.hook .rooted input').prop('disabled'));
+   newA.find('.hook .rooted input').prop('checked', a.find('.hook .rooted input').prop('checked'));
+   
    // data copy
    var oldData = a.data();
    for (var dataKey in oldData) {
@@ -920,6 +953,9 @@ function findPartners(d) {
                d.data('children').push(pair);
                a.data('children').push(pair);
                pair.addClass('known');
+               pair.data('rooted', true);
+               pair.find('.hook .rooted input').prop('checked', true);
+               pair.find('.hook .rooted input').prop('disabled', false);
                pair.data('uri', encodeArrowUri(link));
                // assimilateArrow(pair); TBC
                struct = struct[1];
@@ -1013,15 +1049,15 @@ function onDragEnd(e) {
 }
 
 function hookEnter() {
-    $(this).children('.in,.out,.poke').show().css({'height': '0px', 'opacity': 0}).animate({'height': '20px', opacity: 1}, 50);
+    $(this).children('.in,.out,.rooted,.poke').show().css({'height': '0px', 'opacity': 0}).animate({'height': '20px', opacity: 1}, 50);
 }
 function hookLeave() {
-    $(this).children('.in,.out,.poke').css({'height': '20px', 'opacity': 1}).animate({'height': '0px', opacity: 0}, 200);
+    $(this).children('.in,.out,.rooted,.poke').css({'height': '20px', 'opacity': 1}).animate({'height': '0px', opacity: 0}, 200);
 }
 
 
 function addFoldedPair(x, y) {
-    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'><a href='#'>&times;</a></div></div>");
+    var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'><a href='#'>&times;</a></div></div>");
     area.append(d);
     d.css({left: (x - 75) + 'px',
            top: (y - 45) + 'px',
@@ -1030,14 +1066,14 @@ function addFoldedPair(x, y) {
     d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
 
     // set listeners
-    d.children('.hook').hover(hookEnter, hookLeave);
-    d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.find('.close a').click(onCloseClick);
     d.children('.unfoldTail,.unfoldHead').click(unfoldClick);
-
+    
+    addHookTo(d);
+    
     // data
     d.data('for', []);
     d.data('children', []);
@@ -1051,7 +1087,7 @@ function addPair(tail, head, animate) {
     var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
     var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 3;
     var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div> <div class='out'>&darr;</div></div><div class='close'><a href='#'>&times;</a></div></div>");
+    var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><div class='close'><a href='#'>&times;</a></div></div>");
     area.append(d);
     var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
     d.css({
@@ -1071,13 +1107,13 @@ function addPair(tail, head, animate) {
     }
     
     // set listeners
-    d.children('.hook').hover(hookEnter, hookLeave);
-    d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.find('.close a').click(onCloseClick);
 
+    addHookTo(d);
+    
     // data
     if (tail) {
         d.data('tail', tail);
@@ -1151,8 +1187,16 @@ function onFileInputChange(e) {
     form2.submit(); 
 }
 
+function addHookTo(d) {
+    var h = $("<div class='hook'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox' disabled></div> <div class='poke'>?</div>  <div class='out'>&darr;</div></div>");
+    h.appendTo(d);
+    h.hover(hookEnter, hookLeave);
+    h.children('.in,.out,.poke,.rooted').click(onHookClick);
+    h.find('.rooted input').change(onRootedChange);
+}
+
 function addAtom(x, y, initialValue, animatePlease) {
-    var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div><div class='hook'><div class='in'>&uarr;</div> <div class='poke'>o</div>  <div class='out'>&darr;</div></div></div>");
+    var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
     area.append(d);
     d.css({ 'left': x + 'px',
             'top': y + 'px' });
@@ -1169,14 +1213,13 @@ function addAtom(x, y, initialValue, animatePlease) {
     i.focus(onEntryFocus);
     i.keypress(onEntryKeypress);
     i.keydown(onEntryKeydown);
-    d.children('.hook').hover(hookEnter, hookLeave);
-    d.children('.hook').children('.in,.out,.poke').click(onHookClick);
     d.attr('draggable', true);
     i.on('dragenter', onDragEnterEntry);
     i.on('dragleave', onDragLeaveEntry);
     d.on('dragstart', onDragStart);
     d.on('dragend', onDragEnd);
     d.find('.close a').click(onCloseClick);
+    addHookTo(d);
     
     // data
     d.data('for', []);
