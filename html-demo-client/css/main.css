@@ -363,7 +363,7 @@ textarea {
    position: absolute;
 }
 
-.atomDiv input {
+.atomDiv input , .atomDiv textarea{
    z-index: 20;
    position: relative;
    border-style: solid;
@@ -384,16 +384,22 @@ textarea {
    border-radius: 2px;
 }
 
-.kept object, .kept img {
+.kept .content {
    position: relative;
    z-index: 20;
-   background-color: #DDF;
+   background-color: #FFF;
    cursor: move;
    border-style: solid;
    border-width: 2px;
    border-radius: 20px;
    display: inline-block;
 }
+
+.kept .content {
+   min-width: 100px;
+   max-width: 500px;
+}
+
 
 .pairDiv, .ipairDiv {
    position: absolute;
