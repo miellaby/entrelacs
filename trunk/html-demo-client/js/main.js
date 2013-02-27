@@ -6,6 +6,7 @@ var defaultEntryHeight;
 var dragStartX, dragStartY;
 var dragOver = null;
 var uploadCount = 0;
+var creole = null;
 
 // Simple recursive descent parser for Entrelacs URI
 var decodeArrowUri = function () {
@@ -252,19 +253,6 @@ function dismissArrow(d, direction /* false = down true = up */) {
     d.detach();
 }
 
-// find an editable atom into a tree
-function findNextInto(d) {
-    if (d.hasClass('atomDiv')) { // atom
-        return d.data('for').length ? d /* found */: null;
-    } else { // pair
-       // check in tail then in head
-       var n = d.data('tail') ? findNextInto(d.data('tail')) : null;
-       if (!n && d.data('head'))
-            n = findNextInto(d.data('head'));
-       return n;
-    }
-}
-
 // get an arrow uri
 function buildUri(d) {
     var uri;
@@ -297,8 +285,30 @@ function buildUri(d) {
     throw "undef";
 }
 
-function turnEntryIntoText(d) {
+function turnEntryIntoTextArea(d) {
     var i = d.children('input');
+    if (!i.length) return;
+    var v = i.val();
+    
+    var w0 = d.width();
+    i.detach();
+    i = $("<textarea></textarea>").text(v).appendTo(d);
+    i.blur(onEntryBlur);
+    i.click(onAtomClick);
+    i.focus(onEntryFocus);
+    /* i.keypress(onEntryKeypress); no 13 catch */
+    i.keydown(onEntryKeydown);
+    i.on('dragenter', onDragEnterEntry);
+    i.on('dragleave', onDragLeaveEntry);
+    i.focus();
+    var w = i.width();
+    d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
+}
+
+
+
+function turnEntryIntoText(d) {
+    var i = d.children('input,textarea');
     if (!i.length) return;
     var v = i.val() || 'EVE';
     
@@ -317,28 +327,45 @@ function turnEntryIntoText(d) {
 }
 
 function turnEntryIntoHtmlObject(d) {
-    var i = d.children('input');
+    var i = d.children('input,textarea');
     if (!i.length) return;
     var w0 = i.width();
     d.addClass('kept');
     d.children('.close').addClass('outedClose').show();
     i.detach();
-    var isImage = d.data('uri').match(/\/Content-Typed\+\/image%2F/);
-    var isOctetStream = d.data('uri').match(/\/Content-Typed\+\/application%2Foctet/);
+    var uri = d.data('uri');
+    var isImage = uri.match(/\/Content-Typed\+\/image%2F/);
+    var isOctetStream = uri.match(/\/Content-Typed\+\/application%2Foctet/);
+    var isCreole = uri.match(/\/Content-Typed\+\/text%2Fx-creole/);
     var o = (isImage ?
-      $("<img></img>").attr('src', server + '/escape+' + d.data('uri'))
-    : (isOctetStream ?
-            $("<a target='_blank'></a>").attr('href', server + '/escape+' + d.data('uri')).text(d.data('uri'))
-         : $("<object></object>").attr('data', server + '/escape+' + d.data('uri')))).appendTo(d);
-    o.css('height', 100);
-    //o.click(onAtomClick);
-    o.colorbox({href: server + '/escape+' + d.data('uri'), photo: isImage });
+        $("<img class='content'></img>").attr('src', server + '/escape+' + d.data('uri'))
+        : (isCreole ?
+           $("<div class='content'></div>")
+            : (isOctetStream ?
+               $("<a target='_blank'></a>").attr('href', server + '/escape+' + uri).text(uri)
+               : $("<object class='content'></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
+    if (!isCreole) {
+        o.css('height', 100);
+    }
+    
+    if (isCreole) {
+        creole.parse(o[0], decodeArrowUri(uri)[1][1]);
+    }
+    
     var w = o.width();
     var h = o.height();
-    if (w > h)
-        o.css({width: '100px', 'max-height': 'auto'});
-    else
-        o.css({height: '100px', 'max-width': 'auto'});
+    
+    if (!isCreole) {
+        o.colorbox({href: server + '/escape+' + uri, photo: isImage });
+        if (w > h)
+            o.css({width: '100px', 'max-height': 'auto'});
+        else
+            o.css({height: '100px', 'max-width': 'auto'});
+    } else {
+        o.click(onAtomClick);
+    }
+    
+    
     d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     d.children('.hook').css('bottom', '-18px');
     d.children('.fileinput-button').detach();
@@ -360,13 +387,15 @@ function unlooseArrow(d, c) {
        d.addClass('kept');
        d.find('.hook .rooted input').prop('disabled', false);
     }
-
-    removeFor(d, c);
-    if (c && !hasChild(d, c)) {
-       var children = d.data('children');
-       children.push(c);
+    if (c) {
+        removeFor(d, c);
+        if (!hasChild(d, c)) {
+           var children = d.data('children');
+           children.push(c);
+        }
     }
 }
+
 
 
 
@@ -470,6 +499,19 @@ function recordChildren(d) {
     }
 }
 
+// find an editable atom into a tree
+function findNextInto(d) {
+    if (d.hasClass('atomDiv')) { // atom
+        return d.data('for').length ? d /* found */: null;
+    } else { // pair
+       // check in tail then in head
+       var n = d.data('tail') ? findNextInto(d.data('tail')) : null;
+       if (!n && d.data('head'))
+            n = findNextInto(d.data('head'));
+       return n;
+    }
+}
+
 // search for the next editable atom
 function findNext(d, from, leftOnly) {
    var f = d.data('for');
@@ -491,6 +533,42 @@ function findNext(d, from, leftOnly) {
    // search fail: no editable
    return null;
 }
+
+// find previous editable atom into a tree
+function findPreviousInto(d) {
+    if (d.hasClass('atomDiv')) { // atom
+        return d.data('for').length ? d /* found */: null;
+    } else { // pair
+       // check in head then in tail
+       var n = d.data('head') ? findNextInto(d.data('head')) : null;
+       if (!n && d.data('tail'))
+            n = findPreviousInto(d.data('tail'));
+       return n;
+    }
+}
+
+// search for the previous editable atom
+function findPrevious(d, from, rightOnly) {
+   var f = d.data('for');
+   if ((d.hasClass('pairDiv') || d.hasClass('ipairDiv')) && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
+      var n = findPreviousInto(d.data('tail'));
+      if (n) return n;
+   }
+   
+   for (var i = 0; i < f.length; i++) { // search into loose children
+        var n = findPrevious(f[i], d, rightOnly);
+        if (n) return n;
+   }
+   
+  if (!rightOnly && d.hasClass('pairDiv') && d.data('head') && d.data('head')[0] !== from[0]) { // search into tail
+      var n = findPreviousInto(d.data('head'));
+      if (n) return n;
+   }
+
+   // search fail: no editable
+   return null;
+}
+
 
 function onEntryKeypress(e) {
     var next = null;
@@ -599,19 +677,22 @@ function unfold(d, unfoldTail) {
         if (structOfUnfolded.push !== undefined) { // unfolded is a pair
            var o =  (structOfUnfolded[0] == 'Content-Typed');
            if (o) { // It's a content-typed atom
-              a = addAtom(p.left + (unfoldTail ?  - defaultEntryWidth / 2 - 3 : d.width() - defaultEntryWidth / 2 + 3), p.top - defaultEntryHeight, structOfUnfolded);
+              a = addAtom(p.left + (unfoldTail ?  -defaultEntryWidth / 2 - 60 : 60 + d.width()), p.top - defaultEntryHeight, structOfUnfolded);
               a.data('uri', encodeArrowUri(structOfUnfolded));
               turnEntryIntoHtmlObject(a);
            } else {
-              a = addFoldedPair(p.left + (unfoldTail ? -3 : 3 + d.width()), p.top);
+              a = addFoldedPair(p.left + (unfoldTail ?  -defaultEntryWidth / 2 - 60 : 60 + d.width()), p.top);
               a.data('uri', encodeArrowUri(structOfUnfolded));
+              a.addClass('kept');
+              a.find('.hook .rooted input').prop('disabled', false);
            }
         } else if (structOfUnfolded.ref) { // unfolded is itself folded
-           a = addFoldedPair(p.left + (unfoldTail ? -3 : 3 + d.width()), p.top);
+           a = addFoldedPair(p.left + (unfoldTail ? -defaultEntryWidth / 2 - 60 : 60 + d.width()), p.top);
+           a.find('.hook .rooted input').prop('disabled', false);
            a.data('url', structOfUnfolded.ref);
            
         } else { // unfolded is an atom
-           a = addAtom(p.left + (unfoldTail ?  - defaultEntryWidth / 2 - 3 : d.width() - defaultEntryWidth / 2 + 3), p.top - defaultEntryHeight, structOfUnfolded);
+           a = addAtom(p.left + (unfoldTail ?  -defaultEntryWidth / 2 - 60 : 60 + d.width()), p.top - defaultEntryHeight, structOfUnfolded);
            turnEntryIntoText(a);
            a.data('uri', encodeArrowUri(structOfUnfolded));
         }
@@ -701,7 +782,7 @@ function toast(source, text) {
 function recordOrDetachAtom(d) {
     if (isLoose(d)) {
         setTimeout(function() {
-            if (!d.children('input').is(':focus') && isLoose(d) && !d.data('url') && !d.data('preserve'))
+            if (!d.children('input,textarea').is(':focus') && isLoose(d) && !d.data('url') && !d.data('preserve'))
                  dismissArrow(d);
         }, 1000);
     }
@@ -714,7 +795,49 @@ function onEntryBlur(event) {
 
 function onEntryKeydown(e) {
     console.log(e);
-    if (e.ctrlKey && e.keyCode == 191 /* / */) {
+    if ((e.keyCode == 8 /* backspace */ || e.keyCode == 46 /* delete */) && $(this).val() === '') {
+        var d = $(this).parent();
+        var f = d.data('for');
+        if (!f.length) return true;
+
+        for (var i = 0; i < f.length; i++) { // check loose children
+            var c = f[i];
+            /* backspace=kill only works on a head */
+            if (e.keyCode == 8 && c.data('tail')[0] === d[0]) return true;
+            /* delete=kill only works on a tail */
+            if (e.keyCode == 46 && c.data('head')[0] === d[0]) return true;
+        }
+        
+        var destination;
+        for (var i = 0; i < f.length; i++) { // search into loose children
+           destination = (e.keyCode == 46 ? findNext : findPrevious)(f[i], d, true /* one side only */);
+           break;
+        }
+        if (destination) {
+             destination.children('input,textarea').focus();
+        }
+        
+        for (var i = 0; i < f.length; i++) { // rebuild loose children
+            var c = f[i];
+            var a = c.data('head')[0] === d[0] ? c.data('tail') : c.data('head');
+            turnPairIntoArrow(c, a);
+        }
+        d.detach();
+        return false;
+
+    } else if (e.ctrlKey && e.keyCode == 13 /* Return */) {
+        var d = $(this).parent();
+        if ($(this).is('textarea')) {
+            // record the currently edited compound arrow (or at least this text input)
+            recordChildren(d);
+        } else {
+            // turn the atom into a textarea
+            turnEntryIntoTextArea(d);
+        }
+        e.preventDefault();
+        return false;
+        
+    } else if (e.ctrlKey && e.keyCode == 191 /* / */) {
         var d = $(this).parent();
         e.preventDefault();
         turnEntryIntoPair(d);
@@ -726,7 +849,7 @@ function onEntryKeydown(e) {
         for (var i = 0; i < f.length; i++) { // search into loose children
            var next = findNext(f[i], d, true /* leftOnly */);
            if (next) {
-             next.children('input').focus();
+             next.children('input,textarea').focus();
              return;
            }
         }
@@ -745,17 +868,17 @@ function onEntryKeydown(e) {
         f[f.length - 1].data('for').push(a);
         return false;
         
-     } else if (e.keyCode == 27) {
+     } else if (e.keyCode == 27 /* escape */) {
         e.preventDefault();
         dismissArrow($(this).parent());
-    } else if (e.keyCode == 9) {
+    } else if (e.keyCode == 9 /* tab */) {
         var d = $(this).parent();
         e.preventDefault();
         var f = d.data('for');
         for (var i = 0; i < f.length; i++) { // search into loose children
-           var next = findNext(f[i], d);
+           var next = e.shiftKey ? findPrevious(f[i], d) : findNext(f[i], d);
            if (next) {
-             next.children('input').focus();
+             next.children('input,textarea').focus();
              return;
            }
         }
@@ -764,10 +887,10 @@ function onEntryKeydown(e) {
            while ((ff = f[f.length - 1].data('for')) && ff.length) {
               f = ff ;
            }
-           var a = leave(f[f.length - 1], false /* out */);
+           var a = leave(f[f.length - 1], e.shiftKey /* in/out */);
            f.data('for').push(a);
         } else {
-           var a = leave(d, false /* out */);
+           var a = leave(d, e.shiftKey /* out */);
            d.data('for').push(a);
         }
     }
@@ -860,7 +983,7 @@ function turnEntryIntoPair(d) {
        throw "connected arrows are immutable";
     }
     
-    var v = d.children('input').val();
+    var v = d.children('input,textarea').val();
     var p = d.position();
     var w = d.width();
     var f = d.data('for');
@@ -891,12 +1014,46 @@ function turnEntryIntoPair(d) {
        // and one builds a second pair
        turnEntryIntoPair(h);
     } else {
-       t.children('input').focus();
+       t.children('input,textarea').focus();
     }
 
     // detach atom
     d.detach();
 }
+
+
+function turnPairIntoArrow(d, a) {
+    if (d.data('children').length) {
+       throw "connected arrows are immutable";
+    }
+    
+    var p = d.position();
+    var w = d.width();
+    var h = d.height();
+    var f = d.data('for');
+    
+    // copy data from converted atom to obtained pair
+    removeFor(a, d);
+    a.data('for', a.data('for').concat(d.data('for')));
+    
+    // if pair is a loose arrow, one rewires the children
+    for (var i = 0; i < f.length; i++) { // search into loose children
+       rewirePair(f[i], d, a);
+    }
+    
+    // detach pair
+    d.detach();
+    
+    // move arrow in place of pair
+    var pa = a.position();
+    var offsetX = (p.left + w / 2) - (pa.left + a.width() / 2);
+    var offsetY = (p.top + h - defaultEntryHeight - pa.top); 
+    
+    if (f.length)
+        moveArrow(a, offsetX, offsetY);
+}
+
+
 
 function showMovingGhost(x, y, d) {
      var p = d.position();
@@ -1160,7 +1317,7 @@ function onFileInputClick(e) {
     e.stopPropagation();
     var d = $(this).parent();
     setTimeout(function() { // terrible trick
-        d.children('input').focus();
+        d.children('input,textarea').focus();
         d.data('preserve', true);
     }, 0); // my gosh
 }
@@ -1257,6 +1414,25 @@ function areaOnClick(event) {
     addAtom(x, y, '', animatePlease).children('input').focus();
 }
 
+function getBounds() {
+    return { x: $(document).scrollTop(), y: $(document).scrollLeft(), w: $(window).width(), h: $(window).height() };
+}
+
+function getTiles() {
+    var b = getBounds();
+    var x0 = b.x - (b.x % 200);
+    var y0 = b.y - (b.y % 200);
+    yt = y0;
+    while (yt < b.y + b.h) {
+       xt = x0;
+       while (xt < b.x + b.w) {
+          xt += 200;
+          console.log('tuile ' + xt + '.' + yt);
+       }
+       yt += 200;
+    }
+}
+
 function init() {
     area = $('#area');
     toaster = $('#toaster');
@@ -1281,6 +1457,12 @@ function init() {
             $('.atomDiv,.pairDiv,.ipairDiv').removeData('url');
         }
     });
+    
+    creole = new Parse.Simple.Creole({forIE: document.all,
+                                     interwiki: {
+                WikiCreole: 'http://www.wikicreole.org/wiki/',
+                Wikipedia: 'http://en.wikipedia.org/wiki/'},
+                                     linkFormat: '' });
 }
  
 $(document).ready(init);
