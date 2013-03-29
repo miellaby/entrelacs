@@ -208,12 +208,11 @@ Arrow xls_get(Arrow c, Arrow key) {
 /** returns a list of all children of $a rooted within context path $c
     via link/unlink functions
  */
-Arrow xls_partnersOf(Arrow c, Arrow a) {
+Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
     Arrow value = NIL;
     Arrow contextPair = xl_pairMaybe(c, a);
-    if (contextPair == EVE) return EVE;
+    if (contextPair == EVE) return list;
     
-    Arrow list = EVE;
     XLEnum enumChildren = xl_childrenOf(contextPair);
     while (xl_enumNext(enumChildren)) {
         Arrow pair = xl_enumGet(enumChildren);
@@ -225,7 +224,19 @@ Arrow xls_partnersOf(Arrow c, Arrow a) {
         }
     }
     xl_freeEnum(enumChildren);
-    return list;
+
+    if (tailOf(c) == c)
+        return list;
+    else
+        return partnersOf(tailOf(c), a, list);
+}
+
+
+/** returns a list of all children of $a rooted within context path $c
+    via link/unlink functions
+ */
+Arrow xls_partnersOf(Arrow c, Arrow a) {
+    return partnersOf(c, a, EVE);
 }
 
 /** close a session $s */
