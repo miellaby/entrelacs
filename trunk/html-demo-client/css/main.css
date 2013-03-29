@@ -11,6 +11,7 @@ textarea {
 }
 
 body {
+    font-family: Cantarell, Verdana, Geneva;
     font-size: 1em;
     line-height: 1.4;
 }
@@ -206,9 +207,9 @@ textarea {
 #cboxNext{position:absolute; bottom:0; left:27px; background-color:#FFF; width:25px; height:25px; text-indent:-9999px;}
 #cboxLoadingOverlay{background-color:#5A5;}
 #cboxLoadingGraphic{
-    background: -webkit-linear-gradient(left top, #fff, #9c9);
-    background: -moz-linear-gradient(left top, #fff, #9c9);
-    background: linear-gradient(left top, #fff, #9c9);
+    background: -webkit-linear-gradient(left top, #c99, #99c);
+    background: -moz-linear-gradient(left top, #c99, #99c);
+    background: linear-gradient(left top, #c99, #99c);
 }
 #cboxClose{position:absolute; bottom:0; right:0; background-color: #FFF; width:25px; height:25px; text-indent:-9999px;}
 #cboxClose:hover{}
@@ -329,9 +330,9 @@ textarea {
     position: fixed;
     width: 100%;
     height: 100%;
-    background: -webkit-linear-gradient(left top, #fff, #9c9);
-    background: -moz-linear-gradient(left top, #fff, #9c9);
-    background: linear-gradient(left top, #fff, #9c9);
+    background: -webkit-linear-gradient(left top, #c99, #99c);
+    background: -moz-linear-gradient(left top, #c99, #99c);
+    background: linear-gradient(left top, #c99, #99c);
 }
 
 #area {
