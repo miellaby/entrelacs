@@ -1063,6 +1063,47 @@ function showMovingGhost(x, y, d) {
      ghost.animate({left: nx, top: ny, opacity: 0.5}, function() { ghost.detach(); });
 }
 
+
+function findFeaturedArrows(d) {
+    var request = $.ajax({url: server + 'partnersOf/escape+featured?iDepth=10', xhrFields: { withCredentials: true }});
+    request.done(function(data, textStatus, jqXHR) {
+            var struct = decodeArrowUri(data);
+            while (struct) {
+               var c = getPointOnCircle(50);
+               var link = struct[0];
+               var featuredArrow = link[1][1];
+               var x = link[1][0][0];
+               var y = link[1][0][1];
+               if (featuredArrow.push !== undefined) { // partner is a pair
+                  var o =  (featuredArrow[0] == 'Content-Typed');
+                  if (o) { // It's a content-typed atom
+                      a = addAtom(x, y);
+                      a.data('uri', encodeArrowUri(featuredArrow));
+                      turnEntryIntoHtmlObject(a);
+                  } else {
+                      a = addFoldedPair(x, y);
+                      a.data('uri', encodeArrowUri(featuredArrow));
+                  }
+               } else if (featuredArrow.ref) { // partner is folded
+                  a = addFoldedPair(x, y);
+                  a.data('url', featuredArrow.ref);
+                  
+               } else { // featuredArrow is an atom
+                  a = addAtom(x, y, featuredArrow);
+                  turnEntryIntoText(a);
+                  a.data('uri', encodeArrowUri(featuredArrow));
+               }
+               a.addClass('known');
+               a.data('uri', encodeArrowUri(featuredArrow));
+               // assimilateArrow(pair); TBC
+               struct = struct[1];
+            }
+        });
+}
+
+
+
+
 function findPartners(d) {
     if (!d.data('url')) {
         var def = getDefinition(d);
@@ -1469,6 +1510,8 @@ function init() {
                 WikiCreole: 'http://www.wikicreole.org/wiki/',
                 Wikipedia: 'http://en.wikipedia.org/wiki/'},
                                      linkFormat: '' });
+                                     
+    findFeaturedArrows();
 }
  
 $(document).ready(init);
