@@ -1433,6 +1433,12 @@ function getTiles() {
     }
 }
 
+function getTileUnder(x, y) {
+  var xt = x - (x % 200);
+  var yt = y - (y % 200);
+  return '/' + x + '.' + y;
+}
+
 function init() {
     area = $('#area');
     toaster = $('#toaster');
