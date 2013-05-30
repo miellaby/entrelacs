@@ -1,19 +1,3 @@
-// constants
-var indexSize = 2000;
-
-// indexes (as maps of lists of arrows)
-// note in lower-level AS implementations, arrow storage and indexes are all merged together
-// into a single memory space
-var defIndex[indexSize];
-var headIndex[indexSize];
-var tailIndex[indexSize];
-
-// changes log
-var changelog = [];
-
-// loose arrows
-var loose = [];
-
 /**
  * Compute an hashcode
  * @this {String}
@@ -32,7 +16,7 @@ String.prototype.hashCode = function () {
 };
 
 /**
- * Creates an instance of Arrow.
+ * Creates an instance of {Arrow}.
  * @class {Arrow} 'Everything is an arrow'. That is an oriented pair of {Arrow}s.
  * @constructor
  * @this {Arrow}
@@ -40,14 +24,33 @@ String.prototype.hashCode = function () {
  * @param {Arrow} h head
  * @param {number} hc The hashcode for this arrow.
  */
-function Arrow(h, t, hc) {
-    this.head = h;
+function Arrow(t, h, hc) {
     this.tail = t;
+    this.head = h;
     this.hc = hc;
     this.refCount = 0;
     this.rooted = false;
-    loose.push(this);
+    Arrow.loose.push(this);
 }
+
+// Some constants
+Arrow.indexSize = 2000; // "Nobody Will Ever Need More Than 640k RAM!"
+Arrow.publicEntrelacsServer = "http://miellaby.selfip.net:8008/"; // Famous well-known epic server
+
+// indexes (as maps of lists of arrows)
+//
+//      Please note that implementations at lower levels merge
+//    arrow storage and indexes in a single memory space.
+//
+Arrow.defIndex = new Array(Arrow.indexSize);
+Arrow.headIndex = new Array(Arrow.indexSize);
+Arrow.tailIndex = new Array(Arrow.indexSize);
+
+// changes log
+Arrow.changelog = [];
+
+// loose arrows
+Arrow.loose = [];
 
 $.extend(Arrow.prototype, {
     /**
@@ -59,9 +62,9 @@ $.extend(Arrow.prototype, {
         // to head
         if (this.head) {
             // ihc: hash code for index
-            var ihc = this.head.hc % indexSize;
-            var i = headIndex[ihc];
-            if (!i) i = headIndex[ihc] = [];
+            var ihc = this.head.hc % Arrow.indexSize;
+            var i = Arrow.headIndex[ihc];
+            if (!i) i = Arrow.headIndex[ihc] = [];
             i.push(this);
             this.head.refCount++;
             if (this.head.isLoose()) this.head.connect();
@@ -70,15 +73,15 @@ $.extend(Arrow.prototype, {
         // to tail
         if (this.tail) {
             // ithc: hash code for index
-            var ithc = this.tail.hc % indexSize;
-            var it = tailIndex[ithc];
-            if (!it) it = tailIndex[ithc] = [];
+            var ithc = this.tail.hc % Arrow.indexSize;
+            var it = Arrow.tailIndex[ithc];
+            if (!it) it = Arrow.tailIndex[ithc] = [];
             it.push(this);
             this.tail.refCount++;
             if (this.tail.isLoose()) this.tail.connect();
         }
 
-        loose.splice(loose.indexOf(this), 1);
+        Arrow.loose.splice(Arrow.loose.indexOf(this), 1);
     },
 
     /**
@@ -88,8 +91,8 @@ $.extend(Arrow.prototype, {
     disconnect: function () {
         // from head
         if (this.head) {
-            var ihc = this.head.hc % indexSize;
-            var i = headIndex[ihc];
+            var ihc = this.head.hc % Arrow.indexSize;
+            var i = Arrow.headIndex[ihc];
             i.splice(i.indexOf(this), 1);
             this.head.refCount--;
             if (this.head.isLoose()) this.head.disconnect();
@@ -97,14 +100,14 @@ $.extend(Arrow.prototype, {
 
         // from tail
         if (this.tail) {
-            var ithc = this.tail.hc % indexSize;
-            var it = tailIndex[ithc];
+            var ithc = this.tail.hc % Arrow.indexSize;
+            var it = Arrow.tailIndex[ithc];
             it.splice(it.indexOf(this), 1);
             this.tail.refCount--;
             if (this.tail.isLoose()) this.tail.disconnect();
         }
 
-        loose.push(this);
+        Arrow.loose.push(this);
     },
 
     /**
@@ -117,7 +120,7 @@ $.extend(Arrow.prototype, {
             this.connect();
         }
         this.rooted = true;
-        changelog.push(this);
+        Arrow.changelog.push(this);
     },
 
     /**
@@ -130,7 +133,7 @@ $.extend(Arrow.prototype, {
         if (this.isLoose()) {
             this.disconnect();
         }
-        changelog.push(this);
+        Arrow.changelog.push(this);
     },
 
     /**
@@ -182,12 +185,12 @@ $.extend(Arrow.prototype, {
         var children = [];
 
         // incoming
-        var i = headIndex[this.hc % indexSize];
-        if (i) Array.push.apply(children, i);
+        var i = Arrow.headIndex[this.hc % Arrow.indexSize];
+        if (i) Array.prototype.push.apply(children, i);
 
         // outgoing
-        i = tailIndex[this.hc % indexSize];
-        if (i) Array.push.apply(children, i);
+        i = Arrow.tailIndex[this.hc % Arrow.indexSize];
+        if (i) Array.prototype.push.apply(children, i);
 
         delete i; // prevent polluting the closure
         var indice = 0;
@@ -204,7 +207,7 @@ $.extend(Arrow.prototype, {
 });
 
 /**
- * Creates an instance of Atom.
+ * Creates an instance of {Atom}.
  * @class An atom is an arrow which corresponds to a given piece of data.
  * @this {Atom}
  * @extends {Arrow}
@@ -236,7 +239,7 @@ $.extend(Atom.prototype, Arrow.prototype, {
      * @this {Atom}
      */
     connect: function () {
-        loose.splice(loose.indexOf(this), 1);
+        Arrow.loose.splice(Arrow.loose.indexOf(this), 1);
     },
 
     /**
@@ -244,7 +247,7 @@ $.extend(Atom.prototype, Arrow.prototype, {
      * @this {Atom}
      */
     disconnect: function () {
-        loose.push(this);
+        Arrow.loose.push(this);
     },
 
     /**
@@ -275,7 +278,7 @@ $.extend(Atom.prototype, Arrow.prototype, {
 
 
 /**
- * Creates an instance of Pair.
+ * Creates an instance of {Pair}.
  * @class a pair is an non-atomic arrow
  * @constructor
  * @this {Pair}
@@ -286,7 +289,7 @@ $.extend(Atom.prototype, Arrow.prototype, {
  */
 function Pair(t, h, hc) {
     if (hc === undefined) hc = (String(t.hc) + String(h.hc)).hashCode();
-    Arrow.call(t, h, hc);
+    Arrow.call(this, t, h, hc);
 }
 
 $.extend(Pair.prototype, Arrow.prototype, {
@@ -299,19 +302,52 @@ $.extend(Pair.prototype, Arrow.prototype, {
     },
 });
 
+
+
 /**
- * get the unique arrow corresponding to a piece of data
+ * Creates an instance of {Placeholder}.
+ * @class a placeholder for an existing arrow that we only know
+ *        by its temporary URL on a remote Entrelacs server
+ * @constructor
+ * @this {Placeholder}
+ * @extends {Arrow}
+ * @param {string} url
+ */
+function Placeholder(url, hc) {
+    if (hc === undefined) hc = url.hashCode();
+    Arrow.call(this, undefined, undefined, hc);
+    this.url = url;
+}
+
+$.extend(Placeholder.prototype, Arrow.prototype);
+
+
+
+/**
+* Forget everything
+*/
+Arrow.wipe = function () {
+  Arrow.defIndex = [];
+  Arrow.headIndex = [];
+  Arrow.tailIndex = [];
+  Arrow.changelog = [];
+  Arrow.loose = [];
+}
+
+
+/**
+ * Finds o builds the unique atomic arrow corresponding to a piece of data
  * @param {boolean} test existency test only => no creation
  */
 Arrow.atom = function (body, test) {
     var atom;
     var hc = String(body).hashCode();
-    var a = hc % indexSize;
+    var a = hc % Arrow.indexSize;
     var i = 0;
-    var l = defIndex[a];
-    if (!l) l = defIndex[a] = [];
+    var l = Arrow.defIndex[a];
+    if (!l) l = Arrow.defIndex[a] = [];
 
-    for (i = 0; i < length && atom = l[i] && !(atom.hc == hc && atom.body == body); i++);
+    for (i = 0; i < length && (atom = l[i]) && !(atom.hc == hc && atom.body == body); i++);
     if (i < l.length) return atom;
 
     if (test) return undefined;
@@ -321,7 +357,7 @@ Arrow.atom = function (body, test) {
 };
 
 /**
- * get the unique arrow linking t (its tail) to h (its head)
+ * Finds or builds the unique compound arrow linking 't' (its tail) to 'h' (its head)
  * @param {Arrow} t the tail
  * @param {Arrow} h the head
  * @param {boolean} test existency test only => no creation
@@ -329,332 +365,57 @@ Arrow.atom = function (body, test) {
 Arrow.pair = function (t, h, test) {
     var pair;
     var hc = (String(t.hc) + String(h.hc)).hashCode();
-    var a = hc;
-    var l = defIndex[a];
+    var a = hc % Arrow.indexSize;
+    var l = Arrow.defIndex[a];
     var i = 0;
-    if (!l) l = defIndex[a] = [];
-    
-    for (i = 0; i < l.length && pair = l[i] && !(pair.hc == hc && pair.head === h && pair.tail === t); i++);
+
+    if (!l) l = Arrow.defIndex[a] = [];    
+    for (i = 0; i < l.length && (pair = l[i]) && !(pair.hc == hc && pair.tail === t && pair.head === h); i++);
     if (i < l.length) return pair;
     
     if (test) return undefined;
     
-    l.push(pair = new Pair(h, t, hc));
+    l.push(pair = new Pair(t, h, hc));
     return pair;
 };
 
 /**
- * get an arrow placeholder
- * param {uri} uri that we haven't opened yet
+ * Finds or builds an arrow placeholder for some remote URL
+ * param {url} url that we haven't yet resolved to a local arrow
  * @return {Arrow}
  */
-Arrow.placeholder = function (uri) {
-    var hc = String(uri).hashCode();
+Arrow.placeholder = function (url) {
+    var placeholder;
+    var hc = String(url).hashCode();
+    var a = hc % Arrow.indexSize;
+    var l = Arrow.defIndex[a];
+    var i = 0;
 
-    return new Arrow(undefined, undefined, hc);
+    if (!l) l = Arrow.defIndex[a] = [];    
+    for (i = 0; i < l.length && (placeholder = l[i]) && !(placeholder.url == url); i++);
+    if (i < l.length) return placeholder;
+
+    placeholder = new Placeholder(url, hc);
+    return placeholder;
 }
 
-/**
- * Garbage collector
- */
-Arrow.gc = function () {
-    if (changelog.length) return;
-
-    for (var i = 0; i < loose.length; i++) {
-        var lost = loose[i];
-        var a = lost.hc;
-        var l = defIndex[a];
-        l.splice(l.indexOf(lost), 1);
-    }
-    loose.splice(0, loose.length);
-};
-
-
 
 /**
- * Local changes commit
+ * Parses an URI to find or build its corresponding unique arrow
+ * @param {string} Entrelacs-Compatible URI
+ * @param {string} Entrelacs server URL in case of partially defined URI
+ * @return {Arrow}
  */
-Arrow.commit = function (secondTry) {
-    var promise = $.when({
-        ready: true
-    });
-
-    for (var i = 0; i < changelog.length; i++) {
-        var changed = changelog[i];
-        if (changed.isRooted()) {
-            promise = promise.pipe(function () {
-                return ground.root(changed);
-            });
-        } else {
-            promise = promise.pipe(function () {
-                return ground.unroot(changed);
-            });
-        }
-    }
-    promise = promise.pipe(function () {
-        changelog.splice(0, changelog.length);
-        return ground.commit();
-    }).done(function () {
-        Arrow.gc();
-    });
-
-    if (!secondTry) {
-        // second try in case of failure
-        promise.pipe(nul, function () {
-            ground.reset();
-            return Arrow.commit(true);
-        });
-    }
-    return promise;
-};
-
-
-
-/**
- * the ground object is a proxy beside a public entrelacs server
- * where arrows are really saved when rooted
- */
-var ground = {
-    /** map URI <-> local arrow */
-    uriMap: {},
-
-    /** server base URL */
-    serverUrl: "http://miellaby.selfip.net:8008",
-
-    /** last known cookie, */
-    lastCookie: null,
-
-    /**
-     * reset session
-     * @return {boolean} session was empty while reseting
-     */
-    reset: function () {
-        var wasEmpty = true;
-        for (var uri in this.uriMap) {
-            delete this.uriMap[uri].uri;
-            wasEmpty = false;
-        }
-        this.uriMap = {};
-        return wasEmpty;
-    },
-
-    /** 
-     * check cookie and detect session loss
-     */
-    checkCookie: function () {
-        var currentCookie = $.cookie('session');
-        if (currentCookie != this.lastCookie) {
-            // session is lost, invalidate all URI
-            this.lastCookie = currentCookie;
-            this.reset();
-        }
-    },
-
-    /**
-     * bind an URI to an arrow. Called by ground.getUri or ground.open
-     * @param {Arrow}
-     */
-    bindUri: function (a, uri) {
-        var p = this.uriMap[uri]; // is there a placeholder here?
-        if (p) {
-            // p == a, let's rewire all its children
-            var child, iterator = p.getChildren();
-            while ((child = iterator()) != null) {
-                child.disconnect();
-                if (child.head === p) {
-                    child.head = a;
-                }
-                if (child.tail === p) {
-                    child.tail = a;
-                }
-                child.connect(); // easy as pie
-            }
-        }
-
-        a.uri = uri;
-        this.uriMap[uri] = a;
-        // at this step, p should be GCed by JS
-    },
-
-    /**
-     * get an URI for an arrow
-     * @param {Arrow}
-     * @return {Promise}
-     */
-    getUri: function (a) {
-        var promise;
-
-        if (a.uri) {
-            return $.when(a.uri);
-        }
-
-        if (a.isAtomic()) {
-            var req = this.serverUrl + '/escape+' +
-                encodeURIComponent(a.getBody()) + '?iDepth=0';
-            promise = $.get(req);
-
-        } else {
-            var pt = ground.getUri(a.getTail());
-            var ph = ground.getUri(a.getHead());
-            promise = $.when(pt, ph).pipe(function () {
-                var req = this.serverUrl + '/escape/'
-                    + a.getTail().uri + '+' + a.getHead().uri + '?iDepth=0';
-                return $.get(req);
-            });
-        }
-
-        promise.done(function (uri) {
-            ground.checkCookie();
-            ground.bindUri(a, uri);
-        }).fail(function () {
-            ground.reset();
-        });
-
-        return promise;
-    },
-
-    /**
-     * root an arrow
-     * @param {Arrow}
-     * @return {Promise}
-     */
-    root: function (a) {
-        var promise = this.getUri(a);
-        promise = promise.pipe(function (uri) {
-            var req = this.serverUrl + '/root/escape+' + uri;
-            var promise = $.get(req);
-            return promise;
-        }).fail(function () {
-            ground.reset();
-        });
-        return promise;
-    },
-
-    /**
-     * unroot an arrow
-     * @param {Arrow}
-     * @return {Promise}
-     */
-    unroot: function (a) {
-        var promise = this.getUri(a);
-        promise = promise.pipe(function (uri) {
-            var req = this.serverUrl + '/unroot/escape+' + uri;
-            var promise = $.get(req);
-            return promise;
-        }).fail(function () {
-            ground.reset();
-        });
-        return promise;
-    },
-
-    /**
-     * isRooted
-     * @param {Arrow}
-     * @return {Promise}
-     */
-    isRooted: function (a) {
-        var promise = this.getUri(a);
-        promise = promise.pipe(function (uri) {
-            var req = this.serverUrl + '/isRooted/escape+' + uri;
-            var promise = $.get(req, function (r) {
-                r && a.root() || a.unroot();
-            });
-            return promise;
-        }).fail(function () {
-            ground.reset();
-        });
-        return promise;
-    },
-
-    /**
-     * getChildren
-     * @param {Arrow}
-     * @return {Arrow}
-     */
-    getChildren: function (a) {
-        var promise = this.getUri(a);
-        promise = promise.pipe(function (uri) {
-            var req = this.serverUrl + '/childrenOf/escape+' + uri;
-            var promise = $.get(req);
-            return promise;
-        }).fail(function () {
-            ground.reset();
-        }).done(function (arrowURI) {
-            a.gchildren = ground.parse(arrowURI);
-        });
-        return promise;
-    },
-
-    /**
-     * invoke an arrow (evaluate)
-     * @param {Arrow}
-     * @return {Promise}
-     */
-    invoke: function (a) {
-        var promise = this.getUri(a);
-        promise = promise.pipe(function (uri) {
-            var req = this.serverUrl + '/' + uri; // no escape this time
-            var promise = $.get(req);
-            return promise;
-        }).fail(function () {
-            ground.reset();
-        });
-        return promise;
-    },
-
-    /**
-     * open/unfold/explore an arrow placeholder
-     * @param {Arrow} a placeholder
-     * @return {Promise}
-     */
-    open: function (p, depth) {
-        depth = depth || 5;
-        var uri = p.uri;
-        var req = this.serverUrl + '/escape' + uri + '?iDepth=' + depth;
-
-        var promise = $.get(req, function (uri) {
-            var unfolded = ground.parseURI(uri);
-            ground.bindUri(unfolded, p.uri);
-        });
-
-        return promise;
-    }
-
-    /**
-     * look at a local arrow with the given uri
-     * @param {string} uri
-     * @return {Arrow} the actual arrow or a `placeholder' arrow
-     */
-    fromURI: function (uri) {
-        var a = this.uriMap[uri];
-        if (a) return a;
-        a = Arrow.placeholder(uri);
-        a.uri = uri;
-        this.uriMap[uri] = a;
-        return a;
-    },
-    /**
-     * commit
-     * @return {Promise}
-     */
-    commit: function () {
-        var req = this.serverUrl + '/commit+';
-        var promise = $.get(req).fail(function () {
-            ground.reset();
-        });
-        return promise;
-    }
-};
-
-
-// Simple recursive descent parser for Entrelacs URI
-ground.parseURI = function () {
+Arrow.decodeURI = function () {
     // We define it inside a closure to keep bits private.
+
+    // Simple recursive descent parser
 
     var at, // The index of the current character
     ch, // The current character
     text, // the text being parsed
-
+    baseUrl, // the remote server base URL
+    
     refToString = function () {
         return this.ref;
     },
@@ -687,7 +448,7 @@ ground.parseURI = function () {
                 string += ch;
                 next();
             }
-            return ground.fromURI(string);
+            return Arrow.placeholder(baseUrl + string);
         }
     },
 
@@ -714,28 +475,345 @@ ground.parseURI = function () {
         return Arrow.atom(string);
     },
 
-    arrowURI, // Place holder for the value function.
+    arrow, // Place holder for the value function.
 
     pair = function () { // Parse a pair.
-        var head, tail;
+        var tail, head;
         if (ch === '/') {
             next();
-            head = arrow();
-            if (ch === '+') next();
             tail = arrow();
+            if (ch === '+') next();
+            head = arrow();
             return Arrow.pair(tail, head);
         }
     };
 
-    arrowURI = function () { // Parse a pair or an atom
+    arrow = function () { // Parse a pair or an atom
         return (ch === '/' ? pair() : (ch === '$' ? ref() : atom()));
     };
 
     // Return the overall parsing function
-    return function (source) {
-        text = source;
+    return function (uri, url) {
+        baseUrl = url || Arrow.publicEntrelacsServer;
+        text = uri;
         at = 0;
         next();
-        return arrowURI();
+        return arrow();
     };
 }();
+
+
+/**
+ * Garbage collector
+ */
+Arrow.gc = function () {
+    // on a lower-level system, the arrow GC can't run between 2 commits as it may free unrooted arrows and its descendants before the changes have been commited
+    // if (Arrow.changelog.length) return;
+
+    for (var i = 0; i < Arrow.loose.length; i++) {
+        var lost = Arrow.loose[i];
+        var a = lost.hc % Arrow.indexSize;
+        var l = Arrow.defIndex[a];
+        l.splice(l.indexOf(lost), 1);
+    }
+    Arrow.loose.splice(0, Arrow.loose.length);
+};
+
+
+
+/**
+ * Local changes commit
+ ** Note: it might be perfectly feasible to commit on several servers at once
+ */
+Arrow.commit = function (entrelacs, secondTry) {
+    var promise = $.when({
+        ready: true
+    });
+
+    for (var i = 0; i < Arrow.changelog.length; i++) {
+        var changed = Arrow.changelog[i];
+        if (changed.isRooted()) {
+            promise = promise.pipe(function () {
+                return entrelacs.root(changed);
+            });
+        } else {
+            promise = promise.pipe(function () {
+                return entrelacs.unroot(changed);
+            });
+        }
+    }
+    promise = promise.pipe(function () {
+        return entrelacs.commit();
+    }).done(function () {
+        Arrow.changelog.splice(0, Arrow.changelog.length);
+        Arrow.gc();
+    });
+
+    if (!secondTry) {
+        // second try in case of failure
+        promise.pipe(null, function () {
+            entrelacs.reset();
+            return Arrow.commit(entrelacs, true);
+        });
+    }
+    return promise;
+};
+
+
+
+/**
+ * Creates an instance of {Entrelacs}
+ * @class {Entrelacs} A proxy object in front a remote Entrelacs server.
+ * @constructor
+ * @this {Entrelacs}
+ * @param {string} serverUrl server base URL
+ */
+
+ function Entrelacs(serverUrl) {
+    /** server base URL */
+    this.serverUrl = serverUrl || Arrow.publicEntrelacsServer;
+
+    /** map URI <-> local arrow */
+    this.uriMap = {},
+
+    /** last known cookie, */
+    this.lastCookie = null;
+    
+    /** uri key use to attach remote temporary URI to local arrows */
+    this.uriKey = 'uriOf<' + this.serverUrl + '>';
+};
+
+$.extend(Entrelacs.prototype, {
+
+    /**
+     * reset proxy session
+     */
+    reset: function () {
+        for (var uri in this.uriMap) {
+            delete this.uriMap[uri][this.uriKey];
+        }
+        this.uriMap = {};
+    },
+
+    /** 
+     * check cookie and detect session loss
+     */
+    checkCookie: function () {
+        var currentCookie = $.cookie('session');
+        if (currentCookie != this.lastCookie) {
+            // session is lost, invalidate all URI
+            this.lastCookie = currentCookie;
+            this.reset();
+        }
+    },
+
+    /**
+     * bind an URI to an arrow. Called by self.getUri or self.open
+     * @param {Arrow}
+     */
+    bindUri: function (a, uri) {
+        var p = this.uriMap[uri]; // is there a placeholder here?
+        if (p) {
+            // p == a, let's rewire all its children
+            var child, iterator = p.getChildren();
+            while ((child = iterator()) != null) {
+                child.disconnect();
+                if (child.head === p) {
+                    child.head = a;
+                }
+                if (child.tail === p) {
+                    child.tail = a;
+                }
+                child.connect(); // easy as pie
+            }
+        }
+
+        a[this.uriKey] = uri;
+        this.uriMap[uri] = a;
+        // at this step, p should be GCed by JS
+    },
+
+    /**
+     * get an URI for an arrow
+     * @param {Arrow}
+     * @return {Promise}
+     */
+    getUri: function (a) {
+        var promise;
+        var self = this;
+        
+        if (a[this.uriKey]) {
+            return $.when(a[this.uriKey]);
+        }
+
+        if (a.isAtomic()) {
+            var req = this.serverUrl + '/escape+' +
+                encodeURIComponent(a.getBody()) + '?iDepth=0';
+            promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+
+        } else {
+            var pt = self.getUri(a.getTail());
+            var ph = self.getUri(a.getHead());
+            promise = $.when(pt, ph).pipe(function () {
+                var req = self.serverUrl + '/escape/'
+                    + a.getTail()[self.uriKey] + '+' + a.getHead()[self.uriKey] + '?iDepth=0';
+                return $.ajax({url: req, xhrFields: { withCredentials: true }});
+            });
+        }
+
+        promise.done(function (uri) {
+            self.checkCookie();
+            self.bindUri(a, uri);
+        }).fail(function () {
+            self.reset();
+        });
+
+        return promise;
+    },
+
+    /**
+     * root an arrow
+     * @param {Arrow}
+     * @return {Promise}
+     */
+    root: function (a) {
+        var promise = this.getUri(a);
+        var self = this;
+
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/root/escape+' + uri;
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        }).fail(function () {
+            self.reset();
+        });
+        return promise;
+    },
+
+    /**
+     * unroot an arrow
+     * @param {Arrow}
+     * @return {Promise}
+     */
+    unroot: function (a) {
+        var promise = this.getUri(a);
+        var self = this;
+
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/unroot/escape+' + uri;
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        }).fail(function () {
+            self.reset();
+        });
+        return promise;
+    },
+
+    /**
+     * isRooted
+     * @param {Arrow}
+     * @return {Promise}
+     */
+    isRooted: function (a) {
+        var promise = this.getUri(a);
+        var self = this;
+
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/isRooted/escape+' + uri;
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, sucess: function (r) {
+                r && a.root() || a.unroot();
+            }});
+            return promise;
+        }).fail(function () {
+            self.reset();
+        });
+        return promise;
+    },
+
+    /**
+     * getChildren
+     * @param {Arrow}
+     * @return {Arrow}
+     */
+    getChildren: function (a) {
+        var promise = this.getUri(a);
+        var self = this;
+
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/childrenOf/escape+' + uri;
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        }).fail(function () {
+            self.reset();
+        }).done(function (arrowURI) {
+            a.gchildren = Arrow.decodeURI(arrowURI);
+        });
+        return promise;
+    },
+
+    /**
+     * invoke an arrow (evaluate)
+     * @param {Arrow}
+     * @return {Promise}
+     */
+    invoke: function (a) {
+        var promise = this.getUri(a);
+        var self = this;
+
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/' + uri; // no escape this time
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        }).fail(function () {
+            self.reset();
+        });
+        return promise;
+    },
+
+    /**
+     * open/unfold/explore an arrow placeholder
+     * @param {Arrow} p placeholder
+     * @return {Promise}
+     */
+    open: function (p, depth) {
+        depth = depth || 5;
+        var self = this;
+        var url = p.url;
+        var req = url + '?iDepth=' + depth;
+
+        var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, sucess: function (uri) {
+            var unfolded = Arrow.decodeURI(uri);
+            // rattach the URI to the unfolded arrow as we know it from the placeholder
+            self.bindUri(unfolded, p[self.uriKey]);
+        }});
+
+        return promise;
+    },
+
+    /**
+     * look at a local arrow with the given uri
+     * @param {string} uri
+     * @return {Arrow} the actual arrow or a `placeholder' arrow
+     */
+    fromURI: function (uri) {
+        var a = this.uriMap[uri];
+        if (a) return a;
+        a = Arrow.placeholder(this.serverUrl + '/' + uri);
+        a[this.uriKey] = uri;
+        this.uriMap[uri] = a;
+        return a;
+    },
+    
+    
+    /**
+     * commit
+     * @return {Promise}
+     */
+    commit: function () {
+        var req = this.serverUrl + '/commit+';
+        var promise = $.ajax({url: req, xhrFields: { withCredentials: true }}).fail(function () {
+            self.reset();
+        });
+        return promise;
+    }
+});
