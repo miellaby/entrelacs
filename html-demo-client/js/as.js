@@ -761,7 +761,7 @@ $.extend(Entrelacs.prototype, {
         var self = this;
 
         promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/' + uri; // no escape this time
+            var req = self.serverUrl + uri; // no escape this time
             var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
             return promise;
         }).fail(function () {
@@ -778,11 +778,11 @@ $.extend(Entrelacs.prototype, {
     open: function (p, depth) {
         depth = depth || 5;
         var self = this;
-        var url = p.url;
-        var req = url + '?iDepth=' + depth;
+        // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
+        var req = this.serverUrl + '/escape/+' + p[this.uriKey] + '?iDepth=' + depth;
 
         var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, sucess: function (uri) {
-            var unfolded = Arrow.decodeURI(uri);
+            var unfolded = Arrow.decodeURI(uri).getHead(); 
             // rattach the URI to the unfolded arrow as we know it from the placeholder
             self.bindUri(unfolded, p[self.uriKey]);
         }});
@@ -798,7 +798,7 @@ $.extend(Entrelacs.prototype, {
     fromURI: function (uri) {
         var a = this.uriMap[uri];
         if (a) return a;
-        a = Arrow.placeholder(this.serverUrl + '/' + uri);
+        a = Arrow.placeholder(this.serverUrl + uri);
         a[this.uriKey] = uri;
         this.uriMap[uri] = a;
         return a;
