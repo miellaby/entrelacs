@@ -1,7 +1,7 @@
 // constants
 var indexSize = 2000;
 
-// indexes
+// indexes (as maps of lists of arrows)
 // note in lower-level AS implementations, arrow storage and indexes are all merged together
 // into a single memory space
 var defIndex[indexSize];
@@ -306,7 +306,7 @@ $.extend(Pair.prototype, Arrow.prototype, {
 Arrow.atom = function (body, test) {
     var atom;
     var hc = String(body).hashCode();
-    var a = hc % memSize;
+    var a = hc % indexSize;
     var i = 0;
     var l = defIndex[a];
     if (!l) l = defIndex[a] = [];
