@@ -1,8 +1,18 @@
-var loose = [];
-var mem = [];
-var headIndex = [];
-var tailIndex = [];
+// constants
+var indexSize = 2000;
+
+// indexes
+// note in lower-level AS implementations, arrow storage and indexes are all merged together
+// into a single memory space
+var defIndex[indexSize];
+var headIndex[indexSize];
+var tailIndex[indexSize];
+
+// changes log
 var changelog = [];
+
+// loose arrows
+var loose = [];
 
 /**
  * Compute an hashcode
@@ -45,10 +55,13 @@ $.extend(Arrow.prototype, {
      * @this {Arrow}
      */
     connect: function () {
+
         // to head
         if (this.head) {
-            var i = headIndex[this.head.hc];
-            if (!i) i = headIndex[this.head.hc] = [];
+            // ihc: hash code for index
+            var ihc = this.head.hc % indexSize;
+            var i = headIndex[ihc];
+            if (!i) i = headIndex[ihc] = [];
             i.push(this);
             this.head.refCount++;
             if (this.head.isLoose()) this.head.connect();
@@ -56,8 +69,10 @@ $.extend(Arrow.prototype, {
 
         // to tail
         if (this.tail) {
-            var it = tailIndex[this.tail.hc];
-            if (!it) it = tailIndex[this.tail.hc] = [];
+            // ithc: hash code for index
+            var ithc = this.tail.hc % indexSize;
+            var it = tailIndex[ithc];
+            if (!it) it = tailIndex[ithc] = [];
             it.push(this);
             this.tail.refCount++;
             if (this.tail.isLoose()) this.tail.connect();
@@ -73,7 +88,8 @@ $.extend(Arrow.prototype, {
     disconnect: function () {
         // from head
         if (this.head) {
-            var i = headIndex[this.head.hc];
+            var ihc = this.head.hc % indexSize;
+            var i = headIndex[ihc];
             i.splice(i.indexOf(this), 1);
             this.head.refCount--;
             if (this.head.isLoose()) this.head.disconnect();
@@ -81,7 +97,8 @@ $.extend(Arrow.prototype, {
 
         // from tail
         if (this.tail) {
-            var it = tailIndex[this.tail.hc];
+            var ithc = this.tail.hc % indexSize;
+            var it = tailIndex[ithc];
             it.splice(it.indexOf(this), 1);
             this.tail.refCount--;
             if (this.tail.isLoose()) this.tail.disconnect();
@@ -142,18 +159,18 @@ $.extend(Arrow.prototype, {
 
     /**
      * @this {Arrow}
-     * @return {Arrow} the arrow tail (this if atomic)
+     * @return {Arrow} the arrow tail
      */
     getTail: function () {
-        return this.tail || this;
+        return this.tail;
     },
 
     /**
      * @this {Arrow}
-     * @return {Arrow} the arrow head (this if atomic)
+     * @return {Arrow} the arrow head
      */
     getHead: function () {
-        return this.head || this;
+        return this.head;
     },
 
     /**
@@ -165,17 +182,18 @@ $.extend(Arrow.prototype, {
         var children = [];
 
         // incoming
-        var i = headIndex[this.hc];
+        var i = headIndex[this.hc % indexSize];
         if (i) Array.push.apply(children, i);
 
         // outgoing
-        i = tailIndex[this.hc];
+        i = tailIndex[this.hc % indexSize];
         if (i) Array.push.apply(children, i);
 
-        delete i;
+        delete i; // prevent polluting the closure
         var indice = 0;
         var parent = this;
         return function () {
+            // returns a real child, looping through false positives
             while (indice < children.length) {
                 var a = children[indice++];
                 if (a.getTail() == parent || a.getHead() == parent) return a;
@@ -214,7 +232,7 @@ $.extend(Atom.prototype, Arrow.prototype, {
     },
 
     /**
-     * connect an atom => nothing to do
+     * connect an atom
      * @this {Atom}
      */
     connect: function () {
@@ -222,7 +240,7 @@ $.extend(Atom.prototype, Arrow.prototype, {
     },
 
     /**
-     * disconnect an atom => nothing to do
+     * disconnect an atom
      * @this {Atom}
      */
     disconnect: function () {
@@ -279,22 +297,6 @@ $.extend(Pair.prototype, Arrow.prototype, {
     isAtomic: function () {
         return false;
     },
-
-    /**
-     * @this {Pair}
-     * @return {Arrow} the arrow tail
-     */
-    getTail: function () {
-        return this.tail;
-    },
-
-    /**
-     * @this {Pair}
-     * @return {Arrow} the arrow head
-     */
-    getHead(): function () {
-        return this.head;
-    }
 });
 
 /**
@@ -304,13 +306,17 @@ $.extend(Pair.prototype, Arrow.prototype, {
 Arrow.atom = function (body, test) {
     var atom;
     var hc = String(body).hashCode();
-    var a = hc;
-    while ((atom = mem[a]) !== undefined && !(atom.hc == hc && atom.body == body)) {
-        a++;
-    }
-    if (atom !== undefined) return atom;
+    var a = hc % memSize;
+    var i = 0;
+    var l = defIndex[a];
+    if (!l) l = defIndex[a] = [];
+
+    for (i = 0; i < length && atom = l[i] && !(atom.hc == hc && atom.body == body); i++);
+    if (i < l.length) return atom;
+
     if (test) return undefined;
-    atom = mem[a] = new Atom(body, hc);
+    
+    l.push(atom = new Atom(body, hc));
     return atom;
 };
 
@@ -324,12 +330,16 @@ Arrow.pair = function (t, h, test) {
     var pair;
     var hc = (String(t.hc) + String(h.hc)).hashCode();
     var a = hc;
-    while ((pair = mem[a]) !== undefined && !(pair.hc == hc && pair.head === h && pair.tail === t)) {
-        a++;
-    }
-    if (pair !== undefined) return pair;
+    var l = defIndex[a];
+    var i = 0;
+    if (!l) l = defIndex[a] = [];
+    
+    for (i = 0; i < l.length && pair = l[i] && !(pair.hc == hc && pair.head === h && pair.tail === t); i++);
+    if (i < l.length) return pair;
+    
     if (test) return undefined;
-    pair = mem[a] = new Pair(h, t, hc);
+    
+    l.push(pair = new Pair(h, t, hc));
     return pair;
 };
 
@@ -353,12 +363,8 @@ Arrow.gc = function () {
     for (var i = 0; i < loose.length; i++) {
         var lost = loose[i];
         var a = lost.hc;
-        while (mem[a] !== undefined && mem[a] != lost) {
-            a++;
-        }
-        if (a !== = undefined) {
-            delete mem[a];
-        }
+        var l = defIndex[a];
+        l.splice(l.indexOf(lost), 1);
     }
     loose.splice(0, loose.length);
 };
@@ -455,10 +461,10 @@ var ground = {
             var child, iterator = p.getChildren();
             while ((child = iterator()) != null) {
                 child.disconnect();
-                if (child.head == p) {
+                if (child.head === p) {
                     child.head = a;
                 }
-                if (child.tail == p) {
+                if (child.tail === p) {
                     child.tail = a;
                 }
                 child.connect(); // easy as pie
