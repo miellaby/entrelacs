@@ -1426,7 +1426,6 @@ function addAtom(x, y, initialValue, animatePlease) {
     // file uploading
     d.append("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>");
     d.children('.fileinput-button').click(onFileInputClick).change(onFileInputChange);
-    d
     return d;
 }
 
