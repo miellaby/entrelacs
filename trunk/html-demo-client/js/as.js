@@ -25,16 +25,32 @@ String.prototype.hashCode = function () {
  * @param {number} hc The hashcode for this arrow.
  */
 function Arrow(t, h, hc) {
+    /** tail */
     this.tail = t;
+
+    /** head */
     this.head = h;
+
+    /** hashcode */
     this.hc = hc;
+
+    /** reference counters */
     this.refCount = 0;
+
+    /** root flag */
     this.rooted = false;
+
+    /** payload (for outer programmatic purpose) */
+    this.payload = null;
+    
     Arrow.loose.push(this);
 }
 
 // Some constants
+/** indexes size */
 Arrow.indexSize = 2000; // "Nobody Will Ever Need More Than 640k RAM!"
+
+/** default public server base URL */
 Arrow.publicEntrelacsServer = "http://miellaby.selfip.net:8008/"; // Famous well-known epic server
 
 // indexes (as maps of lists of arrows)
@@ -42,14 +58,19 @@ Arrow.publicEntrelacsServer = "http://miellaby.selfip.net:8008/"; // Famous well
 //      Please note that implementations at lower levels merge
 //    arrow storage and indexes in a single memory space.
 //
+/** 'by definition' index */
 Arrow.defIndex = new Array(Arrow.indexSize);
+
+/** 'by head' index */
 Arrow.headIndex = new Array(Arrow.indexSize);
+
+/** 'by tail' index */
 Arrow.tailIndex = new Array(Arrow.indexSize);
 
-// changes log
+/** changes log */
 Arrow.changelog = [];
 
-// loose arrows
+/** loose arrows log */
 Arrow.loose = [];
 
 $.extend(Arrow.prototype, {
@@ -203,6 +224,30 @@ $.extend(Arrow.prototype, {
             }
             return null;
         };
+    },
+    
+     /** Load some payload into an arrow
+     * @this {Arrow}
+     * @param keyOrMap (a key string or a key-value mapping object)
+     * @param value to bind the key to (only relevant if first parameter is a key string)
+     */
+    set: function(keyOrMap, value) {
+        this.payload || (this.payload = []);
+       
+        if (typeof keyOrMap == 'object') {
+            for (var k in keyOrMap) {
+                keyOrMap.hasOwnProperty(k) && this.payload[k] = keyOrMap[k];
+            }
+        } else {
+            this.payload[keyOrMap] = value;
+        }
+    },
+    
+     /** Get some payload out of an arrow
+     * @this {Arrow}
+     */
+    get: function(key) {
+        return this.payload ? this.payload[key] : undefined;
     }
 });
 
@@ -590,7 +635,7 @@ $.extend(Entrelacs.prototype, {
      */
     reset: function () {
         for (var uri in this.uriMap) {
-            delete this.uriMap[uri][this.uriKey];
+            delete this.uriMap[uri].get(this.uriKey);
         }
         this.uriMap = {};
     },
@@ -628,7 +673,7 @@ $.extend(Entrelacs.prototype, {
             }
         }
 
-        a[this.uriKey] = uri;
+        a.set(this.uriKey, uri);
         this.uriMap[uri] = a;
         // at this step, p should be GCed by JS
     },
@@ -642,8 +687,8 @@ $.extend(Entrelacs.prototype, {
         var promise;
         var self = this;
         
-        if (a[this.uriKey]) {
-            return $.when(a[this.uriKey]);
+        if (a.get(this.uriKey)) {
+            return $.when(a.get(this.uriKey));
         }
 
         if (a.isAtomic()) {
@@ -652,11 +697,11 @@ $.extend(Entrelacs.prototype, {
             promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
 
         } else {
-            var pt = self.getUri(a.getTail());
-            var ph = self.getUri(a.getHead());
+            var pt = this.getUri(a.getTail());
+            var ph = this.getUri(a.getHead());
             promise = $.when(pt, ph).pipe(function () {
                 var req = self.serverUrl + '/escape/'
-                    + a.getTail()[self.uriKey] + '+' + a.getHead()[self.uriKey] + '?iDepth=0';
+                    + a.getTail().get(self.uriKey) + '+' + a.getHead().get(self.uriKey) + '?iDepth=0';
                 return $.ajax({url: req, xhrFields: { withCredentials: true }});
             });
         }
@@ -779,12 +824,12 @@ $.extend(Entrelacs.prototype, {
         depth = depth || 5;
         var self = this;
         // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
-        var req = this.serverUrl + '/escape/+' + p[this.uriKey] + '?iDepth=' + depth;
+        var req = this.serverUrl + '/escape/+' + p.get(this.uriKey) + '?iDepth=' + depth;
 
         var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, sucess: function (uri) {
             var unfolded = Arrow.decodeURI(uri).getHead(); 
             // rattach the URI to the unfolded arrow as we know it from the placeholder
-            self.bindUri(unfolded, p[self.uriKey]);
+            self.bindUri(unfolded, p.get(self.uriKey));
         }});
 
         return promise;
@@ -799,7 +844,7 @@ $.extend(Entrelacs.prototype, {
         var a = this.uriMap[uri];
         if (a) return a;
         a = Arrow.placeholder(this.serverUrl + uri);
-        a[this.uriKey] = uri;
+        a.set(this.uriKey, uri);
         this.uriMap[uri] = a;
         return a;
     },

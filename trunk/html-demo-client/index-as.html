@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Entrelacs Terminal 0.1</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/main.css">
+        <link rel="shortcut icon" href="./favicon.ico">
+
+        <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+    </head>
+    <body>
+        <div id='background'></div>
+        <!--[if lt IE 7]>
+            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+        <div id='killme' style='position: fixed; margin:35%'><h2 style='color: gray;'>Please click anywhere to interact</div>
+        <div id='area' class='area'>
+            <div class="loading bar" id="loading">
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+                 <div></div>
+            </div>
+            <input id='proto_entry' style='visibility: hidden;'><span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span></input>
+        </div>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
+
+        <script src="js/plugins.js"></script>
+        <script src="http://cdn.jsdelivr.net/jquery.cookie/1.3.1/jquery.cookie.js"></script>
+        <script src="js/as.js"></script>
+        <script src="js/vendor/creole.js"></script>
+        <script src="js/terminal.js"></script>
+        <div id='toaster'>...</div>
+        <div id='upload_form_areas' style='display: none'>
+            <form id='upload_form' action='http://miellaby.selfip.net:8008/escape?iDepth=0' method=post enctype='multipart/form-data' target='hidden_upload' style='display: none'>
+            <iframe id='hidden_upload' name='hidden_upload' src=''></iframe>
+            </form>
+        </div>
+        <script src='http://cdnjs.cloudflare.com/ajax/libs/jquery.colorbox/1.3.27/jquery.colorbox-min.js'></script>
+    </body>
+</html>
