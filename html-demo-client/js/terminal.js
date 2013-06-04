@@ -43,11 +43,11 @@ Terminal.prototype = {
         i.keypress(this.on.prompt.keypress);
         i.keydown(this.on.prompt.keydown);
         d.attr('draggable', true);
-        i.on('dragenter', this.on.prompt.dragenter);
-        i.on('dragleave', this.on.prompt.dragleave);
-        d.on('dragstart', this.on.prompt.dragstart);
-        d.on('dragend', this.on.prompt.dragend);
-        d.find('.close a').click(this.on.tree.close.click);
+        i.on('dragenter', this.on.arrow.dragenter);
+        i.on('dragleave', this.on.arrow.dragleave);
+        d.on('dragstart', this.on.arrow.dragstart);
+        d.on('dragend', this.on.arrow.dragend);
+        d.find('.close a').click(this.on.arrow.close.click);
         this.addBarTo(d);
         
         // data
@@ -158,6 +158,107 @@ Terminal.prototype = {
 
         d.detach();
     },
+
+    moveArrow: function(d, offsetX, offsetY, movingChild) {
+        var p = d.position();
+        d.css({ 'opacity': 1,
+                'left': (p.left  + offsetX) + 'px',
+                'top': (p.top + offsetY) +'px'
+        });
+        if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
+           if (d.data('head')) {
+               this.moveArrow(d.data('head'), offsetX, offsetY, d);
+           }
+           if (d.data('tail') && !(d.data('head') && d.data('tail')[0] === d.data('head')[0])) {
+               this.moveArrow(d.data('tail'), offsetX, offsetY, d);
+           }
+        }
+        this.updateDescendants(d, d);
+    },
+
+    updateDescendants: function(a, newA) {
+        var f = a.data('for');
+        for (var i = 0; i < f.length; i++) { // search into loose children
+            this.rewirePair(f[i], a, newA);
+        }
+        var children = a.data('children');
+        for (var i = 0; i < children.length; i++) {
+            this.rewirePair(children[i], a, newA);
+        }
+    },
+
+    updateChild: function(d, a, newA) {
+        var list = d.data('children');
+        for (var i = 0; i < list.length; i++) {
+           var c = list[i];
+           if  (c[0] === a[0]) {
+               list.splice(i, 1, newA);
+               break;
+           }
+        }
+        return list;
+    },
+
+    updateFor: function(d, a, newA) {
+        var list = d.data('for');
+        for (var i = 0; i < list.length; i++) {
+           var c = list[i];
+           if  (c[0] === a[0]) {
+               list.splice(i, 1, newA);
+               break;
+           }
+        }
+        return list;
+    },
+
+    updateRefs: function(d, oldOne, newOne) {
+        this.updateFor(d, oldOne, newOne);
+        this.updateChild(d, oldOne, newOne);
+    },
+
+
+    rewirePair: function(a, oldOne, newOne) {
+       var oldTail = a.data('tail');
+       var oldHead = a.data('head');
+
+       var tailChanged = (oldTail && oldTail[0] === oldOne[0]);
+       var headChanged = (oldHead && oldHead[0] === oldOne[0]);
+
+       var newTail = tailChanged ? newOne : oldTail;
+       var newHead = headChanged ? newOne : oldHead;
+       var newA = this.pairTogether(newTail, newHead);
+       newA.find('.hook .poke').text(a.find('.hook .poke').text());
+
+       // class copy
+       if (a.hasClass('kept'))
+          newA.addClass('kept');
+       if (a.hasClass('known'))
+          newA.addClass('known');
+
+       // props copy
+       newA.find('.hook .rooted input').prop('disabled', a.find('.hook .rooted input').prop('disabled'));
+       newA.find('.hook .rooted input').prop('checked', a.find('.hook .rooted input').prop('checked'));
+       
+       // data copy
+       var oldData = a.data();
+       for (var dataKey in oldData) {
+          if (dataKey == 'head' || dataKey == 'tail') continue;
+          newA.data(dataKey, oldData[dataKey]);
+       }
+       // back refs updating
+       if (newTail)
+           this.updateRefs(newTail, a, newA);
+           
+       if (newHead && !(newTail && newTail[0] === newHead[0])) {
+          this.updateRefs(newHead, a, newA);
+       }
+
+       this.updateDescendants(a, newA);
+       
+       a.detach();
+
+       return newA;
+    },
     
     closePrompt: function(prompt) {
         this.dismissArrow(prompt);
@@ -255,16 +356,16 @@ Terminal.prototype = {
         return arrow;
     },
     
-    submitArrows: function(tree) {
-        var f = tree.data('for');
-        if (f.length) { // get back to the roots (recursive calls to all waiting prompt trees)
+    submitArrows: function(arrow) {
+        var f = arrow.data('for');
+        if (f.length) { // get back to the roots (recursive calls to all waiting prompt arrows)
             var ff;
             for (var i = 0 ; i < f.length; i++) {
                 toBeRecorded = f[i];
                 this.submitArrows(toBeRecorded);
             }
         } else { // terminal case: arrow to be recorded
-            this.getArrow(tree);
+            this.getArrow(arrow);
             
         }
     },
@@ -298,9 +399,9 @@ Terminal.prototype = {
         
         // set listeners
         d.attr('draggable', true);
-        d.on('dragstart', this.on.tree.dragstart);
-        d.on('dragend', this.on.tree.dragend);
-        d.find('.close a').click(this.on.tree.close.click);
+        d.on('dragstart', this.on.arrow.dragstart);
+        d.on('dragend', this.on.arrow.dragend);
+        d.find('.close a').click(this.on.arrow.close.click);
 
         this.addBarTo(d);
         
@@ -457,14 +558,51 @@ Terminal.prototype = {
                 }
             },
         },
-        tree: {
+        arrow: {
             dragenter: function(event) {
+                var prompt = $(this).parent();
+                var area = prompt.parent();
+                var self = area.data('terminal');
+                self.dragOver = this;
+                $(this).animate({'border-width': 6, left: "-=3px"}, 100);
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
             },
             dragleave: function(event) {
+                var prompt = $(this).parent();
+                var area = prompt.parent();
+                var self = area.data('terminal');
+                $(this).animate({'border-width': 2, left: "+=3px"}, 100);
+                setTimeout(function() { self.dragOver = null; }, 0); // my gosh
+                event.preventDefault();
+                return false;
             },
             dragstart: function(event) {
+                var prompt = $(this);
+                var area = prompt.parent();
+                var self = area.data('terminal');
+                self.dragStartX = Math.max(event.originalEvent.screenX, event.originalEvent.pageX);
+                self.dragStartY = Math.max(event.originalEvent.screenY, event.originalEvent.pageY);
+                event.originalEvent.dataTransfer.setData('text/plain', "arrow");
+                event.originalEvent.dataTransfer.effectAllowed = "move";
+                event.originalEvent.dataTransfer.dropEffect = "move";
             },
             dragend: function(event) {
+                var arrow = $(this);
+                var area = arrow.parent();
+                var self = area.data('terminal');
+                if (event.originalEvent.dropEffect == "none") return false;
+    
+                if (self.dragOver && arrow.data('arrow')) {
+                    var d = $(self.dragOver).parent();
+                    self.turnPromptIntoExistingArrow(d, $(this));
+                    self.submitArrow(d); // TODO Need a confirm button
+                } else {
+                    self.moveArrow(arrow, Math.max(event.originalEvent.screenX, event.originalEvent.pageX) - self.dragStartX,
+                                 Math.max(event.originalEvent.screenY, event.originalEvent.pageY) - self.dragStartY, null /* no moving child */);
+                }
+                return true;
             },
             close: {
                 click: function(event) {
