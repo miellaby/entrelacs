@@ -87,8 +87,8 @@ $.extend(Arrow.prototype, {
             var i = Arrow.headIndex[ihc];
             if (!i) i = Arrow.headIndex[ihc] = [];
             i.push(this);
-            this.head.refCount++;
             if (this.head.isLoose()) this.head.connect();
+            this.head.refCount++;
         }
 
         // to tail
@@ -98,8 +98,8 @@ $.extend(Arrow.prototype, {
             var it = Arrow.tailIndex[ithc];
             if (!it) it = Arrow.tailIndex[ithc] = [];
             it.push(this);
-            this.tail.refCount++;
             if (this.tail.isLoose()) this.tail.connect();
+            this.tail.refCount++;
         }
 
         Arrow.loose.splice(Arrow.loose.indexOf(this), 1);
