@@ -1,15 +1,7 @@
 /* This scrap file gathers toughs about design issues
 */
 
-// Loose state is useless for regular arrow, where loose <=> head.jump == 0
-// it is useless for tag arrow as well, where loose <=> ref#==0
-// I'm going to remove this concept.
 
-
-// Je viens d'imaginer une façon excellente d'accélerer le parcours d'un cache a la recherche des modifications
-// on fait comme le petit jeu des enfants avec les bateaux en papier, c'est �  dire: on stocke dans 8 bits �  coté de chaque cellule modifiée l'adresse modulo 255 de la cellule modifiée suivante.
-// Le problème c'est de trouver la cellule modifiée qui précède celle qu'on modifie. Elle peut être n'importe où. Flute.
- 
 // Once one decides not to use a traditional chain hashing designed table, several exicting alternatives come along.
 // First alternative: Open addressing consists in looking for an arrow at more than one physical location, starting from a so-called "open address". Double hashing improves the dispatching of physical locations of a considered open address so to prevent data "clustering".
 // Second alternative: The coalesced chaining. It's a sort of chained hashing, but the chaind list is design within the hash table.
