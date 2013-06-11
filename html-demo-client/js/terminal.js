@@ -60,6 +60,30 @@ Terminal.prototype = {
         return d;
     },
     
+    putFolded: function(x, y) {
+        var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'><a href='#'>&times;</a></div></div>");
+        this.area.append(d);
+        d.css({left: (x - 75) + 'px',
+               top: (y - 45) + 'px',
+               height: '45px',
+               width: '150px'});
+        d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
+
+        // set listeners
+        d.attr('draggable', true);
+        d.on('dragstart', this.on.dragstart);
+        d.on('dragend', this.on.dragend);
+        d.find('.close a').click(this.on.close.click);
+        d.children('.unfoldTail,.unfoldHead').click(this.on.unfold.click);
+        
+        this.addBarTo(d);
+        
+        // data
+        d.data('for', []);
+        d.data('children', []);
+        return d;
+    },
+
     isPrompt: function(d) {
         return d.hasClass('atomDiv');
     },
@@ -229,12 +253,6 @@ Terminal.prototype = {
        var newA = this.pairTogether(newTail, newHead);
        newA.find('.hook .poke').text(a.find('.hook .poke').text());
 
-       // class copy
-       if (a.hasClass('kept'))
-          newA.addClass('kept');
-       if (a.hasClass('known'))
-          newA.addClass('known');
-
        // props copy
        newA.find('.hook .rooted input').prop('disabled', a.find('.hook .rooted input').prop('disabled'));
        newA.find('.hook .rooted input').prop('checked', a.find('.hook .rooted input').prop('checked'));
@@ -262,6 +280,7 @@ Terminal.prototype = {
     
     closePrompt: function(prompt) {
         this.dismissArrow(prompt);
+        this.entrelacs.commit();
     },
     
     closePromptIfLoose: function(prompt) {
@@ -311,27 +330,60 @@ Terminal.prototype = {
 
     },
 
+    processPartners: function(d, list) {
+        var p = d.position();
+        var source = d.data('arrow');
+
+        while (list !== Arrow.eve) {
+            var link = list.getTail();
+            var outgoing = (link.getTail() == source); 
+            var partner = (outgoing ? link.getHead() : link.getTail());
+            var c = this.getPointOnCircle(50);
+            var a;
+            if (partner.isAtomic()) {
+                a = this.openPrompt(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
+                                   d.top + d.height() / 2 + c.y,
+                                   partner.getBody());
+            } else if (partner.head === undefined) { // placeholder
+                a = this.addFolded(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
+            } else {
+                // TODO pair
+            }
+            this.getArrow(a);
+            
+            var next = list.getHead();
+            if (next)
+                list = next;
+            else { // list not completly unfolded. end with a placeholder
+            
+                var promise = this.entrelacs.open(list);
+                promise.done(function(unfolded) {
+                    self.processPartners(unfolded);
+                });
+                list = Arrow.eve;
+            }
+                
+        }
+    },
+    
     update: function(d) {
         var arrow = d.data('arrow');
         var self = this;
         d.css('marginTop','-5px').animate({marginTop: 0});
         var promise = self.entrelacs.isRooted(arrow);
         promise.done(function () {
-            d.find('.hook .rooted input').prop('checked', arrow.isRooted());
-            if (d.hasClass('known')) { // know
-                d.removeClass('known');
-                d.addClass('kept');
-                d.find('.hook .rooted input').prop('disabled', false);
-            }
-            var promise = self.entrelacs.getChildren(arrow);
-            promise.done(function() {
-                // TODO load arrows
+            d.find('.hook .rooted input').prop('checked', arrow.isRooted()).prop('disabled', false);
+            var knownPartners = arrow.getPartners();
+            self.processPartners(d, knownPartners);
+            var promise = self.entrelacs.getPartners(arrow);
+            promise.done(function(partners) {
+                self.processPartners(d, partners);
             });
         });
+        return promise;
     },
     
     getArrow: function(d) {
-        // THAT'S WHEN IT'S COME INTERESTING
         var arrow = d.data('arrow');
         if (arrow) return arrow;
         
@@ -352,7 +404,6 @@ Terminal.prototype = {
             arrow.set('views', views);
         }
         views.push(d);
-        this.update(d);
         return arrow;
     },
     
@@ -366,7 +417,7 @@ Terminal.prototype = {
             }
         } else { // terminal case: arrow to be recorded
             this.getArrow(arrow);
-            
+            this.update(arrow);
         }
     },
 
@@ -454,6 +505,78 @@ Terminal.prototype = {
            return a;
 
     },
+
+    // find an editable atom into a tree
+    findNextInto: function(d) {
+        if (d.hasClass('atomDiv')) { // atom
+            return d.data('for').length ? d /* found */: null;
+        } else { // pair
+           // check in tail then in head
+           var n = d.data('tail') ? this.findNextInto(d.data('tail')) : null;
+           if (!n && d.data('head'))
+                n = this.findNextInto(d.data('head'));
+           return n;
+        }
+    },
+
+    // search for the next editable atom
+    findNext: function(d, from, leftOnly) {
+       var f = d.data('for');
+       if ((d.hasClass('pairDiv') || d.hasClass('ipairDiv')) && d.data('head') && d.data('head')[0] !== from[0]) { // search into head
+          var n = this.findNextInto(d.data('head'));
+          if (n) return n;
+       }
+       
+       for (var i = 0; i < f.length; i++) { // search into loose children
+            var n = this.findNext(f[i], d, leftOnly);
+            if (n) return n;
+       }
+       
+      if (!leftOnly && d.hasClass('pairDiv') && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
+          var n = this.findNextInto(d.data('tail'));
+          if (n) return n;
+       }
+
+       // search fail: no editable
+       return null;
+    },
+    
+    // find previous editable atom into a tree
+    findPreviousInto: function(d) {
+        if (d.hasClass('atomDiv')) { // atom
+            return d.data('for').length ? d /* found */: null;
+        } else { // pair
+           // check in head then in tail
+           var n = d.data('head') ? this.findPreviousInto(d.data('head')) : null;
+           if (!n && d.data('tail'))
+                n = this.findPreviousInto(d.data('tail'));
+           return n;
+        }
+    },
+    
+
+    // search for the previous editable atom
+    findPrevious: function(d, from, rightOnly) {
+       var f = d.data('for');
+       if ((d.hasClass('pairDiv') || d.hasClass('ipairDiv')) && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
+          var n = this.findPreviousInto(d.data('tail'));
+          if (n) return n;
+       }
+       
+       for (var i = 0; i < f.length; i++) { // search into loose children
+            var n = this.findPrevious(f[i], d, rightOnly);
+            if (n) return n;
+       }
+       
+      if (!rightOnly && d.hasClass('pairDiv') && d.data('head') && d.data('head')[0] !== from[0]) { // search into tail
+          var n = this.findPreviousInto(d.data('head'));
+          if (n) return n;
+       }
+
+       // search fail: no editable
+       return null;
+    },
+
     
     on:{
         area: {
@@ -495,6 +618,18 @@ Terminal.prototype = {
             },
             rooted: {
                 change: function(event) {
+                    var d  = $(this).parent().parent().parent();
+                    var self = d.parent().data('terminal');
+                    var arrow = d.data('arrow');
+                    if (arrow) {
+                        if (arrow.isRooted()) {
+                            arrow.unroot();
+                        } else {
+                            arrow.root();
+                        }
+                        Arrow.commit(self.entrelacs);
+                    }
+                    return true;
                 },
             },
             enter: function(event) {
@@ -526,6 +661,8 @@ Terminal.prototype = {
                     event.preventDefault();
                     // record arrows that this prompt belongs too
                     self.submitArrows(prompt);
+                    Arrow.commit(self.entrelacs);
+
                     return false;
                 }
                 return true;
@@ -540,13 +677,48 @@ Terminal.prototype = {
                     if ($(this).is('textarea')) {
                         // record the currently edited compound arrow (or at least this text input)
                         self.submitArrows(prompt);
+                        Arrow.commit(self.entrelacs);
                     } else {
                         // turn the atom into a textarea
                         self.enlargePrompt(prompt);
                     }
-                    e.preventDefault();
+                    event.preventDefault();
                     return false;
+                } else if (event.keyCode == 27 /* escape */) {
+                    var prompt = $(this).parent();
+                    var area = prompt.parent();
+                    var self = area.data('terminal');
+                    event.preventDefault();
+                    self.closePrompt(prompt);
+                    return false;
+                } else if (event.keyCode == 9 /* tab */) {
+                    var prompt = $(this).parent();
+                    var area = prompt.parent();
+                    var self = area.data('terminal');
+                    event.preventDefault();
+                    
+                    var f = prompt.data('for');
+                    for (var i = 0; i < f.length; i++) { // search into loose children
+                        var next = event.shiftKey ? self.findPrevious(f[i], prompt) : self.findNext(f[i], prompt);
+                        if (next) {
+                            next.children('input,textarea').focus();
+                            return;
+                        }
+                    }
+
+                    if (f.length) {
+                        var ff;
+                        while ((ff = f[f.length - 1].data('for')) && ff.length) {
+                            f = ff ;
+                        }
+                        var a = self.leave(f[f.length - 1], event.shiftKey /* in/out */);
+                        f.data('for').push(a);
+                    } else {
+                        var a = self.leave(prompt, event.shiftKey /* out */);
+                        prompt.data('for').push(a);
+                    }
                 }
+
                 return true;
 
             },
