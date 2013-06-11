@@ -142,6 +142,7 @@ $.extend(Arrow.prototype, {
         }
         this.rooted = true;
         Arrow.changelog.push(this);
+        return this;
     },
 
     /**
@@ -155,6 +156,7 @@ $.extend(Arrow.prototype, {
             this.disconnect();
         }
         Arrow.changelog.push(this);
+        return this;
     },
 
     /**
@@ -202,7 +204,7 @@ $.extend(Arrow.prototype, {
      * @return {Function} a Functor to iterate all children
      *   (returns null when over)
      */
-    getChildren: function () {
+    getChildren: function(rootedOnly) {
         var children = [];
 
         // incoming
@@ -220,11 +222,27 @@ $.extend(Arrow.prototype, {
             // returns a real child, looping through false positives
             while (indice < children.length) {
                 var a = children[indice++];
-                if (a.getTail() == parent || a.getHead() == parent) return a;
+                if ((a.getTail() == parent || a.getHead() == parent)
+                        && (!rootedOnly || a.isRooted()))
+                    return a;
             }
             return null;
         };
     },
+
+    /**
+     * @this {Arrow}
+     * @return a list of partners (context-rooted children)
+     */
+    getPartners: function() {
+        var child, iterator = this.getChildren();
+        var list = Arrow.eve;
+        while ((child = iterator()) != null) {
+            list = Arrow.pair(child, list);
+        }
+        return list;
+    },
+    
     
      /** Load some payload into an arrow
      * @this {Arrow}
@@ -381,11 +399,20 @@ Arrow.wipe = function () {
 
 
 /**
+ * Eve: the most simplest arrow, here considered equivalent to an empty-string based atom
+*/
+Arrow.eve = new Atom("", "".hashCode()).root();
+Arrow.eve.rooted = true;
+Arrow.changelog = [];
+
+/**
  * Finds o builds the unique atomic arrow corresponding to a piece of data
  * @param {boolean} test existency test only => no creation
  */
 Arrow.atom = function (body, test) {
     var atom;
+    if (!body.length) return Arrow.eve;
+    
     var hc = String(body).hashCode();
     var a = hc % Arrow.indexSize;
     var i = 0;
@@ -681,7 +708,7 @@ $.extend(Entrelacs.prototype, {
     /**
      * get an URI for an arrow
      * @param {Arrow}
-     * @return {Promise}
+     * @return {JQuery.Promise}
      */
     getUri: function (a) {
         var promise;
@@ -719,17 +746,26 @@ $.extend(Entrelacs.prototype, {
     /**
      * root an arrow
      * @param {Arrow}
-     * @return {Promise}
+     * @return {JQuery.Promise}
      */
     root: function (a) {
         var promise = this.getUri(a);
         var self = this;
-
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/root/escape+' + uri;
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
-        }).fail(function () {
+        if (a.isAtomic()) {
+            promise = promise.pipe(function (uri) {
+                var req = self.serverUrl + '/root/escape+' + uri;
+                var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+                return promise;
+            });
+        } else {
+            promise = promise.pipe(function (uri) {
+                // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
+                var req = self.serverUrl + '/linkTailWithHead/escape+' + uri;
+                var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+                return promise;
+            });
+        }
+        promise.fail(function () {
             self.reset();
         });
         return promise;
@@ -738,7 +774,7 @@ $.extend(Entrelacs.prototype, {
     /**
      * unroot an arrow
      * @param {Arrow}
-     * @return {Promise}
+     * @return {JQuery.Promise}
      */
     unroot: function (a) {
         var promise = this.getUri(a);
@@ -765,7 +801,7 @@ $.extend(Entrelacs.prototype, {
 
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/isRooted/escape+' + uri;
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, sucess: function (r) {
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, success: function (r) {
                 r && a.root() || a.unroot();
             }});
             return promise;
@@ -778,21 +814,54 @@ $.extend(Entrelacs.prototype, {
     /**
      * getChildren
      * @param {Arrow}
-     * @return {Arrow}
+     * @return {JQuery.Promise}
      */
     getChildren: function (a) {
         var promise = this.getUri(a);
         var self = this;
-
+        
         promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/childrenOf/escape+' + uri;
+            var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
             var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
             return promise;
         }).fail(function () {
             self.reset();
-        }).done(function (arrowURI) {
-            a.gchildren = Arrow.decodeURI(arrowURI);
         });
+        
+        promise = promise.pipe(function(arrowURI) {
+            var children = Arrow.decodeURI(arrowURI);
+            return children;
+        });
+        
+        return promise;
+    },
+
+    /**
+     * getPartners
+     * @param {Arrow}
+     * @return {JQuery.Promise}
+     */
+    getPartners: function (a) {
+        var promise = this.getUri(a);
+        var self = this;
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        }).fail(function () {
+            self.reset();
+        });
+        
+        promise = promise.pipe(function(arrowURI) {
+            var list = Arrow.decodeURI(arrowURI);
+            var partners = list;
+            while (list !== Arrow.eve) {
+                list.getTail().root();
+                list = list.getHead();
+            }
+            return partners;
+        });
+        
         return promise;
     },
 
@@ -818,20 +887,20 @@ $.extend(Entrelacs.prototype, {
     /**
      * open/unfold/explore an arrow placeholder
      * @param {Arrow} p placeholder
-     * @return {Promise}
+     * @return {JQuery.Promise}
      */
     open: function (p, depth) {
-        depth = depth || 5;
+        depth = depth || 10;
         var self = this;
         // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
         var req = this.serverUrl + '/escape/+' + p.get(this.uriKey) + '?iDepth=' + depth;
-
-        var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, sucess: function (uri) {
+        var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+        promise = promise.pipe(function (uri) {
             var unfolded = Arrow.decodeURI(uri).getHead(); 
             // rattach the URI to the unfolded arrow as we know it from the placeholder
             self.bindUri(unfolded, p.get(self.uriKey));
-        }});
-
+            return unfolded;
+        });
         return promise;
     },
 
