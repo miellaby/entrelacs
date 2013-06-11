@@ -342,7 +342,7 @@ Terminal.prototype = {
             var a;
             if (partner.isAtomic()) {
                 a = this.openPrompt(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
-                                   d.top + d.height() / 2 + c.y,
+                                   p.top + d.height() / 2 + c.y,
                                    partner.getBody());
             } else if (partner.head === undefined) { // placeholder
                 a = this.addFolded(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
