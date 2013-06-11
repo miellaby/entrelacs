@@ -349,7 +349,7 @@ Terminal.prototype = {
             } else {
                 // TODO pair
             }
-            var pair = outgoing ? pairTogether(d, a) : pairTogether(a, d);
+            var pair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
             d.data('children').push(pair);
             a.data('children').push(pair);
             this.getArrow(pair);
