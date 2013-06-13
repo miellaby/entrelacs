@@ -339,20 +339,26 @@ Terminal.prototype = {
             var outgoing = (link.getTail() == source); 
             var partner = (outgoing ? link.getHead() : link.getTail());
             var c = this.getPointOnCircle(50);
-            var a;
-            if (partner.isAtomic()) {
-                a = this.openPrompt(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
+            var a = this.findNearestArrowView(partner, p, 1000);
+            if (!a) {
+                if (partner.isAtomic()) {
+                    a = this.openPrompt(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
                                    p.top + d.height() / 2 + c.y,
                                    partner.getBody());
-            } else if (partner.head === undefined) { // placeholder
-                a = this.addFolded(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
-            } else {
+                } else if (partner.head === undefined) { // placeholder
+                    a = this.addFolded(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
+                } else {
                 // TODO pair
+                }
             }
-            var pair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
-            d.data('children').push(pair);
-            a.data('children').push(pair);
-            this.getArrow(pair);
+            var pair = outgoing ? Arrow.pair(source, partner) : Arrow.pair(partner, source);
+            var dPair = this.findNearestArrowView(pair, p, 1000);
+            if (!dPair) {
+                dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
+                d.data('children').push(dPair);
+                a.data('children').push(dPair);
+                this.getArrow(dPair);
+            }
             
             var next = list.getHead();
             if (next)
@@ -408,6 +414,22 @@ Terminal.prototype = {
         }
         views.push(d);
         return arrow;
+    },
+    
+    findNearestArrowView: function(arrow, position, limit) {
+        var views = arrow.get('views');
+        if (views === undefined || !views.length) return null;
+        var distance = -1;
+        views.forEach(function(view) {
+            var vp = view.position();
+            var vd = Math.abs(vp.left - position.left) + Math.abs(vp.top - position.top);
+            if (distance == -1 || vd < distance) {
+                distance = vd;
+                nearest = view;
+            }
+        });
+        
+        return (limit !== undefined && distance > limit ? null : nearest);
     },
     
     submitArrows: function(arrow) {
