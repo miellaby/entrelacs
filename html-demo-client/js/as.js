@@ -238,7 +238,9 @@ $.extend(Arrow.prototype, {
         var child, iterator = this.getChildren();
         var list = Arrow.eve;
         while ((child = iterator()) != null) {
-            list = Arrow.pair(child, list);
+            if (child.isRooted()) {
+                list = Arrow.pair(child, list);
+            }
         }
         return list;
     },
@@ -419,7 +421,7 @@ Arrow.atom = function (body, test) {
     var l = Arrow.defIndex[a];
     if (!l) l = Arrow.defIndex[a] = [];
 
-    for (i = 0; i < length && (atom = l[i]) && !(atom.hc == hc && atom.body == body); i++);
+    for (i = 0; i < l.length && (atom = l[i]) && !(atom.hc == hc && atom.body == body); i++);
     if (i < l.length) return atom;
 
     if (test) return undefined;
@@ -467,7 +469,7 @@ Arrow.placeholder = function (url) {
     for (i = 0; i < l.length && (placeholder = l[i]) && !(placeholder.url == url); i++);
     if (i < l.length) return placeholder;
 
-    placeholder = new Placeholder(url, hc);
+    l.push(placeholder = new Placeholder(url, hc));
     return placeholder;
 }
 
@@ -802,7 +804,10 @@ $.extend(Entrelacs.prototype, {
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/isRooted/escape+' + uri;
             var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, success: function (r) {
-                r && a.root() || a.unroot();
+                if (r)
+                    a.root();
+                else
+                    a.unroot();
             }});
             return promise;
         }).fail(function () {
