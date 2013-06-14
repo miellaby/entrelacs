@@ -27,7 +27,7 @@ Arrow xls_sessionMaybe(Arrow s, Arrow agent, Arrow uuid) {
    if (!sessionMaybe)
        return EVE;
 
-   Arrow rootedSession = xls_isRooted(EVE, sessionMaybe);
+   Arrow rootedSession = xls_isRooted(s, sessionMaybe);
    if (!rootedSession)
        return EVE;
 

@@ -151,9 +151,11 @@ static Arrow get_connection_session(const struct mg_connection *conn) {
         dputs("No session cookie");
         return EVE;
     }
+    session_uuid[32] = '\0';
+
     // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
     // TODO: remove the first parameter of sessionMaybe
-    Arrow session = xls_sessionMaybe(EVE, xl_atom("server"), xl_uri(session_uuid));
+    Arrow session = xls_sessionMaybe(EVE, xl_atom("server"), xl_atom(session_uuid));
     if (session == EVE) {
         dputs("Unknown session cookie %s", session_uuid);
     } else {
@@ -187,6 +189,8 @@ static void *event_handler(enum mg_event event,
             assert(session_id);
             snprintf(random, sizeof(random), "%d", rand());
             mg_md5(session_id, random, "server", NULL);
+            session_id[32] = '\0';
+
             dputs("New session with id %s", session_id);
 
             // create session
