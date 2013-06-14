@@ -78,7 +78,10 @@ Arrow.loose = [];
 
 /** commit count */
 Arrow.cc = 0;
-    
+
+/** Hook code here */    
+Arrow.listeners = [];
+
 
 $.extend(Arrow.prototype, {
     /**
@@ -143,12 +146,14 @@ $.extend(Arrow.prototype, {
      * @this {Arrow}
      */
     root: function () {
+        if (this.hc === undefined) return; // GC-ed!
         if (this.rooted) return;
         if (this.isLoose()) {
             this.connect();
         }
         this.rooted = true;
         Arrow.changelog.push(this);
+        Arrow.callListeners(this);
         return this;
     },
 
@@ -157,12 +162,14 @@ $.extend(Arrow.prototype, {
      * @this {Arrow}
      */
     unroot: function () {
+        if (this.hc === undefined) return; // GC-ed!
         if (!this.rooted) return;
         this.rooted = false;
         if (this.isLoose()) {
             this.disconnect();
         }
         Arrow.changelog.push(this);
+        Arrow.callListeners(this);
         return this;
     },
 
@@ -277,6 +284,11 @@ $.extend(Arrow.prototype, {
         return this.payload ? this.payload[key] : undefined;
     }
 });
+
+/** Advertise change */
+Arrow.callListeners = function (a) {
+    Arrow.listeners.forEach(function(cb) { cb(a); });
+};
 
 /**
  * Creates an instance of {Atom}.
@@ -416,7 +428,7 @@ Arrow.eve.rooted = true;
 Arrow.changelog = [];
 
 /**
- * Finds o builds the unique atomic arrow corresponding to a piece of data
+ * Finds or builds the unique atomic arrow corresponding to a piece of data
  * @param {boolean} test existency test only => no creation
  */
 Arrow.atom = function (body, test) {
@@ -597,6 +609,8 @@ Arrow.gc = function () {
         var a = lost.hc % Arrow.indexSize;
         var l = Arrow.defIndex[a];
         l.splice(l.indexOf(lost), 1);
+        lost.hc = undefined; // mark arrow as GC-ed.
+        Arrow.callListeners(lost);
     }
     Arrow.loose.splice(0, Arrow.loose.length);
 };
@@ -693,7 +707,7 @@ $.extend(Entrelacs.prototype, {
      */
     bindUri: function (a, uri) {
         var p = this.uriMap[uri]; // is there a placeholder here?
-        if (p) {
+        if (p && p.hc !== undefined) {
             // p == a, let's rewire all its children
             var child, iterator = p.getChildren();
             while ((child = iterator()) != null) {
@@ -744,6 +758,7 @@ $.extend(Entrelacs.prototype, {
         }
 
         promise.done(function (uri) {
+            if (a.hc === undefined) return; // a is GC-ed
             self.checkCookie();
             self.bindUri(a, uri);
         }).fail(function () {
@@ -812,6 +827,7 @@ $.extend(Entrelacs.prototype, {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise.done(function (r) {
+            if (a.hc === undefined) return; // a is GC-ed
             if (r)
                 a.root();
             else
@@ -839,6 +855,7 @@ $.extend(Entrelacs.prototype, {
         });
         
         promise = promise.pipe(function(arrowURI) {
+            //if (a.hc === undefined) return Arrow.eve; // a is GC-ed
             var children = Arrow.decodeURI(arrowURI, self.serverUrl);
             return children;
         });
@@ -908,7 +925,9 @@ $.extend(Entrelacs.prototype, {
         promise = promise.pipe(function (uri) {
             var unfolded = Arrow.decodeURI(uri, self.serverUrl).getHead(); 
             // rattach the URI to the unfolded arrow as we know it from the placeholder
-            self.bindUri(unfolded, p.get(self.uriKey));
+            if (p.gc !== undefined) { // Not GC-ed
+                self.bindUri(unfolded, p.get(self.uriKey));
+            }
             return unfolded;
         });
         return promise;

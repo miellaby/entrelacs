@@ -12,6 +12,9 @@ function Terminal(area, entrelacs, animatePlease) {
 
     this.circleAngle = 0;
     this.uploadCount = 0;
+
+    var self = this;
+    Arrow.listeners.push(function(a) { self.arrowEvent(a); });
 }
 
 Terminal.prototype = {
@@ -281,7 +284,7 @@ Terminal.prototype = {
     
     closePrompt: function(prompt) {
         this.dismissArrow(prompt);
-        this.entrelacs.commit();
+        Arrow.commit(this.entrelacs);
     },
     
     closePromptIfLoose: function(prompt) {
@@ -603,8 +606,22 @@ Terminal.prototype = {
        return null;
     },
 
+
+    arrowEvent: function(a) {
+        var self = this;
+        if (a.hc === undefined ) { // a is GC-ed
+            var views = a.get('views');
+            views && views.forEach(function(view) { self.dismissArrow(view); });
+        } else {
+            var r = a.isRooted();
+            var views = a.get('views');
+            views && views.forEach(function(view) { view.find('.hook .rooted input').prop('checked', r); });
+        }
+    },
+
     
     on:{
+        
         area: {
             click: function(event) {
                 
@@ -689,7 +706,7 @@ Terminal.prototype = {
                     event.preventDefault();
                     // record arrows that this prompt belongs too
                     self.submitArrows(prompt);
-                    Arrow.commit(self.entrelacs);
+                    //Arrow.commit(self.entrelacs);
 
                     return false;
                 }
@@ -705,7 +722,7 @@ Terminal.prototype = {
                     if ($(this).is('textarea')) {
                         // record the currently edited compound arrow (or at least this text input)
                         self.submitArrows(prompt);
-                        Arrow.commit(self.entrelacs);
+                        //Arrow.commit(self.entrelacs);
                     } else {
                         // turn the atom into a textarea
                         self.enlargePrompt(prompt);
