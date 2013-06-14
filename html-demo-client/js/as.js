@@ -41,7 +41,10 @@ function Arrow(t, h, hc) {
     this.rooted = false;
 
     /** payload (for outer programmatic purpose) */
-    this.payload = null;
+    // this.payload = null;
+    
+    /** cc (commit mark) */
+    // this.cc = null;
     
     Arrow.loose.push(this);
 }
@@ -72,6 +75,10 @@ Arrow.changelog = [];
 
 /** loose arrows log */
 Arrow.loose = [];
+
+/** commit count */
+Arrow.cc = 0;
+    
 
 $.extend(Arrow.prototype, {
     /**
@@ -256,7 +263,7 @@ $.extend(Arrow.prototype, {
        
         if (typeof keyOrMap == 'object') {
             for (var k in keyOrMap) {
-                keyOrMap.hasOwnProperty(k) && this.payload[k] = keyOrMap[k];
+                keyOrMap.hasOwnProperty(k) && (this.payload[k] = keyOrMap[k]);
             }
         } else {
             this.payload[keyOrMap] = value;
@@ -397,6 +404,7 @@ Arrow.wipe = function () {
   Arrow.tailIndex = [];
   Arrow.changelog = [];
   Arrow.loose = [];
+  Arrow.cc = 0;
 }
 
 
@@ -600,32 +608,27 @@ Arrow.gc = function () {
  ** Note: it might be perfectly feasible to commit on several servers at once
  */
 Arrow.commit = function (entrelacs, secondTry) {
-    var promise = $.when({
-        ready: true
-    });
-
+    Arrow.cc++;
+    
     for (var i = 0; i < Arrow.changelog.length; i++) {
         var changed = Arrow.changelog[i];
+        if (changed.cc == Arrow.cc) continue; // already done
+        changed.cc = Arrow.cc;
         if (changed.isRooted()) {
-            promise = promise.pipe(function () {
-                return entrelacs.root(changed);
-            });
+            entrelacs.root(changed);
         } else {
-            promise = promise.pipe(function () {
-                return entrelacs.unroot(changed);
-            });
+            entrelacs.unroot(changed);
         }
     }
-    promise = promise.pipe(function () {
-        return entrelacs.commit();
-    }).done(function () {
+    promise = entrelacs.commit();
+    promise.done(function () {
         Arrow.changelog.splice(0, Arrow.changelog.length);
         Arrow.gc();
     });
 
     if (!secondTry) {
         // second try in case of failure
-        promise.pipe(null, function () {
+        promise = promise.pipe(null, function () {
             entrelacs.reset();
             return Arrow.commit(entrelacs, true);
         });
@@ -655,6 +658,9 @@ Arrow.commit = function (entrelacs, secondTry) {
     
     /** uri key use to attach remote temporary URI to local arrows */
     this.uriKey = 'uriOf<' + this.serverUrl + '>';
+    
+    /** current promise */
+    this.chain = $.when({});
 };
 
 $.extend(Entrelacs.prototype, {
@@ -723,12 +729,14 @@ $.extend(Entrelacs.prototype, {
         if (a.isAtomic()) {
             var req = this.serverUrl + '/escape+' +
                 encodeURIComponent(a.getBody()) + '?iDepth=0';
-            promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            promise = this.chain = this.chain.pipe(function () {
+                return $.ajax({url: req, xhrFields: { withCredentials: true }});
+            });
 
         } else {
             var pt = this.getUri(a.getTail());
             var ph = this.getUri(a.getHead());
-            promise = $.when(pt, ph).pipe(function () {
+            promise = this.chain = this.chain.pipe(function () {
                 var req = self.serverUrl + '/escape/'
                     + a.getTail().get(self.uriKey) + '+' + a.getHead().get(self.uriKey) + '?iDepth=0';
                 return $.ajax({url: req, xhrFields: { withCredentials: true }});
@@ -763,8 +771,7 @@ $.extend(Entrelacs.prototype, {
             promise = promise.pipe(function (uri) {
                 // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
                 var req = self.serverUrl + '/linkTailWithHead/escape+' + uri;
-                var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-                return promise;
+                return $.ajax({url: req, xhrFields: { withCredentials: true }});
             });
         }
         promise.fail(function () {
@@ -784,8 +791,7 @@ $.extend(Entrelacs.prototype, {
 
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/unroot/escape+' + uri;
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
         }).fail(function () {
             self.reset();
         });
@@ -803,13 +809,13 @@ $.extend(Entrelacs.prototype, {
 
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/isRooted/escape+' + uri;
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }, success: function (r) {
-                if (r)
-                    a.root();
-                else
-                    a.unroot();
-            }});
-            return promise;
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
+        });
+        promise.done(function (r) {
+            if (r)
+                a.root();
+            else
+                a.unroot();
         }).fail(function () {
             self.reset();
         });
@@ -827,14 +833,13 @@ $.extend(Entrelacs.prototype, {
         
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
         }).fail(function () {
             self.reset();
         });
         
         promise = promise.pipe(function(arrowURI) {
-            var children = Arrow.decodeURI(arrowURI);
+            var children = Arrow.decodeURI(arrowURI, self.serverUrl);
             return children;
         });
         
@@ -851,14 +856,13 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
         }).fail(function () {
             self.reset();
         });
         
         promise = promise.pipe(function(arrowURI) {
-            var list = Arrow.decodeURI(arrowURI);
+            var list = Arrow.decodeURI(arrowURI, self.serverUrl);
             var partners = list;
             while (list !== Arrow.eve) {
                 list.getTail().root();
@@ -881,8 +885,7 @@ $.extend(Entrelacs.prototype, {
 
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + uri; // no escape this time
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
         }).fail(function () {
             self.reset();
         });
@@ -899,9 +902,11 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
         var req = this.serverUrl + '/escape/+' + p.get(this.uriKey) + '?iDepth=' + depth;
-        var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+        var promise = this.chain = this.chain.pipe(function () {
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
+        });
         promise = promise.pipe(function (uri) {
-            var unfolded = Arrow.decodeURI(uri).getHead(); 
+            var unfolded = Arrow.decodeURI(uri, self.serverUrl).getHead(); 
             // rattach the URI to the unfolded arrow as we know it from the placeholder
             self.bindUri(unfolded, p.get(self.uriKey));
             return unfolded;
@@ -929,8 +934,12 @@ $.extend(Entrelacs.prototype, {
      * @return {Promise}
      */
     commit: function () {
+        var self = this;
         var req = this.serverUrl + '/commit+';
-        var promise = $.ajax({url: req, xhrFields: { withCredentials: true }}).fail(function () {
+        var promise = this.chain = this.chain.pipe(function () {
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
+        });
+        promise.fail(function () {
             self.reset();
         });
         return promise;
