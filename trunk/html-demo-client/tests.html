@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>as.js unit tests</title>
+<link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.11.0.css">
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
+<script src="http://code.jquery.com/qunit/qunit-1.11.0.js"></script>
+<script src="http://cdn.jsdelivr.net/jquery.cookie/1.3.1/jquery.cookie.js"></script>
+<script src="js/as.js"></script>
+<script>
+test("as", function() {
+    var h = Arrow.atom('hello');
+    var w = Arrow.atom('world');
+    var p = Arrow.pair(h, w);
+    equal(h.getBody(), 'hello', 'atom body');
+    equal(w.getBody(), 'world', 'atom body');
+    deepEqual(p.getTail(), h, 'tail');
+    deepEqual(p.getHead(), w, 'head');
+    deepEqual(h.isRooted(), false, 'atom not rooted by default');
+    deepEqual(h.isLoose(), true, 'atom loose by default');
+    deepEqual(p.isRooted(), false, 'pair not rooted by default');
+    deepEqual(p.isLoose(), true, 'pair loose by default');
+    deepEqual(h, Arrow.atom('hello'), 'atom deduplication');
+    deepEqual(w, Arrow.atom('world'), 'atom deduplication');
+    deepEqual(p, Arrow.pair(h, w), 'pair deduplication');
+    var iterator = w.getChildren();
+    var child = iterator();
+    equal(child, null, 'a loose pair is not a child for its ends');
+    p.root();
+    deepEqual(p.isRooted(), true, 'rooted pair');
+    deepEqual(p.isLoose(), false, 'rooted pair is not loose');
+    ok(!h.isLoose() && !w.isLoose(), 'rooted pair ends are not loose');
+    iterator = w.getChildren();
+    child = iterator();
+    equal(child, p, 'rooted pair ends are connected');
+    child = iterator();
+    equal(child, null, 'one child for now');
+    p.unroot();
+    deepEqual(p.isRooted(), false, 'unrooted pair');
+    deepEqual(h.isLoose(), true, 'unrooted pair is loose');
+    ok(h.isLoose() && w.isLoose(), 'unrooted pair ends are loose');
+    iterator = w.getChildren();
+    child = iterator();
+    equal(child, null, 'an unrooted pair is not a child for its ends');
+});
+asyncTest("as I/O", function() {
+    var e = new Entrelacs();
+    Arrow.commit(e).done(function() {
+        ok(Arrow.atom('hello', true) === undefined && Arrow.atom('world', true) === undefined, "check loose arrows have been forgotten");
+        start();
+    });
+});
+</script>
+</head>
+<body>
+<div id="qunit"></div>
+</body>
+</html>

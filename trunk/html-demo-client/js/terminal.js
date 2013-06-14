@@ -20,8 +20,9 @@ Terminal.prototype = {
         var h = $("<div class='hook'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox' disabled></div> <div class='poke'>?</div>  <div class='out'>&darr;</div></div>");
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
-        h.children('.in,.out,.poke,.rooted').click(this.on.bar.click);
+        h.children('.in,.out,.poke').click(this.on.bar.click);
         h.find('.rooted input').change(this.on.bar.rooted.change);
+        h.click(this.on.bar.click);
     },
 
     openPrompt: function(x, y, initialValue) {
@@ -616,12 +617,14 @@ Terminal.prototype = {
         bar: {
             click: function(event) {
                 var button = $(this);
+                if (button.hasClass('hook')) {
+                   event.stopPropagation();
+                   return true;
+                }
                 var d = button.parent().parent();
                 var self = d.parent().data('terminal');
                 var a;
-                if (button.hasClass('.rooted')) {
-                   return false;
-                }
+                
 
                 if (button.hasClass('poke')) {
                    var arrow = d.data('arrow');
