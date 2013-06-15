@@ -331,8 +331,26 @@ Terminal.prototype = {
         prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
         prompt.children('.fileinput-button').detach();
         prompt.find('.hook .rooted input').prop('disabled', false).prop('checked', arrow.isRooted());
-
+        
     },
+
+    turnPromptIntoExistingArrow: function(prompt, a) {
+        var p = prompt.position();
+        var w = prompt.width();
+        var f = prompt.data('for');
+
+        // merge for list
+        a.data('for', a.data('for').concat(f));
+         
+        // if prompt belonged to an arrow, one rewires to "a"
+        for (var i = 0; i < f.length; i++) { // search into loose children
+           this.rewirePair(f[i], prompt, a);
+        }
+        
+        // detach entry-atom
+        prompt.detach();
+    },
+
 
     processPartners: function(d, list) {
         var p = d.position();
@@ -357,7 +375,7 @@ Terminal.prototype = {
             }
             var pair = outgoing ? Arrow.pair(source, partner) : Arrow.pair(partner, source);
             var dPair = this.findNearestArrowView(pair, p, 1000);
-            if (!dPair) {
+            if (!dPair || dPair.data('tail') != (outgoing ? d : a) || dPair.data('head') != (outgoing ? a : d)) {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
                 d.data('children').push(dPair);
                 a.data('children').push(dPair);
