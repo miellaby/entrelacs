@@ -375,11 +375,13 @@ Terminal.prototype = {
             }
             var pair = outgoing ? Arrow.pair(source, partner) : Arrow.pair(partner, source);
             var dPair = this.findNearestArrowView(pair, p, 1000);
-            if (!dPair || dPair.data('tail') != (outgoing ? d : a) || dPair.data('head') != (outgoing ? a : d)) {
+            if (!dPair || dPair.data('tail')[0] !== (outgoing ? d : a)[0] || dPair.data('head')[0] !== (outgoing ? a : d)[0]) {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
                 d.data('children').push(dPair);
                 a.data('children').push(dPair);
                 this.getArrow(dPair);
+            } else {
+                dPair.css('marginTop','-5px').animate({marginTop: 0});
             }
             
             var next = list.getHead();
