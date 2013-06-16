@@ -28,12 +28,54 @@ Terminal.prototype = {
         h.click(this.on.bar.click);
     },
 
-    openPrompt: function(x, y, initialValue) {
-        var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
+    bindViewToArrow: function(view, arrow) {
+        view.data('arrow', arrow);
+        var views = arrow.get('views');
+        if (views === undefined) {
+            views = [];
+            arrow.set('views', views);
+        }
+        views.push(view);
+    },
+    
+    putAtomView: function(x, y, atom) {
+        var d = $("<div class='atomDiv kept'><span></span><div class='close'><a href='#'>&times;</a></div></div>");
         this.area.append(d);
         d.css({ 'left': x + 'px',
                 'top': y + 'px' });
         if (this.animatePlease) {
+            d.css('opacity', 0.1).animate({ opacity: 1}, 200, 'swing');
+        }
+        
+        var s = d.children('span');
+        s.text(atom.getBody() || 'EVE');
+        var w = Math.max(s.width(), 100);
+        s.css({width: '' + w + 'px', 'text-align': 'center'});
+        d.css('left', '-=' + Math.round(w / 2, 0) + 'px');
+
+        d.attr('draggable', true);
+        d.on('dragstart', this.on.view.dragstart);
+        d.on('dragend', this.on.view.dragend);
+        d.find('.close a').click(this.on.view.close.click);
+
+        this.addBarTo(d);
+        d.find('.hook .rooted input').prop('disabled', false).prop('checked', atom.isRooted());
+        
+        // data
+        d.data('for', []);
+        d.data('children', []);
+        this.bindViewToArrow(d, atom);
+        
+        d.children('.close').show();
+        return d;
+    },
+    
+    putPrompt: function(x, y, initialValue) {
+        var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
+        this.area.append(d);
+        d.css({ 'left': x + 'px',
+                'top': y + 'px' });
+        if (this.animatePlease && initialValue === undefined) {
             d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(defaultEntryWidth / 2) + "px", width: defaultEntryWidth}, 200, 'swing', function() { d.css('width', 'auto');});
         }
         
@@ -47,11 +89,11 @@ Terminal.prototype = {
         i.keypress(this.on.prompt.keypress);
         i.keydown(this.on.prompt.keydown);
         d.attr('draggable', true);
-        i.on('dragenter', this.on.arrow.dragenter);
-        i.on('dragleave', this.on.arrow.dragleave);
-        d.on('dragstart', this.on.arrow.dragstart);
-        d.on('dragend', this.on.arrow.dragend);
-        d.find('.close a').click(this.on.arrow.close.click);
+        i.on('dragenter', this.on.view.dragenter);
+        i.on('dragleave', this.on.view.dragleave);
+        d.on('dragstart', this.on.view.dragstart);
+        d.on('dragend', this.on.view.dragend);
+        d.find('.close a').click(this.on.view.close.click);
         this.addBarTo(d);
         
         // data
@@ -64,35 +106,95 @@ Terminal.prototype = {
         return d;
     },
     
-    putFolded: function(x, y) {
-        var d = $("<div class='pairDiv'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'></div><button class='unfoldTail'>+</button><button class='unfoldHead'>+</button><div class='close'><a href='#'>&times;</a></div></div>");
-        this.area.append(d);
-        d.css({left: (x - 75) + 'px',
-               top: (y - 45) + 'px',
-               height: '45px',
-               width: '150px'});
-        d.children('.headDiv,.tailDiv').height(0).width(20).css('border-style', 'dashed');
+    turnPromptIntoAtomView: function(prompt) {
+        var w0 = prompt.width();
+        var body = prompt.children('input,textarea').val();
+        prompt.addClass('kept');
+        prompt.children('.close').show();
+        prompt.children('input,textarea').detach();
+        var s = $("<span></span>").text(body || 'EVE').appendTo(prompt);
+        var w = s.width();
+        s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
+        prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
+        prompt.children('.fileinput-button').detach();
+        prompt.find('.hook .rooted input').prop('disabled', false);
+    },
 
+    putPlaceholder: function(x, y, arrow) {
+        var d = $("<div class='placeholderDiv'><button class='unfold'>+</button></div>");
+        this.area.append(d);
+        d.css({left: x - 12 + 'px',
+               top: y - 12 + 'px'});
+               
         // set listeners
         d.attr('draggable', true);
         d.on('dragstart', this.on.dragstart);
         d.on('dragend', this.on.dragend);
-        d.find('.close a').click(this.on.close.click);
-        d.children('.unfoldTail,.unfoldHead').click(this.on.unfold.click);
-        
-        this.addBarTo(d);
+        d.find('.close a').click(this.on.view.close.click);
+        d.children('.unfold').click(this.on.unfold.click);
         
         // data
         d.data('for', []);
         d.data('children', []);
+        this.bindViewToArrow(d, arrow);
+
         return d;
     },
 
-    isPrompt: function(d) {
+    unfold: function(placeholder) {
+        var self = this;
+        var arrow = placeholder.data('arrow');
+        var p = placeholder.position();
+         
+        if (arrow.isAtomic() === undefined) { // a placeholder
+            var promise = this.entrelacs.open(arrow);
+            promise.done(function(unfolded) {
+                placeholder.detach();
+                var vs = arrow.get('views');
+                vs.splice(vs.indexOf(placeholder), 1);
+
+                var a = self.putArrowView(p.left, p.top, unfolded);
+                // rewire children and prompt trees
+                self.updateDescendants(placeholder, a);
+
+            });
+            return;
+        }
+        
+        placeholder.detach();
+        var vs = arrow.get('views');
+        vs.splice(vs.indexOf(placeholder), 1);
+        var a = self.putArrowView(p.left, p.top, arrow);
+
+        // rewire children and prompt trees
+        this.updateDescendants(placeholder, a);
+    },
+    
+    putArrowView: function(x, y, arrow) {
+        var a = this.findNearestArrowView(arrow, {left: x, top: y}, 1000);
+        if (a) return a;
+        if (arrow.isAtomic()) {
+            a = this.putAtomView(x, y, arrow);
+        } else if (arrow.isAtomic() === undefined) { // placeholder
+            a = this.putPlaceholder(x, y, arrow);
+        } else {
+            var t = this.putArrowView(x - 100 - defaultEntryWidth, y - 170, arrow.getTail());
+            var h = this.putArrowView(x + 100, y - 130, arrow.getHead());
+            a = this.pairTogether(t, h);
+            a.find('.hook .rooted input').prop('disabled', false).prop('checked', arrow.isRooted());
+            t.data('children').push(a);
+            h.data('children').push(a);
+            this.bindViewToArrow(a, arrow);
+        }
+
+        return a;
+    },
+
+    isAtomView: function(d) {
         return d.hasClass('atomDiv');
     },
     
-    isPair: function(d) {
+    isPairView: function(d) {
         return d.hasClass('pairDiv') || d.hasClass('ipairDiv');
     },
     
@@ -121,11 +223,16 @@ Terminal.prototype = {
         return list;
     },
 
-    isArrowLoose: function(d) {
-        return (!d.data('for').length && !d.data('children').length && !d.data('arrow'));
+    isViewLoose: function(d) {
+        // Check view is in no tree
+        if (d.data('for').length || d.data('children').length)
+            return false;
+        // Check arrow is not rooted
+        var arrow = d.data('arrow');
+        return (!arrow || !arrow.isRooted());
     },
 
-    dismissArrow: function(d, direction /* false = down true = up */) {
+    dismissView: function(d, direction /* false = down true = up */) {
         // guard double detach
         if (d.data('detached')) return;
         // for guard
@@ -137,8 +244,8 @@ Terminal.prototype = {
             if (t) {
                 this.removeFor(t, d);
                 this.removeChild(t, d);
-                if (this.isArrowLoose(t))
-                   this.dismissArrow(t, true);
+                if (this.isViewLoose(t))
+                   this.dismissView(t, true);
             }
 
             // propagate deletion to head
@@ -146,48 +253,42 @@ Terminal.prototype = {
             if (h) {
                 this.removeFor(h, d);
                 this.removeChild(h, d);
-                if (this.isArrowLoose(h))
-                   this.dismissArrow(h, true);
+                if (this.isViewLoose(h))
+                   this.dismissView(h, true);
             }
 
         }
 
-        // propagate to loose child
+        // propagate to loose "prompt trees"
         if (!direction) { //  when going "down"
             var f = d.data('for'); 
             while (f.length) {
-                this.dismissArrow(f[0]);
+                this.dismissView(f[0]);
             }
         }
 
         // also fold children
         var children = d.data('children');
-        for (var i = 0; i < children.length; i++) {
-            var c = children[i];
-            // var subchildren = c.data('children');
-            // TODO show unfold buttons
-            if (c.data('head') && c.data('head')[0] === d[0]) {
-                c.children('.headDiv').height(0).width(20).css('border-style', 'dashed');
-                u = $("<button class='unfoldHead'>+</button>");
-                u.click(this.on.unfold.click);
-                u.appendTo(c);
-                c.removeData('head');
-                continue;
-            }
-            if (c.data('tail') && c.data('tail')[0] === d[0]) {
-                c.children('.tailDiv').height(0).width(20).css('border-style', 'dashed').children('.tailEnd').hide();
-                u = $("<button class='unfoldTail'>+</button>");
-                u.click(this.on.unfold.click);
-                u.appendTo(c);
-                c.removeData('tail');
-                continue;
+        if (children.length) {
+            var p = d.position();
+            var arrow = d.data('arrow');
+            var placeholder = this.putPlaceholder(p.left + d.width() / 2, p.top + d.height(), arrow);
+            for (var i = 0; i < children.length; i++) {
+                this.rewirePair(children[i], d, placeholder);
             }
         }
 
         d.detach();
+
+        var arrow = d.data('arrow');
+        if (arrow) {
+            var vs = arrow.get('views');
+            vs.splice(vs.indexOf(arrow), 1);
+        }
+
     },
 
-    moveArrow: function(d, offsetX, offsetY, movingChild) {
+    moveView: function(d, offsetX, offsetY, movingChild) {
         var p = d.position();
         d.css({ 'opacity': 1,
                 'left': (p.left  + offsetX) + 'px',
@@ -195,10 +296,10 @@ Terminal.prototype = {
         });
         if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
            if (d.data('head')) {
-               this.moveArrow(d.data('head'), offsetX, offsetY, d);
+               this.moveView(d.data('head'), offsetX, offsetY, d);
            }
            if (d.data('tail') && !(d.data('head') && d.data('tail')[0] === d.data('head')[0])) {
-               this.moveArrow(d.data('tail'), offsetX, offsetY, d);
+               this.moveView(d.data('tail'), offsetX, offsetY, d);
            }
         }
         this.updateDescendants(d, d);
@@ -277,22 +378,26 @@ Terminal.prototype = {
 
        this.updateDescendants(a, newA);
        
+       var arrow = a.data('arrow');
+       if (arrow) {
+            var vs = arrow.get('views');
+            vs.splice(vs.indexOf(arrow), 1);
+            this.bindViewToArrow(newA, arrow);
+       }
        a.detach();
-
        return newA;
     },
     
     closePrompt: function(prompt) {
-        this.dismissArrow(prompt);
-        Arrow.commit(this.entrelacs);
+        this.dismissView(prompt);
     },
     
     closePromptIfLoose: function(prompt) {
-          if (this.isArrowLoose(prompt)) {
+          if (this.isViewLoose(prompt)) {
             var self = this;
             setTimeout(function() {
                 if (!prompt.children('input,textarea').is(':focus')
-                    && self.isArrowLoose(prompt))
+                    && self.isViewLoose(prompt) && !prompt.data('arrow'))
                      self.closePrompt(prompt);
             }, 1000);
         }
@@ -306,7 +411,6 @@ Terminal.prototype = {
         i.detach();
         i = $("<textarea></textarea>").text(v).appendTo(promt);
         i.blur(this.on.entry.blur);
-        i.click(this.on.atom.click);
         i.focus(this.on.entry.focus);
         /* i.keypress(onEntryKeypress); no 13 catch */
         i.keydown(this.on.entry.keydown);
@@ -317,24 +421,7 @@ Terminal.prototype = {
         prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     },
 
-    turnPromptIntoArrow: function(prompt) {
-        var w0 = prompt.width();
-        var arrow = prompt.data('arrow');
-        var body = arrow.getBody();
-        prompt.addClass('kept');
-        prompt.children('.close').show();
-        prompt.children('input,textarea').detach();
-        var s = $("<span></span>").text(body || 'EVE').appendTo(prompt);
-        s.click(this.on.atom.click);
-        var w = s.width();
-        s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
-        prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
-        prompt.children('.fileinput-button').detach();
-        prompt.find('.hook .rooted input').prop('disabled', false).prop('checked', arrow.isRooted());
-        
-    },
-
-    turnPromptIntoExistingArrow: function(prompt, a) {
+    turnPromptIntoExistingView: function(prompt, a) {
         var p = prompt.position();
         var w = prompt.width();
         var f = prompt.data('for');
@@ -360,18 +447,13 @@ Terminal.prototype = {
             var link = list.getTail();
             var outgoing = (link.getTail() == source); 
             var partner = (outgoing ? link.getHead() : link.getTail());
-            var c = this.getPointOnCircle(50);
             var a = this.findNearestArrowView(partner, p, 1000);
             if (!a) {
-                if (partner.isAtomic()) {
-                    a = this.openPrompt(p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
-                                   p.top + d.height() / 2 + c.y,
-                                   partner.getBody());
-                } else if (partner.head === undefined) { // placeholder
-                    a = this.addFolded(p.left + (outgoing ? 3 : -3 - d.width()), p.top);
-                } else {
-                // TODO pair
-                }
+                var c = this.getPointOnCircle(50);
+                a = this.putArrowView(
+                        p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
+                        p.top + d.height() / 2 + c.y,
+                        partner);
             }
             var pair = outgoing ? Arrow.pair(source, partner) : Arrow.pair(partner, source);
             var dPair = this.findNearestArrowView(pair, p, 1000);
@@ -379,7 +461,8 @@ Terminal.prototype = {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
                 d.data('children').push(dPair);
                 a.data('children').push(dPair);
-                this.getArrow(dPair);
+                dPair.find('.hook .rooted input').prop('disabled', false).prop('checked', partner.isRooted());
+                this.bindViewToArrow(dPair, pair);
             } else {
                 dPair.css('marginTop','-5px').animate({marginTop: 0});
             }
@@ -403,6 +486,7 @@ Terminal.prototype = {
         var arrow = d.data('arrow');
         var self = this;
         d.css('marginTop','-5px').animate({marginTop: 0});
+        this.moveLoadingOnArrow(d);
         var promise = self.entrelacs.isRooted(arrow);
         promise.done(function () {
             d.find('.hook .rooted input').prop('checked', arrow.isRooted()).prop('disabled', false);
@@ -420,23 +504,20 @@ Terminal.prototype = {
         var arrow = d.data('arrow');
         if (arrow) return arrow;
         
-        if (this.isPrompt(d)) {
+        if (this.isAtomView(d)) { // prompt
             var string = d.children('input').val();
+            this.turnPromptIntoAtomView(d);
             arrow = Arrow.atom(string);
-            d.data('arrow', arrow);
-            this.turnPromptIntoArrow(d);
         } else {
             var from = this.getArrow(d.data('tail'));
             var to = this.getArrow(d.data('head'));
             arrow = Arrow.pair(from, to);
+            d.data('tail').data('children').push(d);
+            d.data('head').data('children').push(d);
+
         }
-        d.data('arrow', arrow);
-        var views = arrow.get('views');
-        if (views === undefined) {
-            views = [];
-            arrow.set('views', views);
-        }
-        views.push(d);
+        this.bindViewToArrow(d, arrow);
+        d.data('for', []);
         return arrow;
     },
     
@@ -456,17 +537,17 @@ Terminal.prototype = {
         return (limit !== undefined && distance > limit ? null : nearest);
     },
     
-    submitArrows: function(arrow) {
-        var f = arrow.data('for');
+    submitPromptTrees: function(tree) {
+        var f = tree.data('for');
         if (f.length) { // get back to the roots (recursive calls to all waiting prompt arrows)
             var ff;
             for (var i = 0 ; i < f.length; i++) {
                 toBeRecorded = f[i];
-                this.submitArrows(toBeRecorded);
+                this.submitPromptTrees(toBeRecorded);
             }
-        } else { // terminal case: arrow to be recorded
-            this.getArrow(arrow);
-            this.update(arrow);
+        } else { // terminal case: tree to be recorded
+            this.getArrow(tree);
+            this.update(tree);
         }
     },
 
@@ -487,7 +568,7 @@ Terminal.prototype = {
             'width': Math.abs(x1 - x0) + 'px',
             'height': (Math.abs(y1 - y0) + marge) + 'px'
         });
-        if (this.pleaseAnimate) {
+        if (this.animatePlease) {
             d.hide();
             d.children('.tailDiv').animate({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
             d.children('.headDiv').animate({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
@@ -499,31 +580,15 @@ Terminal.prototype = {
         
         // set listeners
         d.attr('draggable', true);
-        d.on('dragstart', this.on.arrow.dragstart);
-        d.on('dragend', this.on.arrow.dragend);
-        d.find('.close a').click(this.on.arrow.close.click);
+        d.on('dragstart', this.on.view.dragstart);
+        d.on('dragend', this.on.view.dragend);
+        d.find('.close a').click(this.on.view.close.click);
 
         this.addBarTo(d);
         
         // data
-        if (tail) {
-            d.data('tail', tail);
-        } else {
-            d.children('.tailDiv').height(0).width(20).css('border-style', 'dashed');
-            u = $("<button class='unfoldTail'>+</button>");
-            u.click(unfoldClick);
-            u.appendTo(d);
-        }
-
-        if (head) {
-            d.data('head', head);
-        } else {
-            d.children('.headDiv').height(0).width(20).css('border-style', 'dashed');
-            u = $("<button class='unfoldHead'>+</button>");
-            u.click(unfoldClick);
-            u.appendTo(d);
-        }
-
+        d.data('tail', tail);
+        d.data('head', head);
         d.data('for', []);
         d.data('children', []);
         return d;
@@ -543,10 +608,10 @@ Terminal.prototype = {
            var c = this.getPointOnCircle(100);
            var n, a;
            if (incoming) {
-              n = this.openPrompt(p.left - defaultEntryWidth - 100 - c.x, p.top + d.height() / 2 - c.y);
+              n = this.putPrompt(p.left - defaultEntryWidth - 100 - c.x, p.top + d.height() / 2 - c.y);
               a = this.pairTogether(n, d);
            } else {
-              n = this.openPrompt(p.left + d.width() + 100 + c.x, p.top + d.height() / 2 + c.y);
+              n = this.putPrompt(p.left + d.width() + 100 + c.x, p.top + d.height() / 2 + c.y);
               a = this.pairTogether(d, n);
            }
            n.data('for').push(a);
@@ -627,11 +692,16 @@ Terminal.prototype = {
     },
 
 
+    moveLoadingOnArrow: function(d) {
+       var p = d.position();
+       $("#loading").css('top', parseInt(p.top + d.height() - defaultEntryHeight / 2) + 'px').css('left', parseInt(p.left + d.width() / 2) + 'px');
+    },
+
     arrowEvent: function(a) {
         var self = this;
         if (a.hc === undefined ) { // a is GC-ed
             var views = a.get('views');
-            views && views.forEach(function(view) { self.dismissArrow(view); });
+            views && views.forEach(function(view) { self.dismissView(view); });
         } else {
             var r = a.isRooted();
             var views = a.get('views');
@@ -648,7 +718,7 @@ Terminal.prototype = {
                 var self = $(this).data('terminal');
                 var x = event.pageX;
                 var y = event.pageY;
-                self.openPrompt(x, y, '', this.animatePlease).children('input').focus();
+                self.putPrompt(x, y).children('input').focus();
             }
         },
         bar: {
@@ -716,6 +786,7 @@ Terminal.prototype = {
             click: function(e) {
                 var prompt = $(this).parent();
                 var self = prompt.parent().data('terminal');
+                self.moveLoadingOnArrow(prompt);
                 return false;
             },
             keypress: function(event) {
@@ -723,9 +794,10 @@ Terminal.prototype = {
                     var prompt = $(this).parent();
                     var area = prompt.parent();
                     var self = area.data('terminal');
+                    self.moveLoadingOnArrow(prompt);
                     event.preventDefault();
                     // record arrows that this prompt belongs too
-                    self.submitArrows(prompt);
+                    self.submitPromptTrees(prompt);
                     //Arrow.commit(self.entrelacs);
 
                     return false;
@@ -738,10 +810,11 @@ Terminal.prototype = {
                     var prompt = $(this).parent();
                     var area = prompt.parent();
                     var self = area.data('terminal');
+                    self.moveLoadingOnArrow(prompt);
 
                     if ($(this).is('textarea')) {
                         // record the currently edited compound arrow (or at least this text input)
-                        self.submitArrows(prompt);
+                        self.submitPromptTrees(prompt);
                         //Arrow.commit(self.entrelacs);
                     } else {
                         // turn the atom into a textarea
@@ -795,7 +868,7 @@ Terminal.prototype = {
                 }
             },
         },
-        arrow: {
+        view: {
             dragenter: function(event) {
                 var prompt = $(this).parent();
                 var area = prompt.parent();
@@ -819,8 +892,11 @@ Terminal.prototype = {
                 var prompt = $(this);
                 var area = prompt.parent();
                 var self = area.data('terminal');
-                self.dragStartX = Math.max(event.originalEvent.screenX, event.originalEvent.pageX);
-                self.dragStartY = Math.max(event.originalEvent.screenY, event.originalEvent.pageY);
+                // dragStartX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX);
+                // dragStartY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY);
+
+                self.dragStartX = event.originalEvent.screenX;
+                self.dragStartY = event.originalEvent.screenY;
                 event.originalEvent.dataTransfer.setData('text/plain', "arrow");
                 event.originalEvent.dataTransfer.effectAllowed = "move";
                 event.originalEvent.dataTransfer.dropEffect = "move";
@@ -833,16 +909,27 @@ Terminal.prototype = {
     
                 if (self.dragOver && arrow.data('arrow')) {
                     var d = $(self.dragOver).parent();
-                    self.turnPromptIntoExistingArrow(d, $(this));
-                    self.submitArrow(d); // TODO Need a confirm button
+                    self.moveLoadingOnArrow(d);
+
+                    self.turnPromptIntoExistingView(d, $(this));
+                    self.submitPromptTree(d); // TODO Need a confirm button
                 } else {
-                    self.moveArrow(arrow, Math.max(event.originalEvent.screenX, event.originalEvent.pageX) - self.dragStartX,
-                                 Math.max(event.originalEvent.screenY, event.originalEvent.pageY) - self.dragStartY, null /* no moving child */);
+                    // dragEndX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX) - dragStartX
+                    // dragEndY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY) - dragStartY
+                    var dragEndX = event.originalEvent.screenX, dragEndY = event.originalEvent.screenY;
+
+                    self.moveView(arrow, dragEndX - self.dragStartX,
+                                 dragEndY - self.dragStartY, null /* no moving child */);
                 }
                 return true;
             },
             close: {
                 click: function(event) {
+                    var arrow = $(this).parent().parent();
+                    var area = arrow.parent();
+                    var self = area.data('terminal');
+                    self.dismissView(arrow);
+                    return false;
                 }
             },
         },
@@ -853,6 +940,13 @@ Terminal.prototype = {
         },
         unfold: {
             click: function(event) {
+                var b = $(this);
+                var d = b.parent();
+                var area = d.parent();
+                var self = area.data('terminal');
+                
+                self.unfold(d);
+                return false;
             },
         },
     },
