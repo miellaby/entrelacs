@@ -128,9 +128,8 @@ void xls_reset(Arrow c) {
 Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
     Arrow p = xl_pair(source, destination);
  // TODO is not the best way to do it? should not set/unset merges with this?
-    deepRoot(c, p);
     xl_root(a(a(c, source), a(c, destination)));
-    return p;
+    return xls_root(c, p);
 }
 
 /** traditional edge removal
@@ -139,9 +138,8 @@ Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
 Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
     Arrow p = xl_pair(source, destination);
  // TODO is not the best way to do it? should not set/unset merges with this?
-    deepUnroot(c, p);
     xl_unroot(a(a(c, source), a(c, destination)));
-    return p;
+    return xls_unroot(c, p);
 }
 
 
