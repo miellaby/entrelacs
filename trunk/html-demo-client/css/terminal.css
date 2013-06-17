@@ -436,13 +436,13 @@
    border-style: plain;
    background-color: black;
    color: white;
-   border-width: 1px;
+   border-width: 0px;
    border-style: ridge;
    border-radius: 15px;
    width: 25px;
    height: 25px;
-   bottom: -10px;
-   right: -10px;
+   bottom: 0px;
+   left: -10px;
 }
 
 .fileinput-button {
