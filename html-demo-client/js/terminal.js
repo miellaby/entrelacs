@@ -461,7 +461,7 @@ Terminal.prototype = {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
                 d.data('children').push(dPair);
                 a.data('children').push(dPair);
-                dPair.find('.hook .rooted input').prop('disabled', false).prop('checked', partner.isRooted());
+                dPair.find('.hook .rooted input').prop('disabled', false).prop('checked', pair.isRooted());
                 this.bindViewToArrow(dPair, pair);
             } else {
                 dPair.css('marginTop','-5px').animate({marginTop: 0});
