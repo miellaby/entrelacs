@@ -149,25 +149,27 @@ Terminal.prototype = {
         if (arrow.isAtomic() === undefined) { // a placeholder
             var promise = this.entrelacs.open(arrow);
             promise.done(function(unfolded) {
-                placeholder.detach();
                 var vs = arrow.get('views');
                 vs.splice(vs.indexOf(placeholder), 1);
 
                 var a = self.putArrowView(p.left, p.top, unfolded);
                 // rewire children and prompt trees
                 self.updateDescendants(placeholder, a);
+                placeholder.detach();
 
             });
             return;
         }
         
-        placeholder.detach();
         var vs = arrow.get('views');
         vs.splice(vs.indexOf(placeholder), 1);
         var a = self.putArrowView(p.left, p.top, arrow);
 
         // rewire children and prompt trees
         this.updateDescendants(placeholder, a);
+        
+        // note: detach element after .data() access
+        placeholder.detach();
     },
     
     putArrowView: function(x, y, arrow) {
@@ -278,14 +280,13 @@ Terminal.prototype = {
             }
         }
 
-        d.detach();
-
         var arrow = d.data('arrow');
         if (arrow) {
             var vs = arrow.get('views');
             vs.splice(vs.indexOf(arrow), 1);
         }
 
+        d.detach();
     },
 
     moveView: function(d, offsetX, offsetY, movingChild) {
