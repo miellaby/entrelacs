@@ -35,7 +35,7 @@ Terminal.prototype = {
             views = [];
             arrow.set('views', views);
         }
-        views.push(view);
+        views.push(view[0]);
     },
     
     putAtomView: function(x, y, atom) {
@@ -150,7 +150,7 @@ Terminal.prototype = {
             var promise = this.entrelacs.open(arrow);
             promise.done(function(unfolded) {
                 var vs = arrow.get('views');
-                vs.splice(vs.indexOf(placeholder), 1);
+                vs.splice(vs.indexOf(placeholder[0]), 1);
 
                 var a = self.putArrowView(p.left, p.top, unfolded);
                 // rewire children and prompt trees
@@ -162,7 +162,7 @@ Terminal.prototype = {
         }
         
         var vs = arrow.get('views');
-        vs.splice(vs.indexOf(placeholder), 1);
+        vs.splice(vs.indexOf(placeholder[0]), 1);
         var a = self.putArrowView(p.left, p.top, arrow);
 
         // rewire children and prompt trees
@@ -283,7 +283,7 @@ Terminal.prototype = {
         var arrow = d.data('arrow');
         if (arrow) {
             var vs = arrow.get('views');
-            vs.splice(vs.indexOf(arrow), 1);
+            vs.splice(vs.indexOf(d[0]), 1);
         }
 
         d.detach();
@@ -382,7 +382,7 @@ Terminal.prototype = {
        var arrow = a.data('arrow');
        if (arrow) {
             var vs = arrow.get('views');
-            vs.splice(vs.indexOf(arrow), 1);
+            vs.splice(vs.indexOf(a[0]), 1);
             this.bindViewToArrow(newA, arrow);
        }
        a.detach();
@@ -527,7 +527,7 @@ Terminal.prototype = {
         if (views === undefined || !views.length) return null;
         var distance = -1;
         views.forEach(function(view) {
-            var vp = view.position();
+            var vp = $(view).position();
             var vd = Math.abs(vp.left - position.left) + Math.abs(vp.top - position.top);
             if (distance == -1 || vd < distance) {
                 distance = vd;
@@ -535,7 +535,7 @@ Terminal.prototype = {
             }
         });
         
-        return (limit !== undefined && distance > limit ? null : nearest);
+        return (limit !== undefined && distance > limit ? null : $(nearest));
     },
     
     submitPromptTrees: function(tree) {
@@ -702,11 +702,11 @@ Terminal.prototype = {
         var self = this;
         if (a.hc === undefined ) { // a is GC-ed
             var views = a.get('views');
-            views && views.forEach(function(view) { self.dismissView(view); });
+            views && views.forEach(function(view) { self.dismissView($(view)); });
         } else {
             var r = a.isRooted();
             var views = a.get('views');
-            views && views.forEach(function(view) { view.find('.hook .rooted input').prop('checked', r); });
+            views && views.forEach(function(view) { $(view).find('.hook .rooted input').prop('checked', r); });
         }
     },
 
