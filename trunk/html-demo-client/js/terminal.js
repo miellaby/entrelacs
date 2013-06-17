@@ -345,15 +345,13 @@ Terminal.prototype = {
     },
 
     replaceView: function(a, newA) {
-       // data copy
+       // descendants copy
        var oldData = a.data();
-       for (var dataKey in oldData) {
-          if (dataKey == 'head' || dataKey == 'tail') continue;
-          newA.data(dataKey, oldData[dataKey]);
-       }
-
+       newA.data('for', newA.data('for').concat(oldData['children']));
+       newA.data('children', newA.data('children').concat(oldData['children']));
        this.updateDescendants(a, newA);
     },
+
     rewirePair: function(a, oldOne, newOne) {
        var oldTail = a.data('tail');
        var oldHead = a.data('head');
@@ -427,13 +425,7 @@ Terminal.prototype = {
         var w = prompt.width();
         var f = prompt.data('for');
 
-        // merge for list
-        a.data('for', a.data('for').concat(f));
-
-        // if prompt belonged to an arrow, one rewires to "a"
-        for (var i = 0; i < f.length; i++) { // search into loose children
-           this.rewirePair(f[i], prompt, a);
-        }
+        this.replaceView(prompt, a);
         
         // detach entry-atom
         prompt.detach();
