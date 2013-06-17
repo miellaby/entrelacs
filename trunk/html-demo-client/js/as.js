@@ -776,19 +776,13 @@ $.extend(Entrelacs.prototype, {
     root: function (a) {
         var promise = this.getUri(a);
         var self = this;
-        if (a.isAtomic()) {
-            promise = promise.pipe(function (uri) {
-                var req = self.serverUrl + '/root/escape+' + uri;
-                var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-                return promise;
-            });
-        } else {
-            promise = promise.pipe(function (uri) {
-                // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
-                var req = self.serverUrl + '/linkTailWithHead/escape+' + uri;
-                return $.ajax({url: req, xhrFields: { withCredentials: true }});
-            });
-        }
+        // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
+        var operator = (a.isAtomic() ? "root" : "linkTailWithHead");
+        promise = promise.pipe(function (uri) {
+            var req = self.serverUrl + '/' + operator + '/escape+' + uri;
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        });
         promise.fail(function () {
             self.reset();
         });
@@ -803,11 +797,14 @@ $.extend(Entrelacs.prototype, {
     unroot: function (a) {
         var promise = this.getUri(a);
         var self = this;
-
+        // TODO unlinkify
+        var operator = (a.isAtomic() ? "unroot" : "unlinkTailAndHead");
         promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/unroot/escape+' + uri;
-            return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        }).fail(function () {
+            var req = self.serverUrl + '/' + operator + '/escape+' + uri;
+            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
+            return promise;
+        });
+        promise.fail(function () {
             self.reset();
         });
         return promise;
