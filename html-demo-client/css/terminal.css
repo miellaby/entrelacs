@@ -1,5 +1,4 @@
 
-
 /* ==========================================================================
    Terminal styles
    ========================================================================== */
@@ -381,10 +380,10 @@
 }
 
 .tailEnd {
-   background-color: black;
-   width: 12px;
-   height: 8px;
-   border-radius: 0 0 6px 6px;
+   background-color: 6px solid transparent;
+   top-border-color: black;
+   width: 0;
+   height: 0;
 }
 
 .pairDiv .tailEnd {
