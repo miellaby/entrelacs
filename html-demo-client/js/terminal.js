@@ -559,7 +559,7 @@ Terminal.prototype = {
         var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
         var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 3;
         var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-        var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'><div class='headEnd'></div><div class='close'><a href='#'>&times;</a></div></div>");
+        var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'><div class='headEnd'></div></div><div class='close'><a href='#'>&times;</a></div></div>");
         this.area.append(d);
         var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
         d.css({
