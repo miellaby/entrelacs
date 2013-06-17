@@ -154,7 +154,7 @@ Terminal.prototype = {
 
                 var a = self.putArrowView(p.left, p.top, unfolded);
                 // rewire children and prompt trees
-                self.updateDescendants(placeholder, a);
+                self.replaceView(placeholder, a);
                 placeholder.detach();
 
             });
@@ -166,7 +166,7 @@ Terminal.prototype = {
         var a = self.putArrowView(p.left, p.top, arrow);
 
         // rewire children and prompt trees
-        this.updateDescendants(placeholder, a);
+        this.replaceView(placeholder, a);
         
         // note: detach element after .data() access
         placeholder.detach();
@@ -275,9 +275,7 @@ Terminal.prototype = {
             var p = d.position();
             var arrow = d.data('arrow');
             var placeholder = this.putPlaceholder(p.left + d.width() / 2, p.top + d.height(), arrow);
-            for (var i = 0; i < children.length; i++) {
-                this.rewirePair(children[i], d, placeholder);
-            }
+            this.replaceView(d, placeholder);
         }
 
         var arrow = d.data('arrow');
@@ -346,7 +344,16 @@ Terminal.prototype = {
         this.updateChild(d, oldOne, newOne);
     },
 
+    replaceView: function(a, newA) {
+       // data copy
+       var oldData = a.data();
+       for (var dataKey in oldData) {
+          if (dataKey == 'head' || dataKey == 'tail') continue;
+          newA.data(dataKey, oldData[dataKey]);
+       }
 
+       this.updateDescendants(a, newA);
+    },
     rewirePair: function(a, oldOne, newOne) {
        var oldTail = a.data('tail');
        var oldHead = a.data('head');
@@ -362,23 +369,16 @@ Terminal.prototype = {
        // props copy
        newA.find('.hook .rooted input').prop('disabled', a.find('.hook .rooted input').prop('disabled'));
        newA.find('.hook .rooted input').prop('checked', a.find('.hook .rooted input').prop('checked'));
-       
-       // data copy
-       var oldData = a.data();
-       for (var dataKey in oldData) {
-          if (dataKey == 'head' || dataKey == 'tail') continue;
-          newA.data(dataKey, oldData[dataKey]);
-       }
+
        // back refs updating
-       if (newTail)
-           this.updateRefs(newTail, a, newA);
-           
-       if (newHead && !(newTail && newTail[0] === newHead[0])) {
+       this.updateRefs(newTail, a, newA);
+       if (newTail[0] !== newHead[0]) {
           this.updateRefs(newHead, a, newA);
        }
 
-       this.updateDescendants(a, newA);
-       
+       // descendants copy and update
+       this.replaceView(a, newA);
+
        var arrow = a.data('arrow');
        if (arrow) {
             var vs = arrow.get('views');
@@ -429,7 +429,7 @@ Terminal.prototype = {
 
         // merge for list
         a.data('for', a.data('for').concat(f));
-         
+
         // if prompt belonged to an arrow, one rewires to "a"
         for (var i = 0; i < f.length; i++) { // search into loose children
            this.rewirePair(f[i], prompt, a);
