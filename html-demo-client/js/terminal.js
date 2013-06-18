@@ -763,7 +763,12 @@ Terminal.prototype = {
                     self.dismissView(d);
                     return false;
                 }
-                
+
+                if (button.hasClass('rooted')) {
+                    return true;
+                }
+
+
                 if (button.hasClass('poke')) {
                    self.update(d);
                    return false;
