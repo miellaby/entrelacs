@@ -20,10 +20,10 @@ function Terminal(area, entrelacs, animatePlease) {
 Terminal.prototype = {
 
     addBarTo: function(d) {
-        var h = $("<div class='hook'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox' disabled></div> <div class='poke'>?</div>  <div class='out'>&darr;</div></div>");
+        var h = $("<div class='hook'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox' disabled></div> <div class='poke'>?</div> <div class='close'>&times;</div> <div class='out'>&darr;</div></div>");
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
-        h.children('.in,.out,.poke').click(this.on.bar.click);
+        h.children('div').click(this.on.bar.click);
         h.find('.rooted input').change(this.on.bar.rooted.change);
         h.click(this.on.bar.click);
     },
@@ -39,7 +39,7 @@ Terminal.prototype = {
     },
     
     putAtomView: function(x, y, atom) {
-        var d = $("<div class='atomDiv kept'><span></span><div class='close'><a href='#'>&times;</a></div></div>");
+        var d = $("<div class='atomDiv'><span class='content'></span><div class='close'><a href='#'>&times;</a></div></div>");
         this.area.append(d);
         d.css({ 'left': x + 'px',
                 'top': y + 'px' });
@@ -100,9 +100,15 @@ Terminal.prototype = {
         d.data('for', []);
         d.data('children', []);
         
+        // split button
+        d.prepend("<a class='split' style='display: block; position: absolute; right: 0px; margin-right: -20px;'>||</a>");
+        d.children('.split').click(this.on.prompt.split.click);
+
         // file uploading
         d.append("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>");
         d.children('.fileinput-button').click(this.on.prompt.fileInputButton.click).change(this.on.prompt.fileInputButton.change);
+        
+
         return d;
     },
     
@@ -112,14 +118,46 @@ Terminal.prototype = {
         prompt.addClass('kept');
         prompt.children('.close').show();
         prompt.children('input,textarea').detach();
-        var s = $("<span></span>").text(body || 'EVE').appendTo(prompt);
+        var s = $("<span class='content'></span>").text(body || 'EVE').appendTo(prompt);
         var w = s.width();
         s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
         prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
-        prompt.children('.fileinput-button').detach();
+        prompt.children('.fileinput-button,.split').detach();
         prompt.find('.hook .rooted input').prop('disabled', false);
     },
 
+    splitPrompt: function(prompt) {
+        var v = prompt.children('input,textarea').val();
+        var p = prompt.position();
+        var width = prompt.width();
+        var height = prompt.height();
+
+        // peek a counting circle point
+        var c = this.getPointOnCircle(50);
+        
+        // build a tail prompt
+        var t = this.putPrompt(p.left - width / 2 - 50 - c.x, p.top + height / 2 - 100 - c.y, v);
+
+        // build a head prompt
+        var h = this.putPrompt(p.left + width / 2 + 50 + c.x, p.top + height / 2 - 50 + c.y);
+
+        // pair head and tail as loose arrows
+        var a = this.pairTogether(t, h);
+        t.data('for').push(a);
+        h.data('for').push(a);
+
+        // replace prompt with pair
+        this.replaceView(prompt, a);
+
+
+        // detach old prompt
+        prompt.detach();
+
+        // focus on tail prompt
+        t.children('input').focus();
+    },
+    
+    
     putPlaceholder: function(x, y, arrow) {
         var d = $("<div class='placeholderDiv'><button class='unfold'>+</button></div>");
         this.area.append(d);
@@ -200,16 +238,18 @@ Terminal.prototype = {
         return d.hasClass('pairDiv') || d.hasClass('ipairDiv');
     },
     
-    removeFor: function(d, a) {
-        var list = d.data('for');
-        for (var i = 0; i < list.length; i++) {
-           var c = list[i];
-           if  (c[0] === a[0]) {
-               list.splice(i, 1);
-               break;
-           }
-        }
-        return list;
+    removeFor: function(d) {
+        [d.data('tail'), d.data('head')].forEach(function(end) {
+            if (!end) return;
+            var list = end.data('for');
+            for (var i = 0; i < list.length; i++) {
+                var c = list[i];
+                if  (c[0] === d[0]) {
+                    list.splice(i, 1);
+                    break;
+                }
+            }
+        });
     },
 
     
@@ -241,10 +281,11 @@ Terminal.prototype = {
         d.data('detached', true);
 
         if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) { // pair
+            this.removeFor(d);
+
             // propagate deletion to tail
             var t = d.data('tail');
             if (t) {
-                this.removeFor(t, d);
                 this.removeChild(t, d);
                 if (this.isViewLoose(t))
                    this.dismissView(t, true);
@@ -253,7 +294,6 @@ Terminal.prototype = {
             // propagate deletion to head
             var h = d.data('head');
             if (h) {
-                this.removeFor(h, d);
                 this.removeChild(h, d);
                 if (this.isViewLoose(h))
                    this.dismissView(h, true);
@@ -301,7 +341,8 @@ Terminal.prototype = {
                this.moveView(d.data('tail'), offsetX, offsetY, d);
            }
         }
-        this.updateDescendants(d, d);
+        if (!movingChild)
+            this.updateDescendants(d, d);
     },
 
     updateDescendants: function(a, newA) {
@@ -347,7 +388,7 @@ Terminal.prototype = {
     replaceView: function(a, newA) {
        // descendants copy
        var oldData = a.data();
-       newA.data('for', newA.data('for').concat(oldData['children']));
+       newA.data('for', newA.data('for').concat(oldData['for']));
        newA.data('children', newA.data('children').concat(oldData['children']));
        this.updateDescendants(a, newA);
     },
@@ -355,18 +396,22 @@ Terminal.prototype = {
     rewirePair: function(a, oldOne, newOne) {
        var oldTail = a.data('tail');
        var oldHead = a.data('head');
+       var arrow = a.data('arrow');
 
-       var tailChanged = (oldTail && oldTail[0] === oldOne[0]);
-       var headChanged = (oldHead && oldHead[0] === oldOne[0]);
+       var tailChanged = (oldTail[0] === oldOne[0]);
+       var headChanged = (oldHead[0] === oldOne[0]);
 
        var newTail = tailChanged ? newOne : oldTail;
        var newHead = headChanged ? newOne : oldHead;
-       var newA = this.pairTogether(newTail, newHead);
-       newA.find('.hook .poke').text(a.find('.hook .poke').text());
+       var newA = this.pairTogether(newTail, newHead, true /* immediate */);
 
-       // props copy
-       newA.find('.hook .rooted input').prop('disabled', a.find('.hook .rooted input').prop('disabled'));
-       newA.find('.hook .rooted input').prop('checked', a.find('.hook .rooted input').prop('checked'));
+       // props set
+       if (arrow) {
+            newA.find('.hook .rooted input').prop('disabled', false);
+            if (arrow.isRooted()) {
+                newA.find('.hook .rooted input').prop('checked', true);
+            }
+        }
 
        // back refs updating
        this.updateRefs(newTail, a, newA);
@@ -377,7 +422,6 @@ Terminal.prototype = {
        // descendants copy and update
        this.replaceView(a, newA);
 
-       var arrow = a.data('arrow');
        if (arrow) {
             var vs = arrow.get('views');
             vs.splice(vs.indexOf(a[0]), 1);
@@ -406,25 +450,24 @@ Terminal.prototype = {
         var w0 = prompt.width();
         var i = prompt.children('input');
         var v = i.val();
-        
+        prompt.children('.fileinput-button').detach();
+        var textPosition = i[0].selectionStart;
         i.detach();
-        i = $("<textarea></textarea>").text(v).appendTo(promt);
-        i.blur(this.on.entry.blur);
-        i.focus(this.on.entry.focus);
+        i = $("<textarea></textarea>").text(v).appendTo(prompt);
+        i[0].setSelectionRange(textPosition, textPosition);
+        i.blur(this.on.prompt.blur);
+        i.focus(this.on.prompt.focus);
         /* i.keypress(onEntryKeypress); no 13 catch */
-        i.keydown(this.on.entry.keydown);
-        i.on('dragenter', this.on.entry.dragenter);
-        i.on('dragleave', this.on.entry.dragleave);
+        i.keydown(this.on.prompt.keydown);
+        i.click(this.on.prompt.click);
+        i.on('dragenter', this.on.prompt.dragenter);
+        i.on('dragleave', this.on.prompt.dragleave);
         i.focus();
         var w = i.width();
         prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
     },
 
     turnPromptIntoExistingView: function(prompt, a) {
-        var p = prompt.position();
-        var w = prompt.width();
-        var f = prompt.data('for');
-
         this.replaceView(prompt, a);
         
         // detach entry-atom
@@ -477,6 +520,7 @@ Terminal.prototype = {
     
     update: function(d) {
         var arrow = d.data('arrow');
+        if (!arrow) arrow = this.getArrow(d);
         var self = this;
         d.css('marginTop','-5px').animate({marginTop: 0});
         this.moveLoadingOnArrow(d);
@@ -510,7 +554,6 @@ Terminal.prototype = {
 
         }
         this.bindViewToArrow(d, arrow);
-        d.data('for', []);
         return arrow;
     },
     
@@ -539,20 +582,21 @@ Terminal.prototype = {
                 this.submitPromptTrees(toBeRecorded);
             }
         } else { // terminal case: tree to be recorded
+            this.removeFor(tree);
             this.getArrow(tree);
             this.update(tree);
         }
     },
 
-    pairTogether: function(tail, head) {
+    pairTogether: function(tail, head, immediate) {
         // TODO fix default position if head or tail not set
         var p0 = tail ? tail.position() : head.position();
         var p1 = head ? head.position() : tail.position();
-        var x0 = p0.left + (tail ? tail.width() : defaultEntryWidth) / 2 + 3;
+        var x0 = p0.left + (tail ? tail.width() : defaultEntryWidth) / 2 + 6;
         var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
-        var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 3;
+        var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 6;
         var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-        var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'><div class='headEnd'></div></div><div class='close'><a href='#'>&times;</a></div></div>");
+        var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'><div class='headEnd'></div></div></div>"); // <div class='close'><a href='#'>&times;</a></div>
         this.area.append(d);
         var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
         d.css({
@@ -561,7 +605,7 @@ Terminal.prototype = {
             'width': Math.abs(x1 - x0) + 'px',
             'height': (Math.abs(y1 - y0) + marge) + 'px'
         });
-        if (this.animatePlease) {
+        if (this.animatePlease && !immediate) {
             d.hide();
             d.children('.tailDiv').animate({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
             d.children('.headDiv').animate({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
@@ -721,20 +765,21 @@ Terminal.prototype = {
                    event.stopPropagation();
                    return true;
                 }
+                
                 var d = button.parent().parent();
                 var self = d.parent().data('terminal');
-                var a;
                 
-
+                if (button.hasClass('close')) {
+                    self.dismissView(d);
+                    return false;
+                }
+                
                 if (button.hasClass('poke')) {
-                   var arrow = d.data('arrow');
-                   if (arrow) {
-                        self.update(d);
-                   }
-                   
+                   self.update(d);
                    return false;
                 }
 
+                var a;
                 if (button.hasClass('in'))
                     a = self.leave(d, true);
                 else if (button.hasClass('out'))
@@ -762,11 +807,11 @@ Terminal.prototype = {
             },
             enter: function(event) {
                 var bar = $(this);
-                bar.children('.in,.out,.rooted,.poke').show().css({'height': '0px', 'opacity': 0}).animate({'height': '20px', opacity: 1}, 50);
+                bar.children('div').show().animate({'height': bar.height(), opacity: 1}, 50);
             },
             leave: function(event) {
                 var bar = $(this);
-                bar.children('.in,.out,.rooted,.poke').css({'height': '20px', 'opacity': 1}).animate({'height': '0px', opacity: 0}, 200);
+                bar.children('div').animate({'height': '0px', opacity: 0}, 200);
             }
         },
         prompt: {
@@ -815,6 +860,14 @@ Terminal.prototype = {
                     }
                     event.preventDefault();
                     return false;
+                } else if (event.ctrlKey && event.keyCode == 191 /* / */) {
+                    var prompt = $(this).parent();
+                    var area = prompt.parent();
+                    var self = area.data('terminal');
+                    event.preventDefault();
+                    event.stopPropagation();
+                    self.splitPrompt(prompt);
+                    return false;
                 } else if (event.keyCode == 27 /* escape */) {
                     var prompt = $(this).parent();
                     var area = prompt.parent();
@@ -853,9 +906,19 @@ Terminal.prototype = {
                 return true;
 
             },
-
+            split: {
+                click: function(event) {
+                    var prompt = $(this).parent();
+                    var area = prompt.parent();
+                    var self = area.data('terminal');
+                    self.splitPrompt(prompt);
+                    return false;
+                }
+            },
             fileInputButton: {
                 click: function(event) {
+                    $(this).parent().children('input').val('').focus();
+                    event.stopPropagation();
                 },
                 change: function(event) {
                 }
@@ -879,6 +942,7 @@ Terminal.prototype = {
                 $(this).animate({'border-width': 2, left: "+=3px"}, 100);
                 setTimeout(function() { self.dragOver = null; }, 0); // my gosh
                 event.preventDefault();
+                event.stopPropagation();
                 return false;
             },
             dragstart: function(event) {
@@ -893,6 +957,7 @@ Terminal.prototype = {
                 event.originalEvent.dataTransfer.setData('text/plain', "arrow");
                 event.originalEvent.dataTransfer.effectAllowed = "move";
                 event.originalEvent.dataTransfer.dropEffect = "move";
+                event.stopPropagation();
             },
             dragend: function(event) {
                 var arrow = $(this);
@@ -902,10 +967,12 @@ Terminal.prototype = {
     
                 if (self.dragOver && arrow.data('arrow')) {
                     var d = $(self.dragOver).parent();
+                    self.dragOver = null;
+
                     self.moveLoadingOnArrow(d);
 
                     self.turnPromptIntoExistingView(d, $(this));
-                    self.submitPromptTree(d); // TODO Need a confirm button
+                    self.submitPromptTrees(d); // TODO Need a confirm button
                 } else {
                     // dragEndX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX) - dragStartX
                     // dragEndY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY) - dragStartY
@@ -914,7 +981,8 @@ Terminal.prototype = {
                     self.moveView(arrow, dragEndX - self.dragStartX,
                                  dragEndY - self.dragStartY, null /* no moving child */);
                 }
-                return true;
+                event.stopPropagation();
+                return false;
             },
             close: {
                 click: function(event) {
