@@ -36,6 +36,7 @@ Terminal.prototype = {
             arrow.set('views', views);
         }
         views.push(view[0]);
+        view.find('.hook .rooted input').prop('disabled', false).prop('checked', arrow.isRooted());
     },
     
     putAtomView: function(x, y, atom) {
@@ -59,7 +60,6 @@ Terminal.prototype = {
         d.find('.close a').click(this.on.view.close.click);
 
         this.addBarTo(d);
-        d.find('.hook .rooted input').prop('disabled', false).prop('checked', atom.isRooted());
         
         // data
         d.data('for', []);
@@ -221,7 +221,6 @@ Terminal.prototype = {
             var t = this.putArrowView(x - 100 - defaultEntryWidth, y - 170, arrow.getTail());
             var h = this.putArrowView(x + 100, y - 130, arrow.getHead());
             a = this.pairTogether(t, h);
-            a.find('.hook .rooted input').prop('disabled', false).prop('checked', arrow.isRooted());
             t.data('children').push(a);
             h.data('children').push(a);
             this.bindViewToArrow(a, arrow);
@@ -405,14 +404,6 @@ Terminal.prototype = {
        var newHead = headChanged ? newOne : oldHead;
        var newA = this.pairTogether(newTail, newHead, true /* immediate */);
 
-       // props set
-       if (arrow) {
-            newA.find('.hook .rooted input').prop('disabled', false);
-            if (arrow.isRooted()) {
-                newA.find('.hook .rooted input').prop('checked', true);
-            }
-        }
-
        // back refs updating
        this.updateRefs(newTail, a, newA);
        if (newTail[0] !== newHead[0]) {
@@ -497,7 +488,6 @@ Terminal.prototype = {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
                 d.data('children').push(dPair);
                 a.data('children').push(dPair);
-                dPair.find('.hook .rooted input').prop('disabled', false).prop('checked', pair.isRooted());
                 this.bindViewToArrow(dPair, pair);
             } else {
                 dPair.css('marginTop','-5px').animate({marginTop: 0});
