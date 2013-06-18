@@ -205,7 +205,14 @@
     background-color: white;
 }
 
-.in, .out, .rooted, .poke {
+.hook {
+   z-index: 15;
+   width: 100px;
+   height: 22px;
+   line-height: 12px;
+}
+
+.hook div {
       background-color: black;
       color: white;
       text-align: center;
@@ -218,7 +225,7 @@
       float: left;
 }
 
-.pairDiv .close, .ipairDiv .close {
+.pairDiv > .close, .ipairDiv > .close {
     z-index: 15;
     position: absolute;
     left: 50%;
@@ -230,7 +237,7 @@
 }
 
 
-.atomDiv .close {
+.atomDiv  > .close {
     z-index: 25;
     position: absolute;
     right: 7px;
@@ -243,7 +250,7 @@
     opacity: 0.3;
 }
 
-.atomDiv .close.outedClose {
+.atomDiv > .outedClose {
     right: -10px;
     border-width: 1px;
     border-radius: 3px;
@@ -257,6 +264,14 @@
 
 .close  a {
     
+}
+
+.pairDiv .in, .ipairDir .in  {
+   border-top-left-radius: 5px;
+}
+
+.pairDiv .out, .ipairDir .out {
+   border-top-right-radius: 5px;
 }
 
 .in {
@@ -285,18 +300,18 @@
 #toaster {
     position: absolute;
     background-color: #A66;
-    foreground-color: white;
+    color: white;
     opacity: 0.25;
-    border 0;
+    border: 0;
     border-radius: 5px;
 }
 
 .ghost {
     position: absolute;
     background-color: #6A6;
-    foreground-color: white;
+    color: white;
     opacity: 1;
-    border 0;
+    border: 0;
     border-radius: 5px;
 }
 
@@ -310,13 +325,20 @@
    position: relative;
    border-style: solid;
    border-width: 2px;
-   padding-right: 22px;
    padding-left: 4px;
    border-color: black;
    border-radius: 5px;
 }
+.atomDiv input  {
+   padding-right: 22px;
+}
 
-.kept span {
+.atomDiv textarea{
+   padding-right: 4px;
+}
+
+
+.atomDiv span.content {
    z-index: 20;
    display: block;
    position: relative;
@@ -327,7 +349,7 @@
    border-radius: 2px;
 }
 
-.kept .content {
+.atomDiv div.content {
    position: relative;
    z-index: 20;
    background-color: #FFF;
@@ -338,7 +360,7 @@
    display: inline-block;
 }
 
-.kept .content {
+.atomDiv .content {
    min-width: 100px;
    max-width: 500px;
 }
@@ -405,16 +427,9 @@
    margin-right: -7px;
 }
 
-.hook {
-   z-index: 15;
-   width: 74px;
-   height: 20px;
-   line-height: 12px;
-}
-
 .atomDiv .hook {
    position: absolute;
-   margin-left: -28px;
+   margin-left: -42px;
    bottom: -19px;
    left: 50%;
 }
@@ -422,10 +437,11 @@
 .pairDiv .hook, .ipairDiv .hook {
    z-index: 15;
    position: absolute;
-   margin-left: -28px;
-   bottom: -18px;
+   margin-left: -42px;
+   bottom: -9px;
    left: 50%;
 }
+
 .placeholderDiv {
    position: absolute;
 }
@@ -433,7 +449,7 @@
 .placeholderDiv .unfold {
    z-index: 15;
    position: absolute;
-   border-style: plain;
+   border-style: solid;
    background-color: black;
    color: white;
    border-width: 0px;
