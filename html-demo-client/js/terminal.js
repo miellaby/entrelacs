@@ -26,7 +26,7 @@ function Terminal(area, entrelacs, animatePlease) {
 Terminal.prototype = {
 
     addBarTo: function(d) {
-        var h = $("<div class='hook'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox' disabled></div> <div class='poke'>?</div> <div class='close'>&times;</div> <div class='out'>&darr;</div></div>");
+        var h = $("<div class='toolbar'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox'></div> <div class='poke'>?</div> <div class='close'>&times;</div> <div class='out'>&darr;</div></div>");
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
         h.children('div').click(this.on.bar.click);
@@ -42,11 +42,11 @@ Terminal.prototype = {
             arrow.set('views', views);
         }
         views.push(view[0]);
-        view.find('.hook .rooted input').prop('disabled', false).prop('checked', arrow.isRooted());
+        view.find('.toolbar .rooted input').prop('checked', arrow.isRooted());
     },
     
     putAtomView: function(x, y, atom) {
-        var d = $("<div class='atomDiv'><span class='content'></span><div class='close'><a href='#'>&times;</a></div></div>");
+        var d = $("<div class='atom'><span class='content' tabIndex=1></span><div class='close'><a href='#'>&times;</a></div></div>");
         this.area.append(d);
         d.css({ 'left': x + 'px',
                 'top': (y - d.width()) + 'px' });
@@ -64,6 +64,8 @@ Terminal.prototype = {
         d.on('dragstart', this.on.view.dragstart);
         d.on('dragend', this.on.view.dragend);
         d.find('.close a').click(this.on.view.close.click);
+        d.click(this.on.atom.click);
+        d.children('span').focus(this.on.atom.focus).blur(this.on.atom.blur);
 
         this.addBarTo(d);
         
@@ -77,7 +79,7 @@ Terminal.prototype = {
     },
     
     putPrompt: function(x, y, initialValue) {
-        var d = $("<div class='atomDiv'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
+        var d = $("<div class='prompt'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
         this.area.append(d);
         d.css({ 'left': x + 'px',
                 'top': y + 'px' });
@@ -107,12 +109,12 @@ Terminal.prototype = {
         d.data('children', []);
         
         // split button
-        d.prepend("<a class='split' style='display: block; position: absolute; right: 0px; margin-right: -20px;'>||</a>");
+        d.prepend("<a class='split'>||</a>");
         d.children('.split').click(this.on.prompt.split.click);
 
         // file uploading
         d.append("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>");
-        d.children('.fileinput-button').click(this.on.prompt.fileInputButton.click).change(this.on.prompt.fileInputButton.change);
+        d.children('.fileinput-button').click(this.on.prompt.fileInputButton.click);
 
         // Cross-domain form posts can't be queried back!
         // So we build up a secret and pair it with our uploaded file, then we get back our secret child!
@@ -122,6 +124,7 @@ Terminal.prototype = {
         var prog = '/macro/x/arrow//escape+escape/' + secret + '/var+x';
         var self = this;
         d.find('input[type="file"]').ajaxfileupload({
+            'validate_extensions': false,
             'action': this.entrelacs.serverUrl + prog,
             'onStart':  function() {
                 self.uploadCount++;
@@ -129,6 +132,9 @@ Terminal.prototype = {
                 self.loading.show();
             },
             'onComplete': function(response) {
+                if (typeof response == "Object" && response.status === false)
+                    return;
+                    
                 self.uploadCount--;
                 // response is not readable
                 // however one can search for the arrow child
@@ -136,41 +142,47 @@ Terminal.prototype = {
                 query.done(function(response) {
                     self.turnPromptIntoBlobView(d, response.getTail().getHead() /* head of first outgoing arrow */);
                 });
-            }
+            },
+            'onCancel': function() {
+            },
         });
         return d;
     },
     
-    turnPromptIntoAtomView: function(prompt) {
+    turnPromptIntoAtomView: function(prompt, atom) {
         var w0 = prompt.width();
-        var body = prompt.children('input,textarea').val();
-        prompt.addClass('kept');
+        var body = atom.getBody();
+        prompt.removeClass('prompt');
+        prompt.addClass('atom');
         prompt.children('.close').show();
-        prompt.children('input,textarea').detach();
-        var s = $("<span class='content'></span>").text(body || 'EVE').appendTo(prompt);
+        prompt.children('input,textarea,.fileinput-button,.split').detach();
+        var s = $("<span class='content' tabIndex=1></span>").text(body || 'EVE').appendTo(prompt);
         var w = s.width();
-        s.css({width: (w < 100 ? 100 : w) + 'px', 'text-align': 'center'});
-        prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
-        prompt.children('.fileinput-button,.split').detach();
-        prompt.find('.hook .rooted input').prop('disabled', false);
+        if (w < 100) w = 100;
+        s.css({width: w + 'px', 'text-align': 'center'});
+        prompt.css('left', (w < w0 ? '+=' + ((w0 - w) / 2) : '-=' + ((w - w0) / 2)) + 'px');
+        prompt.click(this.on.atom.click);
+        prompt.children('span').focus(this.on.atom.focus).blur(this.on.atom.blur);
+
+        this.bindViewToArrow(prompt, atom);
     },
 
     putBlobView: function(x, y, blob) {
         var server = this.entrelacs.serverUrl;
         var uri = Arrow.serialize(blob);
-        var d = $("<div class='blobDiv'></div>");
+        var d = $("<div class='blob'></div>");
         var isContentTyped = (blob.getTail().getTail() === Arrow.atom('Content-Typed'));
         var type = isContentTyped ? blob.getHead().getTail().getBody() : null;
         var isImage = isContentTyped && type.search(/^image/) == 0;
         var isOctetStream = isContentTyped && type == "application/octet";
         var isCreole = isContentTyped && type == "text/x-creole";
         var o = (isImage
-            ? $("<img class='content'></img>").attr('src', server + '/escape+' + uri)
+            ? $("<img class='content' tabIndex=1></img>").attr('src', server + '/escape+' + uri)
                 : (isCreole
-                ? $("<div class='content'></div>")
+                ? $("<div class='content' tabIndex=1></div>")
                 : (isOctetStream
-                    ? $("<a target='_blank'></a>").attr('href', server + '/escape+' + uri).text(uri)
-                    : $("<object class='content'></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
+                    ? $("<a class='content' target='_blank' tabIndex=1></a>").attr('href', server + '/escape+' + uri).text(uri)
+                    : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
         if (isCreole) {
             creole.parse(o[0], blob.getHead().getHead().getBody());
         } else {
@@ -200,6 +212,8 @@ Terminal.prototype = {
         d.attr('draggable', true);
         d.on('dragstart', this.on.view.dragstart);
         d.on('dragend', this.on.view.dragend);
+        o.focus(this.on.atom.focus);
+        o.blur(this.on.atom.blur);
 
         // data
         d.data('for', []);
@@ -249,15 +263,15 @@ Terminal.prototype = {
     
     
     putPlaceholder: function(x, y, arrow) {
-        var d = $("<div class='placeholderDiv'><button class='unfold'>+</button></div>");
+        var d = $("<div class='placeholder'><button class='unfold'>+</button></div>");
         this.area.append(d);
         d.css({left: x - 12 + 'px',
                top: y - 12 + 'px'});
                
         // set listeners
         d.attr('draggable', true);
-        d.on('dragstart', this.on.dragstart);
-        d.on('dragend', this.on.dragend);
+        d.on('dragstart', this.on.view.dragstart);
+        d.on('dragend', this.on.view.dragend);
         d.find('.close a').click(this.on.view.close.click);
         d.children('.unfold').click(this.on.unfold.click);
         
@@ -273,8 +287,7 @@ Terminal.prototype = {
         var self = this;
         var arrow = placeholder.data('arrow');
         var p = placeholder.position();
-         
-        if (arrow.uri !== undefined) { // a placeholder
+        if (arrow.uri !== undefined) { // an unknown placeholder
             var promise = this.entrelacs.open(arrow);
             promise.done(function(unfolded) {
                 var a = self.putArrowView(p.left, p.top, unfolded);
@@ -283,13 +296,12 @@ Terminal.prototype = {
                 self.replaceView(placeholder, a);
 
             });
-            return;
-        }
-        
-        var a = self.putArrowView(p.left, p.top, arrow);
+        } else { // a folded known arrow
+            var a = self.putArrowView(p.left, p.top, arrow);
 
-        // rewire children and prompt trees
-        this.replaceView(placeholder, a);
+            // rewire children and prompt trees
+            this.replaceView(placeholder, a);
+        }
     },
     
     putArrowView: function(x, y, arrow) {
@@ -314,11 +326,11 @@ Terminal.prototype = {
     },
 
     isAtomView: function(d) {
-        return d.hasClass('atomDiv');
+        return d.hasClass('atom') || d.hasClass('prompt');
     },
     
     isPairView: function(d) {
-        return d.hasClass('pairDiv') || d.hasClass('ipairDiv');
+        return d.hasClass('pair') || d.hasClass('ipair');
     },
     
     removeFor: function(d) {
@@ -363,7 +375,7 @@ Terminal.prototype = {
         // for guard
         d.data('detached', true);
 
-        if (d.hasClass('pairDiv') || d.hasClass('ipairDiv')) { // pair
+        if (d.hasClass('pair') || d.hasClass('ipair')) { // pair
             this.removeFor(d);
 
             // propagate deletion to tail
@@ -392,7 +404,7 @@ Terminal.prototype = {
             }
         }
 
-        // also fold children
+        // fold if children
         var children = d.data('children');
         if (children.length) {
             var p = d.position();
@@ -400,7 +412,7 @@ Terminal.prototype = {
             var placeholder = this.putPlaceholder(p.left + d.width() / 2, p.top + d.height(), arrow);
             this.replaceView(d, placeholder);
         } else {
-
+            // remove completly if no child
             var arrow = d.data('arrow');
             if (arrow) {
                 var vs = arrow.get('views');
@@ -417,7 +429,7 @@ Terminal.prototype = {
                 'left': (p.left  + offsetX) + 'px',
                 'top': (p.top + offsetY) +'px'
         });
-        if (d.hasClass('pairDiv') ||d.hasClass('ipairDiv')) {
+        if (d.hasClass('pair') ||d.hasClass('ipair')) {
            if (d.data('head')) {
                this.moveView(d.data('head'), offsetX, offsetY, d);
            }
@@ -511,14 +523,15 @@ Terminal.prototype = {
     },
     
     closePrompt: function(prompt) {
-        this.dismissView(prompt);
+        var self = this;
+        prompt.fadeOut(200, function() { self.dismissView(prompt); });
     },
     
     closePromptIfLoose: function(prompt) {
           if (this.isViewLoose(prompt)) {
             var self = this;
             setTimeout(function() {
-                if (!prompt.children('input,textarea').is(':focus')
+                if (!prompt.find('input,textarea').is(':focus')
                     && self.isViewLoose(prompt) && !prompt.data('arrow'))
                      self.closePrompt(prompt);
             }, 1000);
@@ -601,7 +614,7 @@ Terminal.prototype = {
         this.moveLoadindBarOnView(d);
         var promise = self.entrelacs.isRooted(arrow);
         promise.done(function () {
-            d.find('.hook .rooted input').prop('checked', arrow.isRooted()).prop('disabled', false);
+            d.find('.toolbar .rooted input').prop('checked', arrow.isRooted());
             var knownPartners = arrow.getPartners();
             self.processPartners(d, knownPartners);
             var promise = self.entrelacs.getPartners(arrow);
@@ -614,21 +627,21 @@ Terminal.prototype = {
     
     getArrow: function(d) {
         var arrow = d.data('arrow');
+        d.data('for', []);
         if (arrow) return arrow;
         
         if (this.isAtomView(d)) { // prompt
             var string = d.children('input').val();
-            this.turnPromptIntoAtomView(d);
             arrow = Arrow.atom(string);
+            this.turnPromptIntoAtomView(d, arrow);
         } else {
             var from = this.getArrow(d.data('tail'));
             var to = this.getArrow(d.data('head'));
             arrow = Arrow.pair(from, to);
             d.data('tail').data('children').push(d);
             d.data('head').data('children').push(d);
-
+            this.bindViewToArrow(d, arrow);
         }
-        this.bindViewToArrow(d, arrow);
         return arrow;
     },
     
@@ -636,7 +649,10 @@ Terminal.prototype = {
         var views = arrow.get('views');
         if (views === undefined || !views.length) return null;
         var distance = -1;
+        var nearest = null;
         views.forEach(function(view) {
+            if ($(view).hasClass('placeholder')) return;
+            
             var vp = $(view).position();
             var vd = Math.abs(vp.left - position.left) + Math.abs(vp.top - position.top);
             if (distance == -1 || vd < distance) {
@@ -645,7 +661,9 @@ Terminal.prototype = {
             }
         });
         
-        return (limit !== undefined && distance > limit ? null : $(nearest));
+        return nearest
+            ? (limit !== undefined && distance > limit ? null : $(nearest))
+            : null;
     },
     
     submitPromptTrees: function(tree) {
@@ -657,7 +675,6 @@ Terminal.prototype = {
                 this.submitPromptTrees(toBeRecorded);
             }
         } else { // terminal case: tree to be recorded
-            this.removeFor(tree);
             this.getArrow(tree);
             this.update(tree);
         }
@@ -671,7 +688,7 @@ Terminal.prototype = {
         var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
         var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 6;
         var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
-        var d = $("<div class='" + (x0 < x1 ? "pairDiv" : "ipairDiv") + "'><div class='tailDiv'><div class='tailEnd'></div></div><div class='headDiv'><div class='headEnd'></div></div></div>"); // <div class='close'><a href='#'>&times;</a></div>
+        var d = $("<div class='" + (x0 < x1 ? "pair" : "ipair") + "'><div class='tail'><div class='tailEnd'></div></div><div class='head'><div class='headEnd'></div></div></div>"); // <div class='close'><a href='#'>&times;</a></div>
         this.area.append(d);
         var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
         d.css({
@@ -682,12 +699,12 @@ Terminal.prototype = {
         });
         if (this.animatePlease && !immediate) {
             d.hide();
-            d.children('.tailDiv').animate({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
-            d.children('.headDiv').animate({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
+            d.children('.tail').animate({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
+            d.children('.head').animate({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
             d.fadeIn(500);
         } else {
-            d.children('.tailDiv').css({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
-            d.children('.headDiv').css({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
+            d.children('.tail').css({'height': (marge + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
+            d.children('.head').css({'height': (marge + ((y1 < y0) ? y0 - y1 : 0)) + 'px'});
         }
         
         // set listeners
@@ -734,21 +751,22 @@ Terminal.prototype = {
 
     // find an editable atom into a tree
     findNextInto: function(d) {
-        if (d.hasClass('atomDiv')) { // atom
-            return d.data('for').length ? d /* found */: null;
-        } else { // pair
+        if (d.hasClass('prompt')) { // atom
+            return d;
+        } else if (this.isPairView(d)) { // pair
            // check in tail then in head
-           var n = d.data('tail') ? this.findNextInto(d.data('tail')) : null;
-           if (!n && d.data('head'))
+           var n = this.findNextInto(d.data('tail'));
+           if (!n)
                 n = this.findNextInto(d.data('head'));
            return n;
         }
+        return null;
     },
 
     // search for the next editable atom
     findNext: function(d, from, leftOnly) {
        var f = d.data('for');
-       if ((d.hasClass('pairDiv') || d.hasClass('ipairDiv')) && d.data('head') && d.data('head')[0] !== from[0]) { // search into head
+       if ((d.hasClass('pair') || d.hasClass('ipair')) && d.data('head') && d.data('head')[0] !== from[0]) { // search into head
           var n = this.findNextInto(d.data('head'));
           if (n) return n;
        }
@@ -758,7 +776,7 @@ Terminal.prototype = {
             if (n) return n;
        }
        
-      if (!leftOnly && d.hasClass('pairDiv') && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
+      if (!leftOnly && d.hasClass('pair') && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
           var n = this.findNextInto(d.data('tail'));
           if (n) return n;
        }
@@ -769,22 +787,23 @@ Terminal.prototype = {
     
     // find previous editable atom into a tree
     findPreviousInto: function(d) {
-        if (d.hasClass('atomDiv')) { // atom
-            return d.data('for').length ? d /* found */: null;
-        } else { // pair
+        if (d.hasClass('prompt')) { // atom
+            return d;
+        } else if (this.isPairView(d)) { // pair
            // check in head then in tail
-           var n = d.data('head') ? this.findPreviousInto(d.data('head')) : null;
-           if (!n && d.data('tail'))
+           var n = this.findPreviousInto(d.data('head'));
+           if (!n)
                 n = this.findPreviousInto(d.data('tail'));
            return n;
         }
+        return null;
     },
     
 
     // search for the previous editable atom
     findPrevious: function(d, from, rightOnly) {
        var f = d.data('for');
-       if ((d.hasClass('pairDiv') || d.hasClass('ipairDiv')) && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
+       if ((d.hasClass('pair') || d.hasClass('ipair')) && d.data('tail') && d.data('tail')[0] !== from[0]) { // search into tail
           var n = this.findPreviousInto(d.data('tail'));
           if (n) return n;
        }
@@ -794,7 +813,7 @@ Terminal.prototype = {
             if (n) return n;
        }
        
-      if (!rightOnly && d.hasClass('pairDiv') && d.data('head') && d.data('head')[0] !== from[0]) { // search into tail
+      if (!rightOnly && d.hasClass('pair') && d.data('head') && d.data('head')[0] !== from[0]) { // search into tail
           var n = this.findPreviousInto(d.data('head'));
           if (n) return n;
        }
@@ -817,7 +836,7 @@ Terminal.prototype = {
         } else {
             var r = a.isRooted();
             var views = a.get('views');
-            views && views.forEach(function(view) { $(view).find('.hook .rooted input').prop('checked', r); });
+            views && views.forEach(function(view) { $(view).find('.toolbar .rooted input').prop('checked', r); });
         }
     },
 
@@ -836,7 +855,7 @@ Terminal.prototype = {
         bar: {
             click: function(event) {
                 var button = $(this);
-                if (button.hasClass('hook')) {
+                if (button.hasClass('toolbar')) {
                    event.stopPropagation();
                    return true;
                 }
@@ -873,7 +892,7 @@ Terminal.prototype = {
                 change: function(event) {
                     var d  = $(this).parent().parent().parent();
                     var self = d.parent().data('terminal');
-                    var arrow = d.data('arrow');
+                    var arrow = self.getArrow(d);
                     if (arrow) {
                         if (arrow.isRooted()) {
                             arrow.unroot();
@@ -887,20 +906,39 @@ Terminal.prototype = {
             },
             enter: function(event) {
                 var bar = $(this);
-                bar.children('div').show().animate({'height': bar.height(), opacity: 1}, 50);
+                bar.addClass('hover').children('div').show().css({'height': bar.height()}).animate({opacity: 1}, 50);
             },
             leave: function(event) {
                 var bar = $(this);
-                bar.children('div').animate({'height': '0px', opacity: 0}, 200);
+                bar.removeClass('hover');
+                if (!bar.parent().children('input,textarea').is(':focus'))
+                    bar.children('div').css({'height': bar.height()}).animate({opacity: 0}, 200);
             }
         },
         prompt: {
+            focus: function(event) {
+                var prompt = $(this).parent();
+                var bar = prompt.children('.toolbar');
+                
+                prompt.children('.fileinput-button,.split').animate({'margin-right': '0px', opacity: 1}, 200).fadeIn();
+
+                bar.children('div').show().animate({'height': bar.height(), opacity: 1}, 200);
+
+            },
+            
             blur: function(event) {
                 var prompt = $(this).parent();
+                var bar = prompt.children('.toolbar');
+
                 var area = prompt.parent();
                 var self = area.data('terminal');
                 self.closePromptIfLoose(prompt);
+                var flies = prompt.children('.fileinput-button,.split');
+                flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200);
+                if (!bar.hasClass('hover'))
+                    bar.children('div').animate({'height': '0px', opacity: 0}, 500);
             },
+            
             click: function(e) {
                 var prompt = $(this).parent();
                 var self = prompt.parent().data('terminal');
@@ -1000,8 +1038,6 @@ Terminal.prototype = {
                     $(this).parent().children('input').val('').focus();
                     event.stopPropagation();
                 },
-                change: function(event) {
-                }
             },
         },
         view: {
@@ -1076,7 +1112,21 @@ Terminal.prototype = {
         },
         atom: {
             click: function(event) {
-                return false;
+                event.stopPropagation();
+            },
+            
+            focus: function(event) {
+                var atom = $(this).parent();
+                var bar = atom.children('.toolbar');
+                bar.children('div').show().animate({'height': bar.height(), opacity: 1}, 200);
+
+            },
+            
+            blur: function(event) {
+                var atom = $(this).parent();
+                var bar = atom.children('.toolbar');
+                if (!bar.hasClass('hover'))
+                    bar.children('div').animate({'height': '0px', opacity: 0}, 500);
             },
         },
         unfold: {
