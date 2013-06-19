@@ -12,6 +12,7 @@
 
         <link rel="stylesheet" href="css/normalize.min.css">
         <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="css/terminal.css">
         <link rel="shortcut icon" href="./favicon.ico">
 
         <script src="js/vendor/modernizr-2.6.2.min.js"></script>
@@ -33,16 +34,17 @@
                  <div></div>
                  <div></div>
             </div>
-            <input id='proto_entry' style='visibility: hidden;'><span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span></input>
+          <div class='atomDiv' id='proto_entry' style='visibility: hidden;'><input type='text' /><span class='fileinput-button'><span>...</span><input type='file' name='files[]'> /></span></div>
         </div>
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
         <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
 
         <script src="js/plugins.js"></script>
         <script src="http://cdn.jsdelivr.net/jquery.cookie/1.3.1/jquery.cookie.js"></script>
+        <script src="js/vendor/jquery.ajaxfileupload.js"></script>
         <script src="js/as.js"></script>
         <script src="js/vendor/creole.js"></script>
-        <script src="js/main.js"></script>
+        <script src="js/terminal.js"></script>
         <div id='toaster'>...</div>
         <div id='upload_form_areas' style='display: none'>
             <form id='upload_form' action='http://miellaby.selfip.net:8008/escape?iDepth=0' method=post enctype='multipart/form-data' target='hidden_upload' style='display: none'>

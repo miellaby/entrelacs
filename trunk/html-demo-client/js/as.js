@@ -397,10 +397,11 @@ $.extend(Pair.prototype, Arrow.prototype, {
  * @extends {Arrow}
  * @param {string} url
  */
-function Placeholder(url, hc) {
-    if (hc === undefined) hc = url.hashCode();
+function Placeholder(server, uri, hc) {
+    if (hc === undefined) hc = (server + uri).hashCode();
     Arrow.call(this, undefined, undefined, hc);
-    this.url = url;
+    this.server = server;
+    this.uri = uri;
 }
 
 $.extend(Placeholder.prototype, Arrow.prototype);
@@ -475,21 +476,22 @@ Arrow.pair = function (t, h, test) {
 
 /**
  * Finds or builds an arrow placeholder for some remote URL
- * param {url} url that we haven't yet resolved to a local arrow
+ * param {url} server url / identifier
+ * param {url} uri that we haven't yet resolved to a local arrow
  * @return {Arrow}
  */
-Arrow.placeholder = function (url) {
+Arrow.placeholder = function (server, uri) {
     var placeholder;
-    var hc = String(url).hashCode();
+    var hc = String(server + uri).hashCode();
     var a = hc % Arrow.indexSize;
     var l = Arrow.defIndex[a];
     var i = 0;
 
     if (!l) l = Arrow.defIndex[a] = [];    
-    for (i = 0; i < l.length && (placeholder = l[i]) && !(placeholder.url == url); i++);
+    for (i = 0; i < l.length && (placeholder = l[i]) && !(placeholder.server == server && placeholder.uri == uri); i++);
     if (i < l.length) return placeholder;
 
-    l.push(placeholder = new Placeholder(url, hc));
+    l.push(placeholder = new Placeholder(server, uri, hc));
     return placeholder;
 }
 
@@ -542,7 +544,7 @@ Arrow.decodeURI = function () {
                 string += ch;
                 next();
             }
-            return Arrow.placeholder(baseUrl + string);
+            return Arrow.placeholder(baseUrl, string);
         }
     },
 
@@ -596,6 +598,20 @@ Arrow.decodeURI = function () {
     };
 }();
 
+/**
+ * Get a valid URI from an arrow definition
+ */
+Arrow.serialize = function(arrow) {
+    if (arrow.uri) { // placeholder
+        return arrow.uri;
+    } else if (arrow.isAtomic()) {
+        return encodeURIComponent(arrow.getBody());
+    } else {
+        var tailUrl = Arrow.serialize(arrow.getTail());
+        var headUrl = Arrow.serialize(arrow.getHead());
+        return '/' + tailUrl + '+' + headUrl;
+    }
+}
 
 /**
  * Garbage collector
@@ -738,9 +754,11 @@ $.extend(Entrelacs.prototype, {
         
         if (a.get(this.uriKey)) {
             return $.when(a.get(this.uriKey));
-        }
-
-        if (a.isAtomic()) {
+        } else if (a.uri) { // placeholder
+            self.bindUri(a, a.uri);
+            if (a.server != this.serverUrl) throw "bad url";
+            return $.when(a.uri);
+        } else if (a.isAtomic()) {
             var req = this.serverUrl + '/escape+' +
                 encodeURIComponent(a.getBody()) + '?iDepth=0';
             promise = this.chain = this.chain.pipe(function () {
@@ -774,10 +792,10 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     root: function (a) {
-        var promise = this.getUri(a);
+        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
         var self = this;
         // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
-        var operator = (a.isAtomic() ? "root" : "linkTailWithHead");
+        var operator = (a.isAtomic && a.isAtomic() ? "root" : "linkTailWithHead");
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/' + operator + '/escape+' + uri;
             var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
@@ -791,14 +809,14 @@ $.extend(Entrelacs.prototype, {
 
     /**
      * unroot an arrow
-     * @param {Arrow}
+     * @param {Arrow} or {string}
      * @return {JQuery.Promise}
      */
     unroot: function (a) {
-        var promise = this.getUri(a);
+        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
         var self = this;
         // TODO unlinkify
-        var operator = (a.isAtomic() ? "unroot" : "unlinkTailAndHead");
+        var operator = (a.isAtomic && a.isAtomic() ? "unroot" : "unlinkTailAndHead");
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/' + operator + '/escape+' + uri;
             var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
@@ -812,11 +830,11 @@ $.extend(Entrelacs.prototype, {
 
     /**
      * isRooted
-     * @param {Arrow}
+     * @param {Arrow} or {string}
      * @return {Promise}
      */
     isRooted: function (a) {
-        var promise = this.getUri(a);
+        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
         var self = this;
 
         promise = promise.pipe(function (uri) {
@@ -837,11 +855,11 @@ $.extend(Entrelacs.prototype, {
 
     /**
      * getChildren
-     * @param {Arrow}
+     * @param {Arrow} or {string}
      * @return {JQuery.Promise}
      */
     getChildren: function (a) {
-        var promise = this.getUri(a);
+        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
         var self = this;
         
         promise = promise.pipe(function (uri) {
@@ -862,11 +880,11 @@ $.extend(Entrelacs.prototype, {
 
     /**
      * getPartners
-     * @param {Arrow}
+     * @param {Arrow} or {string}
      * @return {JQuery.Promise}
      */
     getPartners: function (a) {
-        var promise = this.getUri(a);
+        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
         var self = this;
         promise = promise.pipe(function (uri) {
             var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
@@ -889,12 +907,12 @@ $.extend(Entrelacs.prototype, {
     },
 
     /**
-     * invoke an arrow (evaluate)
-     * @param {Arrow}
+     * invoke an arrow (evaluate) by itself or its UID
+     * @param {Arrow} or {string}
      * @return {Promise}
      */
     invoke: function (a) {
-        var promise = this.getUri(a);
+        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
         var self = this;
 
         promise = promise.pipe(function (uri) {
@@ -912,18 +930,26 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     open: function (p, depth) {
+        var uri;
+        if (typeof p == "string")
+            uri = p;
+        else if (p.server != this.serverUrl)
+            throw "bad placeholder";
+        else
+            uri = p.uri;
+
         depth = depth || 10;
         var self = this;
         // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
-        var req = this.serverUrl + '/escape/+' + p.get(this.uriKey) + '?iDepth=' + depth;
+        var req = this.serverUrl + '/escape/+' + uri + '?iDepth=' + depth;
         var promise = this.chain = this.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise = promise.pipe(function (uri) {
             var unfolded = Arrow.decodeURI(uri, self.serverUrl).getHead(); 
-            // rattach the URI to the unfolded arrow as we know it from the placeholder
-            if (p.gc !== undefined) { // Not GC-ed
-                self.bindUri(unfolded, p.get(self.uriKey));
+            // reattach the URI to the unfolded arrow as we know it from the placeholder
+            if (typeof p == "Object" & p.gc !== undefined) { // Not GC-ed
+                self.bindUri(unfolded, p.uri);
             }
             return unfolded;
         });
@@ -938,7 +964,7 @@ $.extend(Entrelacs.prototype, {
     fromURI: function (uri) {
         var a = this.uriMap[uri];
         if (a) return a;
-        a = Arrow.placeholder(this.serverUrl + uri);
+        a = Arrow.placeholder(this.serverUrl, uri);
         a.set(this.uriKey, uri);
         this.uriMap[uri] = a;
         return a;

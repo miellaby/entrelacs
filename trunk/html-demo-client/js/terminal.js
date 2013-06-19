@@ -9,12 +9,18 @@ function Terminal(area, entrelacs, animatePlease) {
     this.toaster.appendTo(area);
     this.toasterHeight = this.toaster.height();
     this.toaster.hide();
-
+    this.loading = $('<div class="loading bar" id="loading"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>');
+    this.loading.appendTo(area);
     this.circleAngle = 0;
     this.uploadCount = 0;
 
     var self = this;
     Arrow.listeners.push(function(a) { self.arrowEvent(a); });
+    $(document).ajaxStart(function(){
+        self.loading.show();
+    }).ajaxStop(function(){
+        if (!self.uploadCount) self.loading.hide();
+    });
 }
 
 Terminal.prototype = {
@@ -43,7 +49,7 @@ Terminal.prototype = {
         var d = $("<div class='atomDiv'><span class='content'></span><div class='close'><a href='#'>&times;</a></div></div>");
         this.area.append(d);
         d.css({ 'left': x + 'px',
-                'top': y + 'px' });
+                'top': (y - d.width()) + 'px' });
         if (this.animatePlease) {
             d.css('opacity', 0.1).animate({ opacity: 1}, 200, 'swing');
         }
@@ -107,8 +113,31 @@ Terminal.prototype = {
         // file uploading
         d.append("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>");
         d.children('.fileinput-button').click(this.on.prompt.fileInputButton.click).change(this.on.prompt.fileInputButton.change);
-        
 
+        // Cross-domain form posts can't be queried back!
+        // So we build up a secret and pair it with our uploaded file, then we get back our secret child!
+        var secret = Math.random().toString().substring(2) + Date.now();
+        
+        // One doesn't wan the blob to be evaluated ; so here is a prog
+        var prog = '/macro/x/arrow//escape+escape/' + secret + '/var+x';
+        var self = this;
+        d.find('input[type="file"]').ajaxfileupload({
+            'action': this.entrelacs.serverUrl + prog,
+            'onStart':  function() {
+                self.uploadCount++;
+                self.moveLoadindBarOnView(d);
+                self.loading.show();
+            },
+            'onComplete': function(response) {
+                self.uploadCount--;
+                // response is not readable
+                // however one can search for the arrow child
+                var query = self.entrelacs.getChildren(secret);
+                query.done(function(response) {
+                    self.turnPromptIntoBlobView(d, response.getTail().getHead() /* head of first outgoing arrow */);
+                });
+            }
+        });
         return d;
     },
     
@@ -126,8 +155,72 @@ Terminal.prototype = {
         prompt.find('.hook .rooted input').prop('disabled', false);
     },
 
+    putBlobView: function(x, y, blob) {
+        var server = this.entrelacs.serverUrl;
+        var uri = Arrow.serialize(blob);
+        var d = $("<div class='blobDiv'></div>");
+        var isContentTyped = (blob.getTail().getTail() === Arrow.atom('Content-Typed'));
+        var type = isContentTyped ? blob.getHead().getTail().getBody() : null;
+        var isImage = isContentTyped && type.search(/^image/) == 0;
+        var isOctetStream = isContentTyped && type == "application/octet";
+        var isCreole = isContentTyped && type == "text/x-creole";
+        var o = (isImage
+            ? $("<img class='content'></img>").attr('src', server + '/escape+' + uri)
+                : (isCreole
+                ? $("<div class='content'></div>")
+                : (isOctetStream
+                    ? $("<a target='_blank'></a>").attr('href', server + '/escape+' + uri).text(uri)
+                    : $("<object class='content'></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
+        if (isCreole) {
+            creole.parse(o[0], blob.getHead().getHead().getBody());
+        } else {
+            o.css('height', 100);
+        }
+        this.area.append(d);
+  
+        if (isCreole) {
+            o.click(this.on.atom.click);
+        } else {
+            o.colorbox({href: this.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
+            var wo = o.width();
+            var ho = o.height();
+            if (wo > ho)
+                o.css({width: '100px', 'max-height': 'auto'});
+            else
+                o.css({height: '100px', 'max-width': 'auto'});
+        }
+
+        var w = d.width();
+        var h = d.height();
+        d.css('left', (x - Math.round(w / 2, 0)) + 'px');
+        d.css('top', (y - h) + 'px');
+        
+        this.addBarTo(d);
+        
+        d.attr('draggable', true);
+        d.on('dragstart', this.on.view.dragstart);
+        d.on('dragend', this.on.view.dragend);
+
+        // data
+        d.data('for', []);
+        d.data('children', []);
+        this.bindViewToArrow(d, blob);
+
+        return d;
+    },
+    
+    turnPromptIntoBlobView: function(prompt, blob) {
+        var w0 = prompt.width();
+        var p = prompt.position();
+        var blobView = this.putBlobView(p.left + w0 / 2, p.top + prompt.height(), blob);
+        this.replaceView(prompt, blobView);
+    },
+    
     splitPrompt: function(prompt) {
-        var v = prompt.children('input,textarea').val();
+        var i = prompt.children('input,textarea');
+        var v = i.val();
+        var textPosition = i[0].selectionStart;
+
         var p = prompt.position();
         var width = prompt.width();
         var height = prompt.height();
@@ -149,12 +242,9 @@ Terminal.prototype = {
         // replace prompt with pair
         this.replaceView(prompt, a);
 
-
-        // detach old prompt
-        prompt.detach();
-
         // focus on tail prompt
-        t.children('input').focus();
+        t.children('input').focus()[0].setSelectionRange(textPosition, textPosition);
+
     },
     
     
@@ -184,39 +274,33 @@ Terminal.prototype = {
         var arrow = placeholder.data('arrow');
         var p = placeholder.position();
          
-        if (arrow.isAtomic() === undefined) { // a placeholder
+        if (arrow.uri !== undefined) { // a placeholder
             var promise = this.entrelacs.open(arrow);
             promise.done(function(unfolded) {
-                var vs = arrow.get('views');
-                vs.splice(vs.indexOf(placeholder[0]), 1);
-
                 var a = self.putArrowView(p.left, p.top, unfolded);
+
                 // rewire children and prompt trees
                 self.replaceView(placeholder, a);
-                placeholder.detach();
 
             });
             return;
         }
         
-        var vs = arrow.get('views');
-        vs.splice(vs.indexOf(placeholder[0]), 1);
         var a = self.putArrowView(p.left, p.top, arrow);
 
         // rewire children and prompt trees
         this.replaceView(placeholder, a);
-        
-        // note: detach element after .data() access
-        placeholder.detach();
     },
     
     putArrowView: function(x, y, arrow) {
         var a = this.findNearestArrowView(arrow, {left: x, top: y}, 1000);
         if (a) return a;
-        if (arrow.isAtomic()) {
-            a = this.putAtomView(x, y, arrow);
-        } else if (arrow.isAtomic() === undefined) { // placeholder
+        if (arrow.uri !== undefined) { // placeholder
             a = this.putPlaceholder(x, y, arrow);
+        } else if (arrow.isAtomic()) {
+            a = this.putAtomView(x, y, arrow);
+        } else if (arrow.getTail() == Arrow.atom('Content-Typed')) {
+            a = this.putBlobView(x, y, arrow);
         } else {
             var t = this.putArrowView(x - 100 - defaultEntryWidth, y - 170, arrow.getTail());
             var h = this.putArrowView(x + 100, y - 130, arrow.getHead());
@@ -315,15 +399,16 @@ Terminal.prototype = {
             var arrow = d.data('arrow');
             var placeholder = this.putPlaceholder(p.left + d.width() / 2, p.top + d.height(), arrow);
             this.replaceView(d, placeholder);
-        }
+        } else {
 
-        var arrow = d.data('arrow');
-        if (arrow) {
-            var vs = arrow.get('views');
-            vs.splice(vs.indexOf(d[0]), 1);
-        }
+            var arrow = d.data('arrow');
+            if (arrow) {
+                var vs = arrow.get('views');
+                vs.splice(vs.indexOf(d[0]), 1);
+            }
 
-        d.detach();
+            d.detach();
+        }
     },
 
     moveView: function(d, offsetX, offsetY, movingChild) {
@@ -385,11 +470,22 @@ Terminal.prototype = {
     },
 
     replaceView: function(a, newA) {
-       // descendants copy
+       // unregister a as an arrow view
+       var arrow = a.data('arrow');
+       if (arrow) {
+            var vs = arrow.get('views');
+            vs.splice(vs.indexOf(a[0]), 1);
+            this.bindViewToArrow(newA, arrow);
+       }
+
+       // descendants rewiring to newA
        var oldData = a.data();
        newA.data('for', newA.data('for').concat(oldData['for']));
        newA.data('children', newA.data('children').concat(oldData['children']));
        this.updateDescendants(a, newA);
+       
+       // detach a
+       a.detach();
     },
 
     rewirePair: function(a, oldOne, newOne) {
@@ -410,15 +506,7 @@ Terminal.prototype = {
           this.updateRefs(newHead, a, newA);
        }
 
-       // descendants copy and update
        this.replaceView(a, newA);
-
-       if (arrow) {
-            var vs = arrow.get('views');
-            vs.splice(vs.indexOf(a[0]), 1);
-            this.bindViewToArrow(newA, arrow);
-       }
-       a.detach();
        return newA;
     },
     
@@ -460,9 +548,6 @@ Terminal.prototype = {
 
     turnPromptIntoExistingView: function(prompt, a) {
         this.replaceView(prompt, a);
-        
-        // detach entry-atom
-        prompt.detach();
     },
 
 
@@ -513,7 +598,7 @@ Terminal.prototype = {
         if (!arrow) arrow = this.getArrow(d);
         var self = this;
         d.css('marginTop','-5px').animate({marginTop: 0});
-        this.moveLoadingOnArrow(d);
+        this.moveLoadindBarOnView(d);
         var promise = self.entrelacs.isRooted(arrow);
         promise.done(function () {
             d.find('.hook .rooted input').prop('checked', arrow.isRooted()).prop('disabled', false);
@@ -719,9 +804,9 @@ Terminal.prototype = {
     },
 
 
-    moveLoadingOnArrow: function(d) {
+    moveLoadindBarOnView: function(d) {
        var p = d.position();
-       $("#loading").css('top', parseInt(p.top + d.height() - defaultEntryHeight / 2) + 'px').css('left', parseInt(p.left + d.width() / 2) + 'px');
+       this.loading.css('top', parseInt(p.top + d.height() - defaultEntryHeight / 2) + 'px').css('left', parseInt(p.left + d.width() / 2) + 'px');
     },
 
     arrowEvent: function(a) {
@@ -819,7 +904,7 @@ Terminal.prototype = {
             click: function(e) {
                 var prompt = $(this).parent();
                 var self = prompt.parent().data('terminal');
-                self.moveLoadingOnArrow(prompt);
+                self.moveLoadindBarOnView(prompt);
                 return false;
             },
             keypress: function(event) {
@@ -827,7 +912,7 @@ Terminal.prototype = {
                     var prompt = $(this).parent();
                     var area = prompt.parent();
                     var self = area.data('terminal');
-                    self.moveLoadingOnArrow(prompt);
+                    self.moveLoadindBarOnView(prompt);
                     event.preventDefault();
                     // record arrows that this prompt belongs too
                     self.submitPromptTrees(prompt);
@@ -843,7 +928,7 @@ Terminal.prototype = {
                     var prompt = $(this).parent();
                     var area = prompt.parent();
                     var self = area.data('terminal');
-                    self.moveLoadingOnArrow(prompt);
+                    self.moveLoadindBarOnView(prompt);
 
                     if ($(this).is('textarea')) {
                         // record the currently edited compound arrow (or at least this text input)
@@ -855,7 +940,7 @@ Terminal.prototype = {
                     }
                     event.preventDefault();
                     return false;
-                } else if (event.ctrlKey && event.keyCode == 191 /* / */) {
+                } else if (event.ctrlKey && (event.keyCode == 191 /* / */ || event.keyCode == 80 /* p */)) {
                     var prompt = $(this).parent();
                     var area = prompt.parent();
                     var self = area.data('terminal');
@@ -964,7 +1049,7 @@ Terminal.prototype = {
                     var d = $(self.dragOver).parent();
                     self.dragOver = null;
 
-                    self.moveLoadingOnArrow(d);
+                    self.moveLoadindBarOnView(d);
 
                     self.turnPromptIntoExistingView(d, $(this));
                     self.submitPromptTrees(d); // TODO Need a confirm button
@@ -1021,11 +1106,7 @@ function init() {
     $('#proto_entry').detach();
     setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
 
-    $(document).ajaxStart(function(){
-        $("#loading").show();
-    }).ajaxStop(function(){
-        if (!terminal.uploadCount) $("#loading").hide();
-    });
+
     
     creole = new Parse.Simple.Creole({forIE: document.all,
                                      interwiki: {
