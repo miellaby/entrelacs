@@ -165,31 +165,40 @@ animation-delay:0.45s;
 
 
 
-.rooted input {
+
+.toolbar {
+    position: absolute;
+    width: 100px;
+    margin-left: -42px;
+    left: 50%;
+    z-index: 15;
+    height: 22px;
+    line-height: 12px;
+    bottom: -19px;
+}
+
+.pair .toolbar, .ipair .toolbar {
+   bottom: -9px;
+}
+
+.toolbar>div {
+    background-color: black;
+    color: white;
+    text-align: center;
+    height: 100%;
+    padding-top: 5px;
+    padding-left: 3px;
+    padding-right: 3px;
+    width: 11px;
+    display: none;
+    float: left;
+}
+
+.rooted>input {
     background-color: white;
 }
 
-.hook {
-   z-index: 15;
-   width: 100px;
-   height: 22px;
-   line-height: 12px;
-}
-
-.hook div {
-      background-color: black;
-      color: white;
-      text-align: center;
-      height: 100%;
-      padding-top: 5px;
-      padding-left: 3px;
-      padding-right: 3px;
-      width: 11px;
-      display: none;
-      float: left;
-}
-
-.pairDiv > .close, .ipairDiv > .close {
+.pair > .close, .ipair > .close {
     z-index: 15;
     position: absolute;
     left: 50%;
@@ -201,7 +210,7 @@ animation-delay:0.45s;
 }
 
 
-.atomDiv  > .close {
+.atom  > .close, .prompt > .close {
     z-index: 25;
     position: absolute;
     right: 7px;
@@ -214,27 +223,19 @@ animation-delay:0.45s;
     opacity: 0.3;
 }
 
-.atomDiv > .outedClose {
-    right: -10px;
-    border-width: 1px;
-    border-radius: 3px;
-    border-style: solid;
-}
-
-
 .close:hover {
     opacity: 1;
 }
 
-.close  a {
-    
+.close a, .close a:visited {
+    text-decoration: none;
 }
 
-.pairDiv .in, .ipairDir .in  {
+.pair .in, .ipair .in  {
    border-top-left-radius: 5px;
 }
 
-.pairDiv .out, .ipairDir .out {
+.pair .out, .ipair .out {
    border-top-right-radius: 5px;
 }
 
@@ -280,73 +281,51 @@ animation-delay:0.45s;
 }
 
 
-.atomDiv, .blobDiv {
+.atom, .blob, .prompt {
    position: absolute;
 }
 
-.atomDiv input , .atomDiv textarea, .blobDiv img{
-   z-index: 20;
-   position: relative;
-   border-style: solid;
-   border-width: 2px;
-   border-color: black;
-   border-radius: 5px;
-}
-.atomDiv input  {
-  padding-left: 4px;
-  padding-right: 22px;
-}
-
-.atomDiv textarea{
-   padding-left: 4px;
-   padding-right: 4px;
-}
-
-
-.atomDiv span.content {
-   z-index: 20;
+.prompt>input, .prompt>textarea, .atom>.content, .blob>.content {
    display: block;
+   z-index: 20;
    position: relative;
+   border: 2px solid #8A8;
+   border-radius: 5px;
    background-color: #DFD;
    cursor: move;
-   border-style: solid;
-   border-width: 1px;
-   border-radius: 2px;
-}
-
-.atomDiv div.content {
-   position: relative;
-   z-index: 20;
-   background-color: #FFF;
-   cursor: move;
-   border-style: solid;
-   border-width: 2px;
-   border-radius: 20px;
-   display: inline-block;
-}
-
-.atomDiv .content {
    min-width: 100px;
    max-width: 500px;
 }
+.prompt>input, .prompt>textarea {
+   border-color: #000;
+   border-radius: 5px;
+   background-color: #FFF;
+   padding-left: 4px;
+}
 
+.prompt>input  {
+  padding-right: 22px;
+}
 
-.pairDiv, .ipairDiv {
+.prompt>textarea{
+   padding-right: 4px;
+}
+
+.pair, .ipair {
    position: absolute;
 }
 
-.known  .tailDiv, .known .headDiv {
+.known  {
    border-style: dashed;
 }
 
-.tailDiv, .headDiv {
+.tail, .head {
    z-index: 0;
-
    position: absolute;
    bottom: 0px;
    border-style: solid;
 }
-.pairDiv .tailDiv, .ipairDiv .headDiv {
+.pair .tail, .ipair .head {
    right: 50%;
    width: 50%;
    border-left-width: 2px;
@@ -356,7 +335,7 @@ animation-delay:0.45s;
    border-bottom-left-radius: 12px;
 }
 
-.pairDiv .headDiv, .ipairDiv .tailDiv {
+.pair .head, .ipair .tail {
    left: 50%;
    width: 50%;
    border-left-width: 0;
@@ -382,57 +361,66 @@ animation-delay:0.45s;
 }
 
 
-.pairDiv .tailEnd, .ipairDiv .headEnd {
+.pair .tailEnd, .ipair .headEnd {
    float: left;
    margin-left: -7px;
 }
 
-.ipairDiv .tailEnd, .pairDiv .headEnd {
+.ipair .tailEnd, .pair .headEnd {
    float: right;
    margin-right: -7px;
 }
 
-.atomDiv .hook, .blobDiv .hook {
+
+.placeholder {
    position: absolute;
-   margin-left: -42px;
-   bottom: -19px;
-   left: 50%;
+   margin-left: -11px;
+   margin-top: -20px;
 }
 
-.pairDiv .hook, .ipairDiv .hook {
+.placeholder .unfold {
    z-index: 15;
    position: absolute;
-   margin-left: -42px;
-   bottom: -9px;
-   left: 50%;
-}
-
-.placeholderDiv {
-   position: absolute;
-}
-
-.placeholderDiv .unfold {
-   z-index: 15;
-   position: absolute;
-   border-style: solid;
-   background-color: black;
    color: white;
-   border-width: 0px;
-   border-style: ridge;
+   background-color: black;
+   border: 0px solid black;
    border-radius: 15px;
-   width: 25px;
-   height: 25px;
-   bottom: 0px;
-   left: -10px;
+   width: 20px;
+   height: 20px;
 }
 
-.fileinput-button {
-  z-index: 30;
-  position: absolute;
-  overflow: hidden;
-  right: 0;
-  margin-right: 4px;
+.fileinput-button, .split {
+    display: none;
+    z-index: 30;
+    position: absolute;
+    overflow: hidden;
+    right: -20px;
+    top: -30px;
+    color: white;
+    background-color: black;
+    border: 0px solid black;
+    padding: 0 2px;
+    border-radius: 17px;
 }
+
+.split {
+    right: -38px;
+    top: 0px;
+    padding: 0 3px;
+}
+
+.fileinput-button:hover {
+    right: -24px;
+    top: -34px;
+    border-width: 4px;
+}
+
+.split:hover {
+    right: -42px;
+    top: -4px;
+    border-width: 4px;
+}
+
 .fileinput-button input {
   position: absolute;
   top: 0;
@@ -447,6 +435,3 @@ animation-delay:0.45s;
   width: 100%;
 }
 
-.close a, .close a:visited {
-        text-decoration: none;
-}
