@@ -26,7 +26,7 @@ Additional configuration:
 ________________________
 - See options in servers.c
 
-Remarquable files :
+Notable files :
 ________________
 libentrelacs.a ; # static library for the entrelacs "core"
 libentrelacs.so ; # dynamic library
