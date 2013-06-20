@@ -433,11 +433,9 @@ Terminal.prototype = {
                 'left': (p.left  + offsetX) + 'px',
                 'top': (p.top + offsetY) +'px'
         });
-        if (d.hasClass('pair') ||d.hasClass('ipair')) {
-           if (d.data('head')) {
-               this.moveView(d.data('head'), offsetX, offsetY, d);
-           }
-           if (d.data('tail') && !(d.data('head') && d.data('tail')[0] === d.data('head')[0])) {
+        if (d.data('head')) {
+           this.moveView(d.data('head'), offsetX, offsetY, d);
+           if (d.data('tail')[0] !== d.data('head')[0]) {
                this.moveView(d.data('tail'), offsetX, offsetY, d);
            }
         }
@@ -485,6 +483,24 @@ Terminal.prototype = {
         this.updateChild(d, oldOne, newOne);
     },
 
+    dedupViewsInArray: function(arr) {
+        var dedup = [];
+        var l = arr.length;
+        var marker = {};
+        for (var i = 0; i < l; i++) {
+            var o = arr[i];
+            if (o[0].dOIAMark !== marker) {
+                dedup.push(arr[i]);
+                o[0].dOIAMark = marker;
+            }
+        }
+        l = dedup.length;
+        for (var i = 0; i < l; i++) {
+            delete dedup[i][0].dOIAMark;
+        }
+        return dedup;
+    },
+
     replaceView: function(a, newA) {
        // unregister a as an arrow view
        var arrow = a.data('arrow');
@@ -496,7 +512,7 @@ Terminal.prototype = {
 
        // descendants rewiring to newA
        var oldData = a.data();
-       newA.data('for', newA.data('for').concat(oldData['for']));
+       newA.data('for', this.dedupViewsInArray(newA.data('for').concat(oldData['for'])));
        newA.data('children', newA.data('children').concat(oldData['children']));
        this.updateDescendants(a, newA);
        
@@ -1088,7 +1104,7 @@ Terminal.prototype = {
 
                 self.dragStartX = event.originalEvent.screenX;
                 self.dragStartY = event.originalEvent.screenY;
-                event.originalEvent.dataTransfer.setData('text/plain', "arrow");
+                event.originalEvent.dataTransfer.setData('text/plain', prompt.val());
                 event.originalEvent.dataTransfer.effectAllowed = "move";
                 event.originalEvent.dataTransfer.dropEffect = "move";
                 event.stopPropagation();
@@ -1098,13 +1114,12 @@ Terminal.prototype = {
                 var area = arrow.parent();
                 var self = area.data('terminal');
                 if (event.originalEvent.dropEffect == "none") return false;    
-                if (self.dragOver && arrow.data('arrow')) {
+                if (self.dragOver) {
                     var d = $(self.dragOver).parent();
+                    if (d[0] != this) {
+                        self.turnPromptIntoExistingView(d, arrow);
+                    }
                     self.dragOver = null;
-
-                    self.moveLoadindBarOnView(d);
-
-                    self.turnPromptIntoExistingView(d, arrow);
                 } else {
                     // dragEndX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX) - dragStartX
                     // dragEndY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY) - dragStartY
