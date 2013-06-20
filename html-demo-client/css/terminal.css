@@ -172,8 +172,8 @@ animation-delay:0.45s;
     margin-left: -42px;
     left: 50%;
     z-index: 15;
-    height: 22px;
-    line-height: 12px;
+    height: 17px;
+    line-height: 16px;
     bottom: -19px;
 }
 
@@ -184,12 +184,8 @@ animation-delay:0.45s;
 .toolbar>div {
     background-color: black;
     color: white;
-    text-align: center;
-    height: 100%;
-    padding-top: 5px;
     padding-left: 3px;
     padding-right: 3px;
-    width: 11px;
     display: none;
     float: left;
 }
