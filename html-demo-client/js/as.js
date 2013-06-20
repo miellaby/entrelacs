@@ -548,7 +548,7 @@ Arrow.decodeURI = function () {
         }
     },
 
-  utf8_decode : function (utftext) {
+    utf8_decode = function (utftext) {
         var string = "";
         var i = 0;
         var c = c1 = c2 = 0;
