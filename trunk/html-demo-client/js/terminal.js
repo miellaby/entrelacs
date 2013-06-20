@@ -1046,21 +1046,35 @@ Terminal.prototype = {
         },
         view: {
             dragenter: function(event) {
-                var prompt = $(this).parent();
-                var area = prompt.parent();
-                var self = area.data('terminal');
-                self.dragOver = this;
-                $(this).animate({'border-width': 6, left: "-=3px"}, 100);
+                if ($(this).is("input,textarea")) {
+                    var elt = this;
+                    var prompt = $(elt).parent();
+                    var area = prompt.parent();
+                    var self = area.data('terminal');
+                    self.dragOver = elt;
+                    $(elt).stop(true, true).animate({'border-bottom-width': '3px'}, 100);
+                }
                 event.preventDefault();
                 event.stopPropagation();
                 return false;
             },
             dragleave: function(event) {
-                var prompt = $(this).parent();
-                var area = prompt.parent();
-                var self = area.data('terminal');
-                $(this).animate({'border-width': 2, left: "+=3px"}, 100);
-                setTimeout(function() { self.dragOver = null; }, 0); // my gosh
+                if ($(this).is("input,textarea")) {
+                    var elt = this;
+                    // Check the mouseEvent coordinates are outside of the element rectangle
+                    var rect = this.getBoundingClientRect();
+                    event.clientX = event.originalEvent.clientX;
+                    event.clientY = event.originalEvent.clientY ;
+                    // console.log('' + rect.width + 'x' + rect.height + '@' + rect.left + ',' + rect.top + ' ' + event.pageX +  ' ' + event.pageY);
+                    if (event.clientX >= rect.left + rect.width  || event.clientX <= rect.left
+                        || event.clientY >= rect.top + rect.height || event.clientY <= rect.top) {
+                        var prompt = $(this).parent();
+                        var area = prompt.parent();
+                        var self = area.data('terminal');
+                        $(elt).stop(true, true).animate({'border-bottom-width': '1px'}, 100);
+                        self.dragOver = null;
+                    }
+                }
                 event.preventDefault();
                 event.stopPropagation();
                 return false;
@@ -1083,16 +1097,14 @@ Terminal.prototype = {
                 var arrow = $(this);
                 var area = arrow.parent();
                 var self = area.data('terminal');
-                if (event.originalEvent.dropEffect == "none") return false;
-    
+                if (event.originalEvent.dropEffect == "none") return false;    
                 if (self.dragOver && arrow.data('arrow')) {
                     var d = $(self.dragOver).parent();
                     self.dragOver = null;
 
                     self.moveLoadindBarOnView(d);
 
-                    self.turnPromptIntoExistingView(d, $(this));
-                    self.submitPromptTrees(d); // TODO Need a confirm button
+                    self.turnPromptIntoExistingView(d, arrow);
                 } else {
                     // dragEndX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX) - dragStartX
                     // dragEndY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY) - dragStartY
