@@ -5,22 +5,26 @@ function Terminal(area, entrelacs, animatePlease) {
     this.area.data('terminal', this);
     area.click(this.on.area.click);
     
-    this.toaster = $("<div id='toaster'>...</div>");
-    this.toaster.appendTo(area);
-    this.toasterHeight = this.toaster.height();
-    this.toaster.hide();
     this.loading = $('<div class="loading bar" id="loading"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>');
     this.loading.appendTo(area);
     this.circleAngle = 0;
     this.uploadCount = 0;
 
-    var self = this;
+    this.creole = new Parse.Simple.Creole({forIE: document.all,
+                                     interwiki: {
+                WikiCreole: 'http://www.wikicreole.org/wiki/',
+                Wikipedia: 'http://en.wikipedia.org/wiki/'},
+                                     linkFormat: '' });
+
+                                     var self = this;
     Arrow.listeners.push(function(a) { self.arrowEvent(a); });
     $(document).ajaxStart(function(){
         self.loading.show();
     }).ajaxStop(function(){
         if (!self.uploadCount) self.loading.hide();
     });
+    
+
 }
 
 Terminal.prototype = {
@@ -184,7 +188,7 @@ Terminal.prototype = {
                     ? $("<a class='content' target='_blank' tabIndex=1></a>").attr('href', server + '/escape+' + uri).text(uri)
                     : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
         if (isCreole) {
-            creole.parse(o[0], blob.getHead().getHead().getBody());
+            this.creole.parse(o[0], blob.getHead().getHead().getBody());
         } else {
             o.css('height', 100);
         }
@@ -1144,28 +1148,3 @@ Terminal.prototype = {
     
     
 };
-
-function init() {
-    var area = $('#area');
-    var entrelacs = new Entrelacs();
-    var terminal = new Terminal(area, entrelacs, true);
-    $(document).scrollTop(area.height() / 2 - $(window).height() / 2);
-    $(document).scrollLeft(area.width() / 2 - $(window).width() / 2);
-    defaultEntryWidth = $('#proto_entry').width();
-    defaultEntryHeight = $('#proto_entry').height();
-    $('#proto_entry').detach();
-    setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
-
-
-    
-    creole = new Parse.Simple.Creole({forIE: document.all,
-                                     interwiki: {
-                WikiCreole: 'http://www.wikicreole.org/wiki/',
-                Wikipedia: 'http://en.wikipedia.org/wiki/'},
-                                     linkFormat: '' });
-                                     
-    //findFeaturedArrows();
-}
-
-
-$(document).ready(init);

@@ -258,25 +258,6 @@ animation-delay:0.45s;
     height: 10000px;
 }
 
-#toaster {
-    position: absolute;
-    background-color: #A66;
-    color: white;
-    opacity: 0.25;
-    border: 0;
-    border-radius: 5px;
-}
-
-.ghost {
-    position: absolute;
-    background-color: #6A6;
-    color: white;
-    opacity: 1;
-    border: 0;
-    border-radius: 5px;
-}
-
-
 .atom, .blob, .prompt {
    position: absolute;
 }
@@ -288,6 +269,8 @@ animation-delay:0.45s;
    border: 1px solid #898;
    border-radius: 5px;
    background: -webkit-radial-gradient(top, #eee, #dde);
+   background: -moz-radial-gradient(top, #eee, #dde);
+   background: radial-gradient(top, #eee, #dde);
    cursor: move;
    min-width: 100px;
    max-width: 500px;
