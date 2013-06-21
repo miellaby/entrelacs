@@ -61,6 +61,47 @@ textarea {
    Author's custom styles
    ========================================================================== */
 
+   
+.wizard_box {
+    position: relative;
+    background: #88b7d5;
+    border: 24px solid #c2e1f5;
+    border-radius: 20px;
+    padding: 10px;
+    font: 26px/1.286 "Lucida Grande","Lucida Sans Unicode","DejaVu Sans",Lucida,Arial,Helvetica,sans-serif;
+    color: #245;
+}
+.wizard_box >.close {
+    float: right;
+}
+
+
+.wizard_box:after, .wizard_box:before {
+    top: 100%;
+    border: solid transparent;
+    content: " ";
+    height: 0; width: 0;
+    position: absolute;
+    pointer-events: none;
+}
+
+.wizard_box:after {
+    border-color: rgba(136, 183, 213, 0);
+    border-top-color: #88b7d5;
+    border-width: 20px;
+    left: 50%;
+    margin-left: -20px;
+}
+
+.wizard_box:before {
+    border-color: rgba(194, 225, 245, 0);
+    border-top-color: #c2e1f5;
+    border-width: 64px;
+    left: 50%;
+    margin-left: -64px;
+}
+
+   
 /* ==========================================================================
    Helper classes
    ========================================================================== */
