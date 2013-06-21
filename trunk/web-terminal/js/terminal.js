@@ -4,6 +4,12 @@ function Terminal(area, entrelacs, animatePlease) {
     this.entrelacs = entrelacs;
     this.area.data('terminal', this);
     area.click(this.on.area.click);
+
+    protoEntry = $("<div class='prompt'><input type='text' /><span class='fileinput-button'><span>...</span><input type='file' name='files[]'> /></span></div>");
+    protoEntry.appendTo(area);
+    this.defaultEntryWidth = protoEntry.width();
+    this.defaultEntryHeight = protoEntry.height();
+    protoEntry.detach();
     
     this.loading = $('<div class="loading bar" id="loading"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>');
     this.loading.appendTo(area);
@@ -88,7 +94,7 @@ Terminal.prototype = {
         d.css({ 'left': x + 'px',
                 'top': y + 'px' });
         if (this.animatePlease && initialValue === undefined) {
-            d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(defaultEntryWidth / 2) + "px", width: defaultEntryWidth}, 200, 'swing', function() { d.css('width', 'auto');});
+            d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(this.defaultEntryWidth / 2) + "px", width: this.defaultEntryWidth}, 200, 'swing', function() { d.css('width', 'auto');});
         }
         
         var i = d.children('input');
@@ -318,7 +324,7 @@ Terminal.prototype = {
         } else if (arrow.getTail() == Arrow.atom('Content-Typed')) {
             a = this.putBlobView(x, y, arrow);
         } else {
-            var t = this.putArrowView(x - 100 - defaultEntryWidth, y - 170, arrow.getTail());
+            var t = this.putArrowView(x - 100 - this.defaultEntryWidth, y - 170, arrow.getTail());
             var h = this.putArrowView(x + 100, y - 130, arrow.getHead());
             a = this.pairTogether(t, h);
             t.data('children').push(a);
@@ -596,7 +602,7 @@ Terminal.prototype = {
             if (!a) {
                 var c = this.getPointOnCircle(50);
                 a = this.putArrowView(
-                        p.left + (outgoing ? d.width() + 100 + c.x : -100 - defaultEntryWidth - c.x),
+                        p.left + (outgoing ? d.width() + 100 + c.x : -100 - this.defaultEntryWidth - c.x),
                         p.top + d.height() / 2 + c.y,
                         partner);
             }
@@ -702,12 +708,12 @@ Terminal.prototype = {
 
     pairTogether: function(tail, head, immediate) {
         // TODO fix default position if head or tail not set
-        var p0 = tail ? tail.position() : head.position();
-        var p1 = head ? head.position() : tail.position();
-        var x0 = p0.left + (tail ? tail.width() : defaultEntryWidth) / 2 + 6;
-        var y0 = p0.top + (tail ? tail.height() : defaultEntryHeight);
-        var x1 = p1.left + (head ? head.width() : defaultEntryWidth) / 2 - 6;
-        var y1 = p1.top + (head ? head.height() : defaultEntryHeight);
+        var p0 = tail.position();
+        var p1 = head.position();
+        var x0 = p0.left + tail.width() / 2 + 6;
+        var y0 = p0.top + tail.height();
+        var x1 = p1.left + head.width() / 2 - 6;
+        var y1 = p1.top + head.height();
         var d = $("<div class='" + (x0 < x1 ? "pair" : "ipair") + "'><div class='tail'><div class='tailEnd'></div></div><div class='head'><div class='headEnd'></div></div></div>"); // <div class='close'><a href='#'>&times;</a></div>
         this.area.append(d);
         var marge = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
@@ -757,7 +763,7 @@ Terminal.prototype = {
            var c = this.getPointOnCircle(100);
            var n, a;
            if (incoming) {
-              n = this.putPrompt(p.left - defaultEntryWidth - 100 - c.x, p.top + d.height() / 2 - c.y);
+              n = this.putPrompt(p.left - this.defaultEntryWidth - 100 - c.x, p.top + d.height() / 2 - c.y);
               a = this.pairTogether(n, d);
            } else {
               n = this.putPrompt(p.left + d.width() + 100 + c.x, p.top + d.height() / 2 + c.y);
@@ -845,7 +851,7 @@ Terminal.prototype = {
 
     moveLoadindBarOnView: function(d) {
        var p = d.position();
-       this.loading.css('top', parseInt(p.top + d.height() - defaultEntryHeight / 2) + 'px').css('left', parseInt(p.left + d.width() / 2) + 'px');
+       this.loading.css('top', parseInt(p.top + d.height() - this.defaultEntryHeight / 2) + 'px').css('left', parseInt(p.left + d.width() / 2) + 'px');
     },
 
     arrowEvent: function(a) {
