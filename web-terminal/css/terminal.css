@@ -181,13 +181,15 @@ animation-delay:0.45s;
    bottom: -9px;
 }
 
-.toolbar>div {
+.toolbar>a, .toolbar>div  {
+    display:block;
     background-color: black;
     color: white;
     padding-left: 3px;
     padding-right: 3px;
     display: none;
     float: left;
+    cursor: pointer;
 }
 
 .rooted>input {

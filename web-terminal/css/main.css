@@ -69,10 +69,25 @@ textarea {
     border-radius: 20px;
     padding: 10px;
     font: 26px/1.286 "Lucida Grande","Lucida Sans Unicode","DejaVu Sans",Lucida,Arial,Helvetica,sans-serif;
-    color: #245;
+    color: #c2e1f5;
+    text-align: center;
 }
 .wizard_box >.close {
+    height:0;
+    width:0;
+    padding: -10px -10px;
     float: right;
+    border: 20px solid #c2e1f5;
+    border-radius: 20px;
+    margin-left: 20px;
+}
+
+.wizard_box  .close>a {
+    display: block;
+    margin: -19px -12px;
+    color: #88b7d5;
+    font-weight:900;
+    cursor: pointer;
 }
 
 
