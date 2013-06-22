@@ -36,10 +36,10 @@ function Terminal(area, entrelacs, animatePlease) {
 Terminal.prototype = {
 
     addBarTo: function(d) {
-        var h = $("<div class='toolbar'><div class='in'>&uarr;</div> <div class='rooted'><input type='checkbox'></div> <div class='poke'>?</div> <div class='close'>&times;</div> <div class='out'>&darr;</div></div>");
+        var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>?</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
-        h.children('div').click(this.on.bar.click);
+        h.children('a').click(this.on.bar.click);
         h.find('.rooted input').change(this.on.bar.rooted.change);
         h.click(this.on.bar.click);
     },
@@ -932,13 +932,13 @@ Terminal.prototype = {
             },
             enter: function(event) {
                 var bar = $(this);
-                bar.addClass('hover').children('div').show().css({'height': bar.height()}).animate({opacity: 1}, 50);
+                bar.addClass('hover').children('div,a').show().css({'height': bar.height()}).animate({opacity: 1}, 50);
             },
             leave: function(event) {
                 var bar = $(this);
                 bar.removeClass('hover');
                 if (!bar.parent().children('input,textarea').is(':focus'))
-                    bar.children('div').css({'height': bar.height()}).animate({opacity: 0}, 200);
+                    bar.children('div,a').css({'height': bar.height()}).animate({opacity: 0}, 200);
             }
         },
         prompt: {
@@ -948,7 +948,7 @@ Terminal.prototype = {
                 
                 prompt.children('.fileinput-button,.split').animate({'margin-right': '0px', opacity: 1}, 200).fadeIn();
 
-                bar.children('div').show().animate({'height': bar.height(), opacity: 1}, 200);
+                bar.children('div,a').show().animate({'height': bar.height(), opacity: 1}, 200);
 
             },
             
@@ -962,7 +962,7 @@ Terminal.prototype = {
                 var flies = prompt.children('.fileinput-button,.split');
                 flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200);
                 if (!bar.hasClass('hover'))
-                    bar.children('div').animate({'height': '0px', opacity: 0}, 500);
+                    bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
             },
             
             click: function(e) {
@@ -1155,7 +1155,7 @@ Terminal.prototype = {
             focus: function(event) {
                 var atom = $(this).parent();
                 var bar = atom.children('.toolbar');
-                bar.children('div').show().animate({'height': bar.height(), opacity: 1}, 200);
+                bar.children('div,a').show().animate({'height': bar.height(), opacity: 1}, 200);
 
             },
             
@@ -1163,7 +1163,7 @@ Terminal.prototype = {
                 var atom = $(this).parent();
                 var bar = atom.children('.toolbar');
                 if (!bar.hasClass('hover'))
-                    bar.children('div').animate({'height': '0px', opacity: 0}, 500);
+                    bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
             },
         },
         unfold: {
