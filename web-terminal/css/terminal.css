@@ -354,9 +354,14 @@ animation-delay:0.45s;
 
 
 .placeholder {
+   width: 20px;
+   height: 20px;
    position: absolute;
-   margin-left: -11px;
-   margin-top: -20px;
+   margin-left: 0px;
+   margin-top: -4px;
+   padding: 1px;
+   border: 1px solid black;
+   border-radius: 15px;
 }
 
 .placeholder .unfold {

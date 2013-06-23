@@ -20,7 +20,6 @@ function init() {
     
     var center = function(elt) {
            var p = elt.position();
-            console.log(p);
            var x = p.left + elt.width() / 2 - ($(window).width() / 2);
            var y = p.top + elt.height() / 2 - ($(window).height() / 2) - $('.wizard_box').height() * 0.9;
            $('html, body').animate({scrollLeft: x, scrollTop: y}, 1000);

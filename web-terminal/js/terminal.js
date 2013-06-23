@@ -279,7 +279,7 @@ Terminal.prototype = {
                top: y - 12 + 'px'});
                
         // set listeners
-        d.attr('draggable', true);
+        d.children('button').attr('draggable', true)
         d.on('dragstart', this.on.view.dragstart);
         d.on('dragend', this.on.view.dragend);
         d.find('.close a').click(this.on.view.close.click);
@@ -406,14 +406,6 @@ Terminal.prototype = {
 
         }
 
-        // propagate to loose "prompt trees"
-        if (!direction) { //  when going "down"
-            var f = d.data('for'); 
-            while (f.length) {
-                this.dismissView(f[0]);
-            }
-        }
-
         // fold if children
         var children = d.data('children');
         if (children.length) {
@@ -422,6 +414,14 @@ Terminal.prototype = {
             var placeholder = this.putPlaceholder(p.left + d.width() / 2, p.top + d.height(), arrow);
             this.replaceView(d, placeholder);
         } else {
+            // propagate to loose "prompt trees"
+            if (!direction) { //  when going "down"
+                var f = d.data('for'); 
+                while (f.length) {
+                    this.dismissView(f[0]);
+                }
+            }
+
             // remove completly if no child
             var arrow = d.data('arrow');
             if (arrow) {
@@ -445,18 +445,19 @@ Terminal.prototype = {
                this.moveView(d.data('tail'), offsetX, offsetY, d);
            }
         }
-        if (!movingChild)
-            this.updateDescendants(d, d);
+        this.updateDescendants(d, d, movingChild);
     },
 
-    updateDescendants: function(a, newA) {
+    updateDescendants: function(a, newA, except) {
         var f = a.data('for');
         for (var i = 0; i < f.length; i++) { // search into loose children
-            this.rewirePair(f[i], a, newA);
+            if (!except || except[0] != f[i][0])
+                this.rewirePair(f[i], a, newA);
         }
         var children = a.data('children');
         for (var i = 0; i < children.length; i++) {
-            this.rewirePair(children[i], a, newA);
+            if (!except || except[0] != children[i][0])
+                this.rewirePair(children[i], a, newA);
         }
     },
 
