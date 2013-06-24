@@ -275,7 +275,7 @@ Terminal.prototype = {
     putPlaceholder: function(x, y, arrow) {
         var d = $("<div class='placeholder'><button class='unfold'>+</button></div>");
         this.area.append(d);
-        d.css({left: x - 12 + 'px',
+        d.css({left: x - 13 + 'px',
                top: y - 12 + 'px'});
                
         // set listeners
