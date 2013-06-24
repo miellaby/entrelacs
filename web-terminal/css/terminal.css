@@ -354,14 +354,14 @@ animation-delay:0.45s;
 
 
 .placeholder {
-   width: 20px;
+   width: 26px;
    height: 20px;
    position: absolute;
    margin-left: 0px;
    margin-top: -4px;
    padding: 1px;
    border: 1px solid black;
-   border-radius: 15px;
+   border-radius: 5px;
 }
 
 .placeholder .unfold {
@@ -370,8 +370,8 @@ animation-delay:0.45s;
    color: white;
    background-color: black;
    border: 0px solid black;
-   border-radius: 15px;
-   width: 20px;
+   border-radius: 5px;
+   width: 26px;
    height: 20px;
 }
 
