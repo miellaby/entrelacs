@@ -97,7 +97,7 @@ Terminal.prototype = {
             d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(this.defaultEntryWidth / 2) + "px", width: this.defaultEntryWidth}, 200, 'swing', function() { d.css('width', 'auto');});
         }
         
-        var i = d.children('input,textarea');
+        var i = d.children('input');
         if (initialValue) i.val(initialValue);
 
         // set listeners
@@ -658,7 +658,7 @@ Terminal.prototype = {
         if (arrow) return arrow;
         
         if (this.isAtomView(d)) { // prompt
-            var string = d.children('input').val();
+            var string = d.children('input,textarea').val();
             arrow = Arrow.atom(string);
             this.turnPromptIntoAtomView(d, arrow);
         } else {
