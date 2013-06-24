@@ -97,7 +97,7 @@ Terminal.prototype = {
             d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(this.defaultEntryWidth / 2) + "px", width: this.defaultEntryWidth}, 200, 'swing', function() { d.css('width', 'auto');});
         }
         
-        var i = d.children('input');
+        var i = d.children('input,textarea');
         if (initialValue) i.val(initialValue);
 
         // set listeners
