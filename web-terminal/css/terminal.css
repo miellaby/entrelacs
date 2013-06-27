@@ -268,7 +268,6 @@ animation-delay:0.45s;
    display: block;
    z-index: 20;
    position: relative;
-   border: 1px solid #898;
    border-radius: 5px;
    background: -webkit-radial-gradient(top, #eee, #dde);
    background: -moz-radial-gradient(top, #eee, #dde);
@@ -278,7 +277,7 @@ animation-delay:0.45s;
    max-width: 500px;
 }
 .prompt>input, .prompt>textarea {
-   border-color: #000;
+   border: 1px solid #000;
    border-radius: 5px;
    background: #FFF;
    padding-left: 4px;
