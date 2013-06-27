@@ -394,13 +394,13 @@ animation-delay:0.45s;
 .fileinput-button:hover {
     right: -24px;
     top: -34px;
-    padding: 4 6px;
+    padding: 4px 6px;
 }
 
 .split:hover {
     right: -42px;
     top: -4px;
-    padding: 4 7px;
+    padding: 4px 7px;
 }
 
 .fileinput-button input {
