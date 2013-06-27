@@ -183,8 +183,7 @@ animation-delay:0.45s;
 
 .toolbar>a, .toolbar>div  {
     display:block;
-    background-color: black;
-    color: white;
+    background-color: white;
     padding-left: 3px;
     padding-right: 3px;
     display: none;
@@ -268,7 +267,8 @@ animation-delay:0.45s;
    display: block;
    z-index: 20;
    position: relative;
-   border-radius: 5px;
+   border: 1px solid #eee;
+   border-radius: 10px;
    background: -webkit-radial-gradient(top, #eee, #dde);
    background: -moz-radial-gradient(top, #eee, #dde);
    background: radial-gradient(top, #eee, #dde);
@@ -277,8 +277,6 @@ animation-delay:0.45s;
    max-width: 500px;
 }
 .prompt>input, .prompt>textarea {
-   border: 1px solid #000;
-   border-radius: 5px;
    background: #FFF;
    padding-left: 4px;
 }
@@ -379,17 +377,16 @@ animation-delay:0.45s;
     z-index: 30;
     position: absolute;
     overflow: hidden;
-    right: -20px;
-    top: -30px;
-    color: white;
-    background-color: black;
-    border: 0px solid black;
+    right: -21px;
+    top: -31px;
+    background-color: white;
+    border: 1px solid #eee;
     padding: 0 2px;
     border-radius: 17px;
 }
 
 .split {
-    right: -38px;
+    right: -39px;
     top: 0px;
     padding: 0 3px;
 }
@@ -397,13 +394,13 @@ animation-delay:0.45s;
 .fileinput-button:hover {
     right: -24px;
     top: -34px;
-    border-width: 4px;
+    padding: 4 6px;
 }
 
 .split:hover {
     right: -42px;
     top: -4px;
-    border-width: 4px;
+    padding: 4 7px;
 }
 
 .fileinput-button input {
