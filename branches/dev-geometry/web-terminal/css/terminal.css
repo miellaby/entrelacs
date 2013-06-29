@@ -1,0 +1,419 @@
+/* ==========================================================================
+   Terminal styles
+   ========================================================================== */
+.loading{ /* Loading css bar */
+     display: none;
+     width: 120px;
+     height: 15px;
+     margin: -40px -50px;
+     position: absolute;
+}
+.loading.bar div{
+    position:absolute;
+    top:0;
+    background-color:#000000;
+    width:5px;
+    height:5px;
+    opacity:0.05;
+    -webkit-animation: fadeit 1.1s linear infinite;
+    -moz-animation: fadeit 1.1s linear infinite;
+    animation: fadeit 1.1s linear infinite;
+}
+
+.loading.bar div:nth-child(1){
+left:0;
+animation-delay:0.2s;
+-webkit-animation-delay:0.2s;
+
+}
+
+.loading.bar div:nth-child(2){
+left:15px;
+animation-delay:0.25s;
+-webkit-animation-delay:0.25s;
+}
+
+.loading.bar div:nth-child(3){
+left:30px;
+animation-delay:0.3s;
+-webkit-animation-delay:0.3s;
+}
+
+.loading.bar div:nth-child(4){
+left:45px;
+animation-delay:0.35s;
+-webkit-animation-delay:0.35s;
+}
+
+.loading.bar div:nth-child(5){
+left:60px;
+animation-delay:0.4s;
+-webkit-animation-delay:0.4s;
+}
+
+.loading.bar div:nth-child(6){
+left:75px;
+animation-delay:0.45s;
+-webkit-animation-delay:0.45s;
+}
+
+@-webkit-keyframes fadeit{
+     0%{ opacity:1; }
+     100%{ opacity:0; }
+}
+@-moz-keyframes fadeit{
+     0%{ opacity:1; }
+     100%{ opacity:0; }
+}
+@keyframes fadeit{
+     0%{ opacity:1; }
+     100%{opacity:0; }
+}
+
+
+/*
+ *     ColorBox Core Style:
+ *         The following CSS is consistent between example themes and should not be altered.
+ *         */
+#colorbox, #cboxOverlay, #cboxWrapper{position:absolute; top:0; left:0; z-index:9999; overflow:hidden;}
+#cboxOverlay{position:fixed; width:100%; height:100%;}
+#cboxMiddleLeft, #cboxBottomLeft{clear:left;}
+#cboxContent{position:relative;}
+#cboxLoadedContent{overflow:auto;}
+#cboxTitle{margin:0;}
+#cboxLoadingOverlay, #cboxLoadingGraphic{position:absolute; top:0; left:0; width:100%; height:100%;}
+#cboxPrevious, #cboxNext, #cboxClose, #cboxSlideshow{cursor:pointer;}
+.cboxPhoto{float:left; margin:auto; border:0; display:block; max-width:none;}
+.cboxIframe{width:100%; height:100%; display:block; border:0;}
+#colorbox, #cboxContent, #cboxLoadedContent{box-sizing:content-box; -moz-box-sizing:content-box; -webkit-box-sizing:content-box;}
+
+/* 
+ *     User Style:
+ *
+ */
+#cboxOverlay{background-color: #555;}
+#colorbox{}
+#cboxTopLeft{width:21px; height:21px; background-color: #000;}
+#cboxTopRight{width:21px; height:21px; background-color:#000;}
+#cboxBottomLeft{width:21px; height:21px; background-color:#000;}
+#cboxBottomRight{width:21px; height:21px; background-color:#000;}
+#cboxMiddleLeft{width:21px; background-color:#000;}
+#cboxMiddleRight{width:21px; background-color:#000;}
+#cboxTopCenter{height:21px; background:#000;}
+#cboxBottomCenter{height:21px; background:#000;}
+#cboxContent{background:#fff; overflow:hidden;}
+.cboxIframe{background:#fff;}
+#cboxError{padding:50px; border:1px solid #ccc;}
+#cboxLoadedContent{margin-bottom:28px;}
+#cboxTitle{position:absolute; bottom:4px; left:0; text-align:center; width:100%; color:#949494;}
+#cboxCurrent{position:absolute; bottom:4px; left:58px; color:#949494;}
+#cboxSlideshow{position:absolute; bottom:4px; right:30px; color:#0092ef;}
+#cboxPrevious{position:absolute; bottom:0; left:0; background-color:#FFF; width:25px; height:25px; text-indent:-9999px;}
+#cboxNext{position:absolute; bottom:0; left:27px; background-color:#FFF; width:25px; height:25px; text-indent:-9999px;}
+#cboxLoadingOverlay{background-color:#5A5;}
+#cboxLoadingGraphic{
+    background: -webkit-linear-gradient(left top, #c99, #99c);
+    background: -moz-linear-gradient(left top, #c99, #99c);
+    background: linear-gradient(left top, #c99, #99c);
+}
+#cboxClose{position:absolute; bottom:0; right:0; background-color: #FFF; width:25px; height:25px; text-indent:-9999px;}
+#cboxClose:hover{}
+
+/*
+ *   The following fixes a problem where IE7 and IE8 replace a PNG's alpha transparency with a black fill
+ *     when an alpha filter (opacity change) is set on the element or ancestor element.  This style is not applied to or needed in IE9.
+ *       See: http://jacklmoore.com/notes/ie-transparency-problems/
+ *
+ */
+.cboxIE #cboxTopLeft,
+.cboxIE #cboxTopCenter,
+.cboxIE #cboxTopRight,
+.cboxIE #cboxBottomLeft,
+.cboxIE #cboxBottomCenter,
+.cboxIE #cboxBottomRight,
+.cboxIE #cboxMiddleLeft,
+.cboxIE #cboxMiddleRight {
+      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#00FFFFFF,endColorstr=#00FFFFFF);
+    }
+
+/*
+ *   The following provides PNG transparency support for IE6
+ *     Feel free to remove this and the /ie6/ directory if you have dropped IE6 support.
+ *
+ */
+.cboxIE6 #cboxTopLeft{background:url(images/ie6/borderTopLeft.png);}
+.cboxIE6 #cboxTopCenter{background:url(images/ie6/borderTopCenter.png);}
+.cboxIE6 #cboxTopRight{background:url(images/ie6/borderTopRight.png);}
+.cboxIE6 #cboxBottomLeft{background:url(images/ie6/borderBottomLeft.png);}
+.cboxIE6 #cboxBottomCenter{background:url(images/ie6/borderBottomCenter.png);}
+.cboxIE6 #cboxBottomRight{background:url(images/ie6/borderBottomRight.png);}
+.cboxIE6 #cboxMiddleLeft{background:url(images/ie6/borderMiddleLeft.png);}
+.cboxIE6 #cboxMiddleRight{background:url(images/ie6/borderMiddleRight.png);}
+
+.cboxIE6 #cboxTopLeft,
+.cboxIE6 #cboxTopCenter,
+.cboxIE6 #cboxTopRight,
+.cboxIE6 #cboxBottomLeft,
+.cboxIE6 #cboxBottomCenter,
+.cboxIE6 #cboxBottomRight,
+.cboxIE6 #cboxMiddleLeft,
+.cboxIE6 #cboxMiddleRight {
+      _behavior: expression(this.src = this.src ? this.src : this.currentStyle.backgroundImage.split('"')[1], this.style.background = "none", this.style.filter = "progid:DXImageTransform.Microsoft.AlphaImageLoader(src=" + this.src + ", sizingMethod='scale')");
+    }
+
+
+
+
+
+
+.toolbar {
+    position: absolute;
+    width: 100px;
+    margin-left: -42px;
+    left: 50%;
+    z-index: 15;
+    height: 17px;
+    line-height: 16px;
+    bottom: -17px;
+}
+
+.pair .toolbar, .ipair .toolbar {
+   bottom: -9px;
+}
+
+.toolbar>a, .toolbar>div  {
+    display:block;
+    background-color: white;
+    padding-left: 3px;
+    padding-right: 3px;
+    display: none;
+    float: left;
+    cursor: pointer;
+}
+
+.rooted>input {
+    background-color: white;
+}
+
+.pair > .close, .ipair > .close {
+    z-index: 15;
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    line-height: 8px;
+    font-size: 10px;
+    margin-left: 15px;
+    opacity: 0.3;
+}
+
+
+.atom  > .close, .prompt > .close {
+    z-index: 25;
+    position: absolute;
+    right: 7px;
+    top: 3px;
+    line-height: 8px;
+    font-size: 10px;
+    margin-left: 10px;
+    margin-top: 3px;
+    display: none;
+    opacity: 0.3;
+}
+
+.close:hover {
+    opacity: 1;
+}
+
+.close a, .close a:visited {
+    text-decoration: none;
+}
+
+.pair .in, .ipair .in  {
+   border-top-left-radius: 5px;
+}
+
+.pair .out, .ipair .out {
+   border-top-right-radius: 5px;
+}
+
+.in {
+    border-bottom-left-radius: 5px;
+}
+
+.out {
+   border-bottom-right-radius: 5px;
+}
+
+#background {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: -webkit-linear-gradient(left, #bbe, #cad);
+    background: -moz-linear-gradient(left, #bbe, #cad);
+    background: linear-gradient(left, #bbe, #cad);
+}
+
+#area {
+    position: absolute;
+    width: 10000px;
+    height: 10000px;
+}
+
+.atom, .blob, .prompt {
+   position: absolute;
+}
+
+.prompt>input, .prompt>textarea, .atom>.content, .blob>.content {
+   display: block;
+   z-index: 20;
+   position: relative;
+   border: 1px solid #eee;
+   border-radius: 10px;
+   background: -webkit-radial-gradient(top, #eee, #dde);
+   background: -moz-radial-gradient(top, #eee, #dde);
+   background: radial-gradient(top, #eee, #dde);
+   cursor: move;
+   min-width: 100px;
+   max-width: 500px;
+}
+.prompt>input, .prompt>textarea {
+   background: #FFF;
+   padding-left: 4px;
+}
+
+.prompt>input  {
+  padding-right: 22px;
+}
+
+.prompt>textarea{
+   padding-right: 4px;
+}
+
+.pair, .ipair {
+   position: absolute;
+}
+
+.known  {
+   border-style: dashed;
+}
+
+.tail, .head {
+   z-index: 0;
+   position: absolute;
+   bottom: 0px;
+   border-style: solid;
+}
+.pair .tail, .ipair .head {
+   right: 50%;
+   width: 50%;
+   border-left-width: 1px;
+   border-bottom-width: 1px;
+   border-top-width: 0;
+   border-right-width: 0;
+   border-bottom-left-radius: 10px;
+}
+
+.pair .head, .ipair .tail {
+   left: 50%;
+   width: 50%;
+   border-left-width: 0;
+   border-bottom-width: 1px;
+   border-top-width: 0;
+   border-right-width: 1px;
+   border-bottom-right-radius: 10px;
+}
+
+.tailEnd {
+   border: 6px solid transparent;
+   border-top-color: black;
+   width: 0;
+   height: 0;
+}
+
+.headEnd {
+   border: 6px solid transparent;
+   border-bottom-color: black;
+   width: 0;
+   height: 0;
+   margin-top: -6px;
+}
+
+
+.pair .tailEnd, .ipair .headEnd {
+   float: left;
+   margin-left: -7px;
+}
+
+.ipair .tailEnd, .pair .headEnd {
+   float: right;
+   margin-right: -7px;
+}
+
+
+.placeholder {
+   width: 26px;
+   height: 20px;
+   position: absolute;
+   margin-left: 0px;
+   margin-top: -4px;
+   padding: 1px;
+   border: 1px solid black;
+   border-radius: 5px;
+}
+
+.placeholder .unfold {
+   z-index: 15;
+   position: absolute;
+   color: white;
+   background-color: black;
+   border: 0px solid black;
+   border-radius: 5px;
+   width: 26px;
+   height: 20px;
+}
+
+.fileinput-button, .split {
+    display: none;
+    z-index: 30;
+    position: absolute;
+    overflow: hidden;
+    right: -21px;
+    top: -31px;
+    background-color: white;
+    border: 1px solid #eee;
+    padding: 0 2px;
+    border-radius: 17px;
+}
+
+.split {
+    right: -39px;
+    top: 0px;
+    padding: 0 3px;
+}
+
+.fileinput-button:hover {
+    right: -24px;
+    top: -34px;
+    padding: 4px 6px;
+}
+
+.split:hover {
+    right: -42px;
+    top: -4px;
+    padding: 4px 7px;
+}
+
+.fileinput-button input {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  opacity: 0;
+  filter: alpha(opacity=0);
+  transform: translate(-300px, 0) scale(4);
+  font-size: 23px;
+  direction: ltr;
+  cursor: pointer;
+  width: 100%;
+}
+
