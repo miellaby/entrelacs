@@ -30,10 +30,22 @@ function Terminal(area, entrelacs, animatePlease) {
         if (!self.uploadCount) self.loading.hide();
     });
     
-
+    this.commitTimeout = null;
 }
 
 Terminal.prototype = {
+
+    prepareCommit: function(d) {
+        var self = this;
+        if (this.commitTimeout !== null) {
+            clearTimeout(this.commitTimeout);
+        }
+        
+        this.commitTimeout = setTimeout(function() {
+            self.commitTimeout = null;
+            Arrow.commit(self.entrelacs);
+        }, 5000);
+    },
 
     addBarTo: function(d) {
         var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>?</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
@@ -44,7 +56,7 @@ Terminal.prototype = {
         h.click(this.on.bar.click);
     },
 
-    bindViewToArrow: function(view, arrow) {
+    bindViewToArrow: function(view, arrow, ctx) {
         view.data('arrow', arrow);
         var views = arrow.get('views');
         if (views === undefined) {
@@ -162,6 +174,9 @@ Terminal.prototype = {
     turnPromptIntoAtomView: function(prompt, atom) {
         var w0 = prompt.width();
         var body = atom.getBody();
+        var bar = prompt.children('.toolbar');
+        if (prompt.children('input,textarea').is(':focus') && !bar.hasClass('hover'))
+                    bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
         prompt.removeClass('prompt');
         prompt.addClass('atom');
         prompt.children('.close').show();
@@ -314,7 +329,7 @@ Terminal.prototype = {
         }
     },
     
-    putArrowView: function(x, y, arrow) {
+    putArrowView: function(x, y, arrow, ctx) {
         var a = this.findNearestArrowView(arrow, {left: x, top: y}, 1000);
         if (a) return a;
         if (arrow.uri !== undefined) { // placeholder
@@ -324,12 +339,14 @@ Terminal.prototype = {
         } else if (arrow.getTail() == Arrow.atom('Content-Typed')) {
             a = this.putBlobView(x, y, arrow);
         } else {
-            var t = this.putArrowView(x - 100 - this.defaultEntryWidth, y - 170, arrow.getTail());
-            var h = this.putArrowView(x + 100, y - 130, arrow.getHead());
+            var t = this.putArrowView(x - 100 - this.defaultEntryWidth, y - 170, arrow.getTail(), ctx);
+            var h = this.putArrowView(x + 100, y - 130, arrow.getHead(), ctx);
             a = this.pairTogether(t, h);
             t.data('children').push(a);
             h.data('children').push(a);
-            this.bindViewToArrow(a, arrow);
+            this.bindViewToArrow(a, arrow, ctx);
+            if (ctx)
+                this.restoreGeometry(view, null, ctx);
         }
 
         return a;
@@ -370,6 +387,170 @@ Terminal.prototype = {
         return list;
     },
 
+    /** when unrooting an arrow, one calls this method to remove all geometry data attached to it.
+    */
+    cleanAllGeometryAfterUnroot: function(root) {
+        var p = Arrow.pair(Arrow.atom("geometry"), root);
+        var it = p.getChildren(Arrow.FILTER_INCOMING);
+        var c;
+        while ((c = it()) != null) {
+            if (c.getTail() == p) {
+                if (c.isRooted()) { // case: geometry+root/width+height
+                    c.unroot();
+                } else { // case: ///geometry+root/geometry+someArrow/width+height
+                    var it2 = c.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT);
+                    var c2;
+                    while ((c2 = it2()) != null) {
+                        c2.unroot();
+                    }
+                }
+            }
+        }
+    },
+    
+    getPairViewGeometry: function(view) {
+        var w = view.width();
+        // TODO : should just get position of both end views
+        var ht = view.children('.tail').height();
+        var hh = view.children('.head').height();
+        var h = hh - ht;
+        return Arrow.pair(
+                    Arrow.atom("" + w),
+                    Arrow.atom("" + h)
+                );
+    },
+    
+    /** when rooting an arrow, one calls this method to save geometry data for all ancesters */
+    saveAllGeometryAfterRoot: function(view, r) {
+        if (r.isAtomic()) return;
+        var self = this;
+        var recSave = function(d) {
+            if (d === undefined) return;
+            var a = d.data('arrow');
+            if (!a || a.isAtomic()) return;
+            var key = Arrow.pair(
+                Arrow.pair(Arrow.atom("geometry"), r),
+                Arrow.pair(Arrow.atom("geometry"), a)
+            );
+            Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+            Arrow.pair(key, self.getPairViewGeometry(d)).root();
+            recSave(d.data('tail'));
+            recSave(d.data('head'));
+        };
+        recSave(view.data('tail'));
+        recSave(view.data('head'));
+        var key = Arrow.pair(Arrow.atom("geometry"), r);
+        Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+        Arrow.pair(key, this.getPairViewGeometry(view)).root();
+    },
+    
+    /** recursive function called by saveChildrenGeomtry
+    * looks for rooted descendants of 'd' view arrow so to attach 'd' geometry to them.
+    */
+    attachGeometryToRoots: function(d, dd) {
+        var list = dd.data('children');
+        for (var i = 0; i < list.length; i++) {
+           var c = list[i];
+           ac = c.data('arrow');
+           if (!ac) continue;
+           if (ac.isRooted()) {
+                    var key = Arrow.pair(
+                        Arrow.pair(Arrow.atom("geometry"), ac),
+                        Arrow.pair(Arrow.atom("geometry"), d.data('arrow'))
+                    );
+                    Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+                    Arrow.pair(key, this.getPairViewGeometry(d)).root();
+           } else {
+                this.attachGeometryToRoots(d, c);
+           }
+        }
+    },
+    
+    /**
+    * save all arrow views geometries (width and height) which were affected by the move of an arrow
+    * that is, all children arrows of a given arrow 'd'.
+    * For each chid, there is two possibilites:
+    * if the considered child is rooted, the geometry data is directly attached to it.
+    * otherwise, one looks for rooted further descendants. For every rooted descendant 'root', one attaches /width+height to
+    * //geometry+root/geometry+a (where a is a 'd' child). One does this for all children!
+    */
+    saveChildrenGeometry: function(d) {
+        var a = d.data('arrow');
+        if (!a) return;
+        var list = d.data('children');
+        for (var i = 0; i < list.length; i++) {
+           var c = list[i];
+           ac = c.data('arrow');
+           if (ac) {
+                if (ac.isRooted()) {
+                    var key = Arrow.pair(Arrow.atom("geometry"), ac);
+                    Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+                    Arrow.pair(key, this.getPairViewGeometry(c)).root();
+                } else {
+                    this.attachGeometryToRoots(c, c);
+                }
+           }
+        }
+    },
+
+    setPairViewGeometry: function(d, floating, w, h) {
+        var a = d.data('arrow');
+        if (floating) {
+            if (floating == a.getTail()) {
+                var pos = d.data('head').position();
+                this.moveView(d.data('tail').css({left: pos.left + 'px', top: pos.top  + 'px'}), -w, -h);
+            } else {
+                var pos = d.data('tail').position();
+                this.moveView(d.data('head').css({left: pos.left  + 'px', top: pos.top + 'px'}), w, h);
+            }
+        } else {
+            var pos = d.position();
+            pos = { left: pos.left + d.width() / 2, top: pos.top + d.height() };
+            var dt = d.data('tail').css({left: pos.left, top: pos.top});
+            var dh = d.data('head').css({left: pos.left, top: pos.top});
+            var marge = Math.max(20, Math.min(50, h));
+            this.moveView(dt.data('tail'), -w / 2, marge + (h > 0 ? h: 0));
+            this.moveView(dt.data('head'), w / 2, marge + (h < 0 ? -h: 0));
+        }
+    },
+    
+    /**
+    * restore an arrow view geometry (width and height)
+    * if a root arrow is given, one searchs for the geometry attached to the /root+a combination
+    * (actually //geometry+root/geometry+a for better indexing)
+    * if no root is given or if no geometry found at this first step, then
+    * one searchs for the geomtry attached to a by itself.
+    * One looks for an arrow in the form //geometry+a/width+height
+    */
+    restoreGeometry: function(d, floating, root) {
+        var a = d.data('arrow');
+        if (!a || a.isAtomic()) return;
+        if (root && root !== a) {
+            var p = Arrow.pair(Arrow.pair(Arrow.atom("geometry"), root),
+                           Arrow.pair(Arrow.atom("geometry"), a));
+            var it = p.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT);
+            var c;
+            while ((c = it()) != null) {
+                c = c.getHead();
+                var w = parseInt(c.getTail().getBody());
+                var h = parseInt(c.getHead().getBody());
+                this.setPairViewGeometry(d, floating, w, h);
+                return;
+            }
+        }
+        var p = Arrow.pair(Arrow.atom("geometry"), a);
+        var it = p.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT);
+        var c;
+        while ((c = it()) != null) {
+            c = c.getHead();
+            var w = parseInt(c.getTail().getBody());
+            var h = parseInt(c.getHead().getBody());
+            this.setPairViewGeometry(d, floating, w, h);
+            return;
+        }
+    },
+
+    
     isViewLoose: function(d) {
         // Check view is in no tree
         if (d.data('for').length || d.data('children').length)
@@ -436,8 +617,8 @@ Terminal.prototype = {
     moveView: function(d, offsetX, offsetY, movingChild) {
         var p = d.position();
         d.css({ 'opacity': 1,
-                'left': (p.left  + offsetX) + 'px',
-                'top': (p.top + offsetY) +'px'
+                'left': (0 + p.left  + offsetX) + 'px',
+                'top': (0 + p.top + offsetY) +'px'
         });
         if (d.data('head')) {
            this.moveView(d.data('head'), offsetX, offsetY, d);
@@ -594,7 +775,9 @@ Terminal.prototype = {
     processPartners: function(d, list) {
         var p = d.position();
         var source = d.data('arrow');
-
+        var self = this;
+        var geomChain = $.when({});
+        
         while (list !== Arrow.eve) {
             var link = list.getTail();
             var outgoing = (link.getTail() == source); 
@@ -613,11 +796,21 @@ Terminal.prototype = {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
                 d.data('children').push(dPair);
                 a.data('children').push(dPair);
-                this.bindViewToArrow(dPair, pair);
+                this.bindViewToArrow(dPair, pair, pair);
+                this.restoreGeometry(dPair, partner, pair);
+
             } else {
                 dPair.css('marginTop','-5px').animate({marginTop: 0});
             }
-            
+
+            var geoKey = Arrow.pair(Arrow.atom("geometry"), pair);
+            geomChain.pipe(function() {
+                var promise = self.entrelacs.getPartners(geoKey);
+                return promise;
+            }).done(function() {
+                self.restoreGeometry(dPair, partner, pair);
+            });
+          
             var next = list.getHead();
             if (next)
                 list = next;
@@ -629,7 +822,6 @@ Terminal.prototype = {
                 });
                 list = Arrow.eve;
             }
-                
         }
     },
     
@@ -923,8 +1115,10 @@ Terminal.prototype = {
                     if (arrow) {
                         if (arrow.isRooted()) {
                             arrow.unroot();
+                            self.cleanAllGeometryAfterUnroot(arrow);
                         } else {
                             arrow.root();
+                            self.saveAllGeometryAfterRoot(d, arrow);
                         }
                         Arrow.commit(self.entrelacs);
                     }
@@ -934,12 +1128,26 @@ Terminal.prototype = {
             enter: function(event) {
                 var bar = $(this);
                 bar.addClass('hover').children('div,a').show().css({'height': bar.height()}).animate({opacity: 1}, 50);
+                var view = bar.parent();
+                if (view.is('.pair,.ipair')) {
+                    view.children('.tail').css('border-color', '#444').delay(50).css('border-color', '#aaa').delay(50).css('border-color', '#ddd')
+                        .children('.tailEnd').css('border-top-color', '#444').delay(50).css('border-top-color', '#aaa').delay(50).css('border-top-color', '#ddd');
+                    view.children('.head').css('border-color', '#444').delay(50).css('border-color', '#aaa').delay(50).css('border-color', '#ddd')
+                        .children('.headEnd').css('border-bottom-color', '#444').delay(50).css('border-bottom-color', '#aaa').delay(50).css('border-bottom-color', '#ddd');
+                }
             },
             leave: function(event) {
                 var bar = $(this);
                 bar.removeClass('hover');
                 if (!bar.parent().children('input,textarea').is(':focus'))
                     bar.children('div,a').css({'height': bar.height()}).animate({opacity: 0}, 200);
+                var view = bar.parent();
+                if (view.is('.pair,.ipair')) {
+                    view.children('.tail').css('border-color', '#aaa').delay(50).css('border-color', '#444').delay(50).css('border-color', '#000')
+                        .children('.tailEnd').css('border-top-color', '#aaa').delay(50).css('border-top-color', '#444').delay(50).css('border-top-color', '#000');
+                    view.children('.head').css('border-color', '#aaa').delay(50).css('border-color', '#444').delay(50).css('border-color', '#000')
+                        .children('.headEnd').css('border-bottom-color', '#aaa').delay(50).css('border-bottom-color', '#444').delay(50).css('border-bottom-color', '#000');
+                }
             }
         },
         prompt: {
@@ -1134,6 +1342,9 @@ Terminal.prototype = {
 
                     self.moveView(arrow, dragEndX - self.dragStartX,
                                  dragEndY - self.dragStartY, null /* no moving child */);
+                    self.saveChildrenGeometry(arrow);
+                    self.prepareCommit();
+
                 }
                 event.stopPropagation();
                 return false;

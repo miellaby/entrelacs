@@ -171,10 +171,10 @@ animation-delay:0.45s;
     width: 100px;
     margin-left: -42px;
     left: 50%;
-    z-index: 15;
+    z-index: 21;
     height: 17px;
     line-height: 16px;
-    bottom: -17px;
+    bottom: -16px;
 }
 
 .pair .toolbar, .ipair .toolbar {
@@ -186,6 +186,7 @@ animation-delay:0.45s;
     background-color: white;
     padding-left: 3px;
     padding-right: 3px;
+    padding-bottom: 1px;
     display: none;
     float: left;
     cursor: pointer;
@@ -377,11 +378,8 @@ animation-delay:0.45s;
     z-index: 30;
     position: absolute;
     overflow: hidden;
-    right: -21px;
-    top: -31px;
     background-color: white;
     border: 1px solid #eee;
-    padding: 0 2px;
     border-radius: 17px;
 }
 
@@ -391,16 +389,22 @@ animation-delay:0.45s;
     padding: 0 3px;
 }
 
-.fileinput-button:hover {
+.split:hover {
+    right: -43px;
+    top: -4px;
+    padding: 4px 7px;
+}
+
+.fileinput-button {
     right: -24px;
-    top: -34px;
+    top: -36px;
     padding: 4px 6px;
 }
 
-.split:hover {
-    right: -42px;
-    top: -4px;
-    padding: 4px 7px;
+.fileinput-button:hover {
+    right: -26px;
+    top: -38px;
+    padding: 6px 8px;
 }
 
 .fileinput-button input {

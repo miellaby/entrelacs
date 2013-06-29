@@ -50,6 +50,20 @@ function Arrow(t, h, hc) {
 }
 
 // Some constants
+
+/** Filter value for getChildren */
+Arrow.FILTER_NOTHING = 0;
+
+/** Filter value for getChildren */
+Arrow.FILTER_UNROOTED = 1;
+
+/** Filter value for getChildren */
+Arrow.FILTER_OUTGOING = 2;
+
+/** Filter value for getChildren */
+Arrow.FILTER_INCOMING = 4;
+
+
 /** indexes size */
 Arrow.indexSize = 2000; // "Nobody Will Ever Need More Than 640k RAM!"
 
@@ -162,6 +176,7 @@ $.extend(Arrow.prototype, {
      * @this {Arrow}
      */
     unroot: function () {
+        if (this === Arrow.eve) return; // Not EVE
         if (this.hc === undefined) return; // GC-ed!
         if (!this.rooted) return;
         this.rooted = false;
@@ -218,7 +233,7 @@ $.extend(Arrow.prototype, {
      * @return {Function} a Functor to iterate all children
      *   (returns null when over)
      */
-    getChildren: function(rootedOnly) {
+    getChildren: function(filters) {
         var children = [];
 
         // incoming
@@ -236,14 +251,27 @@ $.extend(Arrow.prototype, {
             // returns a real child, looping through false positives
             while (indice < children.length) {
                 var a = children[indice++];
-                if ((a.getTail() == parent || a.getHead() == parent)
-                        && (!rootedOnly || a.isRooted()))
-                    return a;
+                if (a.getTail() != parent && (filters & Arrow.FILTER_INCOMING)
+                    || a.getHead() != parent && (filters & Arrow.FILTER_OUTGOING))
+                    continue;
+                if ((filters & Arrow.FILTER_UNROOTED) && !a.isRooted())
+                    continue;
+                if (a.getTail() != parent && a.getHead() != parent)
+                    continue;
+                return a;
             }
             return null;
         };
     },
 
+    /** Returns one child or null if no child
+     * @this {Arrow}
+     * @return {Arrow} 
+     */
+    getChild: function(filters) {
+        return this.getChildren(filters)();
+    },
+    
     /**
      * @this {Arrow}
      * @return a list of partners (context-rooted children)
@@ -427,6 +455,14 @@ Arrow.wipe = function () {
 Arrow.eve = new Atom("", "".hashCode()).root();
 Arrow.eve.rooted = true;
 Arrow.changelog = [];
+
+
+Arrow.eveIfNull = function(v) {
+    if (!v)
+        return Arrow.eve;
+    else
+        return v;
+}
 
 /**
  * Finds or builds the unique atomic arrow corresponding to a piece of data
@@ -754,7 +790,7 @@ $.extend(Entrelacs.prototype, {
      */
     bindUri: function (a, uri) {
         var p = this.uriMap[uri]; // is there a placeholder here?
-        if (p && p.hc !== undefined) {
+        if (p && p !== a && p.hc !== undefined) {
             // p == a, let's rewire all its children
             var child, iterator = p.getChildren();
             while ((child = iterator()) != null) {
@@ -823,14 +859,19 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     root: function (a) {
-        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
+        var isAtomic = (typeof a == "string") ? false : a.isAtomic();
+        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
-        var operator = (a.isAtomic && a.isAtomic() ? "root" : "linkTailWithHead");
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/' + operator + '/escape+' + uri;
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
+        var operator = (isAtomic ? "root" : "linkTailWithHead");
+        var req = self.serverUrl + '/' + operator + '/escape+' + uri;
+        var promise = self.chain = self.chain.pipe(function () {
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
+        });
+        promise.done(function (r) {
+            if (a.hc === undefined) return; // a is GC-ed
+            self.checkCookie();
+            self.bindUri(a, r);
         });
         promise.fail(function () {
             self.reset();
@@ -844,14 +885,14 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     unroot: function (a) {
-        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
+        var isAtomic = (typeof a == "string") ? false : a.isAtomic();
+        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         // TODO unlinkify
-        var operator = (a.isAtomic && a.isAtomic() ? "unroot" : "unlinkTailAndHead");
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/' + operator + '/escape+' + uri;
-            var promise = $.ajax({url: req, xhrFields: { withCredentials: true }});
-            return promise;
+        var operator = (isAtomic ? "unroot" : "unlinkTailAndHead");
+        var req = self.serverUrl + '/' + operator + '/escape+' + uri;
+        var promise = self.chain = self.chain.pipe(function () {
+            return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise.fail(function () {
             self.reset();
@@ -865,18 +906,20 @@ $.extend(Entrelacs.prototype, {
      * @return {Promise}
      */
     isRooted: function (a) {
-        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
+        var isAtomic = (typeof a == "string") ? false : a.isAtomic();
+        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
-
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/isRooted/escape+' + uri;
+        var req = self.serverUrl + '/isRooted/escape+' + uri;
+        var promise = self.chain = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise.done(function (r) {
             if (a.hc === undefined) return; // a is GC-ed
-            if (r)
+            if (r) {
+                self.checkCookie();
+                self.bindUri(a, r);
                 a.root();
-            else
+            } else
                 a.unroot();
         }).fail(function () {
             self.reset();
@@ -890,13 +933,14 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     getChildren: function (a) {
-        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
+        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
+        var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
         
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
+        var promise = self.chain = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        }).fail(function () {
+        });
+        promise.fail(function () {
             self.reset();
         });
         
@@ -915,12 +959,13 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     getPartners: function (a) {
-        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
+        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
+        var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
+        var promise = self.chain = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        }).fail(function () {
+        });
+        promise.fail(function () {
             self.reset();
         });
         
@@ -943,13 +988,14 @@ $.extend(Entrelacs.prototype, {
      * @return {Promise}
      */
     invoke: function (a) {
-        var promise = (typeof a == "string") ? $.when(a) : this.getUri(a);
+        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
 
-        promise = promise.pipe(function (uri) {
-            var req = self.serverUrl + uri; // no escape this time
+        var req = self.serverUrl + uri; // no escape this time
+        var promise = self.chain = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        }).fail(function () {
+        });
+        promise.fail(function () {
             self.reset();
         });
         return promise;
@@ -973,7 +1019,7 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
         var req = this.serverUrl + '/escape/+' + uri + '?iDepth=' + depth;
-        var promise = this.chain = this.chain.pipe(function () {
+        var promise = self.chain = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise = promise.pipe(function (uri) {
@@ -1009,7 +1055,7 @@ $.extend(Entrelacs.prototype, {
     commit: function () {
         var self = this;
         var req = this.serverUrl + '/commit+';
-        var promise = this.chain = this.chain.pipe(function () {
+        var promise = self.chain = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise.fail(function () {
