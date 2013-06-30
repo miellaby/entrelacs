@@ -704,7 +704,7 @@ Arrow.gc = function () {
  * Local changes commit
  ** Note: it might be perfectly feasible to commit on several servers at once
  */
-Arrow.commit = function (entrelacs, secondTry) {
+Arrow.commit = function (entrelacs) {
     Arrow.cc++;
     
     for (var i = 0; i < Arrow.changelog.length; i++) {
@@ -718,18 +718,12 @@ Arrow.commit = function (entrelacs, secondTry) {
         }
     }
     promise = entrelacs.commit();
+
     promise.done(function () {
         Arrow.changelog.splice(0, Arrow.changelog.length);
         Arrow.gc();
     });
 
-    if (!secondTry) {
-        // second try in case of failure
-        promise = promise.pipe(null, function () {
-            entrelacs.reset();
-            return Arrow.commit(entrelacs, true);
-        });
-    }
     return promise;
 };
 
@@ -766,6 +760,7 @@ $.extend(Entrelacs.prototype, {
      * reset proxy session
      */
     reset: function () {
+        console.log('AS reset');
         for (var uri in this.uriMap) {
             delete this.uriMap[uri].get(this.uriKey);
         }
@@ -815,7 +810,7 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow}
      * @return {JQuery.Promise}
      */
-    getUri: function (a) {
+    getUri: function (a, secondTry) {
         var promise;
         var self = this;
         
@@ -828,14 +823,14 @@ $.extend(Entrelacs.prototype, {
         } else if (a.isAtomic()) {
             var req = this.serverUrl + '/escape+' +
                 encodeURIComponent(a.getBody()) + '?iDepth=0';
-            promise = this.chain = this.chain.pipe(function () {
+            promise = self.chain.pipe(function () {
                 return $.ajax({url: req, xhrFields: { withCredentials: true }});
             });
 
         } else {
-            var pt = this.getUri(a.getTail());
-            var ph = this.getUri(a.getHead());
-            promise = this.chain = this.chain.pipe(function () {
+            var pt = self.getUri(a.getTail());
+            var ph = self.getUri(a.getHead());
+            promise = self.chain.pipe(function () {
                 var req = self.serverUrl + '/escape/'
                     + a.getTail().get(self.uriKey) + '+' + a.getHead().get(self.uriKey) + '?iDepth=0';
                 return $.ajax({url: req, xhrFields: { withCredentials: true }});
@@ -846,9 +841,16 @@ $.extend(Entrelacs.prototype, {
             if (a.hc === undefined) return; // a is GC-ed
             self.checkCookie();
             self.bindUri(a, uri);
-        }).fail(function () {
-            self.reset();
         });
+
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.getUri(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
 
         return promise;
     },
@@ -858,14 +860,14 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow}
      * @return {JQuery.Promise}
      */
-    root: function (a) {
+    root: function (a, secondTry) {
         var isAtomic = (typeof a == "string") ? false : a.isAtomic();
         var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
         var operator = (isAtomic ? "root" : "linkTailWithHead");
         var req = self.serverUrl + '/' + operator + '/escape+' + uri;
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise.done(function (r) {
@@ -873,9 +875,16 @@ $.extend(Entrelacs.prototype, {
             self.checkCookie();
             self.bindUri(a, r);
         });
-        promise.fail(function () {
-            self.reset();
-        });
+
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.root(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+        
         return promise;
     },
 
@@ -884,19 +893,26 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} or {string}
      * @return {JQuery.Promise}
      */
-    unroot: function (a) {
+    unroot: function (a, secondTry) {
         var isAtomic = (typeof a == "string") ? false : a.isAtomic();
         var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         // TODO unlinkify
         var operator = (isAtomic ? "unroot" : "unlinkTailAndHead");
         var req = self.serverUrl + '/' + operator + '/escape+' + uri;
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
-        promise.fail(function () {
-            self.reset();
-        });
+
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.unroot(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+
         return promise;
     },
 
@@ -905,25 +921,33 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} or {string}
      * @return {Promise}
      */
-    isRooted: function (a) {
+    isRooted: function (a, secondTry) {
         var isAtomic = (typeof a == "string") ? false : a.isAtomic();
         var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         var req = self.serverUrl + '/isRooted/escape+' + uri;
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise.done(function (r) {
             if (a.hc === undefined) return; // a is GC-ed
+            self.checkCookie();
             if (r) {
-                self.checkCookie();
                 self.bindUri(a, r);
                 a.root();
             } else
                 a.unroot();
-        }).fail(function () {
-            self.reset();
         });
+        
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.isRooted(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+        
         return promise;
     },
 
@@ -932,24 +956,32 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} or {string}
      * @return {JQuery.Promise}
      */
-    getChildren: function (a) {
+    getChildren: function (a, secondTry) {
         var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
         
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
-        promise.fail(function () {
-            self.reset();
-        });
+
         
         promise = promise.pipe(function(arrowURI) {
+            self.checkCookie();
             //if (a.hc === undefined) return Arrow.eve; // a is GC-ed
             var children = Arrow.decodeURI(arrowURI, self.serverUrl);
             return children;
         });
         
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.getChildren(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+
         return promise;
     },
 
@@ -958,18 +990,16 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} or {string}
      * @return {JQuery.Promise}
      */
-    getPartners: function (a) {
+    getPartners: function (a, secondTry) {
         var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
-        promise.fail(function () {
-            self.reset();
         });
         
         promise = promise.pipe(function(arrowURI) {
+            self.checkCookie();
             var list = Arrow.decodeURI(arrowURI, self.serverUrl);
             var partners = list;
             while (list !== Arrow.eve) {
@@ -979,6 +1009,15 @@ $.extend(Entrelacs.prototype, {
             return partners;
         });
         
+       if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.getPartners(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+
         return promise;
     },
 
@@ -987,17 +1026,30 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} or {string}
      * @return {Promise}
      */
-    invoke: function (a) {
+    invoke: function (a, secondTry) {
         var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
 
         var req = self.serverUrl + uri; // no escape this time
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
-        promise.fail(function () {
-            self.reset();
+
+       promise = promise.pipe(function(arrowURI) {
+            self.checkCookie();
+            var result = Arrow.decodeURI(arrowURI, self.serverUrl);
+            return result;
         });
+        
+         if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.invoke(a, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+        
         return promise;
     },
 
@@ -1006,7 +1058,7 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} p placeholder
      * @return {JQuery.Promise}
      */
-    open: function (p, depth) {
+    open: function (p, depth, secondTry) {
         var uri;
         if (typeof p == "string")
             uri = p;
@@ -1023,6 +1075,7 @@ $.extend(Entrelacs.prototype, {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
         promise = promise.pipe(function (uri) {
+            self.checkCookie();
             var unfolded = Arrow.decodeURI(uri, self.serverUrl).getHead(); 
             // reattach the URI to the unfolded arrow as we know it from the placeholder
             if (typeof p == "Object" & p.gc !== undefined) { // Not GC-ed
@@ -1030,6 +1083,16 @@ $.extend(Entrelacs.prototype, {
             }
             return unfolded;
         });
+
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.open(p, depth, true);
+            });
+        } else {
+            self.chain = promise;
+        }
+        
         return promise;
     },
 
@@ -1052,15 +1115,22 @@ $.extend(Entrelacs.prototype, {
      * commit
      * @return {Promise}
      */
-    commit: function () {
+    commit: function (secondTry) {
         var self = this;
         var req = this.serverUrl + '/commit+';
-        var promise = self.chain = self.chain.pipe(function () {
+        var promise = self.chain.pipe(function () {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
-        promise.fail(function () {
-            self.reset();
-        });
+        
+        if (!secondTry) {
+            promise = promise.pipe(null, function() {
+                self.reset();
+                return self.commit(true);
+            });
+        } else {
+            self.chain = promise;
+        }
+        
         return promise;
     }
 });

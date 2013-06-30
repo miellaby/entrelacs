@@ -398,7 +398,7 @@ Terminal.prototype = {
                 if (c.isRooted()) { // case: geometry+root/width+height
                     c.unroot();
                 } else { // case: ///geometry+root/geometry+someArrow/width+height
-                    var it2 = c.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT);
+                    var it2 = c.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
                     var c2;
                     while ((c2 = it2()) != null) {
                         c2.unroot();
@@ -432,7 +432,7 @@ Terminal.prototype = {
                 Arrow.pair(Arrow.atom("geometry"), r),
                 Arrow.pair(Arrow.atom("geometry"), a)
             );
-            Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+            Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
             Arrow.pair(key, self.getPairViewGeometry(d)).root();
             recSave(d.data('tail'));
             recSave(d.data('head'));
@@ -440,7 +440,7 @@ Terminal.prototype = {
         recSave(view.data('tail'));
         recSave(view.data('head'));
         var key = Arrow.pair(Arrow.atom("geometry"), r);
-        Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+        Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
         Arrow.pair(key, this.getPairViewGeometry(view)).root();
     },
     
@@ -458,7 +458,7 @@ Terminal.prototype = {
                         Arrow.pair(Arrow.atom("geometry"), ac),
                         Arrow.pair(Arrow.atom("geometry"), d.data('arrow'))
                     );
-                    Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+                    Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
                     Arrow.pair(key, this.getPairViewGeometry(d)).root();
            } else {
                 this.attachGeometryToRoots(d, c);
@@ -484,7 +484,7 @@ Terminal.prototype = {
            if (ac) {
                 if (ac.isRooted()) {
                     var key = Arrow.pair(Arrow.atom("geometry"), ac);
-                    Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT)).unroot();
+                    Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
                     Arrow.pair(key, this.getPairViewGeometry(c)).root();
                 } else {
                     this.attachGeometryToRoots(c, c);
@@ -495,22 +495,23 @@ Terminal.prototype = {
 
     setPairViewGeometry: function(d, floating, w, h) {
         var a = d.data('arrow');
+        var dt = d.data('tail')
+        var dh = d.data('head');
+        var dtPos = dt.position();
+        var dhPos = dh.position();
+        console.log('setPairViewGeometry ' + Arrow.serialize(a) + ' ' + (floating ? Arrow.serialize(floating) : "null") + ' ' + w + ' ' + h);
         if (floating) {
             if (floating == a.getTail()) {
-                var pos = d.data('head').position();
-                this.moveView(d.data('tail').css({left: pos.left + 'px', top: pos.top  + 'px'}), -w, -h);
+                this.moveView(dt, dhPos.left - w - dtPos.left, dhPos.top - h - dtPos.top);
             } else {
-                var pos = d.data('tail').position();
-                this.moveView(d.data('head').css({left: pos.left  + 'px', top: pos.top + 'px'}), w, h);
+                this.moveView(dh, dtPos.left + w - dhPos.left, dtPos.top + h - dhPos.top);
             }
         } else {
             var pos = d.position();
-            pos = { left: pos.left + d.width() / 2, top: pos.top + d.height() };
-            var dt = d.data('tail').css({left: pos.left, top: pos.top});
-            var dh = d.data('head').css({left: pos.left, top: pos.top});
-            var marge = Math.max(20, Math.min(50, h));
-            this.moveView(dt.data('tail'), -w / 2, marge + (h > 0 ? h: 0));
-            this.moveView(dt.data('head'), w / 2, marge + (h < 0 ? -h: 0));
+            //pos = { left: pos.left + d.width() / 2, top: pos.top + d.height() };
+            // var marge = Math.max(20, Math.min(50, h));
+            // this.moveView(dt, pos.left - w / 2 - dtPos.left, pos.top + marge + (h > 0 ? h: 0) - dtPos.top);
+            this.moveView(dh, dtPos.left + w - dhPos.left, dtPos.top + h - dhPos.top);
         }
     },
     
@@ -525,29 +526,45 @@ Terminal.prototype = {
     restoreGeometry: function(d, floating, root) {
         var a = d.data('arrow');
         if (!a || a.isAtomic()) return;
-        if (root && root !== a) {
+
+        var dt = d.data('tail');
+        var dh = d.data('head');
+        if (dt) {
+            this.restoreGeometry(dt, null, root);
+        }
+        if (dh) {
+            this.restoreGeometry(dh, null, root);
+        }
+        
+        if (root !== a) {
             var p = Arrow.pair(Arrow.pair(Arrow.atom("geometry"), root),
                            Arrow.pair(Arrow.atom("geometry"), a));
-            var it = p.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT);
+            console.log("check " + Arrow.serialize(p));
+
+            var it = p.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
             var c;
             while ((c = it()) != null) {
-                c = c.getHead();
+                console.log(Arrow.serialize(c));
+                var c = c.getHead();
                 var w = parseInt(c.getTail().getBody());
                 var h = parseInt(c.getHead().getBody());
                 this.setPairViewGeometry(d, floating, w, h);
-                return;
+            }
+        } else {
+            var p = Arrow.pair(Arrow.atom("geometry"), a);
+            console.log("check " + Arrow.serialize(p));
+            var it = p.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
+            var c;
+            while ((c = it()) != null) {
+                console.log(Arrow.serialize(c));
+                c = c.getHead();
+                if (c.getTail() == Arrow.atom("geometry")) continue;
+                var w = parseInt(c.getTail().getBody());
+                var h = parseInt(c.getHead().getBody());
+                this.setPairViewGeometry(d, floating, w, h);
             }
         }
-        var p = Arrow.pair(Arrow.atom("geometry"), a);
-        var it = p.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOT);
-        var c;
-        while ((c = it()) != null) {
-            c = c.getHead();
-            var w = parseInt(c.getTail().getBody());
-            var h = parseInt(c.getHead().getBody());
-            this.setPairViewGeometry(d, floating, w, h);
-            return;
-        }
+        
     },
 
     

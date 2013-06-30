@@ -1,8 +1,8 @@
 
 function init() {
     var area = $('#area');
-    var entrelacs = new Entrelacs();
-    var terminal = new Terminal(area, entrelacs, true);
+    entrelacs = new Entrelacs();
+    terminal = new Terminal(area, entrelacs, true);
     $(document).scrollTop(area.height() / 2 - $(window).height() / 2);
     $(document).scrollLeft(area.width() / 2 - $(window).width() / 2);
     setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
