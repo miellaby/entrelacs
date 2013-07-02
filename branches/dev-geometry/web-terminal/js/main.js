@@ -16,7 +16,7 @@ function init() {
                                      
     //findFeaturedArrows();
     var wizardState = "beginning";
-    if ($.cookie('wizard') == '1') return;
+    if ($.cookie && $.cookie('wizard') == '1') return;
     
     var center = function(elt) {
            var p = elt.position();

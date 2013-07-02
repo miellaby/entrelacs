@@ -771,6 +771,7 @@ $.extend(Entrelacs.prototype, {
      * check cookie and detect session loss
      */
     checkCookie: function () {
+        if (!$.cookie) return;
         var currentCookie = $.cookie('session');
         if (currentCookie != this.lastCookie) {
             // session is lost, invalidate all URI

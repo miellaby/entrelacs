@@ -64,6 +64,7 @@ Terminal.prototype = {
             arrow.set('views', views);
         }
         views.push(view[0]);
+        console.log(Arrow.serialize(arrow) + " " + views.length + " views");
         view.find('.toolbar .rooted input').prop('checked', arrow.isRooted());
     },
     
@@ -413,7 +414,7 @@ Terminal.prototype = {
         // TODO : should just get position of both end views
         var ht = view.children('.tail').height();
         var hh = view.children('.head').height();
-        var h = hh - ht;
+        var h = ht - hh;
         return Arrow.pair(
                     Arrow.atom("" + w),
                     Arrow.atom("" + h)
@@ -502,16 +503,16 @@ Terminal.prototype = {
         console.log('setPairViewGeometry ' + Arrow.serialize(a) + ' ' + (floating ? Arrow.serialize(floating) : "null") + ' ' + w + ' ' + h);
         if (floating) {
             if (floating == a.getTail()) {
-                this.moveView(dt, dhPos.left - w - dtPos.left, dhPos.top - h - dtPos.top);
+                this.moveView(dt, dhPos.left - dh.width() / 2 - w + dt.width() / 2 - dtPos.left, dhPos.top + dh.height() - h - dtPos.top - dt.height());
             } else {
-                this.moveView(dh, dtPos.left + w - dhPos.left, dtPos.top + h - dhPos.top);
+                this.moveView(dh, dtPos.left - dt.width() / 2 + w + dh.width() / 2 - dhPos.left, dtPos.top + dt.height() + h - dhPos.top - dh.height());
             }
         } else {
             var pos = d.position();
-            //pos = { left: pos.left + d.width() / 2, top: pos.top + d.height() };
-            // var marge = Math.max(20, Math.min(50, h));
-            // this.moveView(dt, pos.left - w / 2 - dtPos.left, pos.top + marge + (h > 0 ? h: 0) - dtPos.top);
-            this.moveView(dh, dtPos.left + w - dhPos.left, dtPos.top + h - dhPos.top);
+            pos = { left: pos.left + d.width() / 2, top: pos.top + d.height() };
+            var marge = Math.max(20, Math.min(50, h));
+            this.moveView(dt, pos.left - w / 2 - dt.width() / 2 - dtPos.left, pos.top - dt.height() - marge - (h > 0 ? h: 0) - dtPos.top, d);
+            this.moveView(dh, pos.left + w / 2 - dh.width() / 2 - dhPos.left, pos.top - dh.height() - marge + (h < 0 ? h: 0) - dhPos.top);
         }
     },
     
@@ -545,7 +546,7 @@ Terminal.prototype = {
             var c;
             while ((c = it()) != null) {
                 console.log(Arrow.serialize(c));
-                var c = c.getHead();
+                c = c.getHead();
                 var w = parseInt(c.getTail().getBody());
                 var h = parseInt(c.getHead().getBody());
                 this.setPairViewGeometry(d, floating, w, h);
@@ -625,6 +626,7 @@ Terminal.prototype = {
             if (arrow) {
                 var vs = arrow.get('views');
                 vs.splice(vs.indexOf(d[0]), 1);
+                console.log(Arrow.serialize(arrow) + " " + vs.length + " views");
             }
 
             d.detach();
@@ -712,6 +714,7 @@ Terminal.prototype = {
        if (arrow) {
             var vs = arrow.get('views');
             vs.splice(vs.indexOf(a[0]), 1);
+            console.log(Arrow.serialize(arrow) + " " + vs.length + " views");
             this.bindViewToArrow(newA, arrow);
        }
 
@@ -793,12 +796,12 @@ Terminal.prototype = {
         var p = d.position();
         var source = d.data('arrow');
         var self = this;
-        var geomChain = $.when({});
-        
+        console.log(Arrow.serialize(source) + " partners = {");
         while (list !== Arrow.eve) {
-            var link = list.getTail();
-            var outgoing = (link.getTail() == source); 
-            var partner = (outgoing ? link.getHead() : link.getTail());
+            var pair = list.getTail();
+            console.log(Arrow.serialize(pair) + ",");
+            var outgoing = (pair.getTail() == source); 
+            var partner = (outgoing ? pair.getHead() : pair.getTail());
             var a = this.findNearestArrowView(partner, p, 1000);
             if (!a) {
                 var c = this.getPointOnCircle(50);
@@ -807,7 +810,6 @@ Terminal.prototype = {
                         p.top + d.height() / 2 + c.y,
                         partner);
             }
-            var pair = outgoing ? Arrow.pair(source, partner) : Arrow.pair(partner, source);
             var dPair = this.findNearestArrowView(pair, p, 1000);
             if (!dPair || dPair.data('tail')[0] !== (outgoing ? d : a)[0] || dPair.data('head')[0] !== (outgoing ? a : d)[0]) {
                 dPair = outgoing ? this.pairTogether(d, a) : this.pairTogether(a, d);
@@ -821,13 +823,12 @@ Terminal.prototype = {
             }
 
             var geoKey = Arrow.pair(Arrow.atom("geometry"), pair);
-            geomChain.pipe(function() {
-                var promise = self.entrelacs.getPartners(geoKey);
-                return promise;
-            }).done(function() {
-                self.restoreGeometry(dPair, partner, pair);
-            });
-          
+            (function(geoKey, dPair, partner, pair) {
+                self.entrelacs.getPartners(geoKey).done(function() {
+                    self.restoreGeometry(dPair, partner, pair);
+                });
+            })(geoKey, dPair, partner, pair);
+            
             var next = list.getHead();
             if (next)
                 list = next;
@@ -835,11 +836,12 @@ Terminal.prototype = {
             
                 var promise = this.entrelacs.open(list);
                 promise.done(function(unfolded) {
-                    self.processPartners(unfolded);
+                    self.processPartners(d, unfolded);
                 });
                 list = Arrow.eve;
             }
         }
+        console.log("}");
     },
     
     update: function(d) {
