@@ -169,7 +169,7 @@ animation-delay:0.45s;
 .toolbar {
     position: absolute;
     width: 100px;
-    margin-left: -42px;
+    margin-left: -40px;
     left: 50%;
     z-index: 21;
     height: 17px;
@@ -283,7 +283,7 @@ animation-delay:0.45s;
 }
 
 .prompt>input  {
-  padding-right: 22px;
+  padding: 1px 22px 2px 0px;
 }
 
 .prompt>textarea{
@@ -380,24 +380,24 @@ animation-delay:0.45s;
     overflow: hidden;
     background-color: white;
     border: 1px solid #eee;
-    border-radius: 17px;
+    border-radius: 10px;
 }
 
 .split {
-    right: -39px;
+    right: -28px;
     top: 0px;
     padding: 0 3px;
 }
 
 .split:hover {
-    right: -43px;
+    right: -32px;
     top: -4px;
     padding: 4px 7px;
 }
 
 .fileinput-button {
     right: -24px;
-    top: -36px;
+    top: -38px;
     padding: 4px 6px;
 }
 
