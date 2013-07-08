@@ -1,20 +1,22 @@
 function PairView(a, terminal, tv, hv, root) {
     var p0 = tv.d.position();
     var p1 = hv.d.position();
-    var x0 = p0.left + tv.d.width() / 2 + 6;
-    var y0 = p0.top + tv.d.height();
-    var x1 = p1.left + hv.d.width() / 2 - 6;
-    var y1 = p1.top + hv.d.height();
+    var x0 = p0.left + 6;
+    var y0 = p0.top;
+    var x1 = p1.left - 6;
+    var y1 = p1.top;
     var d = $("<div class='" + (x0 < x1 ? "pair" : "ipair") + "'><div class='tail'><div class='tailEnd'></div></div><div class='head'><div class='headEnd'></div></div></div>"); // <div class='close'><a href='#'>&times;</a></div>
     var margin = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
     d.css({
-        'left': Math.min(x0, x1) + 'px',
-        'top': Math.min(y0, y1) + 'px',
+        'left': parseInt((x0 + x1) / 2) + 'px',
+        'margin-left': -parseInt(Math.abs(x1 - x0) / 2) + 'px',
+        'top': Math.max(y0, y1) + margin + 'px',
+        'margin-top': -(Math.abs(y1 - y0) + margin) + 'px',
         'width': Math.abs(x1 - x0) + 'px',
-        'height': (Math.abs(y1 - y0) + margin) + 'px'
+        'height': (Math.abs(y1 - y0) + margin) + 'px',
     });
 
-    View.call(this, null, terminal, d);
+    View.call(this, a, terminal, d);
     this.tv = tv;
     this.hv = hv;
     
@@ -76,10 +78,10 @@ $.extend(PairView.prototype, View.prototype, {
         var hv = this.hv;
         var p0 = tv.d.position();
         var p1 = hv.d.position();
-        var x0 = p0.left + tv.d.width() / 2 + 6;
-        var y0 = p0.top + tv.d.height();
-        var x1 = p1.left + hv.d.width() / 2 - 6;
-        var y1 = p1.top + hv.d.height();
+        var x0 = p0.left + 6;
+        var y0 = p0.top;
+        var x1 = p1.left - 6;
+        var y1 = p1.top;
         var d  = this.d;
         
         if (d.hasClass('ipair') && x0 < x1) {
@@ -91,10 +93,12 @@ $.extend(PairView.prototype, View.prototype, {
         }
         var margin = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
         d.css({
-            'left': Math.min(x0, x1) + 'px',
-            'top': Math.min(y0, y1) + 'px',
+            'left': parseInt((x0 + x1) / 2) + 'px',
+            'margin-left': -parseInt(Math.abs(x1 - x0) / 2) + 'px',
+            'top': Math.max(y0, y1) + margin + 'px',
+            'margin-top': -(Math.abs(y1 - y0) + margin) + 'px',
             'width': Math.abs(x1 - x0) + 'px',
-            'height': (Math.abs(y1 - y0) + margin) + 'px'
+            'height': (Math.abs(y1 - y0) + margin) + 'px',
         });
 
         d.children('.tail').css({'height': (margin + ((y0 < y1) ? y1 - y0 : 0)) + 'px'});
@@ -157,31 +161,31 @@ $.extend(PairView.prototype, View.prototype, {
         var dh = this.hv.d;
         var dtPos = dt.position();
         var dhPos = dh.position();
-        console.log('setPairViewGeometry ' + Arrow.serialize(this.arrow) + ' '
-                + (floating ? Arrow.serialize(floating) : "null") + ' ' + w + ' ' + h);
+        console.log('setPairViewGeometry ' + Arrow.serialize(this.arrow) + ' ('
+                + (floating == this.hv ? "head floating" : floating ? "tail floting" : "all floating") + ') ' + w + ' ' + h);
         if (floating) {
             if (floating == this.hv) {
                 this.tv.move(
-                        dhPos.left - dh.width() / 2 - w + dt.width() / 2 - dtPos.left,
-                        dhPos.top + dh.height() - h - dtPos.top - dt.height());
+                        dhPos.left - w - dtPos.left,
+                        dhPos.top - h - dtPos.top);
             } else {
                 this.hv.move(
-                        dtPos.left - dt.width() / 2 + w + dh.width() / 2 - dhPos.left,
-                        dtPos.top + dt.height() + h - dhPos.top - dh.height());
+                        dtPos.left + - dhPos.left,
+                        dtPos.top + h - dhPos.top);
             }
         } else {
             var pos = this.d.position();
             pos = {
-                left: pos.left + this.d.width() / 2,
-                top: pos.top + this.d.height()
+                left: pos.left,
+                top: pos.top
             };
             var margin = Math.max(20, Math.min(50, h));
             this.tv.move(
-                    pos.left - w / 2 - dt.width() / 2 - dtPos.left,
-                    pos.top - dt.height() - margin - (h > 0 ? h: 0) - dtPos.top, this);
+                    pos.left - w / 2 - dtPos.left,
+                    pos.top - margin - (h > 0 ? h: 0) - dtPos.top, this);
             this.hv.move(
-                    pos.left + w / 2 - dh.width() / 2 - dhPos.left,
-                    pos.top - dh.height() - margin + (h < 0 ? h: 0) - dhPos.top);
+                    pos.left + w / 2 - dhPos.left,
+                    pos.top - margin + (h < 0 ? h: 0) - dhPos.top);
         }
     },
 

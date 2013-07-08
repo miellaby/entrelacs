@@ -3,11 +3,26 @@ function Prompt(string, terminal, x, y, immediate) {
 
     var d = $("<div class='prompt'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
     d.css({ 'left': x + 'px', 'top': y + 'px' });
-    
     View.call(this, null, terminal, d);
+    var w = d.width();
 
     if (terminal.animatePlease && !immediate) {
-        self.d.css('opacity', 0.1).css('width', '10px').animate({ opacity: 1, left: "-=" + parseInt(terminal.defaultEntryWidth / 2) + "px", width: terminal.defaultEntryWidth}, 200, 'swing', function() { self.d.css('width', 'auto');});
+        d.css({
+            'opacity': 0.1,
+            'width': '10px',
+            'margin-left': 0,
+            'margin-top': -d.height() + 'px'
+        }).animate({
+            'opacity': 1,
+            'margin-left': -parseInt(w / 2) + "px",
+            'width': w
+        }, 200, 'swing', function() { self.d.css('width', 'auto');});
+    } else {
+        d.css({
+            'margin-left': -parseInt(w / 2) + 'px',
+            'margin-top': -d.height() + 'px'
+        });
+        //self.d.css({'left': x - parseInt(terminal.defaultEntryWidth / 2) + 'px', 'y': y - d.height() + 'px'});
     }
     
     $.extend(this.on, {
@@ -76,7 +91,7 @@ function Prompt(string, terminal, x, y, immediate) {
                 for (var i = 0; i < f.length; i++) { // search into loose children
                     var next = event.shiftKey ? self.terminal.findPrevious(f[i], self) : self.terminal.findNext(f[i], self);
                     if (next) {
-                        next.children('input,textarea').focus();
+                        next.d.children('input,textarea').focus();
                         return false;
                     }
                 }
@@ -219,27 +234,18 @@ $.extend(Prompt.prototype, View.prototype, {
     turnIntoAtomView: function() {
         var string = this.d.children('input,textarea').val();
         var arrow = Arrow.atom(string);
-        var d = this.d;
-        var w0 = d.width();
-        var p = d.position();
-        var atomView = new AtomView(arrow, this.terminal, p.left + w0 / 2, p.top + d.height());
+        var p = this.d.position();
+        var atomView = new AtomView(arrow, this.terminal, p.left, p.top);
         this.replaceWith(atomView);
         return atomView;
     },
 
         
     turnIntoBlobView: function(blob) {
-        var d = this.d;
-        var w0 = d.width();
-        var p = d.position();
-        var blobView = new BlobView(blob, this.terminal, p.left + w0 / 2, p.top + d.height());
+        var p = this.d.position();
+        var blobView = new BlobView(blob, this.terminal, p.left, p.top);
         this.replaceWith(blobView);
         return blobView;
-    },
-
-    close: function() {
-        var self = this;
-        self.d.fadeOut(200, function() { self.dismiss(); });
     },
     
     closeIfLoose: function() {
@@ -253,23 +259,20 @@ $.extend(Prompt.prototype, View.prototype, {
     },
 
     split: function() {
-        var prompt = this.d;
-        var i = prompt.children('input,textarea');
+        var i = this.d.children('input,textarea');
         var v = i.val();
         var textPosition = i[0].selectionStart;
 
-        var p = prompt.position();
-        var width = prompt.width();
-        var height = prompt.height();
+        var p = this.d.position();
 
         // peek a counting circle point
         var c = this.terminal.getPointOnCircle(50);
         
         // build a tail prompt
-        var t = new Prompt(v, this.terminal, p.left - width / 2 - 50 - c.x, p.top + height / 2 - 100 - c.y);
+        var t = new Prompt(v, this.terminal, p.left - 50 - c.x, p.top - 100 - c.y);
 
         // build a head prompt
-        var h = new Prompt("", this.terminal, p.left + width / 2 + 50 + c.x, p.top + height / 2 - 50 + c.y);
+        var h = new Prompt("", this.terminal, p.left + 50 + c.x, p.top - 50 + c.y);
 
         // pair head and tail as loose arrows
         var pairView = new PairView(null, this.terminal, t, h);
@@ -278,7 +281,7 @@ $.extend(Prompt.prototype, View.prototype, {
         this.replaceWith(pairView);
 
         // focus on tail prompt
-        t.children('input').focus()[0].setSelectionRange(textPosition, textPosition);
+        t.d.children('input').focus()[0].setSelectionRange(textPosition, textPosition);
 
         return pairView;
     },

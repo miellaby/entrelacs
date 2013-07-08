@@ -22,7 +22,7 @@ function View(arrow, terminal, d) {
                     return true;
                 }
                 if (button.hasClass('close')) {
-                    self.dismiss();
+                    self.close();
                 }  else if (button.hasClass('poke')) {
                     self.update();
                 } else if (button.hasClass('in')) {
@@ -180,7 +180,7 @@ View.prototype = {
         if (this.children.length) {
             var d = this.d;
             var p = d.position();
-            var placeholder = new Placeholder(this.arrow, this.terminal, p.left + d.width() / 2, p.top + d.height());
+            var placeholder = new Placeholder(this.arrow, this.terminal, p.left, p.top);
             this.replaceWith(placeholder);
         } else { // no child
         
@@ -277,7 +277,7 @@ View.prototype = {
             var list = descendant.children;
             for (var i = 0; i < list.length; i++) {
                var c = list[i];
-               attachGeometryToDescendants(c);
+               attachGeometryToDescendants(child, c);
             }
         };
         var list = this.children;
@@ -417,14 +417,13 @@ View.prototype = {
     confirmDescendants: function() {
         var f = this.for;
         if (!f.length) { // terminal case: tree to be recorded
-            this.confirm();
+            this.confirm().update();
         } else {
             // get back to the roots (recursive calls to all waiting prompt arrows)
             for (var i = 0 ; i < f.length; i++) {
                 f[i].confirmDescendants();
             }
         };
-        this.update();
     },
 
     update: function() {
@@ -448,15 +447,15 @@ View.prototype = {
                 if (!a) {
                     var c = self.terminal.getPointOnCircle(50);
                     a = self.terminal.show(partner,
-                            p.left + (outgoing ? d.width() + 100 + c.x : -100 - self.terminal.defaultEntryWidth - c.x),
-                            p.top + d.height() / 2 + c.y);
+                            p.left + (outgoing ? 100 + c.x : -100 - c.x),
+                            p.top + c.y);
                 }
                 var pairView = self.terminal.findNearestArrowView(pair, p, 1000);
                 if (!pairView || pairView.tv !== (outgoing ? self: a) || pairView.hv !== (outgoing ? a : self)) {
-                    pairView = outgoing ? new PairView(pair, terminal, self, a) : new PairView(pair, terminal, a, self);
+                    pairView = outgoing ? new PairView(pair, self.terminal, self, a) : new PairView(pair, self.terminal, a, self);
                     pairView.restoreGeometry(a, pairView);
                 } else {
-                    pairView.css('marginTop','-5px').animate({marginTop: 0});
+                    pairView.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
                 }
 
                 var geoKey = Arrow.pair(Arrow.atom("geometry"), pair);
@@ -480,8 +479,8 @@ View.prototype = {
             console.log("}");
         };
 
-        self.d.css('marginTop','-5px').animate({marginTop: 0});
-        this.terminal.moveLoadindBarOnView(self);
+        self.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
+        self.terminal.moveLoadindBarOnView(self);
         var promise = self.terminal.entrelacs.isRooted(self.arrow);
         promise.done(function () {
             self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
@@ -493,6 +492,11 @@ View.prototype = {
             });
         });
         return promise;
+    },
+
+    close: function() {
+        var self = this;
+        self.d.fadeOut(200, function() { self.dismiss(); });
     },
     
     isPairView: function() { return true; },

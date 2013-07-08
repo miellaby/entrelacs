@@ -122,13 +122,13 @@ Terminal.prototype = {
        var n, a;
        if (incoming) {
           n = new Prompt("", this,
-                    p.left - this.defaultEntryWidth - 100 - c.x,
-                    p.top + d.height() / 2 - c.y, true /* immediate */);
+                    p.left - 100 - c.x,
+                    p.top - c.y, true /* immediate */);
           a = new PairView(null, terminal, n, view);
        } else {
           n = new Prompt("", this,
-                    p.left + d.width() + 100 + c.x,
-                    p.top + d.height() / 2 + c.y, true /* immediate */);
+                    p.left + 100 + c.x,
+                    p.top + c.y, true /* immediate */);
           a = new PairView(null, terminal, view, n);
        }
        n.d.children("input").focus();
