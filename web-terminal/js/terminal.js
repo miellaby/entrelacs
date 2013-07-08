@@ -71,7 +71,7 @@ Terminal.prototype = {
             clearTimeout(this.commitTimeout);
             this.commitTimeout = null;
         }
-        this.entrelacs.commit();
+        Arrow.commit(this.entrelacs);
     },
     
     prepareCommit: function(d) {
