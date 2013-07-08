@@ -452,8 +452,8 @@ View.prototype = {
                             p.top + d.height() / 2 + c.y);
                 }
                 var pairView = self.terminal.findNearestArrowView(pair, p, 1000);
-                if (!pairView || pairView.tv !== (outgoing ? view : a) || pairView.hv !== (outgoing ? a : view)) {
-                    pairView = outgoing ? new PairView(pair, terminal, view, a) : new PairView(pair, terminal, a, view);
+                if (!pairView || pairView.tv !== (outgoing ? self: a) || pairView.hv !== (outgoing ? a : self)) {
+                    pairView = outgoing ? new PairView(pair, terminal, self, a) : new PairView(pair, terminal, a, self);
                     pairView.restoreGeometry(a, pairView);
                 } else {
                     pairView.css('marginTop','-5px').animate({marginTop: 0});
@@ -472,7 +472,7 @@ View.prototype = {
                 else { // list not completly unfolded. end with a placeholder
                     var promise = self.terminal.entrelacs.open(list);
                     promise.done(function(unfolded) {
-                        processPartners(view, unfolded);
+                        processPartners(self, unfolded);
                     });
                     list = Arrow.eve;
                 }
