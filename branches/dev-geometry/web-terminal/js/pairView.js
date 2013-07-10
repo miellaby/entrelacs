@@ -144,8 +144,8 @@ $.extend(PairView.prototype, View.prototype, {
 
     getGeometry: function() {
         var view = this.d;
-        var w = view.width();
         // TODO : should just get position of both end views
+        var w = (view.hasClass('ipair') ? -1 : 1) * view.width();
         var ht = view.children('.tail').height();
         var hh = view.children('.head').height();
         var h = ht - hh;
@@ -164,13 +164,13 @@ $.extend(PairView.prototype, View.prototype, {
         console.log('setPairViewGeometry ' + Arrow.serialize(this.arrow) + ' ('
                 + (floating == this.hv ? "head floating" : floating ? "tail floting" : "all floating") + ') ' + w + ' ' + h);
         if (floating) {
-            if (floating == this.hv) {
+            if (floating == this.tv) {
                 this.tv.move(
                         dhPos.left - w - dtPos.left,
                         dhPos.top - h - dtPos.top);
             } else {
                 this.hv.move(
-                        dtPos.left + - dhPos.left,
+                        dtPos.left + w - dhPos.left,
                         dtPos.top + h - dhPos.top);
             }
         } else {

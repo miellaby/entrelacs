@@ -265,10 +265,10 @@ View.prototype = {
            if (da.isRooted()) {
                 var key;
                 if (da == child.arrow) {
-                    key = Arrow.pair(Arrow.atom("geometry"), a);
+                    key = Arrow.pair(Arrow.atom("geometry"), da);
                 } else {
                     key = Arrow.pair(
-                        Arrow.pair(Arrow.atom("geometry"), a),
+                        Arrow.pair(Arrow.atom("geometry"), da),
                         Arrow.pair(Arrow.atom("geometry"), child.arrow));
                 }
                 Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
@@ -452,7 +452,7 @@ View.prototype = {
                 }
                 var pairView = self.terminal.findNearestArrowView(pair, p, 1000);
                 if (!pairView || pairView.tv !== (outgoing ? self: a) || pairView.hv !== (outgoing ? a : self)) {
-                    pairView = outgoing ? new PairView(pair, self.terminal, self, a) : new PairView(pair, self.terminal, a, self);
+                    pairView = outgoing ? new PairView(pair, self.terminal, self, a, pair) : new PairView(pair, self.terminal, a, self, pair);
                     pairView.restoreGeometry(a, pairView);
                 } else {
                     pairView.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
