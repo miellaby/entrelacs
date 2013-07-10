@@ -213,8 +213,8 @@ Terminal.prototype = {
     moveLoadindBarOnView: function(view) {
        var p = view.d.position();
        this.loading
-            .css('top', parseInt(p.top + view.d.height() - this.defaultEntryHeight / 2) + 'px')
-            .css('left', parseInt(p.left + view.d.width() / 2) + 'px');
+            .css('top', (p.top + this.defaultEntryHeight) + 'px')
+            .css('left', p.left + 'px');
     },
 
     arrowEvent: function(a) {

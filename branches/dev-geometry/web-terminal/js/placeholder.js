@@ -1,11 +1,13 @@
 function Placeholder(a, terminal, x, y) {
     var self = this;
     var d = $("<div class='placeholder'><button class='unfold'>+</button></div>");
-    d.css({left: x - 13 + 'px',
-           top: y - 12 + 'px'});
+    d.css({left: x + 'px', top: y + 'px'});
     View.call(this, a, terminal, d);
-    
-    d.children('button').attr('draggable', true)
+    d.css({
+        'margin-left': -parseInt(d.width() / 2) + 'px',
+        'margin-top': -(d.height() + 5) + 'px'
+    });
+    d.children('button').attr('draggable', true);
               
     $.extend(this.on, {
         unfold: {

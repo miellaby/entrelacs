@@ -63,8 +63,9 @@ function Prompt(string, terminal, x, y, immediate) {
                 self.terminal.moveLoadindBarOnView(self);
 
                 if ($(this).is('textarea')) {
-                    // record the currently edited compound arrow (or at least this text input)
-                    self.terminal.submitPromptTrees();
+                    self.terminal.moveLoadindBarOnView(self);
+                    // record arrows that this prompt belongs too
+                    self.confirmDescendants();
                     // self.terminal.commit();
                 } else {
                     // turn into a textarea
@@ -157,7 +158,6 @@ function Prompt(string, terminal, x, y, immediate) {
     
     var i = d.children('input');
     if (string) i.val(string);
-
     // set listeners
     i.blur(this.on.blur);
     i.click(this.on.click);
@@ -187,7 +187,7 @@ function Prompt(string, terminal, x, y, immediate) {
         'action': terminal.entrelacs.serverUrl + prog,
         'onStart':  function() {
             self.terminal.uploadCount++;
-            self.terminal.moveLoadindBarOnView(self.d);
+            self.terminal.moveLoadindBarOnView(self);
             self.terminal.loading.show();
         },
         'onComplete': function(response) {
@@ -218,8 +218,8 @@ $.extend(Prompt.prototype, View.prototype, {
         d.children('.fileinput-button').detach();
         var textPosition = i[0].selectionStart;
         i.detach();
-        i = $("<textarea></textarea>").text(v).appendTo(d);
-        i[0].setSelectionRange(textPosition, textPosition);
+        i = $("<textarea></textarea>").text(v + "\n").appendTo(d);
+        i[0].setSelectionRange(++textPosition, textPosition);
         i.blur(this.on.blur);
         i.focus(this.on.focus);
         i.keydown(this.on.keydown);
@@ -227,8 +227,11 @@ $.extend(Prompt.prototype, View.prototype, {
         i.on('dragenter', this.on.dragenter);
         i.on('dragleave', this.on.dragleave);
         i.focus();
-        var w = i.width();
-        d.css('left', (w < w0 ? '+=' + ((w0 - w) / 4) : '-=' + ((w - w0) / 4)) + 'px');
+        var w = d.width();
+        d.css({
+            'margin-left': -parseInt(w / 2) + 'px',
+            'margin-top': -d.height() + 'px'
+        });
     },
 
     turnIntoAtomView: function() {

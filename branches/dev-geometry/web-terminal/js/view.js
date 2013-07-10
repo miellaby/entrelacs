@@ -35,6 +35,9 @@ function View(arrow, terminal, d) {
             rooted: {
                 change: function(event) {
                     var arrow = self.arrow;
+                    if (!arrow) {
+                        arrow = self.confirm().arrow;
+                    }
                     if (arrow) {
                         if (arrow.isRooted()) {
                             arrow.unroot();
@@ -44,8 +47,9 @@ function View(arrow, terminal, d) {
                             self.saveAllGeometryAfterRoot();
                         }
                         self.terminal.commit();
-                    }
-                    return true;
+                        return true;
+                    } else
+                        return false;
                 },
             },
             enter: function(event) {
@@ -58,6 +62,7 @@ function View(arrow, terminal, d) {
                     d.children('.head').css('border-color', '#444').delay(50).css('border-color', '#aaa').delay(50).css('border-color', '#ddd')
                         .children('.headEnd').css('border-bottom-color', '#444').delay(50).css('border-bottom-color', '#aaa').delay(50).css('border-bottom-color', '#ddd');
                 }
+                return true;
             },
             leave: function(event) {
                 var d = self.d;
@@ -71,6 +76,7 @@ function View(arrow, terminal, d) {
                     d.children('.head').css('border-color', '#aaa').delay(50).css('border-color', '#444').delay(50).css('border-color', '#000')
                         .children('.headEnd').css('border-bottom-color', '#aaa').delay(50).css('border-bottom-color', '#444').delay(50).css('border-bottom-color', '#000');
                 }
+                return true;
             }
         },
         
