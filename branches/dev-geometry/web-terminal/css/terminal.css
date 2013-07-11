@@ -165,6 +165,23 @@ animation-delay:0.45s;
 
 
 
+.connect {
+    position: fixed;
+    right: 0px;
+    margin-top: 50px;
+    margin-right: 50px;
+    opacity: 0.5;
+}
+.connect :hover {
+    opacity: 0.7;
+}
+
+.connect button {
+    border: 1px solid #eee;
+    border-radius: 10px;
+    min-width: 50px;
+    min-height: 50px;
+}
 
 .toolbar {
     position: absolute;
@@ -174,7 +191,7 @@ animation-delay:0.45s;
     z-index: 21;
     height: 17px;
     line-height: 16px;
-    bottom: -16px;
+    bottom: -17px;
 }
 
 .pair .toolbar, .ipair .toolbar {
