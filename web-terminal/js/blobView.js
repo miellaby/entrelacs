@@ -19,8 +19,7 @@ function BlobView(a, terminal, x, y) {
     } else {
         o.css('height', 100);
     }
-    this.setTerminal(terminal);
-
+    
     if (isCreole) {
         o.click(this.on.click);
     } else {
@@ -33,12 +32,19 @@ function BlobView(a, terminal, x, y) {
             o.css({height: '100px', 'max-width': 'auto'});
     }
 
-    var w = d.width();
-    var h = d.height();
-    d.css('left', (x - Math.round(w / 2, 0)) + 'px');
-    d.css('top', (y - h) + 'px');
+    d.css({
+        'left': x + 'px',
+        'top': y + 'px',
+    });
 
     View.call(this, a, terminal, d);
+
+    var w = d.width();
+    var h = d.height();
+    d.css({
+        'margin-left': -parseInt(w / 2) + 'px',
+        'margin-top': -h + 'px'
+    });
 }
 
 $.extend(BlobView.prototype, View.prototype, {
