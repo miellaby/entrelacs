@@ -9,9 +9,14 @@ function Terminal(area, entrelacs, animatePlease) {
     this.defaultEntryWidth = protoEntry.width();
     this.defaultEntryHeight = protoEntry.height();
     protoEntry.detach();
-    
-    this.loading = $('<div class="loading bar" id="loading"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>');
+    this.loading = $("<div class='loading bar' id='loading'><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>");
     this.loading.appendTo(area);
+    this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
+    this.connect.children('button').click(function() {
+        entrelacs.invoke("/");
+        return false;
+    });
+    this.connect.appendTo(area);
     this.circleAngle = 0;
     this.uploadCount = 0;
 
