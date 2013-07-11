@@ -23,7 +23,7 @@ function BlobView(a, terminal, x, y) {
     if (isCreole) {
         o.click(this.on.click);
     } else {
-        o.colorbox({href: this.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
+        o.colorbox({href: terminal.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
         var wo = o.width();
         var ho = o.height();
         if (wo > ho)
