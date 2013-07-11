@@ -186,7 +186,7 @@ View.prototype = {
         if (this.children.length) {
             var d = this.d;
             var p = d.position();
-            var placeholder = new Placeholder(this.arrow, this.terminal, p.left, p.top);
+            var placeholder = new PlaceholderView(this.arrow, this.terminal, p.left, p.top);
             this.replaceWith(placeholder);
         } else { // no child
         
