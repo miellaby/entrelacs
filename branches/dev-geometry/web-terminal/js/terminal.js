@@ -51,7 +51,7 @@ Terminal.prototype = {
         if (view) return view;
         
         if (a.uri !== undefined) { // placeholder
-            view = new Placeholder(a, this, x, y);
+            view = new PlaceholderView(a, this, x, y);
         } else if (a.isAtomic()) {
             view = new AtomView(a, this, x, y);
         } else if (a.getTail() == Arrow.atom('Content-Typed')) {
