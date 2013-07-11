@@ -1,4 +1,4 @@
-function Placeholder(a, terminal, x, y) {
+function PlaceholderView(a, terminal, x, y) {
     var self = this;
     var d = $("<div class='placeholder'><button class='unfold'>+</button></div>");
     d.css({left: x + 'px', top: y + 'px'});
@@ -19,7 +19,7 @@ function Placeholder(a, terminal, x, y) {
     });
     d.children('.unfold').click(this.on.unfold.click);
 }
-$.extend(Placeholder.prototype, View.prototype, {
+$.extend(PlaceholderView.prototype, View.prototype, {
     isPairView: function() { return false; },
 
     unfold: function() {
