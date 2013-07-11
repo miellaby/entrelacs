@@ -1,10 +1,9 @@
-
 function BlobView(a, terminal, x, y) {
     var server = terminal.entrelacs.serverUrl;
     var uri = Arrow.serialize(a);
     var d = $("<div class='blob'></div>");
-    var isContentTyped = (blob.getTail().getTail() === Arrow.atom('Content-Typed'));
-    var type = isContentTyped ? blob.getHead().getTail().getBody() : null;
+    var isContentTyped = (a.getTail().getTail() === Arrow.atom('Content-Typed'));
+    var type = isContentTyped ? a.getHead().getTail().getBody() : null;
     var isImage = isContentTyped && type.search(/^image/) == 0;
     var isOctetStream = isContentTyped && type == "application/octet";
     var isCreole = isContentTyped && type == "text/x-creole";
@@ -16,7 +15,7 @@ function BlobView(a, terminal, x, y) {
                 ? $("<a class='content' target='_blank' tabIndex=1></a>").attr('href', server + '/escape+' + uri).text(uri)
                 : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
     if (isCreole) {
-        terminal.creole.parse(o[0], blob.getHead().getHead().getBody());
+        terminal.creole.parse(o[0], a.getHead().getHead().getBody());
     } else {
         o.css('height', 100);
     }
