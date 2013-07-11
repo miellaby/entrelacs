@@ -297,18 +297,21 @@ View.prototype = {
     */
     cleanAllGeometryAfterUnroot: function() {
         var r = this.arrow;
-        if (!r ||r.isAtomic()) return;
+        if (!r) return;
         var p = Arrow.pair(Arrow.atom("geometry"), r);
         var it = p.getChildren(Arrow.FILTER_INCOMING);
         var c, c2;
+        var isP = this.isPairView();
         while ((c = it()) != null) {
             if (c.isRooted()) { // case: geometry+root/width+height
                 c.unroot();
             }
-            // case: ///geometry+root/geometry+someArrow/width+height
-            var it2 = c.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
-            while ((c2 = it2()) != null) {
-                c2.unroot();
+            if (isP) {
+                // case: ///geometry+root/geometry+someArrow/width+height
+                var it2 = c.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
+                while ((c2 = it2()) != null) {
+                    c2.unroot();
+                }
             }
         }
     },
@@ -317,26 +320,34 @@ View.prototype = {
     */
     saveAllGeometryAfterRoot: function() {
         var r = this.arrow;
-        if (!r || r.isAtomic()) return;
+        if (!r) return;
         var self = this;
         var recSave = function(view) {
             if (view === undefined) return;
             var a = view.arrow;
-            if (!a || a.isAtomic()) return;
-            var key = Arrow.pair(
-                Arrow.pair(Arrow.atom("geometry"), r),
-                Arrow.pair(Arrow.atom("geometry"), a)
-            );
-            Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
-            Arrow.pair(key, view.getGeometry()).root();
-            recSave(view.tv);
-            recSave(view.hv);
+            if (!a) return;
+            if (view.getGeometry) {
+                var key = Arrow.pair(
+                    Arrow.pair(Arrow.atom("geometry"), r),
+                    Arrow.pair(Arrow.atom("geometry"), a)
+                );
+                Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
+                Arrow.pair(key, view.getGeometry()).root();
+            }
+            if (view.isPairView()) {
+                recSave(view.tv);
+                recSave(view.hv);
+            }
         };
-        recSave(this.tv);
-        recSave(this.hv);
-        var key = Arrow.pair(Arrow.atom("geometry"), r);
-        Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
-        Arrow.pair(key, this.getGeometry()).root();
+        if (this.isPairView()) {
+            recSave(this.tv);
+            recSave(this.hv);
+        }
+        if (this.getGeometry) {
+            var key = Arrow.pair(Arrow.atom("geometry"), r);
+            Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
+            Arrow.pair(key, this.getGeometry()).root();
+        }
     },
     
     /**
@@ -345,7 +356,7 @@ View.prototype = {
     * (actually //geometry+a/width+height for better indexing)
     */
     restoreGeometry: function(floating, root) {
-        if (!this.isPairView()) return;
+        if (!this.setGeometry) return;
         
         var a = this.arrow;
         if (!a || !a.isRooted()) return;
