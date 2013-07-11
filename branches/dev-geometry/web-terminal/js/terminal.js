@@ -138,7 +138,7 @@ Terminal.prototype = {
 
     // find an editable atom into a tree
     findNextInto: function(view) {
-        if (!view.isPairView && view.atom === null) { // atom
+        if (!view.isPairView() && view.arrow === null) { // prompt
             return view;
         } else if (view.isPairView()) { // pair
            // check in tail then in head
@@ -174,7 +174,7 @@ Terminal.prototype = {
     
     // find previous editable atom into a tree
     findPreviousInto: function(view) {
-        if (!view.isPairView() && view.atom === null) { // prompt view
+        if (!view.isPairView() && view.arrow === null) { // prompt
             return view;
         } else if (view.isPairView()) { // pair
            // check in head then in tail
