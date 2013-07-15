@@ -21,7 +21,7 @@ static struct s_machine_stats {
 static Arrow let = 0, load = 0, environment = 0, escape = 0, var = 0, comma = 0, it = 0,
    evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, rlambda = 0, operator = 0,
    continuation = 0, fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord= 0, brokenEnvironment = 0,
-        tempVar, tailOfOperator = EVE, headOfOperator = EVE;
+   land = 0, tempVar, tailOfOperator = EVE, headOfOperator = EVE;
 
 static void machine_init(Arrow);
 
@@ -817,6 +817,10 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     return a(a(a(expression, expr), EVE), escalate);
 }
 
+Arrow landHook(Arrow CM, Arrow hookParameter) {
+    return a(xl_reduceMachine(CM, EVE), land);
+}
+
 Arrow digestHook(Arrow CM, Arrow hookParameter) {
    Arrow arrow = xl_argInMachine(CM);
    uint32_t digestSize;
@@ -848,6 +852,7 @@ static void machine_init(Arrow CM) {
     arrowWord = atom("arrow");
     fall = atom("fall");
     escalate = atom("escalate");
+    land = atom("land");
     comma = atom(",");
     it = atom("it");
     swearWord = atom("&!#");
@@ -871,6 +876,7 @@ static void machine_init(Arrow CM) {
     root(a(locked, arrowWord));
     root(a(locked, fall));
     root(a(locked, escalate));
+    root(a(locked, land));
     root(a(locked, comma));
     root(a(locked, it));
     root(a(locked, swearWord));
@@ -903,6 +909,7 @@ static void machine_init(Arrow CM) {
         {"commit", commitHook},
         {"fall", fallHook},
         {"escalate", escalateHook},
+        {"land", landHook},
         {"digest", digestHook},
         {NULL, NULL}
     };
@@ -936,10 +943,10 @@ static void machine_init(Arrow CM) {
         xls_set(EVE, atom("unlink"), xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/unlinkTailAndHead/arrow///escape+var/tailOf/var+x//escape+var/headOf/var+x+"));
 
     // System Init call
-    xl_eval(EVE, pair(atom("init"), pair(escape, CM))); // we pass CM at parameter to preserve it from GC
+    xl_eval(EVE, pair(atom("init"), pair(escape, CM)), atom("init")); // we pass CM at parameter to preserve it from GC
 }
 
-Arrow xl_run(Arrow C, Arrow M) {
+Arrow xl_run(Arrow C, Arrow M, Arrow session) {
     machine_init(pair(C,M));
 
     // M = //p/e+k
@@ -966,6 +973,13 @@ Arrow xl_run(Arrow C, Arrow M) {
             continue;
         }
 
+        if (head(M) == land) {
+          xls_set(EVE, session, C);
+          LOGPRINTF(LOG_WARN," landing to %O", C);
+          M = tail(M);
+          continue;
+        }
+
         M = transition(C, M);
         xl_yield(pair(C,M));
     }
@@ -989,9 +1003,9 @@ Arrow xl_run(Arrow C, Arrow M) {
     return w;
 }
 
-Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */) {
+Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */, Arrow session) {
     TRACEPRINTF("cl_eval C=%O p=%O", C, p);
     Arrow M = a(p, a(EVE, EVE));
-    return xl_run(C /* ContextPath */, M);
+    return xl_run(C /* ContextPath */, M, session);
 }
 

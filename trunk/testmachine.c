@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
         Arrow wanted = xl_uri(wantedUri);
         assert(!xl_isEve(program) && !xl_isEve(wanted));
 
-        Arrow result = xl_eval(xl_Eve(), program);
+        Arrow result = xl_eval(EVE, program, EVE);
         if (!xl_equal(result, wanted)) {
             fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
             return EXIT_FAILURE;

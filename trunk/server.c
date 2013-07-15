@@ -228,7 +228,10 @@ static void *event_handler(enum mg_event event,
             }
         }
         
-        Arrow output = xl_eval(session, xl_pair(method, input));
+        Arrow sessionContext = xls_get(EVE, session);
+        if (sessionContext == NIL)
+            sessionContext = session;
+        Arrow output = xl_eval(sessionContext, xl_pair(method, input), session);
 
         dputs("Evaluated output is %O", output);
 

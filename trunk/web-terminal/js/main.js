@@ -1,8 +1,8 @@
 
 function init() {
     var area = $('#area');
-    var entrelacs = new Entrelacs();
-    var terminal = new Terminal(area, entrelacs, true);
+    entrelacs = new Entrelacs();
+    terminal = new Terminal(area, entrelacs, true);
     $(document).scrollTop(area.height() / 2 - $(window).height() / 2);
     $(document).scrollLeft(area.width() / 2 - $(window).width() / 2);
     setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
@@ -16,12 +16,12 @@ function init() {
                                      
     //findFeaturedArrows();
     var wizardState = "beginning";
-    if ($.cookie('wizard') == '1') return;
+    if ($.cookie && $.cookie('wizard') == '1') return;
     
     var center = function(elt) {
            var p = elt.position();
-           var x = p.left + elt.width() / 2 - ($(window).width() / 2);
-           var y = p.top + elt.height() / 2 - ($(window).height() / 2) - $('.wizard_box').height() * 0.9;
+           var x = p.left - ($(window).width() / 2);
+           var y = p.top - elt.height() * 1.5 - ($(window).height() / 2) - $('.wizard_box').height() * 0.2;
            $('html, body').animate({scrollLeft: x, scrollTop: y}, 1000);
  
     };
@@ -44,29 +44,29 @@ function init() {
         } else if (wizardState == 'hello') {
             if ((o = Arrow.atom('hello').get('views')) !== undefined) {
                 $('#wizard_says').hide().html("You've just submitted your first <i>atomic arrow</i>.<p>Now find and click the &darr;&nbsp;button.").fadeIn();
-                center($(o[0]));
+                center(o[0].d);
                 wizardState = "outgoing";
             }
         } else if (wizardState == 'outgoing') {
             if ($(':focus').parent().hasClass('prompt')) {
-                var f = $(':focus').parent().data('for');
-                if (f && f.length && f[0].data('tail').data('arrow') == Arrow.atom('hello')) {
+                var f = $(':focus').parent().data('view').for;
+                if (f && f.length && f[0].tv.arrow == Arrow.atom('hello')) {
                     $('#wizard_says').hide().html("You're bound to create another arrow.<p> Enter <i>world</i> at the other end").fadeIn();
-                    center(f[0]);
+                    center(f[0].d);
                     wizardState = "world";
                 }
             }
         } else if (wizardState == 'world') {
             if ((o = Arrow.pair(Arrow.atom('hello'), Arrow.atom('world')).get('views')) !== undefined) {
                 $('#wizard_says').hide().html("I introduce you the <i>hello</i> to <i>world</i> arrow. It is <i>unique</i> and <i>self-indexed</i>, like every other arrow.<p> Now please check the box in its floating toolbar").fadeIn();
-                center($(o[0]));
+                center(o[0].d);
                 wizardState = "root";
             }
 
         } else if (wizardState == 'root') {
             if ((o = Arrow.pair(Arrow.atom('hello'), Arrow.atom('world'))).isRooted()) {
                 $('#wizard_says').hide().html("So you've just <i>rooted hello&rarr;word</i>&nbsp!<br>:)<br>That tells the system this arrow is right and worth keeping.<p>Would you mind refresh the page now?").fadeIn();
-                center($(o.get('views')[0]));
+                center(o.get('views')[0].d);
                 wizardState = "clean";
             }
         } else if (wizardState == 'clean') {
@@ -78,7 +78,7 @@ function init() {
             if ((o = Arrow.atom('hello').get('views') || []).length) {
                 $('#wizard_says').hide().html("Note how arrows are connected to each others, "
                     + "allowing information to be browsed as will!<p>The tutorial is over but keep on experimenting!").fadeIn();
-                center($(o[0]));
+                center(o[0].d);
                 wizardState = 'end';
                 $.cookie('wizard', '1');
                 clearInterval(wizardScrutation);

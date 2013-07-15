@@ -117,10 +117,10 @@ Arrow xl_continuation(XLCallBack hook, Arrow); ///< assimilate a C implemented c
  * $M is a machine state.
  * $contextPath is the path representating a nested hierarchy of contexts (/C0.C1...Cn).
  */
-Arrow xl_run(Arrow contextPath, Arrow M); ///< M == (<program> (<environment> <continuation-stack>))
+Arrow xl_run(Arrow contextPath, Arrow M, Arrow session); ///< M == (<program> (<environment> <continuation-stack>))
 
 /** Eval a program by building and running a machine */
-Arrow xl_eval(Arrow contextPath, Arrow program);
+Arrow xl_eval(Arrow contextPath, Arrow program, Arrow session);
 
 
 #ifdef	__cplusplus
