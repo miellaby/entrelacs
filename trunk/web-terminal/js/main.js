@@ -16,7 +16,11 @@ function init() {
                                      
     //findFeaturedArrows();
     var wizardState = "beginning";
-    if ($.cookie && $.cookie('wizard') == '1') return;
+    
+    if ($.cookie && $.cookie('wizard') == '1'
+        || /#pub/.test(window.location)) {
+        return;
+    }
     
     var center = function(elt) {
            var p = elt.position();

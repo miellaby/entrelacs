@@ -765,6 +765,7 @@ $.extend(Entrelacs.prototype, {
             delete this.uriMap[uri].get(this.uriKey);
         }
         this.uriMap = {};
+        Arrow.callListeners(null);
     },
 
     /** 
@@ -849,7 +850,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.getUri(a, true);
             });
-        } else {
             self.chain = promise;
         }
 
@@ -882,7 +882,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.root(a, true);
             });
-        } else {
             self.chain = promise;
         }
         
@@ -910,7 +909,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.unroot(a, true);
             });
-        } else {
             self.chain = promise;
         }
 
@@ -945,7 +943,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.isRooted(a, true);
             });
-        } else {
             self.chain = promise;
         }
         
@@ -979,7 +976,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.getChildren(a, true);
             });
-        } else {
             self.chain = promise;
         }
 
@@ -1015,7 +1011,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.getPartners(a, true);
             });
-        } else {
             self.chain = promise;
         }
 
@@ -1036,18 +1031,17 @@ $.extend(Entrelacs.prototype, {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
 
-       promise = promise.pipe(function(arrowURI) {
+        promise = promise.pipe(function(arrowURI) {
             self.checkCookie();
             var result = Arrow.decodeURI(arrowURI, self.serverUrl);
             return result;
         });
         
-         if (!secondTry) {
+        if (!secondTry) {
             promise = promise.pipe(null, function() {
                 self.reset();
                 return self.invoke(a, true);
             });
-        } else {
             self.chain = promise;
         }
         
@@ -1090,7 +1084,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.open(p, depth, true);
             });
-        } else {
             self.chain = promise;
         }
         
@@ -1128,7 +1121,6 @@ $.extend(Entrelacs.prototype, {
                 self.reset();
                 return self.commit(true);
             });
-        } else {
             self.chain = promise;
         }
         

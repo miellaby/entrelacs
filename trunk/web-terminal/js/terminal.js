@@ -1,4 +1,5 @@
 function Terminal(area, entrelacs, animatePlease) {
+    var self = this;
     this.animatePlease = animatePlease || false;
     this.area = area;
     this.entrelacs = entrelacs;
@@ -11,12 +12,22 @@ function Terminal(area, entrelacs, animatePlease) {
     protoEntry.detach();
     this.loading = $("<div class='loading bar' id='loading'><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>");
     this.loading.appendTo(area);
-    this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
-    this.connect.children('button').click(function() {
-        entrelacs.invoke("/");
-        return false;
-    });
-    this.connect.appendTo(area);
+    // TODO: move out connection button
+    if (/#pub/.test(window.location)) {
+        entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
+            self.show(Arrow.atom("hello"),  area.height() / 2, area.width() / 2).update();
+        });
+    } else {
+        this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
+        this.connect.children('button').click(function() {
+            alert("Leaving sand box. Entering public area");
+            window.location = "#pub";
+            var promise = entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
+            promise.done(function() { window.location.reload(); });
+            return false;
+        });
+        this.connect.appendTo(area);
+    }
     this.circleAngle = 0;
     this.uploadCount = 0;
 
@@ -26,7 +37,6 @@ function Terminal(area, entrelacs, animatePlease) {
                 Wikipedia: 'http://en.wikipedia.org/wiki/'},
                                      linkFormat: '' });
 
-                                     var self = this;
     Arrow.listeners.push(function(a) { self.arrowEvent(a); });
     $(document).ajaxStart(function(){
         self.loading.show();
@@ -223,6 +233,13 @@ Terminal.prototype = {
     },
 
     arrowEvent: function(a) {
+        if (a == null) { // reset!
+            // TODO: move out reconnection
+            if (/#pub/.test(window.location)) {
+                var promise = this.entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
+            }
+            return;
+        }
         var self = this;
         if (a.hc === undefined ) { // a is GC-ed
             var views = a.get('views');
