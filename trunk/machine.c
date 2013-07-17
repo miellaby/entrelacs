@@ -808,8 +808,7 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     Arrow expression = xls_get(CT, a(target, xl_atom(secret_sha1)));
 
     if (expression == NIL) {
-        LOGPRINTF(LOG_WARN, "escalate attempt %O",
-                  target_secret_expr);
+        WARNPRINTF("escalate attempt %O", target_secret_expr);
 
         return xl_reduceMachine(CM, EVE);
     }
@@ -947,6 +946,7 @@ static void machine_init(Arrow CM) {
 }
 
 Arrow xl_run(Arrow C, Arrow M, Arrow session) {
+    TRACEPRINTF("BEGIN xl_run(%O, %O, %O", C, M, session);
     machine_init(pair(C,M));
 
     // M = //p/e+k
@@ -961,21 +961,21 @@ Arrow xl_run(Arrow C, Arrow M, Arrow session) {
             Arrow V = tail(VM);
             C = a(C, V); // Fall into context
             M = head(VM);
-            LOGPRINTF(LOG_WARN, "machine context fall to %O", V);
+            WARNPRINTF("machine context fall to %O", V);
             continue;
         }
 
         // only operators can produce such a state
         if (head(M) == escalate) {
             C = tail(C); // Escape from enclosing context
-            LOGPRINTF(LOG_WARN, "machine context escalate to %O", C);
+            WARNPRINTF("machine context escalate to %O", C);
             M = tail(M);
             continue;
         }
 
         if (head(M) == land) {
           xls_set(EVE, session, C);
-          LOGPRINTF(LOG_WARN," landing to %O", C);
+          WARNPRINTF(" landing to %O", C);
           M = tail(M);
           continue;
         }
@@ -992,19 +992,19 @@ Arrow xl_run(Arrow C, Arrow M, Arrow session) {
         return tail(head(M));
     }
 
-    TRACEPRINTF("run finished with M = %O", M);
+    DEBUGPRINTF("run finished with M = %O", M);
     if (w == NIL) w = EVE;
-    TRACEPRINTF("run result is %O", w);
 
-    LOGPRINTF(LOG_WARN, "xl_run done, transition=%d",
+    TRACEPRINTF("END xl_run(...) = %O transition=%d", w,
             machine_stats.transition);
+
     machine_stats = machine_stats_zero;
 
     return w;
 }
 
 Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */, Arrow session) {
-    TRACEPRINTF("cl_eval C=%O p=%O", C, p);
+    TRACEPRINTF("BEGIN xl_eval(%O, %O)", C, p);
     Arrow M = a(p, a(EVE, EVE));
     return xl_run(C /* ContextPath */, M, session);
 }

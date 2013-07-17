@@ -2517,6 +2517,8 @@ Arrow xl_state(Arrow a) {
 
 
 static void spaceGC() {
+    TRACEPRINTF("BEGIN spaceGC()");
+
     for (unsigned i = looseStackSize; i > 0; i--) { // loose stack scanning
         Arrow a = looseStack[i - 1].a;
         if (xl_isLoose(a)) { // a loose arrow is removed NOW
@@ -2524,7 +2526,7 @@ static void spaceGC() {
         }
     }
 
-    LOGPRINTF(LOG_WARN, "spaceGC done, looseStackSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
+    TRACEPRINTF("END spaceGC() looseStackSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
         looseStackSize, space_stats.get, space_stats.root,
         space_stats.unroot, space_stats.new, 
         space_stats.pair, space_stats.atom, space_stats.found,

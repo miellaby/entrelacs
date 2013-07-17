@@ -69,9 +69,17 @@ extern void log_msg(int level, enum _log_facility facility, char *fname, int lin
 
 
 #ifdef PRODUCTION
+#define FATALPRINTF(format, arg...) (void)(0)
+#define ERRORPRINTF(format, arg...) (void)(0)
+#define WARNPRINTF(format, arg...) (void)(0)
+#define INFOPRINTF(format, arg...) (void)(0)
 #define TRACEPRINTF(format, arg...) (void)(0)
 #define DEBUGPRINTF(format, arg...) (void)(0)
 #else
+#define FATALPRINTF(format, arg...) LOGPRINTF(LOG_FATAL, format, ##arg)
+#define ERRORPRINTF(format, arg...) LOGPRINTF(LOG_ERROR, format, ##arg)
+#define WARNPRINTF(format, arg...) LOGPRINTF(LOG_WARN, format, ##arg)
+#define INFOPRINTF(format, arg...) LOGPRINTF(LOG_INFO, format, ##arg)
 #ifdef DEBUG
 #define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
 #define DEBUGPRINTF(format, arg...) LOGPRINTF(LOG_DEBUG, format, ##arg)

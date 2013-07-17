@@ -52,7 +52,7 @@ Arrow deepRoot(Arrow c, Arrow e) {
 
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
-    TRACEPRINTF("xls_root(%O,%O)", c, e);
+    INFOPRINTF("xls_root(%O,%O)", c, e);
     deepRoot(c, e);
     return root(a(c, e));
 }
@@ -92,7 +92,7 @@ void deepUnroot(Arrow c, Arrow e) {
 }
 
 Arrow xls_unroot(Arrow c, Arrow e) {
-    TRACEPRINTF("xls_unroot(%O,%O)", c, e);
+    DEBUGPRINTF("xls_unroot(%O,%O)", c, e);
     deepUnroot(c, e);
     Arrow u = unroot(a(c, e));
     // DEBUGPRINTF("xls_unroot(%O,%O) done.", c, e);
@@ -123,9 +123,10 @@ void xls_reset(Arrow c) {
 }
 
 /** traditional edge storage
- *  root $destination in /$c+$source context path
+ *  root /$c+$destination in /$c+$source context path
  */
 Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
+    INFOPRINTF("xls_link(%O,%O,%O)", c, source, destination);
     Arrow p = xl_pair(source, destination);
  // TODO is not the best way to do it? should not set/unset merges with this?
     xl_root(a(a(c, source), a(c, destination)));
@@ -133,9 +134,10 @@ Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
 }
 
 /** traditional edge removal
- *  unroot $destination from /$c+$source context path
+ *  unroot /$c+$destination from /$c+$source context path
  */
 Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
+    INFOPRINTF("xls_unlink(%O,%O,%O)", c, source, destination);
     Arrow p = xl_pair(source, destination);
  // TODO is not the best way to do it? should not set/unset merges with this?
     xl_unroot(a(a(c, source), a(c, destination)));
@@ -149,9 +151,14 @@ Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
      2) root $value in /$c+$key context path
 */
 Arrow xls_set(Arrow c, Arrow key, Arrow value) {
-    TRACEPRINTF("xls_set(%O,%O,%O)", c, key, value);
+    INFOPRINTF("xls_set(%O,%O,%O)", c, key, value);
 
-    xls_unset(c, key);
+    // unset
+    Arrow slotContext = pairMaybe(c, key);
+    if (slotContext != EVE) {
+       xls_reset(slotContext);
+    }
+    
     return xls_root(a(c, key), value);
 }
 
@@ -160,6 +167,8 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     reset $c+$key context path
 */
 void xls_unset(Arrow c, Arrow key) {
+    INFOPRINTF("xls_unset(%O,%O)", c, key);
+    
     Arrow slotContext = pairMaybe(c, key);
     if (slotContext == EVE) return;
 
@@ -197,8 +206,9 @@ static Arrow get(Arrow c, Arrow key) {
 }
 
 Arrow xls_get(Arrow c, Arrow key) {
+    TRACEPRINTF("BEGIN xls_get(%O,%O)", c, key);
     Arrow value = get(c, key);
-    TRACEPRINTF("xls_get(%O,%O) returned %O", c, key, value);
+    TRACEPRINTF("END xls_get(%O,%O) = %O", c, key, value);
     return value;
 }
 
@@ -234,19 +244,24 @@ Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
     via link/unlink functions
  */
 Arrow xls_partnersOf(Arrow c, Arrow a) {
-    return partnersOf(c, a, EVE);
+    TRACEPRINTF("BEGIN xls_partnersOf(%O, %O)", c, a);
+    Arrow list = partnersOf(c, a, EVE);
+    TRACEPRINTF("END xls_partnersOf(%O, %O) = %O", c, a, list);
+    return list;
 }
 
 /** close a session $s */
 Arrow xls_close(Arrow s) {
-   /* $session =  /$s/session/$agent+$uuid */
-   xls_reset(s);
-   xls_unroot(tailOf(s), headOf(s));
-   return s;
+    TRACEPRINTF("BEGIN xls_close(%O)", s);
+    /* $session =  /$s/session/$agent+$uuid */
+    xls_reset(s);
+    xls_unroot(tailOf(s), headOf(s));
+    TRACEPRINTF("END xls_close(%O)", s);
+    return s;
 }
 
 static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int locateOnly) {
-    TRACEPRINTF("BEGIN _fromUrl(%06x, '%s')", context, url);
+    DEBUGPRINTF("BEGIN _fromUrl(%06x, '%s')", context, url);
     Arrow a = EVE;
 
     char c = url[0];
@@ -329,7 +344,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
             }
         }
 
-    TRACEPRINTF("END _fromUrl(%06x, '%s') = %06x", context, url, a);
+    DEBUGPRINTF("END _fromUrl(%06x, '%s') = %06x", context, url, a);
     return a;
 }
 
@@ -344,7 +359,7 @@ static char* skeepSpacesAndOnePlus(char* urlEnd) {
 }
 
 static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
-    TRACEPRINTF("BEGIN fromUrl(%06x, '%s', %d)", context, url, locateOnly);
+    DEBUGPRINTF("BEGIN fromUrl(%06x, '%s', %d)", context, url, locateOnly);
     char c, *nextUrl;
     Arrow a = _fromUrl(context, url, &nextUrl, locateOnly);
     if (!nextUrl) return a; // NIL or EVE
@@ -361,18 +376,24 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
         nextUrl = skeepSpacesAndOnePlus(nextUrl);
     }
 
-    TRACEPRINTF("END fromUrl(%06x, '%s', %d) = %O", context, url, locateOnly, a);
+    DEBUGPRINTF("END fromUrl(%06x, '%s', %d) = %O", context, url, locateOnly, a);
     return a;
 }
 
 Arrow xls_url(Arrow s, char* aUrl) {
+    TRACEPRINTF("BEGIN xls_url(%O, '%s')", s, aUrl);
     Arrow locked = a(s, atom("locked"));
-    return fromUrl(locked, aUrl, 0);
+    Arrow arrow = fromUrl(locked, aUrl, 0);
+    TRACEPRINTF("END xls_url(%O, '%s') = %O", s, aUrl, arrow);
+    return arrow;
 }
 
 Arrow xls_urlMaybe(Arrow s, char* aUrl) {
+    TRACEPRINTF("BEGIN xls_urlMaybe(%O, '%s')", s, aUrl);
     Arrow locked = a(s, atom("locked"));
-    return fromUrl(locked, aUrl, 1);
+    Arrow arrow = fromUrl(locked, aUrl, 1);
+    TRACEPRINTF("END xls_urlMaybe(%O, '%s') = %O", s, aUrl, arrow);
+    return arrow;
 }
 
 static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: could be rewritten with geoallocs
@@ -401,8 +422,11 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
 
 
 char* xls_urlOf(Arrow s, Arrow e, int depth) {
+    TRACEPRINTF("BEGIN xls_urlOf(%O, %O, %d)", s, e, depth);
     uint32_t l;
     Arrow locked = a(s, atom("locked"));
 
-    return toURL(locked, e, depth, &l);
+    char* url = toURL(locked, e, depth, &l);
+    TRACEPRINTF("END xls_urlOf(%O, %O, %d) = '%s'", s, e, depth, url);
+    return url;
 }

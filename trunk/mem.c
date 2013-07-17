@@ -215,7 +215,7 @@ static int _addressCmp(const void *a, const void *b) {
 
 /** commit */
 void mem_commit() {
-  TRACEPRINTF("mem_commit begin, logSize=%d", logSize);
+  TRACEPRINTF("BEGIN mem_commit() logSize=%d", logSize);
   Address i;
   if (!logSize) {
       assert(reserveHead == 0);
@@ -239,7 +239,7 @@ void mem_commit() {
       mem[i].stamp = 0;
     }
   }
-  LOGPRINTF(LOG_WARN, "mem_commit done, logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
+  TRACEPRINTF("END mem_commit() logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
           " reserveMovesBecauseGet=%d mainReplaces=%d notFound=%d mainFound=%d reserveFound=%d",
           logSize, mem_stats.getCount, mem_stats.setCount,
           mem_stats.reserveMovesBecauseSet, mem_stats.reserveMovesBecauseGet, mem_stats.mainReplaces,

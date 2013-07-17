@@ -323,7 +323,7 @@ int main(void) {
 #ifdef PRODUCTION
   log_init(NULL, "space,session,machine,server=warn");
 #else
-  log_init(NULL, "space,session,machine=trace,server=debug");
+  log_init(NULL, "session,machine=info,server=trace,space=warn");
 #endif
 #endif
 
