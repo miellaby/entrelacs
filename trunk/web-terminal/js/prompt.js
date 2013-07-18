@@ -92,7 +92,7 @@ function Prompt(string, terminal, x, y, immediate) {
                 for (var i = 0; i < f.length; i++) { // search into loose children
                     var next = event.shiftKey ? self.terminal.findPrevious(f[i], self) : self.terminal.findNext(f[i], self);
                     if (next) {
-                        next.d.children('input,textarea').focus();
+                        next.d.children('input[type="text"],textarea').focus();
                         return false;
                     }
                 }
@@ -122,23 +122,25 @@ function Prompt(string, terminal, x, y, immediate) {
 
         fileInputButton: {
             click: function(event) {
-                self.d.children('input').val('').focus();
+                self.d.children('input[type="text"]').val('').focus();
                 event.stopPropagation();
             },
         },
 
         dragenter: function(event) {
-            if ($(this).is("input,textarea")) {
+            
+            if ($(this).is("input[type='text'],textarea")) {
+                event.originalEvent.dataTransfer.dropEffect = "move";
                 self.terminal.dragOver = self;
                 $(this).stop(true, true).animate({'border-bottom-width': '3px'}, 100);
             }
-            //event.preventDefault();
-            //event.stopPropagation();
-            return false;
+            event.preventDefault();
+            event.stopPropagation();
+            //return false;
         },
         
         dragleave: function(event) {
-            if ($(this).is("input,textarea")) {
+            if ($(this).is("input[type='text'],textarea")) {
                 // Check the mouseEvent coordinates are outside of the element rectangle
                 var rect = this.getBoundingClientRect();
                 event.clientX = event.originalEvent.clientX;
@@ -150,13 +152,13 @@ function Prompt(string, terminal, x, y, immediate) {
                     self.terminal.dragOver = null;
                 }
             }
-            //event.preventDefault();
-            //event.stopPropagation();
-            return false;
+            event.preventDefault();
+            event.stopPropagation();
+            //return false;
         }
     });
     
-    var i = d.children('input');
+    var i = d.children('input[type="text"]');
     if (string) i.val(string);
     // set listeners
     i.blur(this.on.blur);
@@ -166,7 +168,8 @@ function Prompt(string, terminal, x, y, immediate) {
     i.keydown(this.on.keydown);
     i.on('dragenter', this.on.dragenter);
     i.on('dragleave', this.on.dragleave);
-        
+    i.on('dragover', function() { return false; });
+    
     // split button
     d.prepend("<a class='split'>||</a>");
     d.children('.split').click(this.on.split.click);
@@ -235,7 +238,7 @@ $.extend(Prompt.prototype, View.prototype, {
     },
 
     turnIntoAtomView: function() {
-        var string = this.d.children('input,textarea').val();
+        var string = this.d.children('input[type="text"],textarea').val();
         var arrow = Arrow.atom(string);
         var p = this.d.position();
         var atomView = new AtomView(arrow, this.terminal, p.left, p.top);
@@ -255,14 +258,14 @@ $.extend(Prompt.prototype, View.prototype, {
         if (this.isLoose()) {
             var self = this;
             setTimeout(function() {
-                if (!self.d.find('input,textarea').is(':focus') && self.isLoose())
+                if (!self.d.find('input[type="text"],textarea').is(':focus') && self.isLoose())
                     self.close();
             }, 1000);
         }
     },
 
     split: function() {
-        var i = this.d.children('input,textarea');
+        var i = this.d.children('input[type="text"],textarea');
         var v = i.val();
         var textPosition = i[0].selectionStart;
 
@@ -284,7 +287,7 @@ $.extend(Prompt.prototype, View.prototype, {
         this.replaceWith(pairView);
 
         // focus on tail prompt
-        t.d.children('input').focus()[0].setSelectionRange(textPosition, textPosition);
+        t.d.children('input[type="text"]').focus()[0].setSelectionRange(textPosition, textPosition);
 
         return pairView;
     },

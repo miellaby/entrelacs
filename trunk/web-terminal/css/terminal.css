@@ -284,6 +284,11 @@ animation-delay:0.45s;
 .atom, .blob, .prompt {
    position: absolute;
 }
+.prompt {
+    background: #FFF;
+    border:0;
+    border-radius: 10px;
+}
 
 .prompt>input, .prompt>textarea, .atom>.content, .blob>.content {
    display: block;
