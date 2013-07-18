@@ -497,11 +497,11 @@ View.prototype = {
                 }
 
                 var geoKey = Arrow.pair(Arrow.atom("geometry"), pair);
-                (function(geoKey, pairView, partner, pair) {
+                (function(geoKey, pairView, a, pair) {
                     self.terminal.entrelacs.getPartners(geoKey).done(function() {
                         pairView.restoreGeometry(a, pairView);
                     });
-                })(geoKey, pairView, partner, pair);
+                })(geoKey, pairView, a, pair);
             
                 var next = list.getHead();
                 if (next)
