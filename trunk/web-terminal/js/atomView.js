@@ -37,5 +37,10 @@ function AtomView(a, terminal, x, y) {
 }
 
 $.extend(AtomView.prototype, View.prototype, {
+    focus: function() {
+        this.d.children('span.content').focus();
+        return true;
+    },
+    
     isPairView: function() { return false; }
 });

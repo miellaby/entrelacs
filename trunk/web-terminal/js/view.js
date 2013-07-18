@@ -81,6 +81,13 @@ function View(arrow, terminal, d) {
         },
         
         dragstart: function(event) {
+            if (event.currentTarget != self.d[0]) {
+                console.log('not');
+                event.preventDefault();
+                    return;
+            }
+            
+            console.log('dragstart');
             // dragStartX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX);
             // dragStartY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY);
 
@@ -91,9 +98,11 @@ function View(arrow, terminal, d) {
             bugInducingElement.css('visibility', 'hidden');
             event.originalEvent.dataTransfer.setData('text/plain', data);
             event.originalEvent.dataTransfer.effectAllowed = "move";
+            event.stopPropagation();
         },
         
         dragend: function(event) {
+            console.log('dragend');
             var bugInducingElement = self.d.children("input[type='text'],textarea");
             bugInducingElement.css('visibility', 'visible');
 
@@ -112,6 +121,7 @@ function View(arrow, terminal, d) {
                 self.saveChildrenGeometry();
                 self.terminal.prepareCommit();
             }
+            event.stopPropagation();
         },
         
         close: {
@@ -189,14 +199,23 @@ View.prototype = {
             var placeholder = new PlaceholderView(this.arrow, this.terminal, p.left, p.top);
             this.replaceWith(placeholder);
         } else { // no child
-        
-            // propagate to loose "prompt trees"
-            if (!direction) { //  when going "down"
-                while (this.for.length) {
-                    this.for[0].dismiss();
+            if (this.for.length > 1) {
+               // several prompt trees
+                // propagate to loose "prompt trees"
+                if (!direction) { //  when going "down"
+                    while (this.for.length) {
+                        this.for[0].dismiss();
+                    }
                 }
+            } else if (this.for.length == 1) {
+                // one pair end
+                var pair = this.for[0];
+                pair.removeFor();
+                var otherEnd = (pair.tv == this ? pair.hv : pair.tv);
+                pair.replaceWith(otherEnd);
+                otherEnd.focus();
             }
-
+            
             this.unbind();
             this.detach();
         }
@@ -513,12 +532,20 @@ View.prototype = {
         return promise;
     },
 
+    /** focus */
+    focus: function () {
+        return false;
+    },
+    
+    /** close */
     close: function() {
         var self = this;
         self.d.fadeOut(200, function() { self.dismiss(); });
     },
     
+    /** is pair view ? */
     isPairView: function() { return true; },
+    
     getTerminal: function() { return this.terminal; },
     getArrow: function() {return this.arrow; },
     getElement: function() { return this.d[0]; }

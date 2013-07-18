@@ -282,6 +282,7 @@ animation-delay:0.45s;
 }
 
 .atom, .blob, .prompt {
+   z-index: 20;
    position: absolute;
 }
 .prompt {
@@ -292,7 +293,6 @@ animation-delay:0.45s;
 
 .prompt>input, .prompt>textarea, .atom>.content, .blob>.content {
    display: block;
-   z-index: 20;
    position: relative;
    border: 1px solid #eee;
    border-radius: 10px;

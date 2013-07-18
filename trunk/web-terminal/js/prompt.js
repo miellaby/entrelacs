@@ -92,7 +92,7 @@ function Prompt(string, terminal, x, y, immediate) {
                 for (var i = 0; i < f.length; i++) { // search into loose children
                     var next = event.shiftKey ? self.terminal.findPrevious(f[i], self) : self.terminal.findNext(f[i], self);
                     if (next) {
-                        next.d.children('input[type="text"],textarea').focus();
+                        next.focus();
                         return false;
                     }
                 }
@@ -122,7 +122,7 @@ function Prompt(string, terminal, x, y, immediate) {
 
         fileInputButton: {
             click: function(event) {
-                self.d.children('input[type="text"]').val('').focus();
+                self.focus();
                 event.stopPropagation();
             },
         },
@@ -134,7 +134,7 @@ function Prompt(string, terminal, x, y, immediate) {
                 self.terminal.dragOver = self;
                 $(this).stop(true, true).animate({'border-bottom-width': '3px'}, 100);
             }
-            event.preventDefault();
+            //event.preventDefault();
             event.stopPropagation();
             //return false;
         },
@@ -152,7 +152,7 @@ function Prompt(string, terminal, x, y, immediate) {
                     self.terminal.dragOver = null;
                 }
             }
-            event.preventDefault();
+            //event.preventDefault();
             event.stopPropagation();
             //return false;
         }
@@ -290,6 +290,12 @@ $.extend(Prompt.prototype, View.prototype, {
         t.d.children('input[type="text"]').focus()[0].setSelectionRange(textPosition, textPosition);
 
         return pairView;
+    },
+
+    /** focus */
+    focus: function () {
+        this.d.children('input[type="text"],textarea').focus();
+        return true;
     },
 
     confirm: function() {

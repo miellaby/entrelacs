@@ -52,7 +52,7 @@ function Terminal(area, entrelacs, animatePlease) {
                 var x = event.pageX;
                 var y = event.pageY;
                 var p = new Prompt("", self, x, y);
-                p.d.children('input').focus();
+                p.focus();
             }
         }
     }
@@ -146,8 +146,7 @@ Terminal.prototype = {
                     p.top + c.y, true /* immediate */);
           a = new PairView(null, terminal, view, n);
        }
-       n.d.children("input").focus();
-       n.d.children("input").focus();
+       n.focus();
        return a;
     },
 
