@@ -2,7 +2,7 @@ function BlobView(a, terminal, x, y) {
     var server = terminal.entrelacs.serverUrl;
     var uri = Arrow.serialize(a);
     var d = $("<div class='blob'></div>");
-    var isContentTyped = (a.getTail().getTail() === Arrow.atom('Content-Typed'));
+    var isContentTyped = (a.getTail() === Arrow.atom('Content-Typed'));
     var type = isContentTyped ? a.getHead().getTail().getBody() : null;
     var isImage = isContentTyped && type.search(/^image/) == 0;
     var isOctetStream = isContentTyped && type == "application/octet";
@@ -19,9 +19,16 @@ function BlobView(a, terminal, x, y) {
     } else {
         o.css('height', 100);
     }
+
+    d.css({
+        'left': x + 'px',
+        'top': y + 'px',
+    });
+
+    View.call(this, a, terminal, d);
     
     if (isCreole) {
-        o.click(this.on.click);
+        o.click(function(e) { e.stopPropagation(); });
     } else {
         o.colorbox({href: terminal.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
         var wo = o.width();
@@ -32,12 +39,6 @@ function BlobView(a, terminal, x, y) {
             o.css({height: '100px', 'max-width': 'auto'});
     }
 
-    d.css({
-        'left': x + 'px',
-        'top': y + 'px',
-    });
-
-    View.call(this, a, terminal, d);
 
     var w = d.width();
     var h = d.height();
