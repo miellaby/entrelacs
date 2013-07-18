@@ -382,7 +382,7 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
 
 Arrow xls_url(Arrow s, char* aUrl) {
     TRACEPRINTF("BEGIN xls_url(%O, '%s')", s, aUrl);
-    Arrow locked = a(s, atom("locked"));
+    Arrow locked = a(atom("locked"), s);
     Arrow arrow = fromUrl(locked, aUrl, 0);
     TRACEPRINTF("END xls_url(%O, '%s') = %O", s, aUrl, arrow);
     return arrow;
@@ -390,7 +390,7 @@ Arrow xls_url(Arrow s, char* aUrl) {
 
 Arrow xls_urlMaybe(Arrow s, char* aUrl) {
     TRACEPRINTF("BEGIN xls_urlMaybe(%O, '%s')", s, aUrl);
-    Arrow locked = a(s, atom("locked"));
+    Arrow locked = a(atom("locked"), s);
     Arrow arrow = fromUrl(locked, aUrl, 1);
     TRACEPRINTF("END xls_urlMaybe(%O, '%s') = %O", s, aUrl, arrow);
     return arrow;
@@ -424,7 +424,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
 char* xls_urlOf(Arrow s, Arrow e, int depth) {
     TRACEPRINTF("BEGIN xls_urlOf(%O, %O, %d)", s, e, depth);
     uint32_t l;
-    Arrow locked = a(s, atom("locked"));
+    Arrow locked = a(atom("locked"), s);
 
     char* url = toURL(locked, e, depth, &l);
     TRACEPRINTF("END xls_urlOf(%O, %O, %d) = '%s'", s, e, depth, url);
