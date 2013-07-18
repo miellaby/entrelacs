@@ -86,14 +86,14 @@ function View(arrow, terminal, d) {
 
             self.terminal.dragStartX = event.originalEvent.screenX;
             self.terminal.dragStartY = event.originalEvent.screenY;
-            self.children('input').css('visibility', 'hidden');
+            self.d.children('input').css('visibility', 'hidden');
             event.originalEvent.dataTransfer.setData('text/plain', self.d.val());
             event.originalEvent.dataTransfer.effectAllowed = "move";
             event.stopPropagation();
         },
         
         dragend: function(event) {
-            self.children('input').css('visibility', 'visible');
+            self.d.children('input').css('visibility', 'visible');
             if (self.terminal.dragOver) {
                 if (self.terminal.dragOver != self) {
                     self.terminal.dragOver.replaceWith(self);
