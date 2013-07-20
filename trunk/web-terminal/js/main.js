@@ -5,7 +5,6 @@ function init() {
     terminal = new Terminal(area, entrelacs, true);
     $(document).scrollTop(area.height() / 2 - $(window).height() / 2);
     $(document).scrollLeft(area.width() / 2 - $(window).width() / 2);
-    setTimeout(function() { $("#killme").fadeOut(4000, function(){$(this).detach();}); }, 200);
 
     
     creole = new Parse.Simple.Creole({forIE: document.all,
@@ -17,18 +16,23 @@ function init() {
     //findFeaturedArrows();
     var wizardState = "beginning";
     
+    var center = function(elt) {
+        var p = elt.position();
+        var x = p.left - ($(window).width() / 2);
+        var y = p.top - elt.height() - ($(window).height() * 0.8);
+        $('html, body').animate({scrollLeft: x, scrollTop: y}, 1000);
+    };
+
     if ($.cookie && $.cookie('wizard') == '1'
         || /#pub/.test(window.location)) {
+        setTimeout(function() {
+        $('html, body')
+            .scrollLeft((terminal.area.width() - $(window).width()) * 0.5)
+            .scrollTop((terminal.area.height() - $(window).height()) * 0.5);
+        }, 0);
         return;
     }
     
-    var center = function(elt) {
-           var p = elt.position();
-           var x = p.left - ($(window).width() / 2);
-           var y = p.top - elt.height() * 1.5 - ($(window).height() / 2) - $('.wizard_box').height() * 0.2;
-           $('html, body').animate({scrollLeft: x, scrollTop: y}, 1000);
- 
-    };
     
     $('.wizard_box').delay(1500).fadeIn();
     var p = 

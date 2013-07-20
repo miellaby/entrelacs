@@ -63,7 +63,13 @@ textarea {
 
    
 .wizard_box {
-    position: relative;
+    min-width: 60%;
+    position: fixed;
+    margin:20%;
+    margin-top: 5%;
+}
+
+.wizard_box {
     background: #88b7d5;
     border: 24px solid #c2e1f5;
     border-radius: 20px;
