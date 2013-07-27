@@ -1,4 +1,5 @@
 function BlobView(a, terminal, x, y) {
+    var self = this;
     var server = terminal.entrelacs.serverUrl;
     var uri = Arrow.serialize(a);
     var d = $("<div class='blob'></div>");
@@ -15,7 +16,18 @@ function BlobView(a, terminal, x, y) {
                 ? $("<a class='content' target='_blank' tabIndex=1></a>").attr('href', server + '/escape+' + uri).text(uri)
                 : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
     if (isCreole) {
-        terminal.creole.parse(o[0], a.getHead().getHead().getBody());
+        var contentArrow = a.getHead().getHead();
+        if (!contentArrow.getBody) { // placeholder
+            var promise = terminal.entrelacs.invoke("/escape+" + contentArrow.uri);
+            promise.done(function (text) {
+                terminal.creole.parse(o[0], text);
+                self.unbind();
+                self.arrow = Arrow.atom(text);
+                self.bind();
+            });
+        } else {
+            terminal.creole.parse(o[0], contentArrow.getBody());
+        }
     } else {
         o.css('height', 100);
     }
@@ -27,9 +39,7 @@ function BlobView(a, terminal, x, y) {
 
     View.call(this, a, terminal, d);
     
-    if (isCreole) {
-        o.click(function(e) { e.stopPropagation(); });
-    } else {
+    if (!isCreole) {
         o.colorbox({href: terminal.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
         var wo = o.width();
         var ho = o.height();
@@ -46,9 +56,45 @@ function BlobView(a, terminal, x, y) {
         'margin-left': -parseInt(w / 2) + 'px',
         'margin-top': -h + 'px'
     });
+    
+    
+    $.extend(this.on, {
+        click: function(event) {
+            event.stopPropagation();
+        },
+                
+        dblclick: function(event) {
+            self.edit();
+            return false;
+        },
+                
+        focus: function(event) {
+            self.bar.children('div,a').show().animate({'height': self.bar.height(), opacity: 1}, 200);
+        },
+        
+        blur: function(event) {
+            if (!self.bar.hasClass('hover'))
+                self.bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
+        }
+    });
+    if (isCreole) {
+        o.click(this.on.click).dblclick(this.on.dblclick).focus(this.on.focus).blur(this.on.blur);
+    };
 }
 
 $.extend(BlobView.prototype, View.prototype, {
-    isPairView: function() { return false; }
+    isPairView: function() { return false; },
+
+    edit: function() {
+        var v = this.arrow.getHead().getHead().getBody();
+        View.prototype.edit.call(this);
+      
+        var p = this.d.position();
+        var prompt = new Prompt(v, this.terminal, p.left, p.top);
+        prompt.setWikiFormated(true);
+        this.replaceWith(prompt);
+        return prompt;
+    }
+
 
 });

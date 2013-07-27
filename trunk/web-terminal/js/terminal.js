@@ -20,7 +20,7 @@ function Terminal(area, entrelacs, animatePlease) {
     } else {
         this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
         this.connect.children('button').click(function() {
-            alert("Leaving sand box. Entering public area");
+            alert("Leaving sand box. Entering public area ...");
             window.location = "#pub";
             var promise = entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
             promise.done(function() { window.location.reload(); });
@@ -242,7 +242,9 @@ Terminal.prototype = {
         var self = this;
         if (a.hc === undefined ) { // a is GC-ed
             var views = a.get('views');
-            views && views.forEach(function(view) { view.dismiss(); });
+            views && views.forEach(function(view) {
+                view.edit();
+            });
         } else {
             var r = a.isRooted();
             var views = a.get('views');

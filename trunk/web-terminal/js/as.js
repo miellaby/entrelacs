@@ -1031,11 +1031,12 @@ $.extend(Entrelacs.prototype, {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         });
 
-        promise = promise.pipe(function(arrowURI) {
-            self.checkCookie();
-            var result = Arrow.decodeURI(arrowURI, self.serverUrl);
-            return result;
-        });
+//        promise = promise.pipe(function(arrowURI) {
+//            self.checkCookie();
+//            var result = Arrow.decodeURI(arrowURI, self.serverUrl);
+//            
+//            return result;
+//        });
         
         if (!secondTry) {
             promise = promise.pipe(null, function() {

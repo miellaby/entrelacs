@@ -27,14 +27,14 @@ function Prompt(string, terminal, x, y, immediate) {
     
     $.extend(this.on, {
         focus: function(event) {
-            self.d.children('.fileinput-button,.split').animate({'margin-right': '0px', opacity: 1}, 200).fadeIn();
+            self.d.children('.fileinput-button,.split,.wiki-checkbox,.ok-button').animate({'margin-right': '0px', opacity: 1}, 200).fadeIn();
             self.bar.children('div,a').show().animate({'height': self.bar.height(), opacity: 1}, 200);
             return true;
         },
         
         blur: function(event) {
             self.closeIfLoose();
-            var flies = self.d.children('.fileinput-button,.split');
+            var flies = self.d.children('.fileinput-button,.split,.wiki-checkbox,.ok-button');
             flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200);
             if (!self.bar.hasClass('hover'))
                 self.bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
@@ -62,32 +62,24 @@ function Prompt(string, terminal, x, y, immediate) {
             if (event.ctrlKey && event.keyCode == 13 /* Return */) {
                 self.terminal.moveLoadindBarOnView(self);
 
-                if ($(this).is('textarea')) {
+                if (self.isEnlarged()) {
                     self.terminal.moveLoadindBarOnView(self);
                     // record arrows that this prompt belongs too
                     self.confirmDescendants();
-                    // self.terminal.commit();
                 } else {
-                    // turn into a textarea
                     self.enlarge();
                 }
-                //event.preventDefault();
                 return false;
                 
             } else if (event.ctrlKey && (event.keyCode == 191 /* / */ || event.keyCode == 80 /* p */)) {
-                //event.preventDefault();
-                //event.stopPropagation();
                 self.split();
                 return false;
                 
             } else if (event.keyCode == 27 /* escape */) {
-                //event.preventDefault();
                 self.close();
                 return false;
 
             } else if (event.keyCode == 9 /* tab */) {
-                //event.preventDefault();
-                
                 var f = self.for;
                 for (var i = 0; i < f.length; i++) { // search into loose children
                     var next = event.shiftKey ? self.terminal.findPrevious(f[i], self) : self.terminal.findNext(f[i], self);
@@ -126,7 +118,21 @@ function Prompt(string, terminal, x, y, immediate) {
                 event.stopPropagation();
             },
         },
-
+        wikiButton: {
+            click: function(event) {
+                self.setWikiFormated();
+                self.focus();
+                return false;
+            },
+        },        
+        okButton: {
+            click: function(event) {
+                self.terminal.moveLoadindBarOnView(self);
+                // record arrows that this prompt belongs too
+                self.confirmDescendants();
+                return false;
+            }
+        },
         dragenter: function(event) {
             
             if ($(this).is("input[type='text'],textarea")) {
@@ -159,7 +165,6 @@ function Prompt(string, terminal, x, y, immediate) {
     });
     
     var i = d.children('input[type="text"]');
-    if (string) i.val(string);
     // set listeners
     i.blur(this.on.blur);
     i.click(this.on.click);
@@ -171,12 +176,19 @@ function Prompt(string, terminal, x, y, immediate) {
     i.on('dragover', function() { return false; });
     
     // split button
-    d.prepend("<a class='split'>||</a>");
-    d.children('.split').click(this.on.split.click);
+    $("<a class='split'>||</a>")
+            .prependTo(d)
+            .click(this.on.split.click);
 
     // file upload button
-    d.append("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>");
-    d.children('.fileinput-button').click(this.on.fileInputButton.click);
+    $("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>")
+            .appendTo(d)
+            .click(this.on.fileInputButton.click);
+
+    // wiki button
+    var wb = $("<a class='wiki-checkbox'>.__.</a>")
+        .appendTo(d)
+        .click(this.on.wikiButton.click);
 
     // Cross-domain form posts can't be queried back!
     // So we build up a secret and pair it with our uploaded file, then we get back our secret child!
@@ -209,6 +221,15 @@ function Prompt(string, terminal, x, y, immediate) {
         },
     });
     
+    if (string) {
+        var preformated = (~string.indexOf("\n") || ~string.indexOf("\t"));
+        if (preformated) {
+            this.enlarge();
+            d.children('textarea').text(string);
+        } else {
+            i.val(string);
+        }
+    }
    
 };
 
@@ -218,11 +239,11 @@ $.extend(Prompt.prototype, View.prototype, {
         var w0 = d.width();
         var i = d.children('input');
         var v = i.val();
-        d.children('.fileinput-button').detach();
+        d.children('.fileinput-button,.split').detach();
         var textPosition = i[0].selectionStart;
         i.detach();
-        i = $("<textarea></textarea>").text(v + "\n").appendTo(d);
-        i[0].setSelectionRange(++textPosition, textPosition);
+        i = $("<textarea></textarea>").text(v).appendTo(d);
+        i[0].setSelectionRange(textPosition, textPosition);
         i.blur(this.on.blur);
         i.focus(this.on.focus);
         i.keydown(this.on.keydown);
@@ -230,6 +251,13 @@ $.extend(Prompt.prototype, View.prototype, {
         i.on('dragenter', this.on.dragenter);
         i.on('dragleave', this.on.dragleave);
         i.focus();
+        
+        // ok button
+        var ok = $("<a class='ok-button'>OK</a>")
+            .show()
+            .appendTo(d)
+            .click(this.on.okButton.click);
+
         var w = d.width();
         d.css({
             'margin-left': -parseInt(w / 2) + 'px',
@@ -237,11 +265,37 @@ $.extend(Prompt.prototype, View.prototype, {
         });
     },
 
+    isEnlarged: function() {
+        return this.d.children('textarea').length > 0;
+    },
+            
+    setWikiFormated: function(isWikiFormated) {
+        if (isWikiFormated === undefined) {
+            isWikiFormated = !this.isWikiFormated();
+        }
+        
+        if (isWikiFormated && !this.isEnlarged())
+           this.enlarge();
+
+        var c = this.d.children('.wiki-checkbox');
+        c.text(isWikiFormated ? 'Wiki' : 'raw');
+    },
+                    
+    isWikiFormated: function() {
+        return this.d.children('.wiki-checkbox').text() === 'Wiki';
+    },
+            
     turnIntoAtomView: function() {
         var string = this.d.children('input[type="text"],textarea').val();
         var arrow = Arrow.atom(string);
         var p = this.d.position();
-        var atomView = new AtomView(arrow, this.terminal, p.left, p.top);
+        var atomView;
+        if (this.isWikiFormated()) {
+            arrow = Arrow.pair(Arrow.atom('Content-Typed'), Arrow.pair(Arrow.atom('text/x-creole'), arrow));
+            atomView = new BlobView(arrow, this.terminal, p.left, p.top);
+        } else {
+            atomView = new AtomView(arrow, this.terminal, p.left, p.top);
+        }
         this.replaceWith(atomView);
         return atomView;
     },
@@ -275,10 +329,10 @@ $.extend(Prompt.prototype, View.prototype, {
         var c = this.terminal.getPointOnCircle(50);
         
         // build a tail prompt
-        var t = new Prompt(v, this.terminal, p.left - 50 - c.x, p.top - 100 - c.y);
+        var t = new Prompt(v, this.terminal, p.left - 100 - c.x, p.top - 100 - c.y);
 
         // build a head prompt
-        var h = new Prompt("", this.terminal, p.left + 50 + c.x, p.top - 50 + c.y);
+        var h = new Prompt("", this.terminal, p.left + 100 + c.x, p.top - 50 + c.y);
 
         // pair head and tail as loose arrows
         var pairView = new PairView(null, this.terminal, t, h);

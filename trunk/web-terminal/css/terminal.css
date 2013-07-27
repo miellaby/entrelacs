@@ -300,9 +300,16 @@ animation-delay:0.45s;
    background: -moz-radial-gradient(top, #eee, #dde);
    background: radial-gradient(top, #eee, #dde);
    cursor: move;
-   min-width: 100px;
+   min-width: 50px;
    max-width: 500px;
+   min-height: 1em;
+   margin: 0;
 }
+
+.atom>span.content {
+   text-align: center
+}
+
 .prompt>input, .prompt>textarea {
    background: #FFF;
    padding-left: 4px;
@@ -399,7 +406,7 @@ animation-delay:0.45s;
    height: 20px;
 }
 
-.fileinput-button, .split {
+.fileinput-button, .split, .wiki-checkbox, .ok-button {
     display: none;
     z-index: 30;
     position: absolute;
@@ -447,3 +454,26 @@ animation-delay:0.45s;
   width: 100%;
 }
 
+.wiki-checkbox {
+    right: -54px;
+    top: 32px;
+    padding: 4px 6px;
+}
+
+.wiki-checkbox:hover {
+    right: -56px;
+    top: 30px;
+    padding: 6px 8px;
+}
+
+.ok-button {
+    right: -38px;
+    top: 0px;
+    padding: 0 3px;
+}
+
+.ok-button:hover {
+    right: -42px;
+    top: -4px;
+    padding: 4px 7px;
+}

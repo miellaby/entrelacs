@@ -175,6 +175,7 @@ View.prototype = {
         if (!vs) return;
         vs.splice(vs.indexOf(this), 1);
         console.log(Arrow.serialize(arrow) + " " + vs.length + " views");
+        this.arrow = null;
     },
     
     detach: function() {
@@ -195,8 +196,10 @@ View.prototype = {
         // fold if children
         if (this.children.length) {
             var d = this.d;
-            var p = d.position();
-            var placeholder = new PlaceholderView(this.arrow, this.terminal, p.left, p.top);
+            // TODO pourquoi d.position() ne fonctionne pas?
+            var x = parseInt(d.css('left'));
+            var y = parseInt(d.css('top'));
+            var placeholder = new PlaceholderView(this.arrow, this.terminal, x, y);
             this.replaceWith(placeholder);
         } else { // no child
             if (this.for.length > 1) {
@@ -464,6 +467,21 @@ View.prototype = {
         };
     },
 
+    edit: function() {
+        this.unbind();
+        this.d.find('.toolbar .rooted input').prop('checked', false); 
+        // edit children
+        var children = this.children;
+        for (var i = 0 ; i < children.length; i++) {
+            children[i].edit();
+        }
+        // children are not children any more
+        this.for = this.children;
+        this.children = [];
+        return this;
+    },
+
+            
     update: function() {
         if (!this.arrow) {
             return this.confirm().update();
