@@ -196,7 +196,6 @@ $.extend(PairView.prototype, View.prototype, {
         var toView = this.hv.confirm();
         this.arrow = Arrow.pair(fromView.arrow, toView.arrow);
         this.bind();
-
         fromView.removeFor(this);
         toView.removeFor(this);
         fromView.children.push(this);

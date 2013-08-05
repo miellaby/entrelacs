@@ -1,7 +1,7 @@
 function Prompt(string, terminal, x, y, immediate) {
     var self = this;    
 
-    var d = $("<div class='prompt'><input type='text'></input><div class='close'><a href='#'>&times;</a></div></div>");
+    var d = $("<div class='prompt'><input type='text'></input></div>");
     d.css({ 'left': x + 'px', 'top': y + 'px' });
     View.call(this, null, terminal, d);
     var w = d.width();
@@ -114,7 +114,6 @@ function Prompt(string, terminal, x, y, immediate) {
 
         fileInputButton: {
             click: function(event) {
-                self.focus();
                 event.stopPropagation();
             },
         },
@@ -176,7 +175,7 @@ function Prompt(string, terminal, x, y, immediate) {
     i.on('dragover', function() { return false; });
     
     // split button
-    $("<a class='split'>||</a>")
+    $("<a class='split'>&nbsp;|&nbsp;</a>")
             .prependTo(d)
             .click(this.on.split.click);
 
@@ -218,6 +217,8 @@ function Prompt(string, terminal, x, y, immediate) {
             });
         },
         'onCancel': function() {
+            console.log('cancelling: '); console.log(this);
+            self.closeIfLoose();
         },
     });
     
@@ -290,6 +291,10 @@ $.extend(Prompt.prototype, View.prototype, {
         var arrow = Arrow.atom(string);
         var p = this.d.position();
         var atomView;
+        if (this.replaced) {
+            console.log('prompt on replaced');
+        }
+
         if (this.isWikiFormated()) {
             arrow = Arrow.pair(Arrow.atom('Content-Typed'), Arrow.pair(Arrow.atom('text/x-creole'), arrow));
             atomView = new BlobView(arrow, this.terminal, p.left, p.top);
@@ -312,8 +317,11 @@ $.extend(Prompt.prototype, View.prototype, {
         if (this.isLoose()) {
             var self = this;
             setTimeout(function() {
-                if (!self.d.find('input[type="text"],textarea').is(':focus') && self.isLoose())
+                if (document.hasFocus()
+                        && !self.d.find('input[type="text"],textarea').is(':focus')
+                        && self.isLoose())
                     self.close();
+                // TODO : if the document has lost focus, one should check loose prompts latter
             }, 1000);
         }
     },

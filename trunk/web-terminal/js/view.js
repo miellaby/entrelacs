@@ -41,10 +41,10 @@ function View(arrow, terminal, d) {
                     if (arrow) {
                         if (arrow.isRooted()) {
                             arrow.unroot();
-                            self.cleanAllGeometryAfterUnroot();
+                            self.cleanAllGeometryAfterUnroot(arrow);
                         } else {
                             arrow.root();
-                            self.saveAllGeometryAfterRoot();
+                            self.saveAllGeometryAfterRoot(arrow);
                         }
                         self.terminal.commit();
                         return true;
@@ -164,7 +164,21 @@ View.prototype = {
             arrow.set('views', views);
         }
         views.push(this);
+        
         console.log(Arrow.serialize(arrow) + " " + views.length + " views");
+        
+        // re-binding
+        if (this.replaced) {
+            if (this.replaced.hc !== undefined) {
+                this.replaced.unroot();
+                this.cleanAllGeometryAfterUnroot(this.replaced);
+            }
+            delete this.replaced;
+            this.arrow.root();
+            this.saveAllGeometryAfterRoot(this.arrow);
+            this.terminal.commit();
+        }
+        
         this.d.find('.toolbar .rooted input').prop('checked', arrow.isRooted());
     },
     
@@ -213,10 +227,14 @@ View.prototype = {
             } else if (this.for.length == 1) {
                 // one pair end
                 var pair = this.for[0];
-                pair.removeFor();
-                var otherEnd = (pair.tv == this ? pair.hv : pair.tv);
-                pair.replaceWith(otherEnd);
-                otherEnd.focus();
+                if (pair.replaced) {
+                    pair.dismiss();
+                } else {
+                    pair.removeFor();
+                    var otherEnd = (pair.tv == this ? pair.hv : pair.tv);
+                    pair.replaceWith(otherEnd);
+                    otherEnd.focus();
+                }
             }
             
             this.unbind();
@@ -319,8 +337,7 @@ View.prototype = {
 
     /** when unrooting the arrow, one removes all saved geometry
     */
-    cleanAllGeometryAfterUnroot: function() {
-        var r = this.arrow;
+    cleanAllGeometryAfterUnroot: function(r) {
         if (!r) return;
         var p = Arrow.pair(Arrow.atom("geometry"), r);
         var it = p.getChildren(Arrow.FILTER_INCOMING);
@@ -342,8 +359,7 @@ View.prototype = {
     
     /** when rooting an arrow, one saves all ancesters geometry
     */
-    saveAllGeometryAfterRoot: function() {
-        var r = this.arrow;
+    saveAllGeometryAfterRoot: function(r) {
         if (!r) return;
         var self = this;
         var recSave = function(view) {
@@ -446,6 +462,22 @@ View.prototype = {
         // descendants rewiring to newA
         newA.for = dedupInArray(newA.for.concat(this.for));
         newA.children = newA.children.concat(this.children);
+        if (this.replaced) {
+            if (newA.arrow) {
+                console.log('replacing');
+                if (this.replaced.hc !== undefined) {
+                    console.log('unroot replaced');
+                    this.replaced.unroot();
+                    this.cleanAllGeometryAfterUnroot(this.replaced);
+                }
+                delete this.replaced;
+                newA.arrow.root();
+            } else {
+                console.log('pass replaced');
+                newA.replaced = this.replaced;
+            }
+           this.terminal.commit();
+        }
         this.replaceInDescendants(newA);
         this.detach();
     },
@@ -468,6 +500,9 @@ View.prototype = {
     },
 
     edit: function() {
+        if (this.arrow && this.arrow.isRooted()) {
+            this.replaced = this.arrow;
+        }
         this.unbind();
         this.d.find('.toolbar .rooted input').prop('checked', false); 
         // edit children
