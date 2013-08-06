@@ -2,41 +2,37 @@
 #labels Entrelacs,manifesto
 
 = Introduction =
-Welcome to the Entrelacs manifesto pages.
-
-The *Entrelacs manifesto* aims at encouraging people to invent a computer system based upon a different way to comprehend digital representation of information.
+The *Entrelacs manifesto* claims one *may* and one *should* invent a computer system based upon an alternate knowledge paradigm.
 
 Anyone interested in this objective may freely adhere to this manifesto and relate his work to the Entrelacs umbrella project.
 
 ===Preamble to the Entrelacs manifesto===
 
-A major part of data engineering consists in studying and improving  [http://en.wikipedia.org/wiki/Data_structures data structures]^W^ like [http://en.wikipedia.org/wiki/Balanced_tree balanced trees]^W^; that is optimal ways to store information for a given purpose.
+Applied computer sciences help improving data structures.
 
-However, no study has brought the underlying *information framework* into question; that is: how such a _data structure_ is eventually mapped on a concrete device like a paper sheet or an hard drive. All information systems up to now are inspired by [http://en.wikipedia.org/wiki/Writing Writing]^W^. So, they all work upon the same *[BoxValueParadigm box/value]* _ information framework_.
+However, no study has yet put into question the fundamental _paradigm_ which governs how such data structures are mapped onto concrete storage space.
 
-The _box/value_ way to comprehend information is not only what an human being is accustomed to, but also a direct application of [http://en.wikipedia.org/wiki/Graph_theory graph theory]^W^ which is consequently considered as the foundation of everything computer related. Unfortunately, this approach hinders searchers and engineers in studying better alternatives.
+Consequently, *all* digital and non-digital systems up to now follow a single paradigm, derived from _Writing__. As a side effect, all these systems are more of less modeled after [http://en.wikipedia.org/wiki/Graph_theory graph theory]^W^.
+
+Because the [BoxValueParadigm box/value paradigm], as we'll call it, is the only paradigm an human being is accustomed to, neither scientists nor engineers have though of an alternative.
 
 =The Entrelacs manifesto=
-  * We claim that developing a data computing stack on top of the _box/value information framework_ and graph theory turns out to be an [http://en.wikipedia.org/wiki/Abstraction_inversion abstraction inversion]^W^ regarding information representation. In short, it's a bad approach which makes engineering new useful behaviors within computers excessively difficult. <[BoxValueParadigm more ...]>
-  * We propose a true alternative _information framework_, namely the *Entrelacs framework*, which consists in:
-     * promoting the *immutable* *connected* *ordered* *pair* *singleton* -that one refers herein as an *arrow*- to the first and only citizen class of the whole information system. 
-     * considering all the former concepts that traditional systems relaid on, like _vertex_ and _value_, as derivative constructs made out of _arrows_ and only arrows. <[ArrowParadigm more ...]>
-  * We put the stress on the fact that a pen and a paper sheet is more than enough to experiment with the Entrelacs framework and to demonstrate its feasibility. <[PenAndPaperReferenceDesign more ...]>
-  * We consider a digital system leveraging on the Entrelacs framework could have been designed out of existing hardware for decades by developing an adequate software <[ArrowsSpace more ...]>. 
-  * We call for the immediate development of such a system, that we will name hereafter an *Entrelacs system* <[DesignIntroduction more ...]>.
-  * We anticipate an _Entrelacs system_ may demonstrate many outstanding native capabilities in comparison with a traditional system. To name a few:
-    * Every piece of information is _"relative-able"_. That is, it can be stated relatively to a referential.
-    * More specifically, the relation between a fact and its referential can itself been comprehended relatively to a *meta-referential* (abstraction).
-    * But there is eventually one and only one absolute referential of valid relations. <[RelativeMachine more ...]>
-    * Information *deduping* is _transparent_ and performed at system level. Each piece of information is present only once in the whole system.
-    * Information is *self-indexed* and *fully connected*. One can retrieve in a efficient way (O(n)?) all the information related to some given information.
-    * Information may be mostly stored in [http://en.wikipedia.org/wiki/Persistent_data_structure persistent data structures]^W^.
-    * Information persistence may be easily [http://en.wikipedia.org/wiki/Orthogonal_persistence orthogonal]^W^.
-    * [http://en.wikipedia.org/wiki/Memoization Memoization]^W^ may be easily made orthogonal as well (transparently performed by the system, everytime, everywhere).
-    * Any computation process may be easily [http://en.wikipedia.org/wiki/Virtualization virtualized]^W^, that is performed in a _[RelativeMachine relative]_ environment. It makes a *top-down security* scheme easily feasible.
-    * *Memory management* may be easily orthogonal. Data caching (in high memory levels) and [http://en.wikipedia.org/wiki/Garbage_collection_(computer_science) garbage collection]^W^ become a transparent and full-scope system process.
-    * And many more... Read the [EntrelacsProperties _full abilities_ list]
-  * We consequently consider the Entrelacs framework as the missing link up to a much clever generation of computers. Most data computing disciplines will get major benefits by transposing their works into Entrelacs systems. For example:
-     * Adapted programming languages will exhibit outstanding abilities like system-level persistent introspection and intercession, computation back-tracking, fine-grained virtualization, etc. <[EntrelacsLanguage more ...]>
-     * Adapted _Artificial Learning_ and _Knowledge Representation_ algorithms will work across different abstraction and complexity scales and will be able to cross-cut ontologies across the whole information set. <[EntrelacsAI more ...]>
-  * We acknowledge that most systems may benefit from natively managing complex objects like raw data and tuples in addition to regular arrows. We consider such pragmatic systems to be still considered as _Entrelacs systems_ as long as they manage such advanced objects in the same way as their arrows made equivalent constructs, especially in terms of uniqueness, immutability, and connectivity. <[EntrelacsEquivalences more ...]>
+==We claim that developing computer systems after the _box/value paradigm_ is an [http://en.wikipedia.org/wiki/Abstraction_inversion abstraction inversion]^W^ which makes software engineering excessively difficult. ==
+
+[BoxValueParadigm more ...]
+
+==We claim that one may correct this inversion by promoting the *immutable* *connected* *ordered* *pair* *singleton* -that one refers herein as *an arrow*- to *first* and *only* citizen class of the whole information system. All former concepts, like _vertex_ and _values_, should be seen as derivative constructs made out of _arrows_. This approach is called the *Entrelacs paradigm*==
+
+[ArrowParadigm more ...]
+
+==We claim that designing a computer system after this paradigm is feasible. We put the stress on the fact that one may simulate such a system with paper and pencil==
+
+[PenAndPaperReferenceDesign more ...]
+
+==We believe that a working prototype can be designed out of existing hardware by developing an adequate software layer==
+
+[ArrowsSpace more ...] 
+
+==We call for the immediate development of such an *Entrelacs system* because we believe it will lead the way to various new computer abilities==
+
+[EntrelacsCapabilities more ...]
