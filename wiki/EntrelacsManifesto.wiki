@@ -17,22 +17,22 @@ Consequently, *all* digital and non-digital systems up to now follow a single pa
 Because the [BoxValueParadigm box/value paradigm], as we'll call it, is the only paradigm an human being is accustomed to, neither scientists nor engineers have though of an alternative.
 
 =The Entrelacs manifesto=
-==We claim that developing computer systems after the _box/value paradigm_ is an [http://en.wikipedia.org/wiki/Abstraction_inversion abstraction inversion]^W^ which makes software engineering excessively difficult. ==
+==We claim that developing computer systems after the _box/value paradigm_ is an [http://en.wikipedia.org/wiki/Abstraction_inversion abstraction inversion]^W^ which makes software engineering excessively difficult.==
 
 [BoxValueParadigm more ...]
 
-==We claim that one may correct this inversion by promoting the *immutable* *connected* *ordered* *pair* *singleton* -that one refers herein as *an arrow*- to *first* and *only* citizen class of the whole information system. All former concepts, like _vertex_ and _values_, should be seen as derivative constructs made out of _arrows_. This approach is called the *Entrelacs paradigm*==
+==We claim that one may correct this inversion by promoting the *immutable* *connected* *ordered* *pair* *singleton* -that one refers herein as *an arrow*- to *first* and *only* citizen class of the whole information system. All former concepts, like _vertex_ and _values_, should be seen as derivative constructs made out of _arrows_. This approach is called the *Entrelacs paradigm*.==
 
 [ArrowParadigm more ...]
 
-==We claim that designing a computer system after this paradigm is feasible. We put the stress on the fact that one may simulate such a system with paper and pencil==
+==We claim that designing a computer system after this paradigm is feasible. We put the stress on the fact that one may simulate such a system with paper and pencil.==
 
 [PenAndPaperReferenceDesign more ...]
 
-==We believe that a working prototype can be designed out of existing hardware by developing an adequate software layer==
+==We believe that a working prototype can be designed out of existing hardware by developing an adequate software layer.==
 
 [ArrowsSpace more ...] 
 
-==We call for the immediate development of such an *Entrelacs system* because we believe it will lead the way to various new computer abilities==
+==We call for the immediate development of such an *Entrelacs system* because we believe it will lead the way to various new computer abilities.==
 
 [EntrelacsCapabilities more ...]
