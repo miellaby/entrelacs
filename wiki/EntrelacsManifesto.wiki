@@ -2,9 +2,9 @@
 #labels Entrelacs,manifesto
 
 = Introduction =
-The *Entrelacs manifesto* claims one *may* and one *should* invent a computer system based upon an alternate knowledge paradigm.
+The *Entrelacs manifesto* claims one *can* and one *should* invent a computer system based upon an alternate knowledge paradigm.
 
-Anyone interested in this objective may freely adhere to this manifesto and relate his work to the Entrelacs umbrella project.
+Anyone interested in this objective can freely adhere to this manifesto and relate his work to the Entrelacs umbrella project.
 
 ===Preamble to the Entrelacs manifesto===
 
