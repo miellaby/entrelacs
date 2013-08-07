@@ -266,7 +266,14 @@ int mem0_init() {
   TRACEPRINTF("mem0_filePath is %s", mem0_filePath);
 
   // open mem0 file (create it if non existant)
-  F = fopen(mem0_filePath, "w+b");
+  F = fopen(mem0_filePath, "r");
+  if (F) {
+     fclose(F);
+     F = fopen(mem0_filePath, "r+b");
+  } else {
+     F = fopen(mem0_filePath, "w+b");
+  }
+
   if (!F) {
       perror("mem0 file open failed. Probably access rights or read-only target device.");
       LOGPRINTF(LOG_FATAL, "Can't open persistence file '%s'", mem0_filePath);

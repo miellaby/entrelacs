@@ -65,6 +65,6 @@ libentrelacs.so: $(OBJECTS)
 
 start: server
 	-pkill entrelacsd
-	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
+	# -[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) ./entrelacsd
 	od -t x1z -w8 $(PERSISTENCE_FILE)
