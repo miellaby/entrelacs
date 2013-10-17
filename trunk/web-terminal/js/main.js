@@ -1,4 +1,3 @@
-
 function init() {
     var area = $('#area');
     entrelacs = new Entrelacs();
@@ -24,7 +23,7 @@ function init() {
     };
 
     if ($.cookie && $.cookie('wizard') == '1'
-        || /#pub/.test(window.location)) {
+        || window.location.fragment) {
         setTimeout(function() {
         $('html, body')
             .scrollLeft((terminal.area.width() - $(window).width()) * 0.5)
