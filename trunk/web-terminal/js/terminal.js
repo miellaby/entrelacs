@@ -15,7 +15,7 @@ function Terminal(area, entrelacs, animatePlease) {
     // TODO: move out connection button
     if (window.location.hash) {
         entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
-            self.show(Arrow.atom(window.location.hash),  area.height() / 2, area.width() / 2).update();
+            self.show(Arrow.atom(window.location.hash.substr(1)),  area.height() / 2, area.width() / 2).update();
         });
     } else {
         this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
