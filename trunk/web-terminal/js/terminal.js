@@ -13,9 +13,9 @@ function Terminal(area, entrelacs, animatePlease) {
     this.loading = $("<div class='loading bar' id='loading'><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>");
     this.loading.appendTo(area);
     // TODO: move out connection button
-    if (/#pub/.test(window.location)) {
+    if (window.location.hash) {
         entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
-            self.show(Arrow.atom("hello"),  area.height() / 2, area.width() / 2).update();
+            self.show(Arrow.atom(window.location.hash),  area.height() / 2, area.width() / 2).update();
         });
     } else {
         this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
@@ -234,7 +234,7 @@ Terminal.prototype = {
     arrowEvent: function(a) {
         if (a == null) { // reset!
             // TODO: move out reconnection
-            if (/#pub/.test(window.location)) {
+            if (window.location.hash) {
                 var promise = this.entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
             }
             return;
