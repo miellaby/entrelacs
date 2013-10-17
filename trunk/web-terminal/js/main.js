@@ -23,7 +23,7 @@ function init() {
     };
 
     if ($.cookie && $.cookie('wizard') == '1'
-        || window.location.fragment) {
+        || window.location.hash) {
         setTimeout(function() {
         $('html, body')
             .scrollLeft((terminal.area.width() - $(window).width()) * 0.5)
