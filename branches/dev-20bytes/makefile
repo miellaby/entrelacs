@@ -17,7 +17,7 @@ TARGETS = libentrelacs.so libentrelacs.a server
 OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
 TESTS = space uri script machine shell
 
-PERSISTENCE_FILE=/var/tmp/entrelacs_test.dat
+PERSISTENCE_FILE=/tmp/entrelacs_test.dat
 
 all: $(TARGETS)
 

@@ -12,35 +12,30 @@
  */
 int  mem_init();
 
-/** set binary content into memory cell
+/** set data into memory cell
  @param Cell Address
- @param Cell Content
+ @param Cell Content Pointer
  */
-void mem_set(Address, Cell);
+int mem_set(Address, CellBody*);
 
-/** get binary content from memory cell
+/** get data from memory cell
  @param Cell Address
- @return Cell Content
+ @param Cell Content Pointer
+ @return 0 if OK
  */
-Cell mem_get(Address);
+int mem_get(Address, CellBody*);
 
-/** get binary content from memory cell
- @param Cell Address
- @return Cell Content
- */
-Cell mem_get(Address);
-
-/** get binary content from memory cell and related poke stamp
+/** get data from memory cell and its lastModifiedPoke
  @param Cell Address
  @param Cell Stamp Pointer
- @return Cell Content
+ @return 0 if OK
  */
-Cell mem_get_advanced(Address, uint16_t* stamp_p);
+int mem_get_advanced(Address, CellBody*, uint16_t* stamp_p);
 
 /** close current micro-transaction,
  by making all memory changes from last commit persistent
  */
-void mem_commit();
+int mem_commit();
 
 /** yield current micro-transaction, allowing disk flush
  return !0 if disk flush occurs because MEMn resources are scare

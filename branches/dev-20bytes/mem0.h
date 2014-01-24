@@ -8,17 +8,15 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-/** Cell. A 64 bits construct.
+/** Cell. A 20 bytes long bucket
   */
-typedef uint64_t Cell;
-
-/** Cell significative data.
-*/
-typedef uint64_t CellData; ///< Actually up to 7 bytes max
+struct s_cellBody {
+    char raw[20];
+} CellBody;
 
 /** Cell address.
 */
-typedef uint32_t Address; ///< Actually 3 bytes (24 bits) max
+typedef uint32_t Address;
 
 /** mem0 initialization.
     @return 1 if very first start, <0 if error, 0 otherwise
@@ -79,7 +77,7 @@ extern char* mem0_filePath;
 */
 extern char* mem0_journalFilePath;
 
-/** set by mem0_commit to notify that mem0 caches are out of sync
+/** set by mem0_commit to notify that mem0 caches are out of sync with disk (concurrent disk access?)
 */
 extern int mem_is_out_of_sync;
 
@@ -87,21 +85,24 @@ extern int mem_is_out_of_sync;
  Change is actually buffered into a journal file.
  The journal file is created if not existent.
   @param cell Address.
-  @param Cell content.
+  @param Cell content pointer.
+  @return 0 if success.
   */
-void mem0_set(Address, Cell);
+int mem0_set(Address, CellBody*);
 
 /** get binary content from memory cell.
  This call is forbidden if uncommited changes are pending in an existing journal file.
   @param cell Address.
-  @return Cell content.
+  @param Cell content pointer.
+  @return 0 if success.
   */
-Cell mem0_get(Address);
+int mem0_get(Address, CellBody*);
 
 /** commit changes.
- write changes recorded in the journal file to the persistence file then remove the journal.
- nothing is done if no current journal.
- Persistence file lock is temporarily released so check mem_is_out_of_sync!
+  write changes recorded in the journal file to the persistence file then remove the journal.
+  nothing is done if no current journal.
+  Persistence file lock is temporarily released so check mem_is_out_of_sync!
+  @return 0 if success.
 */
 int  mem0_commit();
 
@@ -125,4 +126,10 @@ char*  mem0_loadData(char* h, size_t* sizeP);
  @param unique cryptographic hash code.
  */
 void   mem0_deleteData(char* h);
+
+
+/** release mem0
+*/
+void mem0_destroy();
+
 #endif
