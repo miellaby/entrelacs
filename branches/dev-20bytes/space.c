@@ -3,75 +3,28 @@
 //
 // TRAVAUX EN COURS
 // WORK IN PROGRESS
-// nouvelle représentation small auto-activé
 // nouvelle représentation sur 24 octets (22 effectif)
-
-//  pour un tag de 5 bytes exactement
-//   (manque un test dans l'assimilation de URI des tags <= 5 pour exploiter 
-//  cette représentation de la façon suivante: "abc" = ['a','b','c',\0,\0] taille 5)
-// A FINALISER: enlever les cast int* avec small et faire une copie octet par octet
-// independament de l'endianess (conserver le \0 trailing en retour de payload())
-//
-// attention changement: JUMP=0 réservé pour identifier SMALL à la place de TAG
-// d'où jump0=1 <=> 1 shift! et non 2; il n'y a plus de shift implicite.
-// (les jump entre slices marchent comme avant)
-//
-// nouveau type de données cellulaires: la flèche faible weak
-// - connectivité masquée,
-// - n'empèche pas le GC de ses bouts
-// - est supprimée avec ses bouts
-// 4 types de flèches faibles: 0 pas faible, faible queue 1, faible tete 2, doublement faible 3
-// A TERMINER
-// SUITE:
-// Par l'API, les flèches faibles sont équivalentes à des flèches normales en tout point
-// l'API renvoie de façon transparente à la flèche forte si besoin (créée si besoin)
-// Par l'API, forge fortes correspondantes (cela entraine une conversion en profondeur de la structure de flèches)
-// on ne peut pas (pour l'instant) créer des flèches faibles par l'API;
-// Par contre, on utilise des flèches faibles pour faire un arbre binaire equilibré
-// avec les enfants de chaque flèche forte (remplace les listes chainées d'enfants)
-// la racine de l'arbre étant pointé par child0 (elle est donc pas dédupliquée celle là)
-// C'est pas très clair, il faut encore réfléchir
-//
-// 2eme essai:
-// Toute flèche peut disposer d'une flèche jumelle faible
-// bit réservé: weak
-// si à true, alors il existe une flèche Weak->Fleche qui sert à l'index des enfants faibles
-// les descendants d'une flèche Weak ne sont pas marqués comme tels, même ils sont supprimés dès qu'un ancêtre faible est recyclé
-// Weak est une flèche réservée
-// Weak->Fleche permet d'indexer des enfants faibles
-// quand Fleche est supprimée (GC), tous les descendants de Weak->Fleche aussi
-// Quand on fait children d'une flèche on ne renvoie pas les enfants de Weak->Fleche
-//  API: weak(arrow)
-//   exemple d'usage: root(pair(weak(root(atom('hello'))), atom('world'))
-//   children('hello') ne renvoie pas hello->world
-// si 'hello' unrootée, 'hello'->'world' aussi
-// on n'est bien obligé de garder un index (même si pas connectivité publique) pour implémenter le "delete cascade"
-/// c'est mieux, mais comment on stocke les enfants, comme avant ou par des vrais flèches?
-
-// 3eme essai:
+// nouvel atom : small
+// nouvelle propriété faible: rootage faible, "weak" flag
+// - n'empêche pas l'oubli (le GC) de ses bouts
+// - est supprimée avec ses bouts
 // Toute flèche dispose des flags suivants
 // R: roots flag, indique que la flèche appartient au contexte globale 
-// W: weakness flag, indique que la la flèche appartient au contexte globale faible, on la garde tant que ses bouts existent
+// W: weakness flag, liaison faible dans le contexte globale 
+// la flèche est oubliée quand ses 2 bouts sont déracinés
+//
+// A TERMINER / A ETUDIER
+// Option: types de rootage faibles: par la queue, par la tete, doublement
+//  API: weak(arrow)
+//   exemple d'usage: root(pair(weak(root(atom('hello'))), atom('world'))
+// si 'hello' déracinée, 'hello'->'world' aussi
+// weak(A) est immédiatement "loose" (sur le point d'être oubliée) si aucun des 2 bouts de A n'est enraciné
 // B: Brotherhood flag, indique que la flèche sert à relier entre elles les composantes d'une collection des flèches enfants d'une autre flèche
-// H: Hidden Rootes flag, la flèche appartient au contexte globale en tant que flèche cachée, sans générer de back-références dans ses ancetres.
-//    Une flèche H ne fait qu'augmenter les compteurs de référence
-// Toute flèche marquée W B ou R ou possédant au moins un enfant non weak sont préservées du GC
-// 
-// 4eme essai:
-// W: weakness flag, précise que la flèche est déracinée quand ses 2 bouts sont déracinés
-// weak(a) déracine immédiatement A si aucun des 2 bouts de A n'est enraciné, sinon l'enracinne
 // utiliser une indirection (Eve->bout) pour ignorer un rootage non désiré
-// les flèches faibles sont déplacées dans les branches de gauche de l'arbre des enfants (en tête de tri)
 // unroot regarde s'il y a des enfants faibles et les déracinent
-// un marqueur permet de savoir qu'une flèche a des enfants faibles
 // attention: préfèrer xls_weak_link(C,A,B) = weak((C,A)=>(C,B)) et  utiliser par ex xls_partnersOf(C,A) pour faire un lien faible entre 2 objets
 // xls_weak(c,a) devrait permettre d'enrichir un contexte sans le verouiller, cette flèche étant libérée quand plus aucune autre flèche non faible n'est vraie dans ce contexte
-// PROBLEME: COMMENT FAIRE? 
-// Une fleche cachée a des back-references (permet de combiner weak et hidden), elles sont justes tenues secrètes 
-
 */
-
-
 
 #define _XOPEN_SOURCE 600
 #include <stdio.h>
@@ -212,9 +165,20 @@ typedef union u_cell {
  
   /** T = 1, 2, 3, 4: arrow definition.
   *   +--------+----------------------+-----------+----------+----+----+
-  *   |  hash  | full or partial def  | R.W.Wn.Cn |  Child0  | cr | dr |
+  *   |  hash  | full or partial def  | RWC0dWnCn |  Child0  | cr | dr |
   *   +--------+----------------------+-----------+----------+----+----+
   *       4                8                4          4        1    1
+  *   where RWC0dWnCn = R|W|C0d|Wn|Cn
+  *
+  *   R = root flag (1 bit)
+  *   W = weak flag (1 bit)
+  *   C0d = child0 direction (1 bit)
+  *   Wn = Weak children count (14 bits)
+  *   Cn = Non-weak children count  (15 bits)
+  *
+  *   child0 = 1st child of this arrow
+  *   cr = children revision
+  *   dr = definition revision
   */
   struct s_arrow {
      uint32_t hash;
@@ -229,22 +193,17 @@ typedef union u_cell {
  */
 #define FLAGS_ROOTED           0x80000000u
 #define FLAGS_WEAK             0x40000000u
-#define FLAGS_WEAKCHILDRENMASK 0x3FFF8000u
+#define FLAGS_C0D              0x20000000u
+#define FLAGS_WEAKCHILDRENMASK 0x1FFF8000u
+#define MAX_WEAKREFCOUNT       0x1FFFu
 #define FLAGS_CHILDRENMASK     0X00007FFFu
 #define MAX_REFCOUNT           0x7FFFu
 
   /* T = 1: regular pair.
   *   +--------+--------+--------+-----------+----------+----+----+
-  *   |  hash  |  tail  |  head  | R.W.Wn.Cn |  Child0  | cr | dr |
+  *   |  hash  |  tail  |  head  | RWC0dWnCn |  Child0  | cr | dr |
   *   +--------+--------+--------+-----------+----------+----+----+
   *       4        4        4         4            4       1    1
-  *
-  *   R = root flag (1 bit)
-  *   W = weak flag (1 bit)
-  *   Wn = Weak children count (15 bits)
-  *   Cn = Non-weak children count  (15 bits)
-  *   cr = children revision
-  *   dr = definition revision
   */
   struct s_pair {
      uint32_t hash;
@@ -402,6 +361,7 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
       char flags[] = {
           (cell->arrow.RWWnCn & FLAGS_ROOTED ? 'R' : '.'),
           (cell->arrow.RWWnCn & FLAGS_WEAK ? 'W' : '.'),
+          (cell->arrow.RWWnCn & FLAGS_C0D ? 'O' : 'I'),
           '\0'
       };
       uint32_t hash = cell->arrow.hash;
@@ -411,9 +371,9 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
       int dr = (int)cell->arrow.dr;
 
       if (type == CELLTYPE_PAIR) {
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x cr=%02x dr=%02x %s tail=%08x head=%08x",
+        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s tail=%08x head=%08x",
           line, operation, address, peeble, type,
-          hash, flags, weakChildrenCount, childrenCount, cr, dr, cat,
+          hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
           cell->pair.head);
 
@@ -421,15 +381,15 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
         int s = (int)cell->small.s;
         char buffer[11];
         cell_getSmallPayload(cell, buffer);
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x cr=%02x dr=%02x %s size=%d data=%.*s",
+        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s size=%d data=%.*s",
           line, operation, address, peeble, type,
-          hash, flags, weakChildrenCount, childrenCount, cr, dr, cat,
+          hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
           line, operation, address, peeble, type,
-          hash, flags, weakChildrenCount, childrenCount, cr, dr, cat,
+          hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
       }
@@ -446,13 +406,29 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
         cell->last.data);
 
     } else if (type == CELLTYPE_CHILDREN) {
-      dputs("%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x}",
+      char directions[] = {
+          '[',
+          (cell->children.directions & 0x01 ? 'O' : '.'),
+          (cell->children.directions & 0x02 ? 'O' : '.'),
+          (cell->children.directions & 0x04 ? 'O' : '.'),
+          (cell->children.directions & 0x08 ? 'O' : '.'),
+          (cell->children.directions & 0x10 ? 'O' : '.'),
+          (cell->children.directions & 0x0100 ? 'T' : '.'),
+          (cell->children.directions & 0x0200 ? 'T' : '.'),
+          (cell->children.directions & 0x0400 ? 'T' : '.'),
+          (cell->children.directions & 0x0800 ? 'T' : '.'),
+          (cell->children.directions & 0x1000 ? 'T' : '.'),
+          ']',
+          '\0'
+      };
+      dputs("%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
         line, operation, address, peeble, type, cat,
         cell->children.C[0],
         cell->children.C[1],
         cell->children.C[2],
         cell->children.C[3],
-        cell->children.C[4]);
+        cell->children.C[4],
+        directions);
 
     } else if (type == CELLTYPE_REATTACHMENT) {
       dputs("%d %c %06x peeble=%02x type=%1x %s from=%x to=%x",
@@ -2145,7 +2121,7 @@ enum e_xlType xl_typeOf(Arrow a) {
  * @param childWeakness !0 if one builds up a weak connection
  */
 static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
-    TRACEPRINTF("connect child=%06x to a=%06x weakness=%1x", child, a, childWeakness);
+    TRACEPRINTF("connect child=%06x to a=%06x weakness=%1x outgoing=%1x", child, a, childWeakness, outgoing);
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
     space_stats.connect++;
     
@@ -2184,7 +2160,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
 
     // Update children counters in parent cell    
     if (childWeakness) {
-      if (weakChildrenCount < MAX_REFCOUNT) {
+      if (weakChildrenCount < MAX_WEAKREFCOUNT) {
           weakChildrenCount++;
       }
     } else {
@@ -2202,8 +2178,17 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     if (!childWeakness) {
       // child0 always point the last strongly connnected child
       Arrow lastChild0 = cell.arrow.child0;
+      int lastChild0Direction = ((cell.arrow.RWWnCn & FLAGS_C0D) ? 1 : 0);
       cell.arrow.child0 = child;
+
+      if (outgoing) {
+        cell.arrow.RWWnCn |= FLAGS_C0D;
+      } else {
+        cell.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
+      }
+
       child = lastChild0; // Now one puts the previous value of child0 into another cell
+      outgoing = lastChild0Direction;
     }
     
     // write parent cell
@@ -2234,7 +2219,6 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       // get the next cell
       mem_get(next, (CellBody *)&nextCell);
       ONDEBUG((SHOWCELL('R', next, &nextCell)));
-      j = 0;
 
       if (nextCell.full.type == CELLTYPE_EMPTY) {
         // One found a free cell
@@ -2248,7 +2232,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
         // One found a children cell
-
+        j = 0;
         while (j < 5) { // slot scanning
           Address inSlot = nextCell.children.C[j];
           
@@ -2315,7 +2299,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       nextCell.children.directions
       & ((1 << j) ^ 0xFFFF)
       & ((1 << (8 + j)) ^ 0xFFFF)
-      | (child != a && outgoing ? (1 << j) : 0) // outgoing flag
+      | ((child != a && outgoing) ? (1 << j) : 0) // outgoing flag
       | (child == a ? (1 << (8 + j)) : 0); // terminator flag if one puts the terminator
     mem_set(next, (CellBody *)&nextCell);
  }
@@ -2340,7 +2324,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
  *      * one disconnects "a" from its both parents.
  */
 static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
-    TRACEPRINTF("disconnect child=%06x from a=%06x weakness=%1x", child, a, weakness);
+    TRACEPRINTF("disconnect child=%06x from a=%06x weakness=%1x outgoing=%1x", child, a, weakness, outgoing);
     space_stats.disconnect++;
     if (a == EVE) return; // One doesn't store Eve connectivity.
 
@@ -2357,7 +2341,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
     // update child counters
     if (weakness) {
-      if (weakChildrenCount < MAX_REFCOUNT) {
+      if (weakChildrenCount < MAX_WEAKREFCOUNT) {
         weakChildrenCount--;
       }
     } else {
@@ -2388,6 +2372,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     // child0 simple case
     if (parent.arrow.child0 == child) {
       parent.arrow.child0 = 0;
+      parent.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
       child = 0; // OK
     }
 
@@ -2428,12 +2413,13 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
         j = 0;
         while (j < 5) { // slot scanning
-            Address inSlot = nextCell.children.C[j];
+            Arrow inSlot = nextCell.children.C[j];
             if (inSlot == child
-                && (outgoing && (nextCell.children.directions & (1 << j))
-                    || !outgoing && !(nextCell.children.directions & (1 << j))
-                   )
-               ) { // back-ref found
+                && (   child == a && (nextCell.children.directions & (1 << (j + 8)))
+                    || child != a && 
+                      (    outgoing && (nextCell.children.directions & (1 << j))
+                       || !outgoing && !(nextCell.children.directions & (1 << j))))
+               ) { // back-ref or terminator found
               
               // unload slot
               nextCell.children.C[j] = 0;
@@ -2447,25 +2433,26 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
                   nextCell.children.directions =
                     nextCell.children.directions
                     & (((1 << j) | (1 << (8 + j))) ^ 0xFFFF);
-                } else {
+              } else {
                   // cell is fully empty
                   // mark as is
                   memset(nextCell.full.data, 0, sizeof(nextCell.full.data));
                   nextCell.full.type = CELLTYPE_EMPTY;
                   // don't delete peeble!
-                } 
-                mem_set(next, (CellBody *)&nextCell);
+              } 
+              mem_set(next, (CellBody *)&nextCell);
+              ONDEBUG((SHOWCELL('W', next, &nextCell)));
 
-                if (!removeTerminatorNow) {
-                  break; // back-ref removed. Job done
+              if (!removeTerminatorNow) {
+                return; // back-ref removed. Job done
 
-                } else if (child == a) {
-                  break; // terminator removed. Job done
+              } else if (child == a) {
+                return; // terminator removed. Job done
 
-                }  else {
-                  // back-ref removed but not terminator yet
-                  child = a;
-                }
+              }  else {
+                // back-ref removed but not terminator yet
+                child = a;
+              }
 
             } // target found
             j++;
@@ -2811,7 +2798,7 @@ Arrow xl_unroot(Arrow a) {
         return LOCK_OUT(a);
 
     // change the arrow to UNROOTED state
-    cell.arrow.RWWnCn = cell.arrow.RWWnCn ^ FLAGS_ROOTED;
+    cell.arrow.RWWnCn ^= FLAGS_ROOTED;
     mem_set(a, (CellBody *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
