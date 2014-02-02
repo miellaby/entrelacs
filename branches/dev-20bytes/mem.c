@@ -10,8 +10,8 @@
 #include "log.h"
 #include "mem.h"
 
-#define MEMSIZE (8192<<3)
-// 0x20000
+#define MEMSIZE (65536)
+// 0x10000 cells
 static const Address memSize = MEMSIZE ; ///< mem size
 
 /** The main RAM cache, aka "mem".
@@ -20,7 +20,8 @@ static const Address memSize = MEMSIZE ; ///< mem size
  */
 static struct s_mem {
   CellBody c;
-  uint16_t a; ///< <--mem1 internal flags (4 bits)--><--page # (12 bits)-->
+  uint16_t flags; //< mem1 internal flags (16 bits)
+  uint16_t page; //< page # (16 bits)
   uint16_t stamp;
 } mem[MEMSIZE];
 
@@ -33,7 +34,7 @@ static uint32_t pokes = 0;
  TODO replace it by cuckoo hashing or smarter alternative
  */
 static struct s_reserve { // TODO : change the name
-  Cell    c;
+  CellBody c;
   Address a;
   uint16_t stamp;
 } reserve[RESERVESIZE];
@@ -64,11 +65,10 @@ static struct s_mem_stats {
 };
 
 
-#define MEM1_CHANGED 0x1000
-#define MEM1_EMPTY   0xE000
-#define memPageOf(M) ((M)->a & 0x0FFF)
-#define memIsEmpty(M) ((M)->a == MEM1_EMPTY)
-#define memIsChanged(M) ((M)->a & MEM1_CHANGED)
+#define MEM1_CHANGED 0x0001
+#define MEM1_EMPTY   0x0100
+#define memIsEmpty(M) ((M)->flags == MEM1_EMPTY)
+#define memIsChanged(M) ((M)->flags & MEM1_CHANGED)
 
 
 /** set-up or reset a tuple {allocated memory, allocated size, significative size} used by geoalloc() function */
@@ -105,10 +105,10 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint16_t* stamp_p) {
   mem_stats.getCount++;
   struct s_mem* m = &mem[offset];
   
-  if (!memIsEmpty(m) && memPageOf(m) == page) {
+  if (!memIsEmpty(m) && m->page == page) {
     // cache hit
     DEBUGPRINTF("mem_get cache hit");
-    if (stamp_p != NULL) *stamp_p = m.stamp;
+    if (stamp_p != NULL) *stamp_p = m->stamp;
     mem_stats.mainFound++;
     *pCellBody = m->c;
     return 0;
@@ -133,7 +133,7 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint16_t* stamp_p) {
     // return mem0_get(a);
         
     // When replacing a modified cell, move it to reserve
-    Address moved = memPageOf(m) * MEMSIZE + offset;
+    Address moved = m->page * MEMSIZE + offset;
     DEBUGPRINTF("mem_get moves %06x from mem to reserve", moved);
     if (reserveHead >= reserveSize){
         LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
@@ -149,17 +149,19 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint16_t* stamp_p) {
     mem_stats.reserveMovesBecauseGet++;
   }
 
-  mem[offset].a = page;
+  mem[offset].page = page;
+  mem[offset].flags = 0;
   mem[offset].stamp = pokes;
   if (stamp_p != NULL) *stamp_p = pokes;
   mem_stats.notFound++;
-  *pCellBody = (mem[offset]->c = mem0_get(a));
+  mem0_get(a, &mem[offset].c);
+  *pCellBody = mem[offset].c;
   return 0;
 }
 
 /** Get a cell */
 int mem_get(Address a, CellBody *pCellBody) {
-    return mem_get_advanced(a, NULL);
+    return mem_get_advanced(a, pCellBody, NULL);
 }
 
 /** Set a cell */
@@ -170,7 +172,7 @@ int mem_set(Address a, CellBody *pCellBody) {
     mem_stats.setCount++;
     struct s_mem* m = &mem[offset];
 
-    if (!memIsEmpty(m) && memPageOf(m) != page)  { // Uhh that's not fun
+    if (!memIsEmpty(m) && m->page != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
             if (reserve[i].a == a) {
                 DEBUGPRINTF("mem cell found in reserve");
@@ -184,7 +186,7 @@ int mem_set(Address a, CellBody *pCellBody) {
 
         // no copy in the reserve, one puts the modified cell in mem0
         if (memIsChanged(m)) { // one replaces a modificied cell that one moves to reserve
-            Address moved = memPageOf(m) * MEMSIZE + offset;
+            Address moved = m->page * MEMSIZE + offset;
             DEBUGPRINTF("mem_set moved %06x to reserve", moved);
             if (reserveHead >= reserveSize) {
                 LOGPRINTF(LOG_ERROR, "reserve full :( :( logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
@@ -209,7 +211,8 @@ int mem_set(Address a, CellBody *pCellBody) {
         log[logSize - 1] = a;
     }
 
-    m->.a = MEM1_CHANGED | page;
+    m->flags = MEM1_CHANGED;
+    m->page = page;
     m->stamp = ++pokes;
     m->c = *pCellBody;
     DEBUGPRINTF("mem_set end, logSize=%d", logSize);
@@ -224,9 +227,11 @@ static int _addressCmp(const void *a, const void *b) {
 int mem_commit() {
   TRACEPRINTF("BEGIN mem_commit() logSize=%d", logSize);
   Address i;
+
   if (!logSize) {
+      // nothing to commit
       assert(reserveHead == 0);
-      return;
+      return 0;
   }
 
   // sort memory log
@@ -238,12 +243,12 @@ int mem_commit() {
     Address offset = a % MEMSIZE;
     CellBody c;
     if (mem_get(a, &c))
-      return -1:
+      return -1;
 
     if (mem0_set(a, &c))
       return -1;
 
-    mem[offset].a &= 0xEFFF; // reset changed flag for this offset (even if the changed cell is actually in reserve)
+    mem[offset].flags &= 0xFFFE; // reset changed flag for this offset (even if the changed cell is actually in reserve)
   }
 
   if (mem0_commit())
@@ -251,7 +256,7 @@ int mem_commit() {
 
   if (mem_is_out_of_sync) { // Reset cache because out of sync
     for (i = 0; i < memSize; i++) {
-      mem[i].a = MEM1_EMPTY;
+      mem[i].flags = MEM1_EMPTY;
       mem[i].stamp = 0;
     }
   }
@@ -289,7 +294,7 @@ int mem_init() {
 
   Address i;
   for (i = 0; i < memSize; i++) {
-    mem[i].a = MEM1_EMPTY;
+    mem[i].flags = MEM1_EMPTY;
     mem[i].stamp = 0;
   }
 

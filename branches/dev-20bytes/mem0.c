@@ -138,7 +138,7 @@ static int openJournal(int forWrite) {
 }
 
 int mem0_initJournal() {
-    return (void)openJournal(JOURNAL_WRITING);
+    return openJournal(JOURNAL_WRITING);
 }
 
 int mem0_addToJournal(Address r, CellBody *p) {
@@ -158,7 +158,7 @@ int mem0_addToJournal(Address r, CellBody *p) {
 int mem0_terminateJournal() {
     // add terminator
     CellBody terminator;
-    memset(&terminator,0,20);
+    memset(&terminator, 0, sizeof(CellBody));
     mem0_addToJournal(0, &terminator);
     mem0_addToJournal(0, &terminator);
 
@@ -318,7 +318,7 @@ int mem0_init() {
   return 1;
 }
 
-Cell mem0_get(Address address, CellBody* pCellBody) {
+int mem0_get(Address address, CellBody* pCellBody) {
    DEBUGPRINTF("mem0_get@%012x", address);
    assert(!journalHandler); // get can't happen where flush in progress
 

@@ -80,9 +80,12 @@ int basic() {
     assert(typeOf(hello) == XL_ATOM && typeOf(world) == XL_ATOM);
     char *s1 = str(hello);
     char *s2 = str(world);
-    assert(!strcmp("hello", s1) && !strcmp("world", s2));
+    char *s3 = str(more_bigger_string_11111111111111111111);
+    assert(!strcmp("hello", s1) && !strcmp("world", s2)
+           && !strcmp("more_bigger_string_11111111111111111111", s3));
     free(s1);
     free(s2);
+    free(s3);
 
     // check rooting
     test_title("check rooting");

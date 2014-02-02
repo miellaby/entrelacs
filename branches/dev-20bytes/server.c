@@ -207,7 +207,7 @@ static void *event_handler(enum mg_event event,
         dputs("input %s assimilated as %O", request_info->uri, input);
         if (input == NIL) {
             free(session_id);
-            char* origin = mg_get_header(conn, "Origin") ;
+            const char* origin = mg_get_header(conn, "Origin") ;
             mg_printf(conn, "HTTP/1.1 %d %s\r\n"
                       "Access-Control-Allow-Origin: %s\r\n"
                       "Access-Control-Allow-Credentials: true\r\n"
@@ -286,7 +286,7 @@ static void *event_handler(enum mg_event event,
             content = xls_urlOf(session, output, i_depth);
             content_length = strlen(content);
         }
-        char* origin =  mg_get_header(conn, "Origin");
+        const char* origin =  mg_get_header(conn, "Origin");
         mg_printf(conn, "HTTP/1.1 200 OK\r\nCache: no-cache\r\n"
                   "Access-Control-Allow-Origin: %s\r\n"
                   "Access-Control-Allow-Credentials: true\r\n"

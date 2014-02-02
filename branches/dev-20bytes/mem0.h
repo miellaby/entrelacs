@@ -8,10 +8,10 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-/** Cell. A 20 bytes long bucket
+/** Cell. A 24 bytes long bucket
   */
-struct s_cellBody {
-    char raw[20];
+typedef struct s_cellBody {
+    char raw[24];
 } CellBody;
 
 /** Cell address.
@@ -38,9 +38,9 @@ void mem0_destroy();
 #define _PRIM0 ((1 << 23) - 157)
 
 
-const Address PRIM0; ///< Biggest of twin prim numbers.
-const Address PRIM1; ///< Smallest of twin prim numbers, that is PRIM0 - 2.
-const Address SPACE_SIZE; ///< Space total size. It is basically PRIM0.
+extern const Address PRIM0; ///< Biggest of twin prim numbers.
+extern const Address PRIM1; ///< Smallest of twin prim numbers, that is PRIM0 - 2.
+extern const Address SPACE_SIZE; ///< Space total size. It is basically PRIM0.
 #ifdef MEM0_C
 const Address PRIM0 = _PRIM0;
 const Address PRIM1 = (_PRIM0 - 2);
