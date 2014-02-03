@@ -62,6 +62,8 @@ int basic() {
     test_title("assimilate arrows");
     DEFATOM(hello); // Arrow hello = xl_atom("hello");
     DEFATOM(world);
+    DEFATOM(small12345);
+
     DEFATOM(more_bigger_string_11111111111111111111);
     DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
     
@@ -77,16 +79,26 @@ int basic() {
 
     // Check atoms
     test_title("check atoms");
-    assert(typeOf(hello) == XL_ATOM && typeOf(world) == XL_ATOM);
+    assert(typeOf(hello) == XL_ATOM && typeOf(world) == XL_ATOM
+            && typeOf(more_bigger_string_11111111111111111111) == XL_ATOM
+            && typeOf(small12345) == XL_ATOM);
+    
     char *s1 = str(hello);
-    char *s2 = str(world);
-    char *s3 = str(more_bigger_string_11111111111111111111);
-    assert(!strcmp("hello", s1) && !strcmp("world", s2)
-           && !strcmp("more_bigger_string_11111111111111111111", s3));
+    assert(!strcmp("hello", s1));
     free(s1);
+    
+    char *s2 = str(world);
+    assert(!strcmp("world", s2));
     free(s2);
+    
+    char *s3 = str(more_bigger_string_11111111111111111111);
+    assert(!strcmp("more_bigger_string_11111111111111111111", s3));
     free(s3);
 
+    char *s4 = str(small12345);
+    assert(!strcmp("small12345", s4));
+    free(s4);
+    
     // check rooting
     test_title("check rooting");
     root(_hello_world);

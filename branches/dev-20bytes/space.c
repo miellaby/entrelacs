@@ -978,9 +978,9 @@ static Arrow small(int length, char* str, int ifExist) {
     *   s : small size (0 < s <= 11)
     *   hash3: (data 1st word ^ 2d word ^ 3d word) with s completion 
     */
-    buffer[1] = buffer[0] ^ buffer[5] ^ buffer[9];
-    buffer[2] = buffer[1] ^ buffer[6] ^ buffer[10];
-    buffer[3] = buffer[2] ^ buffer[7] ^ buffer[11];
+    buffer[1] = buffer[1] ^ buffer[5] ^ buffer[9];
+    buffer[2] = buffer[2] ^ buffer[6] ^ buffer[10];
+    buffer[3] = buffer[3] ^ buffer[7] ^ buffer[11];
 
     space_stats.get++;
 
@@ -2892,28 +2892,30 @@ static void forget(Arrow a) {
         if (!hChain) hChain = 1; // offset can't be 0
 
         Address next = jumpToFirst(&cell, a, hChain);
-        Cell chained_cell;
-        mem_get(next, (CellBody *)&chained_cell);
-        ONDEBUG((SHOWCELL('R', next, &chained_cell)));
-        while (chained_cell.full.type == CELLTYPE_SLICE) {
+        Cell sliceCell;
+        mem_get(next, (CellBody *)&sliceCell);
+        ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+        while (sliceCell.full.type == CELLTYPE_SLICE) {
             // free cell
-            memset(chained_cell.full.data, 0, sizeof(chained_cell.full.data));
-            chained_cell.full.type = CELLTYPE_EMPTY;
- 
-            mem_set(next, (CellBody *)&chained_cell);
-            ONDEBUG((SHOWCELL('W', next, &chained_cell)));
-            next = jumpToNext(&chained_cell, next, hChain);
+            Address current = next;
+            next = jumpToNext(&sliceCell, next, hChain);
 
-            mem_get(next, (CellBody *)&chained_cell);
-            ONDEBUG((SHOWCELL('R', next, &chained_cell)));
-        }
-        assert(chained_cell.full.type == CELLTYPE_LAST);
-        // free cell
-        memset(chained_cell.full.data, 0, sizeof(chained_cell.full.data));
-        chained_cell.full.type = CELLTYPE_EMPTY;
+            memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
+            sliceCell.full.type = CELLTYPE_EMPTY;
  
-        mem_set(next, (CellBody *)&chained_cell);
-        ONDEBUG((SHOWCELL('W', next, &chained_cell)));
+            mem_set(current, (CellBody *)&sliceCell);
+            ONDEBUG((SHOWCELL('W', current, &sliceCell)));
+            
+            mem_get(next, (CellBody *)&sliceCell);
+            ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+        }
+        assert(sliceCell.full.type == CELLTYPE_LAST);
+        // free cell
+        memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
+        sliceCell.full.type = CELLTYPE_EMPTY;
+ 
+        mem_set(next, (CellBody *)&sliceCell);
+        ONDEBUG((SHOWCELL('W', next, &sliceCell)));
     }
 
     // Free definition start cell

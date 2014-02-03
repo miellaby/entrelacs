@@ -10,7 +10,7 @@
 #include "log.h"
 #include "mem.h"
 
-#define MEMSIZE (65536)
+#define MEMSIZE (0x100000)
 // 0x10000 cells
 static const Address memSize = MEMSIZE ; ///< mem size
 
@@ -257,6 +257,7 @@ int mem_commit() {
   if (mem_is_out_of_sync) { // Reset cache because out of sync
     for (i = 0; i < memSize; i++) {
       mem[i].flags = MEM1_EMPTY;
+      mem[i].page = 0;
       mem[i].stamp = 0;
     }
   }
@@ -295,6 +296,7 @@ int mem_init() {
   Address i;
   for (i = 0; i < memSize; i++) {
     mem[i].flags = MEM1_EMPTY;
+    mem[i].page = 0;
     mem[i].stamp = 0;
   }
 
