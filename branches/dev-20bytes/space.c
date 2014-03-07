@@ -2256,11 +2256,11 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
               // set/reset flags
               nextCell.children.directions =
                 nextCell.children.directions
-                & ((1 << j) ^ 0xFFFF)
-                & ((1 << (8 + j)) ^ 0xFFFF)
+                & ((0x101 << j) ^ 0xFFFF)
                 | (outgoing ? (1 << j) : 0);
               mem_set(next, (CellBody *)&nextCell);
-
+              ONDEBUG((SHOWCELL('W', next, &nextCell)));
+        
               // now search for a free slot to put a terminator
               child = a;
             }
@@ -2268,7 +2268,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
             if (inSlot == 0)
               break; // free slot found
 
-            if (inSlot == a && (nextCell.children.directions & (1 << (8 + j)))) {
+            if (inSlot == a && (nextCell.children.directions & (0x100 << j))) {
               // One found "a" children terminator
 
               // replace with child
@@ -2281,7 +2281,8 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
                 & ((1 << (8 + j)) ^ 0xFFFF)
                 | (outgoing ? (1 << j) : 0);
               mem_set(next, (CellBody *)&nextCell);
-
+              ONDEBUG((SHOWCELL('W', next, &nextCell)));
+        
               // Now one keeps on probing for a free slot to put the terminator into
               child = a;
             } // terminator found
@@ -2300,11 +2301,11 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     nextCell.children.C[j] = child;
     nextCell.children.directions =
       nextCell.children.directions
-      & ((1 << j) ^ 0xFFFF)
-      & ((1 << (8 + j)) ^ 0xFFFF)
+      & ((0x101 << j) ^ 0xFFFF)
       | ((child != a && outgoing) ? (1 << j) : 0) // outgoing flag
-      | (child == a ? (1 << (8 + j)) : 0); // terminator flag if one puts the terminator
+      | (child == a ? (0x100 << j) : 0); // terminator flag if one puts the terminator
     mem_set(next, (CellBody *)&nextCell);
+    ONDEBUG((SHOWCELL('W', next, &nextCell)));
  }
 
 /** disconnect a child pair from its parent arrow "a".
@@ -2591,7 +2592,7 @@ static int xl_enumNextChildOf(XLEnum e) {
     // get current cell
     Cell cell;
     mem_get(pos ? pos : a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', pos, &cell)));
+    ONDEBUG((SHOWCELL('R', pos ? pos : a, &cell)));
 
     if (pos == EVE || pos == a) { // current cell is parent cell
         
@@ -2624,7 +2625,7 @@ static int xl_enumNextChildOf(XLEnum e) {
             && cell.arrow.child0) {
             return LOCK_OUT(0); // no child left
         }
-
+        pos = a;
     } else {
 
       // check current children cell is unchanged:
@@ -2643,7 +2644,7 @@ static int xl_enumNextChildOf(XLEnum e) {
     }
 
     uint32_t hChild = iteratorp->hChild;
-
+    int iProbe = 0xFFFFF;
     while (1) { // children loop
       if (cell.full.type == CELLTYPE_CHILDREN) {
 
@@ -2680,8 +2681,11 @@ static int xl_enumNextChildOf(XLEnum e) {
           } // child maybe found
           i++;        
         } // slot loop
+        iProbe = 0xFFFFF;
       } // children cell
-
+       else {
+          assert(--iProbe);
+      }
       // shift
       ADDRESS_SHIFT(pos, pos, hChild);
       mem_get(pos, (CellBody *)&cell);
