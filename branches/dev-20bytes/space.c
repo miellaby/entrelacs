@@ -549,8 +549,8 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
  * ====== */
 
 /* Address shifting */
-#define SHIFT_LIMIT 220
-#define PROBE_LIMIT 10000
+#define SHIFT_LIMIT 20
+#define PROBE_LIMIT 20
 #define ADDRESS_SHIFT(ADDRESS, NEW, OFFSET) \
          (NEW = (((ADDRESS) + (31 + (OFFSET)++) / 32) % (SPACE_SIZE)))
 
@@ -1215,7 +1215,7 @@ Arrow xl_pairMaybe(Arrow tail, Arrow head) {
  */
 static Arrow tag(uint32_t size, char* data, int ifExist, uint64_t hash) {
   if (!hash) hash = hashRaw(data, size);
-  return payload(CELLTYPE_TAG, size, data, hash, 0);
+  return payload(CELLTYPE_TAG, size, data, hash, ifExist);
 }
 /** retrieve a blob arrow defined by 'size' bytes pointed by 'data',
  * by creating the singleton if not found.
@@ -1981,11 +1981,14 @@ Arrow xl_urinMaybe(uint32_t aSize, char* aUri) {
 
 Arrow xl_anonymous() {
     char anonymous[CRYPTO_SIZE + 1];
+    Arrow a = NIL;
     do {
         char random[80];
         snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
         crypto(80, random,  anonymous); // Access to unitialized data is wanted
-    } while (xl_atomMaybe(anonymous));
+        a = xl_atomMaybe(anonymous);
+        assert(a != NIL);
+    } while (a);
     return xl_atom(anonymous);
 }
 
@@ -2371,9 +2374,12 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
     // child0 simple case
     if (parent.arrow.child0 == child) {
-      parent.arrow.child0 = 0;
-      parent.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
-      child = 0; // OK
+      int child0direction = parent.arrow.RWWnCn & FLAGS_C0D;
+      if (child0direction && outgoing || !(child0direction || outgoing)) {
+        parent.arrow.child0 = 0;
+        parent.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
+        child = 0; // OK
+      }
     }
 
     // write parent cell
@@ -2395,9 +2401,16 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
     // If one child, one removes the list terminator
     int removeTerminatorNow = 
-            (weakChildrenCount == 0
-              && childrenCount == 1
-              && parent.arrow.child0 != 0);
+            !weakness
+              && weakChildrenCount == 0
+              && (childrenCount == 0
+                  || childrenCount == 1
+                     && parent.arrow.child0 != 0)
+            || weakness
+              && weakChildrenCount == 0
+              && (childrenCount == 0
+                 || childrenCount == 1
+                    && parent.arrow.child0 != 0);
 
     while(1) { // child probing loop
 
@@ -2428,17 +2441,20 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
                   | nextCell.children.C[2] | nextCell.children.C[3]
                   | nextCell.children.C[4]) {
                   // cell is not fully empty
-     
                   // set/reset flags
                   nextCell.children.directions =
                     nextCell.children.directions
                     & (((1 << j) | (1 << (8 + j))) ^ 0xFFFF);
+     
               } else {
+                  // Empty children cell can be recycled
+                  // because the terminator isn't inside
+                  //
                   // cell is fully empty
                   // mark as is
                   memset(nextCell.full.data, 0, sizeof(nextCell.full.data));
                   nextCell.full.type = CELLTYPE_EMPTY;
-                  // don't delete peeble!
+                  // but don't delete peeble!
               } 
               mem_set(next, (CellBody *)&nextCell);
               ONDEBUG((SHOWCELL('W', next, &nextCell)));
@@ -2538,6 +2554,8 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
             ONDEBUG((SHOWCELL('R', child, &childCell)));
 
             // check at least one arrow end is a
+            // TODO check direction so to not at a same child twice because its back-reference
+            // from its both ends got gathered in the same sequence
             if (childCell.pair.head == a || childCell.pair.tail == a) {
               // child!
               cb(child, context);

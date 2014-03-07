@@ -400,6 +400,7 @@ int main(void) {
               dputs("session %O outdated.", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
+              xl_freeEnum(e);
               sessionTag =  xl_atom("session");
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;

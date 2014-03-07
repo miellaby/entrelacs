@@ -1,19 +1,25 @@
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
-#include <assert.h>
+#include <assert.h>include
 #include "log.h"
 #include "entrelacs/entrelacs.h"
+#include "session.h"
 
 int main(int argc, char **argv) {
     FILE* fd;
     char buffer[1024];
-    log_init(NULL, "server,session,machine,space=debug");
-    //log_init(NULL, "server,session,machine=debug");
+    //log_init(NULL, "server,session,machine,space=debug");
+    log_init(NULL, "server,session,machine=debug");
 
     xl_init();
+
+
+    //Arrow context = xls_session(EVE, xl_atom("test"), xl_anonymous());
+
     struct s_test { char* program; char* result; } *test, tests[] = {
-    // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1"},
+   // {"let//x+1/arrow//var+x+2", "/1+2"},
     //{NULL, NULL},
+    // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1"},
         
     //{"/childrenOf+locked", "//locked+XLR3SuLT+//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+"},
     //{"/let//identity/lambda/x+x/identity+42", "42"},
@@ -103,12 +109,17 @@ int main(int argc, char **argv) {
         Arrow program = xl_uri(programUri);
         Arrow wanted = xl_uri(wantedUri);
         assert(!xl_isEve(program) && !xl_isEve(wanted));
-
+        //xls_root(context, program);
+        //xls_root(context, wanted);
         Arrow result = xl_eval(EVE, program, EVE);
+        program = xl_uri(programUri);
+        wanted = xl_uri(wantedUri);
         if (!xl_equal(result, wanted)) {
             fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
             return EXIT_FAILURE;
         }
+        //xls_unroot(context, program);
+        //xls_unroot(context, wanted);
     }
     xl_over();
     return EXIT_SUCCESS;
