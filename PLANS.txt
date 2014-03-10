@@ -1,0 +1,104 @@
+Current changes:
+ * Web terminal
+
+
+Most recent previous changes:
+ * web terminal (sexy demo)
+ * xl_yield(arrow state) (in replacement of xl_over)
+   * sync with all threads then GC
+   * but in addition: preserve "state" arrow from GC (temporary root)
+   * TBC: maybe timeout for yielding
+   * is used between each transition of the machine
+ * lowest level operators renamed to reflect their behavior
+ * example.xl
+ * rlambda (closure can access to itself as "it")
+ * anonymous arrow API (avoid it as long as you can!)
+ * hook API. Root flag is used to prevent attack proof or invalidate a hook
+ * not-blocking childrenOf version:
+      * syntax: /let/enum/childReview+a
+      * returns a new "dynamic" operator
+          * returned operator carries a handler to the enumerator
+      * apply the operator to perform next/get on the enumerator
+      * /enum+ => 1st children, /enum+ 2d children, etc.
+ * API now reentrant. Lock at every sensible access of space.c/mem.c
+     * no more global lock in server.c
+ * a way to sync commit between concurrent agents
+     * xl_begin(), xl_over()/xl_commit()
+     * see server.c & testshell.c for usage
+ * lock on the persistent file to prevent concurrent clients.
+     * avoid mess when running several entrelacsd, testshell or any other libentrelacs clients,
+     * temporarly close-unlock file right after commit
+     * when relocking, one checks if file mtime changed. If so, nuke RAM cache!
+* Added: a digest operator.
+* Some web clients refuse to escape '.' character in %2E.
+   Radical solution: URI format has changed. Now '/tail+head'
+* Public API hides implementation of atoms: blob, tag or btag
+  * blob or tag according to data size
+* when an application is bound as is, it takes precedence over the corresponding closure evaluation.
+  * it's an attempt to merge intensive and extensive definitions, that is function and environment/object.
+* operator, closure & paddock: auto escaped and somewhat typed litterals. paddock is for macro.
+* xls_get now returns NIL (FFFFFF) when no arrow found
+* NIL is a undefined arrow. Different from Eve (0)
+* virtualized evaluation (root/get/set are confined in a nested hierarchy of contexts)
+* resolve now use xls_get to get "global" variable value
+* rooting a pair is not enough any more to make a global bound variable.
+  * Use xls_set(EVE,slot,value) instead.
+      * will do root((EVE->slot)->value) ; root(EVE->(slot->value)))
+* looseStack dumped in reverse order
+* new API to get and retrieve "uri" (no more xl_program)
+* and much more ...
+
+Future:
+ * doxygen integration
+ * HTTP push connector
+   * use in the demo
+ * Web terminal
+   * user login & persistent changes
+   * link layout (relatively to their ends)
+   * parametrable "seed"
+ * map/reduce operators
+   * do we put them in machine.c or not?
+   * what if I moved all non trivial definition like if macro elsewhere?
+ * site.sh
+   * pkill entrelacsd && echo restart... || echo start...
+   * entrelacsd &
+   * sleep 5
+   * for each line in $(cat site.xl) do
+        curl GET $SITE/$line
+     done ; # define some functions
+   * for each filename in glob site/* do
+        cat $filename | curl PUT $SITE/$filename --stdin
+     done ; # assimilate demo assets
+ * MessageBox
+   * new operator box
+     a hook to a cond lock
+   * new operator observe param=box
+     wait for the condition lock during 20s
+     then/or
+     unroot and return childrenOf box rooted
+     and paused machine (see hereafter)
+   * new operator trigger
+     get/create the box arrow if non existant
+     root (box, output)
+     trigger condition variable
+   * new operator pause
+     stop the machine and return as /machine/... (new litteral)
+      * resume ... restore machine
+      * abort ... free machine
+
+In study:
+ * the very first child should be attached to the main arrow definition, as most non-rooted arrow are made to be attached to at least one child.
+ * a session is actually a continuation
+ * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
+ * xls_set: create less arrows (but also less indexation)
+     * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
+ * when an operator is GC by forget() -if tail(a) == operator (space-level reserved keyword)-
+                 then forget do call the operator with special *GC* atom
+                     on *GC* argument, operator should test it's really a GC (global variable in_commit TODO)
+                     and free anything
+ * Web terminal
+   * infinite "map" of objects with spatial hashing
+      * clients sync with tiles every couple of seconds
+   * timeline
+   * unused objects out of view may move out of screen after a while
+   
