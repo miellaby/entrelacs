@@ -1,0 +1,15 @@
+<svg width="640" height="480" xmlns="http://www.w3.org/2000/svg">
+ <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+ <g>
+  <title>Calque 1</title>
+  <rect fill="#7fff00" stroke="#000000" stroke-width="5" stroke-linejoin="null" stroke-linecap="null" x="78" y="184.877061" width="479" height="234.000007" id="svg_8"/>
+  <path fill="#ffff00" stroke="#000000" stroke-width="5" d="m78.000023,418.877075l0.000015,-233.877075l140.469322,0.168015l3.031723,38.855927l48.507431,56.367905l87.919647,2.167969l113.183929,-43.359909l84.887909,-21.679962l0.000122,199.455551l-478.000122,1.901581l0.000023,0z" id="svg_3"/>
+  <path fill="#ff7f00" stroke="#000000" stroke-width="5" d="m78.000015,418.877075l0.000023,-133.877075l103.078224,1.241028l40.422821,21.09726l48.507431,32.266388l87.919647,1.240997l113.18396,-24.820282l84.887878,-12.410156l0.000122,114.17334l-478.000122,1.088501l0.000015,0z" id="svg_2"/>
+  <path fill="#FF0000" stroke="#000000" stroke-width="5" d="m79.000015,418.877075l0.000023,-56.877075l103.078209,0.527252l40.422836,8.963074l48.507431,13.708221l87.919647,0.527252l113.183929,-10.5448l84.887909,-5.2724l0.000122,48.506012l-478.000122,0.462433l0.000015,0.000031z" id="svg_1"/>
+  <text fill="#000000" stroke="#000000" stroke-width="0" stroke-linejoin="null" stroke-linecap="null" x="146.5" y="398" id="svg_4" font-size="24" font-family="Sans-serif" text-anchor="middle" xml:space="preserve">mem0</text>
+  <text fill="#000000" stroke="#000000" stroke-width="0" stroke-linejoin="null" stroke-linecap="null" x="143.5" y="329" font-size="24" font-family="Sans-serif" text-anchor="middle" xml:space="preserve" id="svg_5">mem</text>
+  <text fill="#000000" stroke="#000000" stroke-width="0" stroke-linejoin="null" stroke-linecap="null" x="159.5" y="236" font-size="24" font-family="Sans-serif" text-anchor="middle" xml:space="preserve" id="svg_6">space</text>
+  <text fill="#000000" stroke="#000000" stroke-width="0" stroke-linejoin="null" stroke-linecap="null" x="317.72034" y="237" id="svg_9" font-size="23" font-family="Sans-serif" text-anchor="middle" xml:space="preserve" font-style="normal">machine</text>
+  <path id="svg_10" d="m308.07663,71.314217q11.92392,8.18927 23.821228,0m-21.237091,-16.17379c0,-1.265747 1.025543,-2.291771 2.292084,-2.291771c1.264709,0 2.290588,1.026024 2.290588,2.291771c0,1.265549 -1.025879,2.29155 -2.290588,2.29155c-1.266541,0 -2.292084,-1.026001 -2.292084,-2.29155m14.095795,0c0,-1.265747 1.025879,-2.291771 2.292236,-2.291771c1.264893,0 2.290436,1.026024 2.290436,2.291771c0,1.265549 -1.025543,2.29155 -2.290436,2.29155c-1.266357,0 -2.292236,-1.026001 -2.292236,-2.29155m-26.75589,6.579575l0,0c0,-12.150208 9.84903,-22 21.999878,-22c12.14975,0 21.998779,9.849792 21.998779,22c0,12.150215 -9.84903,22 -21.998779,22c-12.150848,0 -21.999878,-9.849785 -21.999878,-22zm0,0l0,0c0,-12.150208 9.84903,-22 21.999878,-22c12.14975,0 21.998779,9.849792 21.998779,22c0,12.150215 -9.84903,22 -21.998779,22c-12.150848,0 -21.999878,-9.849785 -21.999878,-22z" stroke-linecap="null" stroke-linejoin="null" stroke-width="4" stroke="#000000" fill="#ffff56"/>
+ </g>
+</svg>
