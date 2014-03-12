@@ -1,8 +1,33 @@
-Current changes:
- * Web terminal
+Current change:
+ * space buffer: buffer.c/h
+ * API: buffer_* <=> xl_*
+ * used by machine.c
+ * use ram.c/h: volatile memory
+ * 28 bytes model (include arrowServerId) * 0x100000 cells
+ * volatile locally deduped arrows
+ * placeHolder for a server arrow
+ * on commit rooted arrows are server-rooted, unrooted arrows are server-unrooted
+ * change flags
+ * first call to children or isRooted bind buffered arrow if necessary
+   * one needs to store the fact that root flags hve unknown values
+ * buffer can be reserved/freed as a whole
+ * buffer is zeroed when not needed
+ * buffer sync: fetch  id and clear server root flag and children cache for one arrow/every arrow
+ * blob in separate directories (/var/tmp)
+ * ROOT/WEAK values: UNKNOWN=4, SET=3, UNSET=2, True=1, False=0
 
+Previous changes:
+ * new 24 bytes model
+   * new atom type: SMALL
+   * new kind of rooting : "weak" rooting
+    -  a weak arrow doesn't prevent its both ends GCing
+    -  a weak arrow is GCed when its both ends are GCed
+    -  an arrow may be independantly strongly rooted and weakly rooted
+    -  2 separate boolean root flags per arrow: strong and weak
+    -  not yet completed
+   * a public hashcode stored in every arrow definition,
+   * xl_hashOf() to get the hash of an arrow
 
-Most recent previous changes:
  * web terminal (sexy demo)
  * xl_yield(arrow state) (in replacement of xl_over)
    * sync with all threads then GC
