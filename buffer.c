@@ -7,15 +7,14 @@
 #include <ctype.h>
 #include <pthread.h>
 #include "entrelacs/entrelacs.h"
-#include "mem0.h"
-#include "mem.h"
+#include "ram.h"
 #include "sha1.h"
-#define LOG_CURRENT LOG_SPACE
+#define LOG_CURRENT LOG_BUFFER
 #include "log.h"
 
 /** statistic structure and variables
  */
-static struct s_space_stats {
+static struct s_buffer_stats {
   // operation and other events counters
   int get; //< GET op counter
   int root; //< root op counter
@@ -27,9 +26,9 @@ static struct s_space_stats {
   int atom; //< atom creation counter
   int pair; //< pair cration counter
   int forget; //< forget op counter
-} space_stats_zero = {
+} buffer_stats_zero = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-}, space_stats = {
+}, buffer_stats = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
@@ -47,8 +46,8 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
 static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
-static int apiActivity = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
-static int spaceGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC done
+static int apiActivity = 0; // Activity counter; Incremented/Decremented by buffer_begin/buffer_over. Decremented when waiting for commit. Incremented again after.
+static int bufferGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC done
 static int memCommitNeeded = 0; // 0->1 when a thread is wait for commit, 1->0 when commit done
 
 
@@ -71,25 +70,26 @@ const Arrow Eve = EVE;
 
 
 /*
- *   Memory device
+ *   RAM only memory device
  *
  *   -------+------+------+------+-------
  *      ... | cell | cell | cell | ...
  *   -------+------+------+------+-------
  *
+ *   cell: a RAM cell
  */
 
 
-/**  Cell structure (24 bytes).
+/**  Cell structure (28 bytes).
  *
  *   +---------------------------------------+---+---+
  *   |                  data                 | T | P |
  *   +---------------------------------------+---+---+
- *                       22                    1   1
+ *                       26                    1   1
  *
  *      P: "Peeble" count aka "More" counter (8 bits)
  *       T: Cell type ID (8 bits)
- *    Data: Data (18 bytes)
+ *    Data: Data (26 bytes)
  *
  *
  */
@@ -99,7 +99,7 @@ const Arrow Eve = EVE;
 typedef union u_cell {
   struct u_full {
 
-    char data[22];
+    char data[26];
     unsigned char peeble;
     unsigned char type;
   } full;
@@ -125,21 +125,21 @@ typedef union u_cell {
    * raw
   */
   struct s_uint {
-    uint32_t data[6];
+    uint32_t data[7];
   } uint;
 
   /*   T = 0: empty cell.
    *   +---------------------------------------------------+
    *   |                      junk                         |
    *   +---------------------------------------------------+
-   *                         22 bytes
+   *                         26 bytes
    */
  
   /** T = 1, 2, 3, 4: arrow definition.
-  *   +--------+----------------------+-----------+----------+----+----+
-  *   |  hash  | full or partial def  | RWC0dWnCn |  Child0  | cr | dr |
-  *   +--------+----------------------+-----------+----------+----+----+
-  *       4                8                4          4        1    1
+  *   +--------+--------+----------------------+-----------+----------+----+----+
+  *   | arrowID|  hash  | full or partial def  | RWC0dWnCn |  Child0  | cr | dr |
+  *   +--------+--------+----------------------+-----------+----------+----+----+
+  *        4       4                8                4          4        1    1
   *   where RWC0dWnCn = R|W|C0d|Wn|Cn
   *
   *   R = root flag (1 bit)
@@ -148,11 +148,13 @@ typedef union u_cell {
   *   Wn = Weak children count (14 bits)
   *   Cn = Non-weak children count  (15 bits)
   *
+  *   arrowId = buffered arrow Id
   *   child0 = 1st child of this arrow
   *   cr = children revision
   *   dr = definition revision
   */
   struct s_arrow {
+     Arrow arrowId;
      uint32_t hash;
      char  def[8];
      uint32_t RWWnCn;
@@ -172,12 +174,13 @@ typedef union u_cell {
 #define MAX_REFCOUNT           0x7FFFu
 
   /* T = 1: regular pair.
-  *   +--------+--------+--------+-----------+----------+----+----+
-  *   |  hash  |  tail  |  head  | RWC0dWnCn |  Child0  | cr | dr |
-  *   +--------+--------+--------+-----------+----------+----+----+
-  *       4        4        4         4            4       1    1
+  *   +--------+--------+--------+--------+-----------+----------+----+----+
+  *   | arrowID|  hash  |  tail  |  head  | RWC0dWnCn |  Child0  | cr | dr |
+  *   +--------+--------+--------+--------+-----------+----------+----+----+
+  *        4       4        4        4         4            4       1    1
   */
   struct s_pair {
+     uint32_t arrowId;
      uint32_t hash;
      uint32_t tail;
      uint32_t head;
@@ -188,17 +191,18 @@ typedef union u_cell {
   } pair;
 
   /* T = 2: small.
-  *   +---+-------+-------------------+------------+----------+----+----+
-  *   | s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
-  *   +---+-------+-------------------+------------+----------+----+----+
-  *     1    3               8      
-  *   <---hash--->
+  *   +--------+---+-------+-------------------+------------+----------+----+----+
+  *   | arrowID| s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
+  *   +--------+---+-------+-------------------+------------+----------+----+----+
+  *        4     1    3               8      
+  *            <---hash--->
   *
   *   s : small size (0 < s <= 11)
   *   hash3: (data 1st word ^ 2d word ^ 3d word) & 0xFFFFFFu
   *    ... if s > 8, one can get 3 additional bytes, by computing:(1st word ^ 2d word ^ hash) & 0xFFFFFFu
   */
   struct s_small {
+    uint32_t arrowId;
     unsigned char s;
     char hash3[3];
     char data[8];
@@ -209,13 +213,14 @@ typedef union u_cell {
   } small;
      
   /* T = 3: tag or 4: blob footprint.
-  *   +--------+------------+----+-----------+----------+----+----+
-  *   |  hash  |   slice0   | J0 | R.W.Wn.Cn |  Child0  | cr | dr |
-  *   +--------+------------+----+-----------+----------+----+----+
-  *       4          7        1                     
+  *   +--------+--------+------------+----+-----------+----------+----+----+
+  *   | arrowID|  hash  |   slice0   | J0 | R.W.Wn.Cn |  Child0  | cr | dr |
+  *   +--------+--------+------------+----+-----------+----------+----+----+
+  *        4       4          7        1                     
   *   J = first slice jump, h-sequence multiplier (1 byte)
   */
   struct s_tagOrBlob {
+    uint32_t arrowId;
     uint32_t hash;
     char slice0[7];
     unsigned char jump0;
@@ -231,10 +236,10 @@ typedef union u_cell {
   *   +-----------------------------------------+---+
   *   |                   data                  | J |
   *   +-----------------------------------------+---+
-  *                        21                     1
+  *                        25                     1
   */
   struct s_slice {
-    char data[21];
+    char data[25];
     unsigned char jump;
   } slice;
 
@@ -244,11 +249,11 @@ typedef union u_cell {
   *   +-----------------------------------------+---+
   *   |                   data                  | s |
   *   +-----------------------------------------+---+
-  *                        21                     1
+  *                        25                     1
   *   s = slice size
   */
   struct s_last {
-    char data[21];
+    char data[25];
     unsigned char size;
   } last;
 
@@ -261,22 +266,22 @@ typedef union u_cell {
   struct s_reattachment {
     uint32_t from;
     uint32_t to;
-    char junk[14];
+    char junk[18];
   } reattachment;
 
   /*   T = 8: children with same hash
-   *   +------+------+------+------+------+---+
-   *   |  C4  |  C3  |  C2  |  C1  |  C0  | td|
-   *   +------+------+------+------+------+---+
-   *       4     4      4      4       4    2
+   *   +------+------+------+------+------+------+---+
+   *   |  C5  |  C4  |  C3  |  C2  |  C1  |  C0  | td|
+   *   +------+------+------+------+------+------+---+
+   *       4      4     4      4      4       4    2
    *   Ci : Child or list terminator
    *        (list terminator = parent address with flag)
    *   td: terminators (1 byte) . directions (1 byte, 1 outgoing)
-   *       5 significative bits per byte
+   *       6 significative bits per byte
    *   
    */
   struct s_children {
-    uint32_t C[5];
+    uint32_t C[6];
     uint16_t directions;
   } children;
 
@@ -341,10 +346,10 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
       int childrenCount = (int)(cell->arrow.RWWnCn & FLAGS_CHILDRENMASK);
       int cr = (int)cell->arrow.cr;
       int dr = (int)cell->arrow.dr;
-
+      int arrowId = (int)cell->arrow.arrowId;
       if (type == CELLTYPE_PAIR) {
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s tail=%08x head=%08x",
-          line, operation, address, peeble, type,
+        dputs("%d %c %06x id=%06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s tail=%08x head=%08x",
+          line, operation, address, arrowId, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
           cell->pair.head);
@@ -353,14 +358,14 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
         int s = (int)cell->small.s;
         char buffer[11];
         cell_getSmallPayload(cell, buffer);
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s size=%d data=%.*s",
-          line, operation, address, peeble, type,
+        dputs("%d %c %06x id=%06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s size=%d data=%.*s",
+          line, operation, address, arrowId, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
-          line, operation, address, peeble, type,
+        dputs("%d %c %06x id=%06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+          line, operation, address, arrowId, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
@@ -385,21 +390,24 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
           (cell->children.directions & 0x04 ? 'O' : '.'),
           (cell->children.directions & 0x08 ? 'O' : '.'),
           (cell->children.directions & 0x10 ? 'O' : '.'),
+          (cell->children.directions & 0x20 ? 'O' : '.'),
           (cell->children.directions & 0x0100 ? 'T' : '.'),
           (cell->children.directions & 0x0200 ? 'T' : '.'),
           (cell->children.directions & 0x0400 ? 'T' : '.'),
           (cell->children.directions & 0x0800 ? 'T' : '.'),
           (cell->children.directions & 0x1000 ? 'T' : '.'),
+          (cell->children.directions & 0x2000 ? 'T' : '.'),
           ']',
           '\0'
       };
-      dputs("%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
+      dputs("%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x %x} D=%s",
         line, operation, address, peeble, type, cat,
         cell->children.C[0],
         cell->children.C[1],
         cell->children.C[2],
         cell->children.C[3],
         cell->children.C[4],
+        cell->children.C[5],
         directions);
 
     } else if (type == CELLTYPE_REATTACHMENT) {
@@ -524,10 +532,10 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
 #define SHIFT_LIMIT 20
 #define PROBE_LIMIT 20
 #define ADDRESS_SHIFT(ADDRESS, NEW, OFFSET) \
-         (NEW = (((ADDRESS) + (31 + (OFFSET)++) / 32) % (SPACE_SIZE)))
+         (NEW = (((ADDRESS) + (31 + (OFFSET)++) / 32) % (RAM_SIZE)))
 
 #define ADDRESS_JUMP(ADDRESS, NEW, OFFSET, JUMP) \
-         (NEW = (((ADDRESS) + (31 * (JUMP) + ((OFFSET) * (JUMP) * (1 + JUMP) / 2)) / 32) % (SPACE_SIZE)))
+         (NEW = (((ADDRESS) + (31 * (JUMP) + ((OFFSET) * (JUMP) * (1 + JUMP) / 2)) / 32) % (RAM_SIZE)))
 
 /* Cell testing */
 #define CELL_CONTAINS_ARROW(CELL) ((CELL).full.type != CELLTYPE_EMPTY && (CELL).full.type <= CELLTYPE_ARROWLIMIT)
@@ -546,7 +554,7 @@ static Address jumpToFirst(Cell* cell, Address address, Address offset) {
     if (jump == MAX_JUMP0) {
         // one needs to look for a reattachment (sync) cell
         Cell probed;
-        mem_get(next, (CellBody *)&probed);
+        ram_get(next, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', next, &probed)));
 
         int i = PROBE_LIMIT;
@@ -554,7 +562,7 @@ static Address jumpToFirst(Cell* cell, Address address, Address offset) {
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
-            mem_get(next, (CellBody *)&probed);
+            ram_get(next, (RamCell *)&probed);
             ONDEBUG((SHOWCELL('R', next, &probed)));
         }
         assert(i);
@@ -575,7 +583,7 @@ static Address jumpToNext(Cell* cell, Address address, Address offset) {
     if (jump == MAX_JUMP) {
         // one needs to look for a reattachment (sync) cell
         Cell probed;
-        mem_get(next, (CellBody *)&probed);
+        ram_get(next, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', next, &probed)));
 
         int i = PROBE_LIMIT;
@@ -583,7 +591,7 @@ static Address jumpToNext(Cell* cell, Address address, Address offset) {
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
-            mem_get(next, (CellBody *)&probed);
+            ram_get(next, (RamCell *)&probed);
             ONDEBUG((SHOWCELL('R', next, &probed)));
         }
         assert(i);
@@ -594,7 +602,7 @@ static Address jumpToNext(Cell* cell, Address address, Address offset) {
 }
 
 /** return Eve */
-Arrow xl_Eve() {
+Arrow buffer_Eve() {
     return EVE;
 }
 
@@ -612,14 +620,14 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     unsigned i, jump;
     char c, *p;
 
-    space_stats.atom++;
+    buffer_stats.atom++;
 
     if (!length) {
         return EVE;
     }
 
     hash = payloadHash & 0xFFFFFFFFU;
-    hashAddress = hash % PRIM0;
+    hashAddress = hash % PRIM0 % RAM_SIZE;
     hashProbe = hash % PRIM1;
     if (!hashProbe) hashProbe = 1; // offset can't be 0
    
@@ -628,7 +636,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     probeAddress = hashAddress;
     firstFreeAddress = EVE;
     while (1) {
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
 
         if (probed.full.type == CELLTYPE_EMPTY) {
@@ -648,7 +656,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
           i = 0;
 
           next = jumpToFirst(&probed, probeAddress, hChain);
-          mem_get(next, (CellBody *)&sliceCell);
+          ram_get(next, (RamCell *)&sliceCell);
           ONDEBUG((SHOWCELL('R', next, &sliceCell)));
 
           while ((c = *p++) == sliceCell.slice.data[i++] && --l) { // cmp loop
@@ -658,7 +666,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                     break; // the chain is over
                 }
                 next = jumpToNext(&sliceCell, next, hChain);
-                mem_get(next, (CellBody *)&sliceCell);
+                ram_get(next, (RamCell *)&sliceCell);
                 ONDEBUG((SHOWCELL('R', next, &sliceCell)));
                 i = 0;
             }
@@ -666,7 +674,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
           if (!l && sliceCell.full.type == CELLTYPE_LAST
              && sliceCell.last.size == i) {
             // exact match
-            space_stats.found++;
+            buffer_stats.found++;
             return probeAddress; // found arrow
           } // match
         } // if candidate
@@ -685,8 +693,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     }
     // else ... one creates a corresponding arrow right now
 
-    space_stats.new++;
-    space_stats.atom++;
+    buffer_stats.new++;
+    buffer_stats.atom++;
 
     if (firstFreeAddress == EVE) {
         Cell probed;
@@ -695,7 +703,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         while (--i) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
 
-            mem_get(probeAddress, (CellBody *)&probed);
+            ram_get(probeAddress, (RamCell *)&probed);
             ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
             
             if (probed.full.type == CELLTYPE_EMPTY) {
@@ -712,19 +720,20 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     Address current, newArrow = firstFreeAddress;
     Cell newCell, nextCell, currentCell;
 
-    mem_get(newArrow, (CellBody *)&newCell);
+    ram_get(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
 
     /*   |  hash  | slice0  | J | R.W.Wn.Cn |  Child0  | cr | dr |
     *       4          7        1                     
     */
+    newCell.tagOrBlob.arrowId = 0;
     newCell.tagOrBlob.hash = hash;
     memcpy(newCell.tagOrBlob.slice0, str, sizeof(newCell.tagOrBlob.slice0));
     newCell.arrow.RWWnCn = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = cellType;
-    newCell.arrow.dr = space_stats.new & 0xFFu;
+    newCell.arrow.dr = buffer_stats.new & 0xFFu;
 
     hChain = hashChain(&newCell) % PRIM1;
     if (!hChain) hChain = 1; // offset can't be 0
@@ -732,7 +741,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     Address offset = hChain;
     ADDRESS_SHIFT(newArrow, next, offset);
     
-    mem_get(next, (CellBody *)&nextCell);
+    ram_get(next, (RamCell *)&nextCell);
     ONDEBUG((SHOWCELL('R', next, &nextCell)));
 
     jump = 0;
@@ -741,7 +750,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         jump++;
         ADDRESS_SHIFT(next, next, offset);
 
-        mem_get(next, (CellBody *)&nextCell);
+        ram_get(next, (RamCell *)&nextCell);
         ONDEBUG((SHOWCELL('R', next, &nextCell)));
     }
     assert(i);
@@ -753,27 +762,27 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         syncCell.reattachment.from = newArrow;
         syncCell.reattachment.to   = newArrow; // will be overwritten as soon as possible
         
-        mem_set(sync, (CellBody *)&syncCell);
+        ram_set(sync, (RamCell *)&syncCell);
         ONDEBUG((SHOWCELL('W', sync, &syncCell)));
         
         offset = hChain;
         ADDRESS_SHIFT(next, next, offset);
         
-        mem_get(next, (CellBody *)&nextCell);
+        ram_get(next, (RamCell *)&nextCell);
         ONDEBUG((SHOWCELL('R', next, &nextCell)));
 
         i = PROBE_LIMIT;
         while (nextCell.full.type == CELLTYPE_EMPTY && --i) {
           ADDRESS_SHIFT(next, next, offset);
 
-          mem_get(next, (CellBody *)&nextCell);
+          ram_get(next, (RamCell *)&nextCell);
           ONDEBUG((SHOWCELL('R', next, &nextCell)));
         }
         assert(i);
 
         syncCell.reattachment.to = next;
         
-        mem_set(sync, (CellBody *)&syncCell);
+        ram_set(sync, (RamCell *)&syncCell);
         ONDEBUG((SHOWCELL('W', sync, &syncCell)));
 
         jump = MAX_JUMP;
@@ -781,7 +790,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
 
     newCell.tagOrBlob.jump0 = jump;
 
-    mem_set(newArrow, (CellBody *)&newCell);
+    ram_set(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
     
     current = next;
@@ -800,7 +809,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                 Address offset = hChain;
                 ADDRESS_SHIFT(current, next, offset);
     
-                mem_get(next, (CellBody *)&nextCell);
+                ram_get(next, (RamCell *)&nextCell);
                 ONDEBUG((SHOWCELL('R', next, &nextCell)));
                 
                 jump = 0;
@@ -809,7 +818,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                     jump++;
                     ADDRESS_SHIFT(next, next, offset);
                 
-                    mem_get(next, (CellBody *)&nextCell);
+                    ram_get(next, (RamCell *)&nextCell);
                     ONDEBUG((SHOWCELL('R', next, &nextCell)));
                 }
                 assert(i);
@@ -821,27 +830,27 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                   syncCell.reattachment.from = current;
                   syncCell.reattachment.to   = current; // will be overwritten as soon as possible
                   
-                  mem_set(sync, (CellBody *)&syncCell);
+                  ram_set(sync, (RamCell *)&syncCell);
                   ONDEBUG((SHOWCELL('W', sync, &syncCell)));
                   
                   offset = hChain;
                   ADDRESS_SHIFT(next, next, offset);
                   
-                  mem_get(next, (CellBody *)&nextCell);
+                  ram_get(next, (RamCell *)&nextCell);
                   ONDEBUG((SHOWCELL('R', next, &nextCell)));
 
                   int j = PROBE_LIMIT;
                   while (nextCell.full.type == CELLTYPE_EMPTY && --j) {
                     ADDRESS_SHIFT(next, next, offset);
 
-                    mem_get(next, (CellBody *)&nextCell);
+                    ram_get(next, (RamCell *)&nextCell);
                     ONDEBUG((SHOWCELL('R', next, &nextCell)));
                   }
                   assert(j);
 
                   syncCell.reattachment.to = next;
                   
-                  mem_set(sync, (CellBody *)&syncCell);
+                  ram_set(sync, (RamCell *)&syncCell);
                   ONDEBUG((SHOWCELL('W', sync, &syncCell)));
 
                   jump = MAX_JUMP;
@@ -849,35 +858,35 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                 currentCell.full.type = CELLTYPE_SLICE;
                 currentCell.slice.jump = jump;
 
-                mem_set(current, (CellBody *)&currentCell);
+                ram_set(current, (RamCell *)&currentCell);
                 ONDEBUG((SHOWCELL('W', current, &currentCell)));
 
                 i = 0;
                 current = next;
-                mem_get(current, (CellBody *)&currentCell);
+                ram_get(current, (RamCell *)&currentCell);
             }
 
         }
     }
     currentCell.full.type = CELLTYPE_LAST;
     currentCell.last.size = 1 + i /* size */;
-    mem_set(current, (CellBody *)&currentCell);
+    ram_set(current, (RamCell *)&currentCell);
     ONDEBUG((SHOWCELL('W', current, &currentCell)));
 
     // Now incremeting "peeble" counters in the probing path up to the new singleton
     // important to reinitialize probing variables  
-    probeAddress = /* hash % PRIM0 */ hashAddress;
+    probeAddress = /* hash % PRIM0 % RAM_SIZE */ hashAddress;
     hashProbe = hash % PRIM1;
     if (!hashProbe)
       hashProbe = 1;
     while (probeAddress != newArrow) {
         Cell probed;
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
         if (probed.full.peeble != PEEBLE_MAX)
           probed.full.peeble++;
         
-        mem_set(probeAddress, (CellBody *)&probed);
+        ram_set(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
@@ -893,10 +902,10 @@ uint32_t hashOf(Arrow a) {
     
     if (a == XL_EVE)
       return EVE_HASH; // Eve hash is not zero!
-    else if (a >= SPACE_SIZE)
-      return 0; // Out of space
+    else if (a >= RAM_SIZE)
+      return 0; // Out of buffer
     else {
-      mem_get(a, (CellBody *)&cell);
+      ram_get(a, (RamCell *)&cell);
       ONDEBUG((SHOWCELL('R', a, &cell)));
       if (cell.full.type == CELLTYPE_EMPTY
          || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -906,7 +915,7 @@ uint32_t hashOf(Arrow a) {
     }
 }
 
-uint32_t xl_hashOf(Arrow a) {
+uint32_t buffer_hashOf(Arrow a) {
     LOCK();
     uint32_t cs = hashOf(a);
     return LOCK_OUT(cs);
@@ -954,11 +963,11 @@ static Arrow small(int length, char* str, int ifExist) {
     buffer[2] = buffer[2] ^ buffer[6] ^ buffer[10];
     buffer[3] = buffer[3] ^ buffer[7] ^ buffer[11];
 
-    space_stats.get++;
+    buffer_stats.get++;
 
     // Compute hashs
     hash = uint_buffer[0];
-    hashAddress = hash % PRIM0; // base address
+    hashAddress = hash % PRIM0 % RAM_SIZE; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
     
@@ -971,7 +980,7 @@ static Arrow small(int length, char* str, int ifExist) {
     
         // get probed cell
         Cell probed;
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
 
         if (probed.full.type == CELLTYPE_EMPTY) {
@@ -980,7 +989,7 @@ static Arrow small(int length, char* str, int ifExist) {
 
         } else if (probed.full.type == CELLTYPE_SMALL
                 && 0 == memcmp(probed.full.data, buffer, 12)) {
-            space_stats.found++;
+            buffer_stats.found++;
             return probeAddress; // OK: arrow found!
         }
         // Not the singleton
@@ -993,18 +1002,18 @@ static Arrow small(int length, char* str, int ifExist) {
     }
     // Miss
 
-    if (ifExist) // one only want to test for singleton existence in the arrows space
+    if (ifExist) // one only want to test for singleton existence in the arrows buffer
         return EVE; // Eve means not found
 
-    space_stats.new++;
-    space_stats.pair++;
+    buffer_stats.new++;
+    buffer_stats.pair++;
 
     if (firstFreeAddress == EVE) {
         Cell probed;
         i = PROBE_LIMIT;
         while (--i) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
-            mem_get(probeAddress, (CellBody *)&probed);
+            ram_get(probeAddress, (RamCell *)&probed);
             ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
@@ -1017,16 +1026,16 @@ static Arrow small(int length, char* str, int ifExist) {
     // Create a singleton
     Address newArrow = firstFreeAddress;
     Cell newCell;
-    mem_get(newArrow, (CellBody *)&newCell);
+    ram_get(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
     memcpy(&newCell, buffer, 12);
     newCell.arrow.RWWnCn = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_SMALL;
-    newCell.arrow.dr = space_stats.new & 0xFFu;
+    newCell.arrow.dr = buffer_stats.new & 0xFFu;
     memcpy(newCell.full.data, buffer, 12);
-    mem_set(newArrow, (CellBody *)&newCell);
+    ram_set(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
 
     /* Now incremeting "more" counters in the probing path up to the new singleton
@@ -1039,12 +1048,12 @@ static Arrow small(int length, char* str, int ifExist) {
 
         // get probed cell
         Cell probed;
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
         if (probed.full.peeble != PEEBLE_MAX)
           probed.full.peeble++;
         
-        mem_set(probeAddress, (CellBody *)&probed);
+        ram_set(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
@@ -1068,11 +1077,11 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     if (tail == NIL || head == NIL)
         return NIL;
  
-    space_stats.get++;
+    buffer_stats.get++;
 
     // Compute hashs
     hash = hashPair(hashOf(tail), hashOf(head));
-    hashAddress = hash % PRIM0; // base address
+    hashAddress = hash % PRIM0 % RAM_SIZE; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
     
@@ -1082,7 +1091,7 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     firstFreeAddress = EVE;
     i = PROBE_LIMIT;
     while (--i) {
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
     
         if (probed.full.type == CELLTYPE_EMPTY)
@@ -1092,7 +1101,7 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
                 && probed.pair.tail == tail
                 && probed.pair.head == head
                 && probeAddress /* ADAM can't be put at EVE place! TODO: optimize */) {
-            space_stats.found++;
+            buffer_stats.found++;
             return probeAddress; // OK: arrow found!
         }
         // Not the singleton
@@ -1105,11 +1114,11 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     }
     // Miss
 
-    if (ifExist) // one only want to test for singleton existence in the arrows space
+    if (ifExist) // one only want to test for singleton existence in the arrows buffer
         return EVE; // Eve means not found
 
-    space_stats.new++;
-    space_stats.pair++;
+    buffer_stats.new++;
+    buffer_stats.pair++;
 
     if (firstFreeAddress == EVE) {
         i = PROBE_LIMIT;
@@ -1117,7 +1126,7 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
         
             Cell probed;
-            mem_get(probeAddress, (CellBody *)&probed);
+            ram_get(probeAddress, (RamCell *)&probed);
             ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
         
             if (probed.full.type == CELLTYPE_EMPTY) {
@@ -1133,7 +1142,7 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     // read the free cell
     Address newArrow = firstFreeAddress;
     Cell newCell;
-    mem_get(newArrow, (CellBody *)&newCell);
+    ram_get(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
     //
@@ -1143,8 +1152,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     newCell.arrow.RWWnCn = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_PAIR;
-    newCell.arrow.dr = space_stats.new & 0xFFu;
-    mem_set(newArrow, (CellBody *)&newCell);
+    newCell.arrow.dr = buffer_stats.new & 0xFFu;
+    ram_set(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
 
     /* Now incremeting "peeble" counters in the probing path up to the new singleton
@@ -1154,12 +1163,12 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     if (!hashProbe) hashProbe = 1; // offset can't be 0
 
     while (probeAddress != newArrow) {
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
         if (probed.full.peeble != PEEBLE_MAX)
           probed.full.peeble++;
         
-        mem_set(probeAddress, (CellBody *)&probed);
+        ram_set(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
@@ -1169,13 +1178,13 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     return newArrow;
 }
 
-Arrow xl_pair(Arrow tail, Arrow head) {
+Arrow buffer_pair(Arrow tail, Arrow head) {
     LOCK();
     Arrow a = pair(tail, head, 0);
     return LOCK_OUT(a);
 }
 
-Arrow xl_pairMaybe(Arrow tail, Arrow head) {
+Arrow buffer_pairMaybe(Arrow tail, Arrow head) {
     LOCK();
     Arrow a= pair(tail, head, 1);
     return LOCK_OUT(a);
@@ -1200,15 +1209,15 @@ static Arrow blob(uint32_t size, char* data, int ifExist) {
     uint64_t hash = hashStringAndGetSize(signature, &signature_size);
 
     // A BLOB consists in:
-    // - A signature, stored as a specialy typed tag in the arrows space.
-    // - data stored separatly in some traditional filer outside the arrows space.
+    // - A signature, stored as a specialy typed tag in the arrows buffer.
+    // - data stored separatly in some traditional filer outside the arrows buffer.
     mem0_saveData(signature, size, data);
     // TODO: remove data when cell at h is recycled.
 
     return payload(CELLTYPE_BLOB, signature_size, signature, hash, ifExist);
 }
 
-Arrow xl_atom(char* str) {
+Arrow buffer_atom(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
     LOCK();
@@ -1222,7 +1231,7 @@ Arrow xl_atom(char* str) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomMaybe(char* str) {
+Arrow buffer_atomMaybe(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
     LOCK();
@@ -1236,7 +1245,7 @@ Arrow xl_atomMaybe(char* str) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomn(uint32_t size, char* mem) {
+Arrow buffer_atomn(uint32_t size, char* mem) {
     Arrow a;
     LOCK();
     if (size == 0)
@@ -1251,7 +1260,7 @@ Arrow xl_atomn(uint32_t size, char* mem) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomnMaybe(uint32_t size, char* mem) {
+Arrow buffer_atomnMaybe(uint32_t size, char* mem) {
     Arrow a;
     LOCK();
     if (size == 0)
@@ -1266,12 +1275,12 @@ Arrow xl_atomnMaybe(uint32_t size, char* mem) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_headOf(Arrow a) {
+Arrow buffer_headOf(Arrow a) {
     if (a == EVE)
         return EVE;
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -1283,13 +1292,13 @@ Arrow xl_headOf(Arrow a) {
         return LOCK_OUT(cell.pair.head);
 }
 
-Arrow xl_tailOf(Arrow a) {
+Arrow buffer_tailOf(Arrow a) {
     if (a == EVE)
         return EVE;
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -1323,7 +1332,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
     // Get the cell pointed by a
     Cell    cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     
     if (cell.full.type == CELLTYPE_SMALL) { // type "small"
@@ -1358,7 +1367,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
     Address next = jumpToFirst(&cell, a, hChain);
     Cell sliceCell;
-    mem_get(next, (CellBody *)&sliceCell);
+    ram_get(next, (RamCell *)&sliceCell);
     ONDEBUG((SHOWCELL('R', next, &sliceCell)));
 
     while (1) {
@@ -1378,7 +1387,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
         // go to next slice
         next = jumpToNext(&sliceCell, next, hChain);
-        mem_get(next, (CellBody *)&sliceCell);
+        ram_get(next, (RamCell *)&sliceCell);
         ONDEBUG((SHOWCELL('R', next, &sliceCell)));
     }
 
@@ -1397,7 +1406,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
 /** return the content behind an atom
 */
-char* xl_memOf(Arrow a, uint32_t* lengthP) {
+char* buffer_memOf(Arrow a, uint32_t* lengthP) {
     if (a == EVE) { // Eve has an empty payload
         return payloadOf(a, lengthP);
     }
@@ -1407,7 +1416,7 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
 
     // get the cell pointed by a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
 
     if (cell.full.type < CELLTYPE_SMALL
@@ -1436,9 +1445,9 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
     return LOCK_OUT(payload);
 }
 
-char* xl_strOf(Arrow a) {
+char* buffer_strOf(Arrow a) {
     uint32_t lengthP;
-    char* p = xl_memOf(a, &lengthP);
+    char* p = buffer_memOf(a, &lengthP);
     return p;
 }
 
@@ -1508,13 +1517,13 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
         return s;
     }
 
-    if (a >= SPACE_SIZE) {
+    if (a >= RAM_SIZE) {
         return NULL; // address anomaly
     }
 
     // Get cell pointed by a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
 
     switch (cell.full.type) {
@@ -1524,7 +1533,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
         }
         case CELLTYPE_BLOB:
         { // return a BLOB digest
-            return xl_digestOf(a, l);
+            return buffer_digestOf(a, l);
         }
         case CELLTYPE_SMALL:
         case CELLTYPE_TAG:
@@ -1532,7 +1541,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 
             // get atom content
             uint32_t memLength, encodedDataLength;
-            char* mem = xl_memOf(a, &memLength);
+            char* mem = buffer_memOf(a, &memLength);
             char *uri = malloc(3 * memLength + 1); // memory allocation for encoded content
             if (!uri) { // allocation failed
                free(mem);
@@ -1552,10 +1561,10 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
         case CELLTYPE_PAIR:
         { // concat tail and head identifiers into /tail+head style URI
             uint32_t l1, l2;
-            char *tailUri = toURI(xl_tailOf(a), &l1);
+            char *tailUri = toURI(buffer_tailOf(a), &l1);
             if (tailUri == NULL) return NULL;
 
-            char *headUri = toURI(xl_headOf(a), &l2);
+            char *headUri = toURI(buffer_headOf(a), &l2);
             if (headUri == NULL) {
                 free(tailUri);
                 return NULL;
@@ -1587,10 +1596,10 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 #define DIGEST_HASH_SIZE 8
 #define DIGEST_SIZE (2 + CRYPTO_SIZE + DIGEST_HASH_SIZE)
 
-char* xl_digestOf(Arrow a, uint32_t *l) {
-    TRACEPRINTF("BEGIN xl_digestOf(%06x)", a);
+char* buffer_digestOf(Arrow a, uint32_t *l) {
+    TRACEPRINTF("BEGIN buffer_digestOf(%06x)", a);
 
-    if (a >= SPACE_SIZE) { // Address anomaly
+    if (a >= RAM_SIZE) { // Address anomaly
         return NULL;
     }
 
@@ -1610,7 +1619,7 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
 
     // Get cell pointed by a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
 
     if (cell.full.type == CELLTYPE_EMPTY
@@ -1646,7 +1655,7 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
         case CELLTYPE_TAG:
         {
             uint32_t dataSize;
-            char* data = xl_memOf(a, &dataSize);
+            char* data = buffer_memOf(a, &dataSize);
             crypto(dataSize, data, hashStr);
             free(data);
             break;
@@ -1691,14 +1700,14 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
     return LOCK_OUTSTR(digest);
 }
 
-char* xl_uriOf(Arrow a, uint32_t *l) {
+char* buffer_uriOf(Arrow a, uint32_t *l) {
     LOCK();
     char *str = toURI(a, l);
     return LOCK_OUTSTR(str);
 }
 
-Arrow xl_digestMaybe(char* digest) {
-    TRACEPRINTF("BEGIN xl_digestMaybe(%.58s)", digest);
+Arrow buffer_digestMaybe(char* digest) {
+    TRACEPRINTF("BEGIN buffer_digestMaybe(%.58s)", digest);
 
     // read the hash at the digest beginning
     int i = 2; // jump over '$H' string
@@ -1711,7 +1720,7 @@ Arrow xl_digestMaybe(char* digest) {
     Address probeAddress;
     Cell cell;
 
-    hashAddress = hash % PRIM0; // base address
+    hashAddress = hash % PRIM0 % RAM_SIZE; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
 
@@ -1725,7 +1734,7 @@ Arrow xl_digestMaybe(char* digest) {
     while (--i) { // probing limit
         Cell probed;
         
-        mem_get(probeAddress, (CellBody *)&probed);
+        ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
 
         if (probed.full.type != CELLTYPE_EMPTY
@@ -1733,7 +1742,7 @@ Arrow xl_digestMaybe(char* digest) {
             && probed.arrow.hash == hash) { // found candidate
 
             // get its digest
-            char* otherDigest = xl_digestOf(probeAddress, NULL);
+            char* otherDigest = buffer_digestOf(probeAddress, NULL);
             if (!strcmp(otherDigest, digest)) { // both digest match
                 free(otherDigest);
                 return LOCK_OUT(probeAddress); // hit! arrow found!
@@ -1760,7 +1769,7 @@ static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, i
 
     char c = uri[0];
     
-    if (c <= 32 || !size) { // Any control-caracters/white-spaces are considered as URI break
+    if (c <= 32 || !size) { // Any control-caracters/white-buffers are considered as URI break
         a = EVE;
         uriLength = 0;
     } else switch (c) {
@@ -1789,7 +1798,7 @@ static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, i
                     break;
                 }
 
-                a = xl_digestMaybe(uri);
+                a = buffer_digestMaybe(uri);
                 
                 if (a == NIL) // Non assimilated blob
                     uriLength = NAN;
@@ -1884,7 +1893,7 @@ static uint32_t skeepSpacesAndOnePlus(uint32_t size, char* uriEnd) {
     uint32_t l = 0;
     while ((size == NAN || l < size)
             && (c = uriEnd[l]) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
-        // white spaces are tolerated and ignored here
+        // white buffers are tolerated and ignored here
         l++;
     }
     if (c == '+' && (size == NAN || l < size)) l++;
@@ -1927,45 +1936,45 @@ static Arrow uri(uint32_t size, char *uri, int ifExist) { // TODO: document actu
     return a;
 }
 
-Arrow xl_uri(char* aUri) {
+Arrow buffer_uri(char* aUri) {
     LOCK();
     Arrow a = uri(NAN, aUri, 0);
     return LOCK_OUT(a);
 }
 
-Arrow xl_uriMaybe(char* aUri) {
+Arrow buffer_uriMaybe(char* aUri) {
     LOCK();
     Arrow a = uri(NAN, aUri, 1);
     return LOCK_OUT(a);
 }
 
-Arrow xl_urin(uint32_t aSize, char* aUri) {
+Arrow buffer_urin(uint32_t aSize, char* aUri) {
     LOCK();
     Arrow a = uri(aSize, aUri, 0);
     return LOCK_OUT(a);
 }
 
-Arrow xl_urinMaybe(uint32_t aSize, char* aUri) {
+Arrow buffer_urinMaybe(uint32_t aSize, char* aUri) {
     LOCK();
     Arrow a = uri(aSize, aUri, 1);
     return LOCK_OUT(a);
 }
 
-Arrow xl_anonymous() {
+Arrow buffer_anonymous() {
     char anonymous[CRYPTO_SIZE + 1];
     Arrow a = NIL;
     do {
         char random[80];
         snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
         crypto(80, random,  anonymous); // Access to unitialized data is wanted
-        a = xl_atomMaybe(anonymous);
+        a = buffer_atomMaybe(anonymous);
         assert(a != NIL);
     } while (a);
-    return xl_atom(anonymous);
+    return buffer_atom(anonymous);
 }
 
 static Arrow unrootChild(Arrow child, Arrow context) {
-    xl_unroot(child);
+    buffer_unroot(child);
     return EVE;
 }
 
@@ -1974,28 +1983,28 @@ static Arrow getHookBadge() {
     if (hookBadge != EVE) return hookBadge; // try to avoid the costly lock.
     LOCK();
     if (hookBadge != EVE) return LOCK_OUT(hookBadge);
-    hookBadge = xl_atom("XLhO0K");
-    xl_root(hookBadge); 
+    hookBadge = buffer_atom("XLhO0K");
+    buffer_root(hookBadge); 
     
     // prevent previous hooks to survive the reboot.
-    xl_childrenOfCB(hookBadge, unrootChild, EVE);
+    buffer_childrenOfCB(hookBadge, unrootChild, EVE);
     
     return LOCK_OUT(hookBadge);
 }
 
-Arrow xl_hook(void* hookp) {
+Arrow buffer_hook(void* hookp) {
   char hooks[64]; 
   snprintf(hooks, 64, "%p", hookp);
   // Note: hook must be bottom-rooted to be valid
-  Arrow hook = xl_root(xl_pair(getHookBadge(), xl_atom(hooks)));
+  Arrow hook = buffer_root(buffer_pair(getHookBadge(), buffer_atom(hooks)));
   return hook;
 }
 
-void* xl_pointerOf(Arrow a) { // Only bottom-rooted hook is accepted to limit hook forgery
-    if (!xl_isPair(a) || xl_tailOf(a) != getHookBadge() || !xl_isRooted(a))
+void* buffer_pointerOf(Arrow a) { // Only bottom-rooted hook is accepted to limit hook forgery
+    if (!buffer_isPair(a) || buffer_tailOf(a) != getHookBadge() || !buffer_isRooted(a))
         return NULL;
     
-    char* hooks = xl_strOf(xl_headOf(a));
+    char* hooks = buffer_strOf(buffer_headOf(a));
     void* hookp;
     int n = sscanf(hooks, "%p", &hookp);
     if (!n) hookp = NULL;
@@ -2003,22 +2012,22 @@ void* xl_pointerOf(Arrow a) { // Only bottom-rooted hook is accepted to limit ho
     return hookp;
 }
 
-int xl_isEve(Arrow a) {
+int buffer_isEve(Arrow a) {
     return (a == EVE);
 }
 
-Arrow xl_isPair(Arrow a) {
+Arrow buffer_isPair(Arrow a) {
     if (a == EVE) {
       return EVE; 
     }
 
-    if (a >= SPACE_SIZE) { // Address anomaly
+    if (a >= RAM_SIZE) { // Address anomaly
         return NIL;
     }
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
 
@@ -2028,18 +2037,18 @@ Arrow xl_isPair(Arrow a) {
     return (cell.full.type == CELLTYPE_PAIR ? a : EVE);
 }
 
-Arrow xl_isAtom(Arrow a) {
+Arrow buffer_isAtom(Arrow a) {
     if (a == EVE) {
       return EVE; 
     }
 
-    if (a >= SPACE_SIZE) { // Address anomaly
+    if (a >= RAM_SIZE) { // Address anomaly
         return NIL;
     }
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
 
@@ -2049,18 +2058,18 @@ Arrow xl_isAtom(Arrow a) {
     return (cell.full.type == CELLTYPE_PAIR ? EVE : a);
 }
 
-enum e_xlType xl_typeOf(Arrow a) {
+enum e_xlType buffer_typeOf(Arrow a) {
     if (a == EVE) {
       return XL_EVE; 
     }
 
-    if (a >= SPACE_SIZE) {
+    if (a >= RAM_SIZE) {
       return XL_UNDEF;
     }
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
 
@@ -2098,11 +2107,11 @@ enum e_xlType xl_typeOf(Arrow a) {
 static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     TRACEPRINTF("connect child=%06x to a=%06x weakness=%1x outgoing=%1x", child, a, childWeakness, outgoing);
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
-    space_stats.connect++;
+    buffer_stats.connect++;
     
     // get the cell at a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     assert(cell.full.type != CELLTYPE_EMPTY && cell.full.type <= CELLTYPE_ARROWLIMIT);
   
@@ -2167,7 +2176,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     }
     
     // write parent cell
-    mem_set(a, (CellBody *)&cell);
+    ram_set(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
     if (child == EVE) {
@@ -2192,7 +2201,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, (CellBody *)&nextCell);
+      ram_get(next, (RamCell *)&nextCell);
       ONDEBUG((SHOWCELL('R', next, &nextCell)));
 
       if (nextCell.full.type == CELLTYPE_EMPTY) {
@@ -2230,7 +2239,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
                 nextCell.children.directions
                 & ((0x101 << j) ^ 0xFFFF)
                 | (outgoing ? (1 << j) : 0);
-              mem_set(next, (CellBody *)&nextCell);
+              ram_set(next, (RamCell *)&nextCell);
               ONDEBUG((SHOWCELL('W', next, &nextCell)));
         
               // now search for a free slot to put a terminator
@@ -2252,7 +2261,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
                 & ((1 << j) ^ 0xFFFF)
                 & ((1 << (8 + j)) ^ 0xFFFF)
                 | (outgoing ? (1 << j) : 0);
-              mem_set(next, (CellBody *)&nextCell);
+              ram_set(next, (RamCell *)&nextCell);
               ONDEBUG((SHOWCELL('W', next, &nextCell)));
         
               // Now one keeps on probing for a free slot to put the terminator into
@@ -2276,7 +2285,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       & ((0x101 << j) ^ 0xFFFF)
       | ((child != a && outgoing) ? (1 << j) : 0) // outgoing flag
       | (child == a ? (0x100 << j) : 0); // terminator flag if one puts the terminator
-    mem_set(next, (CellBody *)&nextCell);
+    ram_set(next, (RamCell *)&nextCell);
     ONDEBUG((SHOWCELL('W', next, &nextCell)));
  }
 
@@ -2301,12 +2310,12 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
  */
 static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     TRACEPRINTF("disconnect child=%06x from a=%06x weakness=%1x outgoing=%1x", child, a, weakness, outgoing);
-    space_stats.disconnect++;
+    buffer_stats.disconnect++;
     if (a == EVE) return; // One doesn't store Eve connectivity.
 
     // get parent arrow definition
     Cell parent;
-    mem_get(a, (CellBody *)&parent);
+    ram_get(a, (RamCell *)&parent);
     ONDEBUG((SHOWCELL('R', a, &parent)));
     // check it's a valid arrow
     assert(parent.full.type != CELLTYPE_EMPTY && parent.full.type <= CELLTYPE_ARROWLIMIT);
@@ -2356,7 +2365,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     }
 
     // write parent cell
-    mem_set(a, (CellBody *)&parent);
+    ram_set(a, (RamCell *)&parent);
     ONDEBUG((SHOWCELL('W', a, &parent)));
 
     if (child == 0) { // OK done
@@ -2391,7 +2400,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, (CellBody *)&nextCell);
+      ram_get(next, (RamCell *)&nextCell);
       ONDEBUG((SHOWCELL('R', next, &nextCell)));
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
@@ -2429,7 +2438,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
                   nextCell.full.type = CELLTYPE_EMPTY;
                   // but don't delete peeble!
               } 
-              mem_set(next, (CellBody *)&nextCell);
+              ram_set(next, (RamCell *)&nextCell);
               ONDEBUG((SHOWCELL('W', next, &nextCell)));
 
               if (!removeTerminatorNow) {
@@ -2453,8 +2462,8 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 /** Get children
 *
 */
-void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
-    TRACEPRINTF("xl_childrenOf a=%06x", a);
+void buffer_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
+    TRACEPRINTF("buffer_childrenOf a=%06x", a);
 
     if (a == EVE) {
         return; // Eve connectivity not traced
@@ -2463,7 +2472,7 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
     // get the parent cell
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
 
     // check arrow
@@ -2503,7 +2512,7 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, (CellBody *)&nextCell);
+      ram_get(next, (RamCell *)&nextCell);
       ONDEBUG((SHOWCELL('R', next, &nextCell)));
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
@@ -2523,7 +2532,7 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
 
             // get child cell
             Cell childCell;
-            mem_get(child, (CellBody *)&childCell);
+            ram_get(child, (RamCell *)&childCell);
             ONDEBUG((SHOWCELL('R', child, &childCell)));
 
             // check at least one arrow end is a
@@ -2551,7 +2560,7 @@ typedef struct iterator_s {
     int      type;
 } iterator_t;
 
-static int xl_enumNextChildOf(XLEnum e) {
+static int buffer_enumNextChildOf(XLEnum e) {
     iterator_t *iteratorp = e;
 
     // iterate from current address stored in childrenOf iterator
@@ -2563,7 +2572,7 @@ static int xl_enumNextChildOf(XLEnum e) {
 
     // get current cell
     Cell cell;
-    mem_get(pos ? pos : a, (CellBody *)&cell);
+    ram_get(pos ? pos : a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', pos ? pos : a, &cell)));
 
     if (pos == EVE || pos == a) { // current cell is parent cell
@@ -2637,7 +2646,7 @@ static int xl_enumNextChildOf(XLEnum e) {
 
             // get child cell
             Cell childCell;
-            mem_get(child, (CellBody *)&childCell);
+            ram_get(child, (RamCell *)&childCell);
             ONDEBUG((SHOWCELL('R', child, &childCell)));
 
             // check at least one arrow end is a
@@ -2660,23 +2669,23 @@ static int xl_enumNextChildOf(XLEnum e) {
       }
       // shift
       ADDRESS_SHIFT(pos, pos, hChild);
-      mem_get(pos, (CellBody *)&cell);
+      ram_get(pos, (RamCell *)&cell);
       ONDEBUG((SHOWCELL('R', pos, &cell)));
     } // children loop
 
     // FIXME what happens if terminator is removed while iterating
 }
 
-int xl_enumNext(XLEnum e) {
+int buffer_enumNext(XLEnum e) {
     assert(e);
     iterator_t *iteratorp = e;
     assert(iteratorp->type == 0);
     if (iteratorp->type == 0) {
-        return xl_enumNextChildOf(e);
+        return buffer_enumNextChildOf(e);
     }
 }
 
-Arrow xl_enumGet(XLEnum e) {
+Arrow buffer_enumGet(XLEnum e) {
     assert(e);
     iterator_t *iteratorp = e;
     assert(iteratorp->type == 0);
@@ -2685,12 +2694,12 @@ Arrow xl_enumGet(XLEnum e) {
     }
 }
 
-void xl_freeEnum(XLEnum e) {
+void buffer_freeEnum(XLEnum e) {
     free(e);
 }
 
-XLEnum xl_childrenOf(Arrow a) {
-    TRACEPRINTF("xl_childrenOf a=%06x", a);
+XLEnum buffer_childrenOf(Arrow a) {
+    TRACEPRINTF("buffer_childrenOf a=%06x", a);
 
     if (a == EVE) {
         return NULL; // Eve connectivity not traced
@@ -2699,7 +2708,7 @@ XLEnum xl_childrenOf(Arrow a) {
     // get parent cell
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
       || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -2722,13 +2731,13 @@ XLEnum xl_childrenOf(Arrow a) {
     return iteratorp;
 }
 
-Arrow xl_childOf(Arrow a) {
-    XLEnum e = xl_childrenOf(a);
+Arrow buffer_childOf(Arrow a) {
+    XLEnum e = buffer_childrenOf(a);
     if (!e) return EVE;
     int n = 0;
     Arrow chosen = EVE;
-    while (xl_enumNext(e)) {
-        Arrow child = xl_enumGet(e);
+    while (buffer_enumNext(e)) {
+        Arrow child = buffer_enumGet(e);
         n++;
         if (n == 1 || rand() % n == 1) {
             chosen = child;
@@ -2738,14 +2747,14 @@ Arrow xl_childOf(Arrow a) {
 }
 
 /** root an arrow */
-Arrow xl_root(Arrow a) {
-    space_stats.root++;
+Arrow buffer_root(Arrow a) {
+    buffer_stats.root++;
     if (a == EVE) {
         return EVE; // no
     }
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -2758,7 +2767,7 @@ Arrow xl_root(Arrow a) {
 
     // change the arrow to ROOTED state
     cell.arrow.RWWnCn = cell.arrow.RWWnCn | FLAGS_ROOTED;
-    mem_set(a, (CellBody *)&cell);
+    ram_set(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
     if (loose) { // if arrow was loose, one now connects it to its parents
@@ -2774,8 +2783,8 @@ Arrow xl_root(Arrow a) {
 }
 
 /** unroot a rooted arrow */
-Arrow xl_unroot(Arrow a) {
-    space_stats.unroot++;
+Arrow buffer_unroot(Arrow a) {
+    buffer_stats.unroot++;
 
     if (a == EVE)
         return EVE; // no.
@@ -2783,7 +2792,7 @@ Arrow xl_unroot(Arrow a) {
     LOCK();
 
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -2793,7 +2802,7 @@ Arrow xl_unroot(Arrow a) {
 
     // change the arrow to UNROOTED state
     cell.arrow.RWWnCn ^= FLAGS_ROOTED;
-    mem_set(a, (CellBody *)&cell);
+    ram_set(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
     // If this arrow has no child, it's now loose
@@ -2812,12 +2821,12 @@ Arrow xl_unroot(Arrow a) {
 }
 
 /** return the root status */
-int xl_isRooted(Arrow a) {
+int buffer_isRooted(Arrow a) {
     if (a == EVE) return EVE;
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
     
@@ -2831,12 +2840,12 @@ int xl_isRooted(Arrow a) {
 }
 
 /** check if an arrow is loose */
-int xl_isLoose(Arrow a) {
+int buffer_isLoose(Arrow a) {
     if (a == EVE) return EVE;
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
     
@@ -2853,7 +2862,7 @@ int xl_isLoose(Arrow a) {
     return 1;
 }
 
-int xl_equal(Arrow a, Arrow b) {
+int buffer_equal(Arrow a, Arrow b) {
     return (a == b);
 }
 
@@ -2866,10 +2875,10 @@ int xl_equal(Arrow a, Arrow b) {
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(Arrow a) {
     TRACEPRINTF("forget loose arrow %06x", a);
-    space_stats.forget++;
+    buffer_stats.forget++;
 
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
+    ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     assert(cell.full.type != CELLTYPE_EMPTY
         || cell.full.type <= CELLTYPE_ARROWLIMIT);
@@ -2887,7 +2896,7 @@ static void forget(Arrow a) {
 
         Address next = jumpToFirst(&cell, a, hChain);
         Cell sliceCell;
-        mem_get(next, (CellBody *)&sliceCell);
+        ram_get(next, (RamCell *)&sliceCell);
         ONDEBUG((SHOWCELL('R', next, &sliceCell)));
         while (sliceCell.full.type == CELLTYPE_SLICE) {
             // free cell
@@ -2897,10 +2906,10 @@ static void forget(Arrow a) {
             memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
             sliceCell.full.type = CELLTYPE_EMPTY;
  
-            mem_set(current, (CellBody *)&sliceCell);
+            ram_set(current, (RamCell *)&sliceCell);
             ONDEBUG((SHOWCELL('W', current, &sliceCell)));
             
-            mem_get(next, (CellBody *)&sliceCell);
+            ram_get(next, (RamCell *)&sliceCell);
             ONDEBUG((SHOWCELL('R', next, &sliceCell)));
         }
         assert(sliceCell.full.type == CELLTYPE_LAST);
@@ -2908,17 +2917,17 @@ static void forget(Arrow a) {
         memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
         sliceCell.full.type = CELLTYPE_EMPTY;
  
-        mem_set(next, (CellBody *)&sliceCell);
+        ram_set(next, (RamCell *)&sliceCell);
         ONDEBUG((SHOWCELL('W', next, &sliceCell)));
     }
 
     // Free definition start cell
     memset(cell.full.data, 0, sizeof(cell.full.data));
     cell.full.type = CELLTYPE_EMPTY;
-    mem_set(a, (CellBody *)&cell);
+    ram_set(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
-    hashAddress = hash % PRIM0; // base address
+    hashAddress = hash % PRIM0 % RAM_SIZE; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
 
@@ -2928,19 +2937,19 @@ static void forget(Arrow a) {
     Address probeAddress = hashAddress;
     // ONDEBUG(if (probeAddress != a) DEBUGPRINTF("real address %X != open Address %X", a, probeAddress));
     while (probeAddress != a) {
-        mem_get(probeAddress, (CellBody *)&cell);
+        ram_get(probeAddress, (RamCell *)&cell);
         ONDEBUG((SHOWCELL('R', probeAddress, &cell)));
         if (cell.full.peeble)
           cell.full.peeble--;
 
-        mem_set(probeAddress, (CellBody *)&cell);
+        ram_set(probeAddress, (RamCell *)&cell);
         ONDEBUG((SHOWCELL('W', probeAddress, &cell)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
 
 }
 
-void xl_begin() {
+void buffer_begin() {
     LOCK();
     ACTIVITY_BEGIN();
     LOCK_END();
@@ -2949,51 +2958,51 @@ void xl_begin() {
 /** type an arrow as a "state" arrow.
  *  TODO: is it necessary?
  */
-Arrow xl_state(Arrow a) {
+Arrow buffer_state(Arrow a) {
     static Arrow systemStateBadge = EVE;
     if (systemStateBadge == EVE) { // to avoid locking in most cases
             LOCK();
             if (systemStateBadge == EVE) {
-                systemStateBadge = xl_atom("XLsTAT3");
-                xl_root(systemStateBadge);
+                systemStateBadge = buffer_atom("XLsTAT3");
+                buffer_root(systemStateBadge);
 
                 // prevent previous session saved states to survive the reboot.
-                xl_childrenOfCB(systemStateBadge, unrootChild, EVE);
+                buffer_childrenOfCB(systemStateBadge, unrootChild, EVE);
             }
             LOCK_END();
     }
-    return xl_pair(systemStateBadge, a);
+    return buffer_pair(systemStateBadge, a);
 }
 
 
-static void spaceGC() {
-    TRACEPRINTF("BEGIN spaceGC()");
+static void bufferGC() {
+    TRACEPRINTF("BEGIN bufferGC()");
 
     for (unsigned i = looseLogSize; i > 0; i--) { // loose stack scanning
         Arrow a = looseLog[i - 1];
 
-        if (xl_isLoose(a)) { // a loose arrow is removed NOW
+        if (buffer_isLoose(a)) { // a loose arrow is removed NOW
             forget(a);
         }
     }
 
-    TRACEPRINTF("END spaceGC() looseLogSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
-        looseLogSize, space_stats.get, space_stats.root,
-        space_stats.unroot, space_stats.new, 
-        space_stats.pair, space_stats.atom, space_stats.found,
-        space_stats.connect, space_stats.disconnect, space_stats.forget);
-    space_stats = space_stats_zero;
+    TRACEPRINTF("END bufferGC() looseLogSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
+        looseLogSize, buffer_stats.get, buffer_stats.root,
+        buffer_stats.unroot, buffer_stats.new, 
+        buffer_stats.pair, buffer_stats.atom, buffer_stats.found,
+        buffer_stats.connect, buffer_stats.disconnect, buffer_stats.forget);
+    buffer_stats = buffer_stats_zero;
 
     zeroalloc((char**) &looseLog, &looseLogMax, &looseLogSize);
 
-    spaceGCNeeded = 0;
+    bufferGCNeeded = 0;
     
     if (mem_yield())
         memCommitNeeded = 0;
 }
 
-void xl_over() {
-    spaceGCNeeded = 1;
+void buffer_over() {
+    bufferGCNeeded = 1;
 
     LOCK();
     ACTIVITY_OVER();
@@ -3001,15 +3010,15 @@ void xl_over() {
         WAIT_DORMANCY();
     } while (apiActivity > 0); // spurious wakeup check
     
-    if (spaceGCNeeded) {
-        spaceGC();
+    if (bufferGCNeeded) {
+        bufferGC();
     }
     LOCK_END();
 }
 
-void xl_commit() {
-    TRACEPRINTF("xl_commit (looseLogSize = %d)", looseLogSize);
-    spaceGCNeeded = 1;
+void buffer_commit() {
+    TRACEPRINTF("buffer_commit (looseLogSize = %d)", looseLogSize);
+    bufferGCNeeded = 1;
     memCommitNeeded = 1;
     
     LOCK();
@@ -3018,8 +3027,8 @@ void xl_commit() {
         WAIT_DORMANCY();
     } while (apiActivity > 0); // spurious wakeup check
     
-    if (spaceGCNeeded) {
-        spaceGC();
+    if (bufferGCNeeded) {
+        bufferGC();
     }
     
     if (memCommitNeeded) {
@@ -3031,18 +3040,18 @@ void xl_commit() {
     
 }
 
-/** xl_yield */
-void xl_yield(Arrow a) {
+/** buffer_yield */
+void buffer_yield(Arrow a) {
     Arrow stateArrow = EVE;
-    TRACEPRINTF("xl_yield (looseLogSize = %d)", looseLogSize);
+    TRACEPRINTF("buffer_yield (looseLogSize = %d)", looseLogSize);
     if (a != EVE) {
-        stateArrow = xl_state(a);
-        xl_root(stateArrow);
+        stateArrow = buffer_state(a);
+        buffer_root(stateArrow);
     }
-    xl_over();
-    xl_begin();
+    buffer_over();
+    buffer_begin();
     if (stateArrow != EVE) {
-        xl_unroot(stateArrow);
+        buffer_unroot(stateArrow);
     }
 }
 
@@ -3052,7 +3061,7 @@ static int printf_arrow_extension(FILE *stream,
         const void *const *args) {
     static const char* nilFakeURI = "(NIL)";
     Arrow arrow = *((Arrow*) (args[0]));
-    char* uri = arrow != NIL ? xl_uriOf(arrow, NULL) : (char *)nilFakeURI;
+    char* uri = arrow != NIL ? buffer_uriOf(arrow, NULL) : (char *)nilFakeURI;
     if (uri == NULL)
         uri = (char *)nilFakeURI;
     int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
@@ -3071,13 +3080,13 @@ static int printf_arrow_arginfo_size(const struct printf_info *info, size_t n,
     return 1;
 }
 
-/** initialize the Entrelacs system */
-int xl_init() {
-    static int xl_init_done = 0;
-    if (xl_init_done) return 0;
-    xl_init_done = 1;
+/** initialize a buffered Entrelacs system */
+int buffer_init() {
+    static int buffer_init_done = 0;
+    if (buffer_init_done) return 0;
+    buffer_init_done = 1;
     
-    assert(sizeof(CellBody) == sizeof(Cell));
+    assert(sizeof(RamCell) == sizeof(Cell));
 
     pthread_cond_init(&apiNowActive, NULL);
     pthread_cond_init(&apiNowDormant, NULL);
@@ -3086,7 +3095,7 @@ int xl_init() {
     pthread_mutexattr_settype(&apiMutexAttr, PTHREAD_MUTEX_RECURSIVE_NP);
     pthread_mutex_init(&apiMutex, &apiMutexAttr);
 
-    int rc = mem_init();
+    int rc = ram_init();
     if (rc < 0) { // problem
        return rc;
     }
@@ -3094,27 +3103,11 @@ int xl_init() {
     // register a printf extension for arrow (glibc only!)
     register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
     
-    if (rc) { // very first start
-        // Eve
-
-        Cell EveCell;
-        EveCell.pair.tail = EVE;
-        EveCell.pair.head = EVE;
-        EveCell.arrow.hash = EVE_HASH;
-        EveCell.arrow.RWWnCn = FLAGS_ROOTED;
-        EveCell.arrow.child0 = 0;
-        EveCell.full.type = CELLTYPE_PAIR;
-        EveCell.arrow.dr = 0;
-        mem_set(EVE, (CellBody *)&EveCell);
-        ONDEBUG((SHOWCELL('W', EVE, &EveCell)));
-        mem_commit();
-    }
-    
     geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof(Arrow), 0);
     return rc;
 }
 
-void xl_destroy() {
+void buffer_destroy() {
     // TODO complete
     free(looseLog);
     

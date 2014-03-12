@@ -10,9 +10,9 @@
 
 /** Cell. A 24 bytes long bucket
   */
-typedef struct s_cellBody {
+typedef struct s_memCell {
     char raw[24];
-} CellBody;
+} MemCell;
 
 /** Cell address.
 */
@@ -88,7 +88,7 @@ extern int mem_is_out_of_sync;
   @param Cell content pointer.
   @return 0 if success.
   */
-int mem0_set(Address, CellBody*);
+int mem0_set(Address, MemCell*);
 
 /** get binary content from memory cell.
  This call is forbidden if uncommited changes are pending in an existing journal file.
@@ -96,7 +96,7 @@ int mem0_set(Address, CellBody*);
   @param Cell content pointer.
   @return 0 if success.
   */
-int mem0_get(Address, CellBody*);
+int mem0_get(Address, MemCell*);
 
 /** commit changes.
   write changes recorded in the journal file to the persistence file then remove the journal.

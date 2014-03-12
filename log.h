@@ -22,6 +22,8 @@ enum _log_facility
   LOG_MACHINE,
   LOG_SESSION,
   LOG_SERVER,
+  LOG_RAM,
+  LOG_BUFFER,
   LOG_FACILITY_COUNT
 };
 #ifndef LOG_CURRENT
@@ -38,6 +40,8 @@ char *facility_name[] = {
     "machine",
     "session",
     "server",
+    "ram",
+    "buffer",
     0
 };
 

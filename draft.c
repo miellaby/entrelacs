@@ -1,5 +1,8 @@
-/* This scrap file gathers toughs about design issues
+/* This scrap file gathers toughs and code about design issues
 */
+
+// can we delay deduplication
+
 
 
 // Once one decides not to use a traditional chain hashing designed table, several exicting alternatives come along.
@@ -31,7 +34,10 @@
 //
 
 // Prototype constraints
-// Cell size: 64 bits
-// Address range: 0-2^24
+// Current model: Cell size = 24 bytes
+// Address range: potentialy 0..2^32, yet artificialy limited to N<2^24
+// Previous model: Cell size = 8 bytes, 64 bits
+// Address range: 0..2^24
 // Blobs are stored as files in a traditional system. A blob arrow is actually equivalent to a tag arrow but the string stored in the tag is a cryptographic hash which uniquely identifies the blob.
 // A newly assimilated arrow is not connected to its parents until it's rooted or it becomes an ancestor of a newly assimilated rooted arrow.
+// 

@@ -73,7 +73,7 @@ Arrow xl_tailOf(Arrow); ///< return arrow tail.
 char* xl_strOf(Arrow);  ///< retrieve an atomic arrow as a C string. @return pointer to freed.
 char* xl_memOf(Arrow, uint32_t* size_p); /// retrieve an atomic arrow as a piece of binary data. @return pointer to freed.
 char* xl_uriOf(Arrow, uint32_t* size_p); ///< Retrieve an arrow definition in URI notation. @return pointer to freed.
-uint32_t xl_checksumOf(Arrow); ///< return the arrow checksum.
+uint32_t xl_hashOf(Arrow); ///< return the arrow hash.
 char* xl_digestOf(Arrow, uint32_t* size_p); ///< Retrieve an arrow digest. @return pointer to freed.
 void* xl_pointerOf(Arrow); //< Retrieve the C pointer corresponding to a "hook" arrow. @return pointer.
 
