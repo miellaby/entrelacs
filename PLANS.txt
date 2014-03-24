@@ -1,20 +1,70 @@
 Current change:
- * space buffer: buffer.c/h
- * API: buffer_* <=> xl_*
- * used by machine.c
- * use ram.c/h: volatile memory
- * 28 bytes model (include arrowServerId) * 0x100000 cells
- * volatile locally deduped arrows
- * placeHolder for a server arrow
- * on commit rooted arrows are server-rooted, unrooted arrows are server-unrooted
- * change flags
- * first call to children or isRooted bind buffered arrow if necessary
-   * one needs to store the fact that root flags hve unknown values
+ * buffer
+ * It's a RAM-based buffer for arrows. Put in front of the arrows space
+ * mainly used by the EL machine for quick disk-free arrow manipulation
+ * arrows are autonomously managed in the buffer, whatever their server counterparts.
+ * they have buffer-specific addresses ( and id ).
+ * buffer implementation depends on ram.c/h: volatile memory as a bank of of 0x100000 cells
+ * buffer specific 28 bytes memory model for "cells"
+   * each buffered arrow definition includes "spaceId"
+   * spaceId identifies the corresponding arrow in the arrows space.
+   * spaceId != bufferedArrow.id
+ * arrow buffer API: buffer.c/h
+ * Same operators than the space API: buffer_* <=> xl_*
+ * By default, arrows assimilated via the buffer API are not bound to their spatial counterparts.
+   * For exemple, spaceId initialy = NULL for the arrow assimilated by buffer_atom("toto")
+ * one "resolves"  a buffered arrow (bind it to its server counterpart) on demand. That is,
+   * at first call of buffer_isRooted()
+   * or at first call of buffer_childrenOf()
+ * spaceId is set to NIL if no disk counterpart is found when resolving a buffered arrow
+ * one "pulls" the server-side children list of an arrow at the firt call of buffer_childrenOf()
+ * children parents are lazy loaded
+ * In the buffer bank, new cell types : PLACEHOLDER; INCOMING_PLACEHOLDER; OUTGOING_...
+ * Placeholders stand for pairs which are partialy loaded.
+   * One or both ends are only known by a space Id.
+ * Placeholders are created for every unknown pair pulled from space
+   * typically when retrieving the spatial children list
+   * or browsing the ancestors or retrieved arrows.
+ * 1st call to buffer_children retrieve the server children list (xl_children)
+   Subsequent calls compare the children list revision between buffer and server. 
+   If different revisions, fetch again the server list.
+   when pulling a server children list, one call "pull(spaceId)" for each retrieved arrow 
+ * when spaceId = NIL (eg uuid), all buffered descendants have automaticaly
+   NIL serverId : great optimization, avoid useless xl_children/xl_isRooted
+ * on commit root-settted arrows are server-rooted, root-unsetted arrows are server-unrooted
+   * so: change flags and changelog
  * buffer can be reserved/freed as a whole
- * buffer is zeroed when not needed
- * buffer sync: fetch  id and clear server root flag and children cache for one arrow/every arrow
+ * buffer is zeroed after usage. TBC.
+ * buffer_sync: ~~resolve + fetch~~ reset server root flag and children list for one arrow/every arrow =~ empty cache / force cache refresh
  * blob in separate directories (/var/tmp)
- * ROOT/WEAK values: UNKNOWN=4, SET=3, UNSET=2, True=1, False=0
+ * blob are lazy loaded
+ * space children retrieval algorithm if based on a buffer_pull() fonction
+ * pulling = loading a space arrow known by its spaceId into the buffer
+ * buffer_pull(spaceId) =
+   * read hash=xl_hashOf(spaceId)
+   * look for hash-indexed arrows in the buffer bank
+   * if the hash matches to local unresolved arrows,
+   * resolve these local arrow(s) first,
+   * so to compare the spaceId and avoid duping with local copies,
+   * if no local copy then eventually retrieve the pulled arrow definition
+   * if the arrow is a pair,
+     * create a placeholder containing a spaceId as one of its ends.
+     * Outgoing placeholders got buffer Id for tail and space Id for heads 
+     * Incoming placeholders got buffer Id for heads, space Id for tails
+   * if the arrow is a small/tag atom, retrieve its full definition
+   * if the space arrow is a blob, only retrieve its footprint,
+   * raw data is pulled on buffer on demand
+   * buffer_tailOf (resp. buffer_headOf) will convert a placeholder into a regular pair
+      * if cell.arrow.type == OUTGOING_PLACEHOLDER || ...PLACEHOLDER
+      * cell.arrow.tailId  = buffer_pull(cell.arrow.tailId)
+      * if ...PLACEHOLDER { cell.arrow.headId = .... }
+      * cell.arrow.type = PAIR
+   * when assimlating a buffered pair, one probes for an existing singleton as usual,
+   * but ...
+     * if the buffered pair spaceId is not nil (happens if one end is nil)
+     * and if one finds a checksum-matching placeholder pair while probing,
+     * then one resolves the bufferer pair (call spaceId = xl_pair(buffer_resolve(tail), buffer_resolve(head))
+     * if both spaceId match, its a probing hit 
 
 Previous changes:
  * new 24 bytes model

@@ -2,6 +2,25 @@
 */
 
 // can we delay deduplication
+// 
+
+
+//
+//
+// TRAVAUX EN COURS
+// WORK IN PROGRESS
+//
+// A TERMINER / A ETUDIER
+// Option: types de rootage faibles: par la queue, par la tete, doublement
+//  API: weak(arrow)
+//   exemple d'usage: root(pair(weak(root(atom('hello'))), atom('world'))
+// si 'hello' déracinée, 'hello'->'world' aussi
+// weak(A) est immédiatement "loose" (sur le point d'être oubliée) si aucun des 2 bouts de A n'est enraciné
+// B: Brotherhood flag, indique que la flèche sert à relier entre elles les composantes d'une collection des flèches enfants d'une autre flèche
+// utiliser une indirection (Eve->bout) pour ignorer un rootage non désiré
+// unroot regarde s'il y a des enfants faibles et les déracinent
+// attention: préfèrer xls_weak_link(C,A,B) = weak((C,A)=>(C,B)) et  utiliser par ex xls_partnersOf(C,A) pour faire un lien faible entre 2 objets
+// xls_weak(c,a) devrait permettre d'enrichir un contexte sans le verouiller, cette flèche étant libérée quand plus aucune autre flèche non faible n'est vraie dans ce contexte
 
 
 

@@ -19,7 +19,7 @@ static const Address memSize = MEMSIZE ; ///< mem size
  Each record can carry one mem0 cell.
  */
 static struct s_mem {
-  CellBody c;
+  MemCell c;
   uint16_t flags; //< mem1 internal flags (16 bits)
   uint16_t page; //< page # (16 bits)
   uint16_t stamp;
@@ -34,7 +34,7 @@ static uint32_t pokes = 0;
  TODO replace it by cuckoo hashing or smarter alternative
  */
 static struct s_reserve { // TODO : change the name
-  CellBody c;
+  MemCell c;
   Address a;
   uint16_t stamp;
 } reserve[RESERVESIZE];
@@ -97,7 +97,7 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 }
 
 /** Get a cell */
-int mem_get_advanced(Address a, CellBody* pCellBody, uint16_t* stamp_p) {
+int mem_get_advanced(Address a, MemCell* pCellBody, uint16_t* stamp_p) {
   TRACEPRINTF("mem_get(%06x) begin", a);
   Address i;
   Address offset = a % MEMSIZE;
@@ -160,12 +160,12 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint16_t* stamp_p) {
 }
 
 /** Get a cell */
-int mem_get(Address a, CellBody *pCellBody) {
+int mem_get(Address a, MemCell *pCellBody) {
     return mem_get_advanced(a, pCellBody, NULL);
 }
 
 /** Set a cell */
-int mem_set(Address a, CellBody *pCellBody) {
+int mem_set(Address a, MemCell *pCellBody) {
     TRACEPRINTF("mem_set(%06x) begin", a);
     Address offset = a % MEMSIZE;
     uint32_t  page = a / MEMSIZE;
@@ -241,7 +241,7 @@ int mem_commit() {
   for (i = 0; i < logSize; i++) {
     Address a = log[i];
     Address offset = a % MEMSIZE;
-    CellBody c;
+    MemCell c;
     if (mem_get(a, &c))
       return -1;
 
