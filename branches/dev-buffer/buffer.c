@@ -1,3 +1,56 @@
+/* TODO List
+* buffer.h
+ * any new arrow: set spaceId = 0
+ * one "resolves"  a buffered arrow (bind it to its server counterpart) on demand. That is,
+   * at first call of buffer_isRooted()
+   * or at first call of buffer_childrenOf()
+ * detect the first call of buffer_childrenOf()
+   * call_xlChildrenOf()
+   * "pull" each child on buffer_next
+   * buffer_pull(serverId)
+ * pull ends when new cell types : PLACEHOLDER; INCOMING_PLACEHOLDER; OUTGOING_...
+ * Placeholders are created for every unknown pair pulled from space
+   * typically when retrieving the spatial children list
+   * or browsing the ancestors or retrieved arrows.
+ * 1st call to buffer_children retrieve the server children list (xl_children)
+   Subsequent calls compare the children list revision between buffer and server. 
+   If different revisions, fetch again the server list.
+   the children iterator not being atomic, one may have new children fetched before
+   the iterator ended. It's important to store the children revision number before iterating
+ * when pulling a server children list, one call "pull(spaceId)" for each retrieved arrow 
+ * buffer can be reserved/freed as a whole
+ * buffer is zeroed after usage.
+ * buffer_sync: ~~resolve + fetch~~ reset server root flag and children list for one arrow/every arrow =~ empty cache / force cache refresh
+ * blob in separate directories (/var/tmp)
+ * blob are lazy loaded!!!!!!!
+ * space children retrieval algorithm if based on a buffer_pull() fonction
+ * pulling = loading a space arrow known by its spaceId into the buffer
+ * buffer_pull(spaceId) =
+   * read hash=xl_hashOf(spaceId)
+   * look for hash-indexed arrows in the buffer bank
+   * if the hash matches to local unresolved arrows,
+   * resolve these local arrow(s) first,
+   * so to compare the spaceId and avoid duping with local copies,
+   * if no local copy then eventually retrieve the pulled arrow definition
+   * if the arrow is a pair,
+     * create a placeholder containing a spaceId as one of its ends.
+     * Outgoing placeholders got buffer Id for tail and space Id for heads 
+     * Incoming placeholders got buffer Id for heads, space Id for tails
+   * if the arrow is a small/tag atom, retrieve its full definition
+   * if the space arrow is a blob, only retrieve its footprint,
+   * raw data is pulled on buffer on demand
+   * buffer_tailOf (resp. buffer_headOf) will convert a placeholder into a regular pair
+      * if cell.arrow.type == OUTGOING_PLACEHOLDER || ...PLACEHOLDER
+      * cell.arrow.tailId  = buffer_pull(cell.arrow.tailId)
+      * if ...PLACEHOLDER { cell.arrow.headId = .... }
+      * cell.arrow.type = PAIR
+   * when assimlating a buffered pair, one probes for an existing singleton as usual,
+   * but ...
+     * if the buffered pair spaceId is not nil (happens if one end is nil)
+     * and if one finds a checksum-matching placeholder pair while probing,
+     * then one resolves the bufferer pair (call spaceId = xl_pair(buffer_resolve(tail), buffer_resolve(head))
+     * if both spaceId match, its a probing hit 
+*/
 #define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +64,90 @@
 #include "sha1.h"
 #define LOG_CURRENT LOG_BUFFER
 #include "log.h"
+
+
+/** The change log.
+ This is a log of all changes made in buffered arrows space. It grows geometrically (see geoalloc() function).
+ */
+static Arrow* changeLog = NULL; ///< dynamically allocated
+static size_t   changeLogMax = 0; ///< heap allocated changeLog size
+static size_t   changeLogSize = 0; ///< significative changeLog size
+
+static int changeLogAdd(Arrow a) {
+  geoalloc((char **)&changeLog, &changeLogMax, &changeLogSize, sizeof(Arrow), changeLogSize + 1);
+  changeLog[changeLogSize - 1] = a; 
+}
+
+static Arrow resolve(Arrow a, int ifAny) {
+  Cell cell;
+  if (a == EVE) return EVE;
+
+  ram_get(a, (RamCell *)&cell);
+  ONDEBUG((SHOWCELL('R', a, &cell)));
+  Arrow spaceId = cell.arrow.spaceId;
+  if (spaceId && (spaceId != NIL || ifAny)) {
+      return spaceId;
+  }
+
+  if (cell.full.type == CELLTYPE_PAIR) {
+      Arrow t = resolve(cell.pair.tail, ifAny);
+      Arrow h = resolve(cell.pair.head, ifAny);
+      if (t != NIL && h != NIL) {
+          spaceId = ifAny ? xl_pairIfAny(t, h) : xl_pair(t, h);
+      } else {
+          spaceId = NIL;
+      }
+  } else {
+    uint32_t lengthP;
+    char* p = buffer_memOf(a, &lengthP);
+    if (p) {
+        spaceId = ifAny ? xl_atomnMaybe(lengthP, p) : xl_atomn(lengthP, p);
+    } else {
+      spaceId = NIL;
+    }
+  }
+  cell.arrow.spaceId = spaceId;
+  ram_set(a, (RamCell *)&cell);
+  ONDEBUG((SHOWCELL('W', a, &cell)));
+  return spaceId;
+}
+
+static int changeLogFlush() {
+  int i;
+    // TODO: optimize
+  for (i = 0; i < changeLogSize; i++) {
+    Arrow a = changeLog[i];
+    Cell cell;
+    ram_get(a, (RamCell *)&cell);
+    ONDEBUG((SHOWCELL('R', a, &cell)));
+    
+    if (cell.full.type == CELLTYPE_EMPTY
+        || cell.full.type > CELLTYPE_ARROWLIMIT)
+      continue;
+  
+    if (cell.arrow.mutables & FLAGS_ROOTSETTED) {
+
+      if (cell.arrow.mutables & FLAGS_ROOTED) {
+        Arrow A = resolve(a, 0);
+        xl_root(A);
+      } else {
+        Arrow A = resolve(a, 1);
+        if (A && A != NIL) {
+          xl_unroot(A);
+        }
+      }
+
+      cell.arrow.spaceId  = A;
+      cell.arrow.mutables ^= FLAGS_ROOTSETTED;
+      ram_set(a, (RamCell *)&cell);
+      ONDEBUG((SHOWCELL('W', a, &cell)));
+    }
+  }
+  xl_commit();
+
+  zeroalloc((char **)&changeLog, &changeLogMax, &changeLogSize);
+}
+
 
 /** statistic structure and variables
  */
@@ -39,16 +176,15 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define LOCK() pthread_mutex_lock(&apiMutex)
 #define LOCK_END() pthread_mutex_unlock(&apiMutex)
-#define LOCK_OUT(X) ((Arrow)pthread_mutex_unlock(&apiMutex), X)
-#define LOCK_OUT64(X) ((uint64_t)pthread_mutex_unlock(&apiMutex), X)
-#define LOCK_OUTSTR(X) ((char*)pthread_mutex_unlock(&apiMutex), X)
+#define LOCK_OUT(X) ((Arrow)pthread_mutex_unlock(&apiMutex), (X))
+#define LOCK_OUT64(X) ((uint64_t)pthread_mutex_unlock(&apiMutex), (X))
+#define LOCK_OUTSTR(X) ((char*)pthread_mutex_unlock(&apiMutex), (X))
 
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
 static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
 static int apiActivity = 0; // Activity counter; Incremented/Decremented by buffer_begin/buffer_over. Decremented when waiting for commit. Incremented again after.
 static int bufferGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC done
-static int memCommitNeeded = 0; // 0->1 when a thread is wait for commit, 1->0 when commit done
 
 
 #define ACTIVITY_BEGIN() (!apiActivity++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
@@ -120,6 +256,9 @@ typedef union u_cell {
 #define CELLTYPE_SYNC   7
 #define CELLTYPE_REATTACHMENT 7
 #define CELLTYPE_CHILDREN 8
+#define CELLTYPE_OUTGOING_PLACEHOLDER 16
+#define CELLTYPE_INCOMING_PLACEHOLDER 17
+#define CELLTYPE_PLACEHOLDER 18
 
   /*
    * raw
@@ -134,57 +273,60 @@ typedef union u_cell {
    *   +---------------------------------------------------+
    *                         26 bytes
    */
- 
+
   /** T = 1, 2, 3, 4: arrow definition.
   *   +--------+--------+----------------------+-----------+----------+----+----+
-  *   | arrowID|  hash  | full or partial def  | RWC0dWnCn |  Child0  | cr | dr |
+  *   | arrowID|  hash  | full or partial def  |  mutables |  Child0  | cr | dr |
   *   +--------+--------+----------------------+-----------+----------+----+----+
   *        4       4                8                4          4        1    1
-  *   where RWC0dWnCn = R|W|C0d|Wn|Cn
+  *   where mutables = R|W|C0d|wS|Wn|rS|Cn
   *
   *   R = root flag (1 bit)
   *   W = weak flag (1 bit)
+  *   rS = root setted flag (1 bit)
+  *   wS = weak setted flag (1 bit) 
   *   C0d = child0 direction (1 bit)
   *   Wn = Weak children count (14 bits)
   *   Cn = Non-weak children count  (15 bits)
-  *
-  *   arrowId = buffered arrow Id
+  *   
   *   child0 = 1st child of this arrow
   *   cr = children revision
   *   dr = definition revision
   */
   struct s_arrow {
-     Arrow arrowId;
+     Arrow spaceId;
      uint32_t hash;
      char  def[8];
-     uint32_t RWWnCn;
+     uint32_t mutables;
      uint32_t child0;
      unsigned char cr;
      unsigned char dr;
   } arrow;
 
-/** RWWnCn flags.
+/** mutables flags.
  */
 #define FLAGS_ROOTED           0x80000000u
 #define FLAGS_WEAK             0x40000000u
 #define FLAGS_C0D              0x20000000u
-#define FLAGS_WEAKCHILDRENMASK 0x1FFF8000u
-#define MAX_WEAKREFCOUNT       0x1FFFu
-#define FLAGS_CHILDRENMASK     0X00007FFFu
-#define MAX_REFCOUNT           0x7FFFu
-
+#define FLAGS_WEAKCHILDRENMASK 0x0FFF8000u
+#define MAX_WEAKREFCOUNT       0x0FFFu
+#define FLAGS_CHILDRENMASK     0X00003FFFu
+#define MAX_REFCOUNT           0x3FFFu
+#define FLAGS_WEAKSETTED       0x10000000u
+#define FLAGS_ROOTSETTED       0x00004000u
   /* T = 1: regular pair.
+  *  T = 16, 17, 18: pair with one or both unloaded end(s), aka a placeholder
   *   +--------+--------+--------+--------+-----------+----------+----+----+
-  *   | arrowID|  hash  |  tail  |  head  | RWC0dWnCn |  Child0  | cr | dr |
+  *   | arrowID|  hash  |  tail  |  head  |  mutables |  Child0  | cr | dr |
   *   +--------+--------+--------+--------+-----------+----------+----+----+
   *        4       4        4        4         4            4       1    1
   */
   struct s_pair {
-     uint32_t arrowId;
+     uint32_t spaceId;
      uint32_t hash;
      uint32_t tail;
      uint32_t head;
-     uint32_t RWWnCn;
+     uint32_t mutables;
      uint32_t child0;
      unsigned char cr;
      unsigned char dr;
@@ -192,7 +334,7 @@ typedef union u_cell {
 
   /* T = 2: small.
   *   +--------+---+-------+-------------------+------------+----------+----+----+
-  *   | arrowID| s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
+  *   | arrowID| s | hash3 |        data       |  mutables  |  Child0  | cr | dr |
   *   +--------+---+-------+-------------------+------------+----------+----+----+
   *        4     1    3               8      
   *            <---hash--->
@@ -202,11 +344,11 @@ typedef union u_cell {
   *    ... if s > 8, one can get 3 additional bytes, by computing:(1st word ^ 2d word ^ hash) & 0xFFFFFFu
   */
   struct s_small {
-    uint32_t arrowId;
+    uint32_t spaceId;
     unsigned char s;
     char hash3[3];
     char data[8];
-    uint32_t RWWnCn;
+    uint32_t mutables;
     uint32_t child0;
     unsigned char cr;
     unsigned char dr;
@@ -214,17 +356,17 @@ typedef union u_cell {
      
   /* T = 3: tag or 4: blob footprint.
   *   +--------+--------+------------+----+-----------+----------+----+----+
-  *   | arrowID|  hash  |   slice0   | J0 | R.W.Wn.Cn |  Child0  | cr | dr |
+  *   | arrowID|  hash  |   slice0   | J0 |  mutables |  Child0  | cr | dr |
   *   +--------+--------+------------+----+-----------+----------+----+----+
   *        4       4          7        1                     
   *   J = first slice jump, h-sequence multiplier (1 byte)
   */
   struct s_tagOrBlob {
-    uint32_t arrowId;
+    uint32_t spaceId;
     uint32_t hash;
     char slice0[7];
     unsigned char jump0;
-    uint32_t RWWnCn;
+    uint32_t mutables;
     uint32_t child0;
     unsigned char cr;
     unsigned char dr;
@@ -336,20 +478,20 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
     }
     if (type <= CELLTYPE_ARROWLIMIT) {
       char flags[] = {
-          (cell->arrow.RWWnCn & FLAGS_ROOTED ? 'R' : '.'),
-          (cell->arrow.RWWnCn & FLAGS_WEAK ? 'W' : '.'),
-          (cell->arrow.RWWnCn & FLAGS_C0D ? 'O' : 'I'),
+          (cell->arrow.mutables & FLAGS_ROOTED ? 'R' : '.'),
+          (cell->arrow.mutables & FLAGS_WEAK ? 'W' : '.'),
+          (cell->arrow.mutables & FLAGS_C0D ? 'O' : 'I'),
           '\0'
       };
       uint32_t hash = cell->arrow.hash;
-      int weakChildrenCount = (int)((cell->arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
-      int childrenCount = (int)(cell->arrow.RWWnCn & FLAGS_CHILDRENMASK);
+      int weakChildrenCount = (int)((cell->arrow.mutables & FLAGS_WEAKCHILDRENMASK) >> 15);
+      int childrenCount = (int)(cell->arrow.mutables & FLAGS_CHILDRENMASK);
       int cr = (int)cell->arrow.cr;
       int dr = (int)cell->arrow.dr;
-      int arrowId = (int)cell->arrow.arrowId;
+      int spaceId = (int)cell->arrow.spaceId;
       if (type == CELLTYPE_PAIR) {
         dputs("%d %c %06x id=%06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s tail=%08x head=%08x",
-          line, operation, address, arrowId, peeble, type,
+          line, operation, address, spaceId, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
           cell->pair.head);
@@ -359,13 +501,13 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
         char buffer[11];
         cell_getSmallPayload(cell, buffer);
         dputs("%d %c %06x id=%06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s size=%d data=%.*s",
-          line, operation, address, arrowId, peeble, type,
+          line, operation, address, spaceId, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
         dputs("%d %c %06x id=%06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
-          line, operation, address, arrowId, peeble, type,
+          line, operation, address, spaceId, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
@@ -724,13 +866,13 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
 
-    /*   |  hash  | slice0  | J | R.W.Wn.Cn |  Child0  | cr | dr |
+    /*   |  hash  | slice0  | J |  mutables |  Child0  | cr | dr |
     *       4          7        1                     
     */
-    newCell.tagOrBlob.arrowId = 0;
+    newCell.tagOrBlob.spaceId = 0;
     newCell.tagOrBlob.hash = hash;
     memcpy(newCell.tagOrBlob.slice0, str, sizeof(newCell.tagOrBlob.slice0));
-    newCell.arrow.RWWnCn = 0;
+    newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = cellType;
     newCell.arrow.dr = buffer_stats.new & 0xFFu;
@@ -896,6 +1038,19 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     return newArrow;
 }
 
+Arrow serverIdOf(Arrow a) {
+    if (a == XL_EVE)
+      return EVE;
+    if (a >= RAM_SIZE)
+      return NIL;
+    Cell cell;
+    ram_get(a, (RamCell *)&cell);
+    ONDEBUG((SHOWCELL('R', a, &cell)));
+    if (cell.full.type == CELLTYPE_EMPTY
+       || cell.full.type > CELLTYPE_ARROWLIMIT)
+        return NIL; // Not an arrow
+    return cell.arrow.spaceId; // current serverId
+}
 
 uint32_t hashOf(Arrow a) {
     Cell cell;
@@ -955,7 +1110,7 @@ static Arrow small(int length, char* str, int ifExist) {
       memset(buffer, (char)length, 4);
     }
     
-    /*| s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
+    /*| s | hash3 |        data       |  mutables  |  Child0  | cr | dr |
     *   s : small size (0 < s <= 11)
     *   hash3: (data 1st word ^ 2d word ^ 3d word) with s completion 
     */
@@ -1030,7 +1185,7 @@ static Arrow small(int length, char* str, int ifExist) {
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
     memcpy(&newCell, buffer, 12);
-    newCell.arrow.RWWnCn = 0;
+    newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_SMALL;
     newCell.arrow.dr = buffer_stats.new & 0xFFu;
@@ -1077,6 +1232,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     if (tail == NIL || head == NIL)
         return NIL;
  
+     // FIXME : Load both ends cells, check validity and don't use hashOf/serverIdOf
+
     buffer_stats.get++;
 
     // Compute hashs
@@ -1149,10 +1306,17 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     newCell.pair.tail = tail;
     newCell.pair.head = head;
     newCell.arrow.hash = hash;
-    newCell.arrow.RWWnCn = 0;
+    newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_PAIR;
     newCell.arrow.dr = buffer_stats.new & 0xFFu;
+    
+    // buffer-local arrows necessarily produces buffer-local children
+    if (serverIdOf(tail) == NIL || serverIdOf(head) == NIL)
+      newCell.arrow.spaceId = NIL;
+    else
+      newCell.arrow.spaceId = 0;
+      
     ram_set(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
 
@@ -1964,13 +2128,20 @@ Arrow buffer_anonymous() {
     char anonymous[CRYPTO_SIZE + 1];
     Arrow a = NIL;
     do {
-        char random[80];
-        snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
-        crypto(80, random,  anonymous); // Access to unitialized data is wanted
-        a = buffer_atomMaybe(anonymous);
-        assert(a != NIL);
-    } while (a);
-    return buffer_atom(anonymous);
+      do {
+          // peek up a random string
+          char random[80];
+          snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
+          crypto(80, random,  anonymous); // Access to unitialized data is deliberate/wanted
+          a = buffer_atomMaybe(anonymous);
+          assert(a != NIL);
+      } while (a); // while not locally unique
+      a = buffer_atom(anonymous);
+    } while (resolve(a, 1) != NIL); // while not globally unique
+
+    // what's brillant is that serverIdOf(a) == NIL so any descendant will be auto-local
+    // no server-side isRooted/childrenOf
+    return a;
 }
 
 static Arrow unrootChild(Arrow child, Arrow context) {
@@ -2116,10 +2287,10 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     assert(cell.full.type != CELLTYPE_EMPTY && cell.full.type <= CELLTYPE_ARROWLIMIT);
   
     // is the parent arrow (@a) loose?
-    int childrenCount = (int)(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
-    int weakChildrenCount = (int)((cell.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
+    int childrenCount = (int)(cell.arrow.mutables & FLAGS_CHILDRENMASK);
+    int weakChildrenCount = (int)((cell.arrow.mutables & FLAGS_WEAKCHILDRENMASK) >> 15);
 
-    int loose = (childrenCount == 0 && !(cell.arrow.RWWnCn & FLAGS_ROOTED));
+    int loose = (childrenCount == 0 && !(cell.arrow.mutables & FLAGS_ROOTED));
     if (loose && !childWeakness) {
           // parent is not loose anymore
 
@@ -2153,7 +2324,7 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       }
     }
 
-    cell.arrow.RWWnCn = cell.arrow.RWWnCn
+    cell.arrow.mutables = cell.arrow.mutables
        & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu) 
        | (weakChildrenCount << 15)
        | childrenCount;
@@ -2162,13 +2333,13 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     if (!childWeakness) {
       // child0 always point the last strongly connnected child
       Arrow lastChild0 = cell.arrow.child0;
-      int lastChild0Direction = ((cell.arrow.RWWnCn & FLAGS_C0D) ? 1 : 0);
+      int lastChild0Direction = ((cell.arrow.mutables & FLAGS_C0D) ? 1 : 0);
       cell.arrow.child0 = child;
 
       if (outgoing) {
-        cell.arrow.RWWnCn |= FLAGS_C0D;
+        cell.arrow.mutables |= FLAGS_C0D;
       } else {
-        cell.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
+        cell.arrow.mutables &= (FLAGS_C0D ^ 0xFFFFFFFFu);
       }
 
       child = lastChild0; // Now one puts the previous value of child0 into another cell
@@ -2321,8 +2492,8 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     assert(parent.full.type != CELLTYPE_EMPTY && parent.full.type <= CELLTYPE_ARROWLIMIT);
 
     // get counters
-    int childrenCount = (int)(parent.arrow.RWWnCn & FLAGS_CHILDRENMASK);
-    int weakChildrenCount = (int)((parent.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
+    int childrenCount = (int)(parent.arrow.mutables & FLAGS_CHILDRENMASK);
+    int weakChildrenCount = (int)((parent.arrow.mutables & FLAGS_WEAKCHILDRENMASK) >> 15);
 
     // update child counters
     if (weakness) {
@@ -2334,12 +2505,12 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
         childrenCount--;
       }
     }
-    parent.arrow.RWWnCn = parent.arrow.RWWnCn
+    parent.arrow.mutables = parent.arrow.mutables
        & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu) 
        | (weakChildrenCount << 15) | childrenCount;
 
     // check "loose" status evolution
-    int loose = (childrenCount == 0 && !(parent.arrow.RWWnCn & FLAGS_ROOTED));
+    int loose = (childrenCount == 0 && !(parent.arrow.mutables & FLAGS_ROOTED));
     if (!weakness && loose) { // parent arrow got loose by removing the last strong child
        // add 'a' into the loose log if strong child
        looseLogAdd(a);
@@ -2356,10 +2527,10 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
     // child0 simple case
     if (parent.arrow.child0 == child) {
-      int child0direction = parent.arrow.RWWnCn & FLAGS_C0D;
+      int child0direction = parent.arrow.mutables & FLAGS_C0D;
       if (child0direction && outgoing || !(child0direction || outgoing)) {
         parent.arrow.child0 = 0;
-        parent.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
+        parent.arrow.mutables &= (FLAGS_C0D ^ 0xFFFFFFFFu);
         child = 0; // OK
       }
     }
@@ -2481,7 +2652,7 @@ void buffer_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
       return; // invalid ID. TODO one might call cb with a
 
 
-    if (!(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
+    if (!(cell.arrow.mutables & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
       // no child
       LOCK_END();
       return;
@@ -2495,7 +2666,7 @@ void buffer_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
       // child0
       cb(cell.arrow.child0, context);
 
-      if ((cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK)) == 1) {
+      if ((cell.arrow.mutables & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK)) == 1) {
         // child0 is the only child
         LOCK_END();
         return;
@@ -2586,7 +2757,7 @@ static int buffer_enumNextChildOf(XLEnum e) {
             return LOCK_OUT(0); // arrow changed
         }
 
-        if (!(cell.arrow.RWWnCn &
+        if (!(cell.arrow.mutables &
           (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
           // no child
           return LOCK_OUT(0); // no child
@@ -2601,7 +2772,7 @@ static int buffer_enumNextChildOf(XLEnum e) {
         }
 
         // pos == a (or EVE without child0)
-        if (1 == (cell.arrow.RWWnCn &
+        if (1 == (cell.arrow.mutables &
               (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))
             && cell.arrow.child0) {
             return LOCK_OUT(0); // no child left
@@ -2756,17 +2927,31 @@ Arrow buffer_root(Arrow a) {
     Cell cell;
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
+
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
       return LOCK_OUT(EVE);
-    if (cell.arrow.RWWnCn & FLAGS_ROOTED)
+
+    if (cell.arrow.mutables & FLAGS_ROOTED) { // already rooted
+      if (!(cell.arrow.mutables & FLAGS_ROOTSETTED)) {
+        cell.arrow.mutables |= FLAGS_ROOTSETTED;
+        ram_set(a, (RamCell *)&cell);
+        ONDEBUG((SHOWCELL('W', a, &cell)));
+        changeLogAdd(a);
+      }
       return LOCK_OUT(a);
+    }
 
     // If this arrow had no child before, it was loose
-    int loose = !(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
+    int loose = !(cell.arrow.mutables & FLAGS_CHILDRENMASK);
+
+    if (!(cell.arrow.mutables & FLAGS_ROOTSETTED)) {
+      cell.arrow.mutables |= FLAGS_ROOTSETTED;
+      changeLogAdd(a);
+    }
 
     // change the arrow to ROOTED state
-    cell.arrow.RWWnCn = cell.arrow.RWWnCn | FLAGS_ROOTED;
+    cell.arrow.mutables |= FLAGS_ROOTED;
     ram_set(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
@@ -2794,19 +2979,32 @@ Arrow buffer_unroot(Arrow a) {
     Cell cell;
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
+    
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
       return LOCK_OUT(EVE);
-    if (!(cell.arrow.RWWnCn & FLAGS_ROOTED))
-        return LOCK_OUT(a);
+    
+    if (!(cell.arrow.mutables & FLAGS_ROOTED)) {
+      if (!(cell.arrow.mutables & FLAGS_ROOTSETTED)) {
+        cell.arrow.mutables |= FLAGS_ROOTSETTED;
+        ram_set(a, (RamCell *)&cell);
+        ONDEBUG((SHOWCELL('W', a, &cell)));
+        changeLogAdd(a);
+      }
+      return LOCK_OUT(a);
+    }
 
+    if (!(cell.arrow.mutables & FLAGS_ROOTSETTED)) {
+      cell.arrow.mutables |= FLAGS_ROOTSETTED;
+      changeLogAdd(a);
+    }
     // change the arrow to UNROOTED state
-    cell.arrow.RWWnCn ^= FLAGS_ROOTED;
+    cell.arrow.mutables ^= FLAGS_ROOTED;
     ram_set(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('W', a, &cell)));
 
     // If this arrow has no child, it's now loose
-    int loose = !(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
+    int loose = !(cell.arrow.mutables & FLAGS_CHILDRENMASK);
     if (loose) {
         // loose log
         looseLogAdd(a);
@@ -2823,20 +3021,64 @@ Arrow buffer_unroot(Arrow a) {
 /** return the root status */
 int buffer_isRooted(Arrow a) {
     if (a == EVE) return EVE;
-
+      
     LOCK();
+
     Cell cell;
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
-    LOCK_END();
     
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
-      return EVE;
-    else if (cell.arrow.RWWnCn & FLAGS_ROOTED)
-      return a;
-    else
-      return EVE;
+      return LOCK_OUT(EVE);
+    
+    if (cell.arrow.spaceId == 0
+        && !(cell.arrow.mutables & FLAGS_ROOTSETTED)) {
+      // if arrow root flags has not been setted yet and arrow is unresolved
+
+      // resolve the arrow
+      Arrow A = resolve(a, 1);
+      if (A && A != NIL) { // disk counterpart found
+
+        // load the arrow root state from its disk counterpart
+        if (xl_isRooted(A)) {
+          if (!(cell.arrow.mutables & FLAGS_ROOTED)) {
+            cell.arrow.spaceId = A;
+            cell.arrow.mutables |= FLAGS_ROOTED;
+            ram_set(a, (RamCell *)&cell);
+            ONDEBUG((SHOWCELL('W', a, &cell)));
+            int loose = !(cell.arrow.mutables & FLAGS_CHILDRENMASK);
+            if (loose) { // if arrow was loose, one now connects it to its parents
+              if (cell.full.type == CELLTYPE_PAIR) {
+                  connect(cell.pair.tail, a, 0, 1);
+                  connect(cell.pair.head, a, 0, 0);
+              }
+              looseLogRemove(a);
+            }
+          }
+        } else {
+          if (cell.arrow.mutables & FLAGS_ROOTED)) {
+            cell.arrow.spaceId = A;
+            cell.arrow.mutables ^= FLAGS_ROOTED;
+            ram_set(a, (RamCell *)&cell);
+            ONDEBUG((SHOWCELL('W', a, &cell)));
+            // If this arrow has no child, it's now loose
+            int loose = !(cell.arrow.mutables & FLAGS_CHILDRENMASK);
+            if (loose) {
+              // loose log
+              looseLogAdd(a);
+
+              // If it's loose, one disconnects it from its parents.
+              if (cell.full.type == CELLTYPE_PAIR) {
+                  disconnect(cell.pair.tail, a, 0, 1);
+                  disconnect(cell.pair.head, a, 0, 0);
+              } // TODO Tuple case
+            }
+          }
+        }
+      }
+    }
+    return LOCK_OUT(cell.arrow.mutables & FLAGS_ROOTED ? a : EVE);
 }
 
 /** check if an arrow is loose */
@@ -2853,10 +3095,10 @@ int buffer_isLoose(Arrow a) {
         || cell.full.type > CELLTYPE_ARROWLIMIT)
       return 0;
 
-    if (cell.arrow.RWWnCn & FLAGS_ROOTED)
+    if (cell.arrow.mutables & FLAGS_ROOTED)
       return 0;
 
-    if (cell.arrow.RWWnCn & FLAGS_CHILDRENMASK)
+    if (cell.arrow.mutables & FLAGS_CHILDRENMASK)
       return 0;
 
     return 1;
@@ -2996,9 +3238,6 @@ static void bufferGC() {
     zeroalloc((char**) &looseLog, &looseLogMax, &looseLogSize);
 
     bufferGCNeeded = 0;
-    
-    if (mem_yield())
-        memCommitNeeded = 0;
 }
 
 void buffer_over() {
@@ -3019,7 +3258,6 @@ void buffer_over() {
 void buffer_commit() {
     TRACEPRINTF("buffer_commit (looseLogSize = %d)", looseLogSize);
     bufferGCNeeded = 1;
-    memCommitNeeded = 1;
     
     LOCK();
     ACTIVITY_OVER();
@@ -3031,10 +3269,9 @@ void buffer_commit() {
         bufferGC();
     }
     
-    if (memCommitNeeded) {
-        mem_commit();
-        memCommitNeeded = 0;
-    }
+    // Apply buffer changes to real entrelacs space
+    logChangeFlush();
+
     ACTIVITY_BEGIN();
     LOCK_END();
     
@@ -3085,7 +3322,8 @@ int buffer_init() {
     static int buffer_init_done = 0;
     if (buffer_init_done) return 0;
     buffer_init_done = 1;
-    
+  
+
     assert(sizeof(RamCell) == sizeof(Cell));
 
     pthread_cond_init(&apiNowActive, NULL);
@@ -3103,18 +3341,20 @@ int buffer_init() {
     // register a printf extension for arrow (glibc only!)
     register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
     
-    geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof(Arrow), 0);
+    geoalloc((char **)&changeLog, &changeLogMax, &changeLogSize, sizeof(Arrow), 0);
+    geoalloc((char **)&looseLog, &looseLogMax, &looseLogSize, sizeof(Arrow), 0);
     return rc;
 }
 
 void buffer_destroy() {
     // TODO complete
     free(looseLog);
-    
+    free(changeLog);
+
     pthread_cond_destroy(&apiNowActive);
     pthread_cond_destroy(&apiNowDormant);
     pthread_mutexattr_destroy(&apiMutexAttr);
     pthread_mutex_destroy(&apiMutex);
 
-    mem_destroy();
+    ram_destroy();
 }

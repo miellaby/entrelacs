@@ -15,7 +15,7 @@ static FILE* F = NULL;
 int mem_is_out_of_sync = 0;
 
 /** internal function */
-int _mem0_set(Address address, CellBody* data);
+int _mem0_set(Address address, MemCell* data);
 
 // =========
 // file path handling
@@ -141,13 +141,13 @@ int mem0_initJournal() {
     return openJournal(JOURNAL_WRITING);
 }
 
-int mem0_addToJournal(Address r, CellBody *p) {
+int mem0_addToJournal(Address r, MemCell *p) {
    size_t writen = fwrite(&r, sizeof(Address), 1, journalHandler);
    if (writen != 1) {
        LOGPRINTF(LOG_FATAL, "Can't write into journal");
        return -1;
    }
-   writen = fwrite(p, sizeof(CellBody), 1, journalHandler);
+   writen = fwrite(p, sizeof(MemCell), 1, journalHandler);
    if (writen != 1) {
        LOGPRINTF(LOG_FATAL, "Can't write into journal");
        return -1;
@@ -157,8 +157,8 @@ int mem0_addToJournal(Address r, CellBody *p) {
 
 int mem0_terminateJournal() {
     // add terminator
-    CellBody terminator;
-    memset(&terminator, 0, sizeof(CellBody));
+    MemCell terminator;
+    memset(&terminator, 0, sizeof(MemCell));
     mem0_addToJournal(0, &terminator);
     mem0_addToJournal(0, &terminator);
 
@@ -185,7 +185,7 @@ int mem0_dismissJournal() {
 }
 
 int mem0_openPreviousJournal() {
-    char check[2 * sizeof(Address) + 2 * sizeof(CellBody)];
+    char check[2 * sizeof(Address) + 2 * sizeof(MemCell)];
 
     if (openJournal(JOURNAL_READING))
         goto corrupted;
@@ -204,7 +204,7 @@ int mem0_openPreviousJournal() {
         LOGPRINTF(LOG_WARN, "Journal last bytes reading failed. probably truncated file");
         goto corrupted;
     }
-    // journal terminator is in the form: Address=0,CellBody=0,Address=0,CellBody=0
+    // journal terminator is in the form: Address=0,MemCell=0,Address=0,MemCell=0
     for (int i = 0; i < sizeof(check); i++) {
         if (check[i]) { // if one byte is not 0, then it's a truncated journal
             LOGPRINTF(LOG_WARN, "Journal is not properly terminated");
@@ -229,9 +229,9 @@ int mem0_recoverFromJournal() {
     rewind(journalHandler);
     while (1) {
         Address address;
-        CellBody cell;
+        MemCell cell;
         size_t addressRead = fread(&address, sizeof(Address), 1, journalHandler);
-        size_t cellRead = fread(&cell, sizeof(CellBody), 1, journalHandler);
+        size_t cellRead = fread(&cell, sizeof(MemCell), 1, journalHandler);
         if (!(addressRead == 1 && cellRead == 1)) {
             LOGPRINTF(LOG_FATAL, "Can't read Address/Cell pair from journal");
             return -1;
@@ -287,7 +287,7 @@ int mem0_init() {
     F = fopen(mem0_filePath, "w+b");
     if (F) {
       // set it up to its max size
-      CellBody lastCell;
+      MemCell lastCell;
       memset(&lastCell, 0, 20);
       _mem0_set(SPACE_SIZE - 1, &lastCell);
       if (ftell(F) <= 0) {
@@ -318,7 +318,7 @@ int mem0_init() {
   return 1;
 }
 
-int mem0_get(Address address, CellBody* pCellBody) {
+int mem0_get(Address address, MemCell* pCellBody) {
    DEBUGPRINTF("mem0_get@%012x", address);
    assert(!journalHandler); // get can't happen where flush in progress
 
@@ -327,9 +327,9 @@ int mem0_get(Address address, CellBody* pCellBody) {
        return -1;
    }
 
-   fseek(F, address * sizeof(CellBody), SEEK_SET);
+   fseek(F, address * sizeof(MemCell), SEEK_SET);
    
-   size_t read = fread(pCellBody, sizeof(CellBody), 1, F);
+   size_t read = fread(pCellBody, sizeof(MemCell), 1, F);
    if (read != 1) {
        LOGPRINTF(LOG_FATAL, "Can't read from mem0 @%012x", address);
        return -1;
@@ -338,7 +338,7 @@ int mem0_get(Address address, CellBody* pCellBody) {
    return 0;
 }
 
-int _mem0_set(Address address, CellBody* pCellBody) {
+int _mem0_set(Address address, MemCell* pCellBody) {
    DEBUGPRINTF("mem0_set@%012x", address);
    
    if (address >= SPACE_SIZE) {
@@ -346,9 +346,9 @@ int _mem0_set(Address address, CellBody* pCellBody) {
        return -1;
    }
 
-   fseek(F, address * sizeof(CellBody), SEEK_SET);
+   fseek(F, address * sizeof(MemCell), SEEK_SET);
    
-   size_t write = fwrite(pCellBody, sizeof(CellBody), 1, F);
+   size_t write = fwrite(pCellBody, sizeof(MemCell), 1, F);
    if (write != 1) {
        LOGPRINTF(LOG_FATAL, "Can't write to mem0");
        return -1;
@@ -358,7 +358,7 @@ int _mem0_set(Address address, CellBody* pCellBody) {
 }
 
 /** mem0_set actually buffers data into journal */
-int mem0_set(Address address, CellBody* pCellBody) {
+int mem0_set(Address address, MemCell* pCellBody) {
     if (!journalHandler) {
         DEBUGPRINTF("First mem0_set() call since last commit. Journal begin.");
         if (mem0_initJournal())

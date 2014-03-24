@@ -16,21 +16,21 @@ int  mem_init();
  @param Cell Address
  @param Cell Content Pointer
  */
-int mem_set(Address, CellBody*);
+int mem_set(Address, MemCell*);
 
 /** get data from memory cell
  @param Cell Address
  @param Cell Content Pointer
  @return 0 if OK
  */
-int mem_get(Address, CellBody*);
+int mem_get(Address, MemCell*);
 
 /** get data from memory cell and its lastModifiedPoke
  @param Cell Address
  @param Cell Stamp Pointer
  @return 0 if OK
  */
-int mem_get_advanced(Address, CellBody*, uint16_t* stamp_p);
+int mem_get_advanced(Address, MemCell*, uint16_t* stamp_p);
 
 /** close current micro-transaction,
  by making all memory changes from last commit persistent
