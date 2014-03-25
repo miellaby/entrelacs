@@ -17,12 +17,12 @@
 #define DEFA(T, H) Arrow _##T##_##H = a(T, H)
 
 
-#define pairMaybe(T, H)   xl_pairMaybe(T, H)
-#define atomMaybe(S)      xl_atomMaybe(S)
-#define natomMaybe(N, S)  xl_atomnMaybe(N, S)
-#define uriMaybe(U)       xl_uriMaybe(U)
-#define urinMaybe(U)      xl_urinMaybe(N, U)
-#define digestMaybe(D)    xl_digestMaybe(D)
+#define pairIfAny(T, H)   xl_pairIfAny(T, H)
+#define atomIfAny(S)      xl_atomIfAny(S)
+#define natomIfAny(N, S)  xl_atomnIfAny(N, S)
+#define uriIfAny(U)       xl_uriIfAny(U)
+#define urinIfAny(U)      xl_urinIfAny(N, U)
+#define digestIfAny(D)    xl_digestIfAny(D)
 
 #define typeOf(A)    xl_typeOf(A)
 #define headOf(A)    xl_headOf(A)

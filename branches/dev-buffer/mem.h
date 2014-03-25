@@ -47,15 +47,6 @@ int mem_yield();
  */
 uint32_t mem_pokes();
 
-/** setup or reinitialize a geometrically growing RAM area
- */
-void zeroalloc(char** pp, size_t* maxp, size_t* sp);
-
-/** change content size inside a geometrically growing RAM area
- */
-void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s);
-
-
 /** "mem" release
  */
 int  mem_destroy();

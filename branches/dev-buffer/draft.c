@@ -1,8 +1,10 @@
 /* This scrap file gathers toughs and code about design issues
 */
 
-// can we delay deduplication
-// 
+// can we delay deduplication with an "arrow buffer"?
+// buffer_xxx API, like xl_xxx API but in a RAM buffer : a 100%RAM based AS (Arrow Space)
+// when called  buffer_isRotted, one resolves buffer arrow in a disk arrow, arrowId stores
+// id, and 
 
 
 //

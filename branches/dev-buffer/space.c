@@ -7,8 +7,8 @@
 #include <ctype.h>
 #include <pthread.h>
 #include "entrelacs/entrelacs.h"
-#include "mem0.h"
 #include "mem.h"
+#include "geoalloc.h"
 #include "sha1.h"
 #define LOG_CURRENT LOG_SPACE
 #include "log.h"
@@ -1177,7 +1177,7 @@ Arrow xl_pair(Arrow tail, Arrow head) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_pairMaybe(Arrow tail, Arrow head) {
+Arrow xl_pairIfAny(Arrow tail, Arrow head) {
     LOCK();
     Arrow a= pair(tail, head, 1);
     return LOCK_OUT(a);
@@ -1224,7 +1224,7 @@ Arrow xl_atom(char* str) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomMaybe(char* str) {
+Arrow xl_atomIfAny(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
     LOCK();
@@ -1253,7 +1253,7 @@ Arrow xl_atomn(uint32_t size, char* mem) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomnMaybe(uint32_t size, char* mem) {
+Arrow xl_atomnIfAny(uint32_t size, char* mem) {
     Arrow a;
     LOCK();
     if (size == 0)
@@ -1699,8 +1699,8 @@ char* xl_uriOf(Arrow a, uint32_t *l) {
     return LOCK_OUTSTR(str);
 }
 
-Arrow xl_digestMaybe(char* digest) {
-    TRACEPRINTF("BEGIN xl_digestMaybe(%.58s)", digest);
+Arrow xl_digestIfAny(char* digest) {
+    TRACEPRINTF("BEGIN xl_digestIfAny(%.58s)", digest);
 
     // read the hash at the digest beginning
     int i = 2; // jump over '$H' string
@@ -1791,7 +1791,7 @@ static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, i
                     break;
                 }
 
-                a = xl_digestMaybe(uri);
+                a = xl_digestIfAny(uri);
                 
                 if (a == NIL) // Non assimilated blob
                     uriLength = NAN;
@@ -1935,7 +1935,7 @@ Arrow xl_uri(char* aUri) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_uriMaybe(char* aUri) {
+Arrow xl_uriIfAny(char* aUri) {
     LOCK();
     Arrow a = uri(NAN, aUri, 1);
     return LOCK_OUT(a);
@@ -1947,7 +1947,7 @@ Arrow xl_urin(uint32_t aSize, char* aUri) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_urinMaybe(uint32_t aSize, char* aUri) {
+Arrow xl_urinIfAny(uint32_t aSize, char* aUri) {
     LOCK();
     Arrow a = uri(aSize, aUri, 1);
     return LOCK_OUT(a);
@@ -1960,7 +1960,7 @@ Arrow xl_anonymous() {
         char random[80];
         snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
         crypto(80, random,  anonymous); // Access to unitialized data is wanted
-        a = xl_atomMaybe(anonymous);
+        a = xl_atomIfAny(anonymous);
         assert(a != NIL);
     } while (a);
     return xl_atom(anonymous);

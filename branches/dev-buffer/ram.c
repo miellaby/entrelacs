@@ -4,28 +4,28 @@
 #define RAM_C
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #define LOG_CURRENT LOG_RAM
 #include "log.h"
 #include "ram.h"
 
-static const Address ramSize = RAMSIZE ; ///< ram size
+static const RamAddress ramSize = RAMSIZE; ///< ram size
 
-/** The main RAM cache, aka "ram".
- ram is an array of ramSize records.
- Each record can carry one mem0 cell.
+/** The main RAM cache.
+ An array of n=ramSize "RAM cells".
  */
-static RamCell ram[ramSize];
+static RamCell ramBank[RAMSIZE];
 
 
 /** Get a cell */
-int ram_get(Address a, RamCell* pRamCell) {
-  *pRamCell = &ram[a];
+int ram_get(RamAddress a, RamCell* pRamCell) {
+  *pRamCell = ramBank[a];
   return 0;
 }
 
 /** Set a cell */
-int ram_set(Address a, RamCell *pRamCell) {
-    ram[a] = *pRamCell;
+int ram_set(RamAddress a, RamCell* pRamCell) {
+    ramBank[a] = *pRamCell;
     return 0;
 }
 
@@ -34,7 +34,7 @@ int ram_set(Address a, RamCell *pRamCell) {
   @return 0
 */
 int ram_init() {
-  memset(ram, sizeof(ram), 0);
+  memset(ramBank, sizeof(ramBank), 0);
   return 0;
 }
 

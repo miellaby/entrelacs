@@ -307,7 +307,7 @@ int stress() {
     {
         unroot(big);
         commit();
-        assert(isEve(atomMaybe("save me!")));
+        assert(isEve(atomIfAny("save me!")));
 
         // unrooting stress
         test_title("unrooting stress");
