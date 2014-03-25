@@ -61,7 +61,7 @@ Arrow xls_session(Arrow c, Arrow agent, Arrow id);
 
 /** return a previously defined session /$c+sessions+/$agent+$id, Eve if not found
 */
-Arrow xls_sessionMaybe(Arrow c, Arrow agent, Arrow id);
+Arrow xls_sessionIfAny(Arrow c, Arrow agent, Arrow id);
 
 /** reset and remove (unroot) a session.
 */
@@ -145,7 +145,7 @@ Arrow xls_url(Arrow s, char* url);
 /** Resolve an URL into an arrow if it exists.
     Any embedded ID must belong to the considered session.
 */
-Arrow xls_urlMaybe(Arrow s, char* url);
+Arrow xls_urlIfAny(Arrow s, char* url);
 
 /** returns a list of all rooted pairs within context path "/$c+$key"
 */

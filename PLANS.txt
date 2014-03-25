@@ -1,16 +1,17 @@
-Current change:
- * buffer
+Current change: Arrow buffer
+ * currently via a dedicated API
+   * arrow buffer API: buffer.c/h
+   * Same operators than the space API: buffer_* <=> xl_*
+   * might become the default implem (xl_* API)
  * It's a RAM-based buffer for arrows. Put in front of the arrows space
  * mainly used by the EL machine for quick disk-free arrow manipulation
  * arrows are autonomously managed in the buffer, whatever their server counterparts.
- * they have buffer-specific addresses ( and id ).
+ * they got buffer-specific addresses ( and id ).
  * buffer implementation depends on ram.c/h: volatile memory as a bank of of 0x100000 cells
  * buffer specific 28 bytes memory model for "cells"
    * each buffered arrow definition includes "spaceId"
    * spaceId identifies the corresponding arrow in the arrows space.
    * spaceId != bufferedArrow.id
- * arrow buffer API: buffer.c/h
- * Same operators than the space API: buffer_* <=> xl_*
  * By default, arrows assimilated via the buffer API are not bound to their spatial counterparts.
    * For exemple, spaceId initialy = NULL for the arrow assimilated by buffer_atom("toto")
  * one "resolves"  a buffered arrow (bind it to its server counterpart) on demand. That is,
@@ -28,13 +29,24 @@ Current change:
  * 1st call to buffer_children retrieve the server children list (xl_children)
    Subsequent calls compare the children list revision between buffer and server. 
    If different revisions, fetch again the server list.
-   when pulling a server children list, one call "pull(spaceId)" for each retrieved arrow 
+   the children iterator not being atomic, one may have new children fetched before
+   the iterator ended. It's important to store the children revision number before iterating
+ * when pulling a server children list, one call "pull(spaceId)" for each retrieved arrow 
  * when spaceId = NIL (eg uuid), all buffered descendants have automaticaly
    NIL serverId : great optimization, avoid useless xl_children/xl_isRooted
  * on commit root-settted arrows are server-rooted, root-unsetted arrows are server-unrooted
    * so: change flags and changelog
  * buffer can be reserved/freed as a whole
  * buffer is zeroed after usage. TBC.
+    * if the buffer is not zeroed,
+       * one adds a stamp to every fetched arrow
+       * bufferRevision++ at each new buffer session
+       * stamp=bufferRevision for every new buffer arrow or otherwise touched arrows
+       * when probing an arrow, one saves (in addition of the first free cell) the
+         first cell which contains an arrows so than stamp <modulo bufferRevision - 5
+       * when putting a new arrow in buffer, one preferes firstOldCell rather than firstFreeCell.
+         * if firstOldCell, one deletes firstOldCell, problem: children are too be 
+           deleted to, or converted into "placeholders"
  * buffer_sync: ~~resolve + fetch~~ reset server root flag and children list for one arrow/every arrow =~ empty cache / force cache refresh
  * blob in separate directories (/var/tmp)
  * blob are lazy loaded

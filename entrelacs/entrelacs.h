@@ -52,12 +52,12 @@ Arrow xl_hook(void* hook); ///< assimilate a C pointer and return an arrow.
 
 /* Probe arrows without creating them if missing
  */
-Arrow xl_pairMaybe(Arrow, Arrow); ///< return a pair of arrows if system-known, Eve otherwise.
-Arrow xl_atomMaybe(char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
-Arrow xl_atomnMaybe(uint32_t size, char*); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
-Arrow xl_uriMaybe(char*); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
-Arrow xl_urinMaybe(uint32_t size, char*); ///< return the previously assimilated arrow corresponding to a piece of URI, NIL if wrong URI, EVE if arrow not assimilated.
-Arrow xl_digestMaybe(char*); ///< return a stored arrow corresponding to a digest, NIL if no match.
+Arrow xl_pairIfAny(Arrow, Arrow); ///< return a pair of arrows if system-known, Eve otherwise.
+Arrow xl_atomIfAny(char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
+Arrow xl_atomnIfAny(uint32_t size, char*); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
+Arrow xl_uriIfAny(char*); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
+Arrow xl_urinIfAny(uint32_t size, char*); ///< return the previously assimilated arrow corresponding to a piece of URI, NIL if wrong URI, EVE if arrow not assimilated.
+Arrow xl_digestIfAny(char*); ///< return a stored arrow corresponding to a digest, NIL if no match.
 
 /* Unbuilding */
 typedef enum e_xlType {

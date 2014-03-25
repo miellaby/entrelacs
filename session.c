@@ -18,16 +18,16 @@ Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
    return session;
 }
 
-Arrow xls_sessionMaybe(Arrow s, Arrow agent, Arrow uuid) {
-   Arrow agentUuidMaybe = pairMaybe(agent, uuid);
-   if (!agentUuidMaybe)
+Arrow xls_sessionIfAny(Arrow s, Arrow agent, Arrow uuid) {
+   Arrow agentUuidIfAny = pairIfAny(agent, uuid);
+   if (!agentUuidIfAny)
        return EVE;
 
-   Arrow sessionMaybe = pairMaybe(atom("session"), agentUuidMaybe);
-   if (!sessionMaybe)
+   Arrow sessionIfAny = pairIfAny(atom("session"), agentUuidIfAny);
+   if (!sessionIfAny)
        return EVE;
 
-   Arrow rootedSession = xls_isRooted(s, sessionMaybe);
+   Arrow rootedSession = xls_isRooted(s, sessionIfAny);
    if (!rootedSession)
        return EVE;
 
@@ -72,7 +72,7 @@ Arrow deepIsRooted(Arrow c, Arrow e) {
 #endif
 
 Arrow xls_isRooted(Arrow c, Arrow e) {
-    Arrow m = pairMaybe(c, e);
+    Arrow m = pairIfAny(c, e);
     if (m == EVE || !isRooted(m))
         return EVE;
 
@@ -154,7 +154,7 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     INFOPRINTF("xls_set(%O,%O,%O)", c, key, value);
 
     // unset
-    Arrow slotContext = pairMaybe(c, key);
+    Arrow slotContext = pairIfAny(c, key);
     if (slotContext != EVE) {
        xls_reset(slotContext);
     }
@@ -169,7 +169,7 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
 void xls_unset(Arrow c, Arrow key) {
     INFOPRINTF("xls_unset(%O,%O)", c, key);
     
-    Arrow slotContext = pairMaybe(c, key);
+    Arrow slotContext = pairIfAny(c, key);
     if (slotContext == EVE) return;
 
     xls_reset(slotContext);
@@ -181,7 +181,7 @@ void xls_unset(Arrow c, Arrow key) {
 */
 static Arrow get(Arrow c, Arrow key) {
     Arrow value = NIL;
-    Arrow keyContext = pairMaybe(c, key);
+    Arrow keyContext = pairIfAny(c, key);
     if (keyContext != EVE) {
 
         XLEnum enumChildren = xl_childrenOf(keyContext);
@@ -218,7 +218,7 @@ Arrow xls_get(Arrow c, Arrow key) {
  */
 Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
     Arrow value = NIL;
-    Arrow contextPair = xl_pairMaybe(c, a);
+    Arrow contextPair = xl_pairIfAny(c, a);
     if (contextPair == EVE) return list;
     
     XLEnum enumChildren = xl_childrenOf(contextPair);
@@ -298,7 +298,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
                     break;
                 }
                 
-                a = (locateOnly ? xl_pairMaybe(tail, head) : xl_pair(tail, head));
+                a = (locateOnly ? xl_pairIfAny(tail, head) : xl_pair(tail, head));
                 if (a == EVE || a == NIL) {
                     *urlEnd = NULL;
                     break;
@@ -333,7 +333,7 @@ static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int loca
                     urlLength++;
                 assert(urlLength);
 
-                a = (locateOnly ? xl_urinMaybe(urlLength, url) : xl_urin(urlLength, url));
+                a = (locateOnly ? xl_urinIfAny(urlLength, url) : xl_urin(urlLength, url));
                 if (a == NIL || a == EVE) {
                     *urlEnd = NULL;
                     break;
@@ -370,7 +370,7 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
         Arrow b = _fromUrl(context, nextUrl, &nextUrl, locateOnly);
         if (!nextUrl) return b; // NIL or EVE
         
-        a = (locateOnly ? pairMaybe(a, b) : pair(a, b)); // TODO: document actual design
+        a = (locateOnly ? pairIfAny(a, b) : pair(a, b)); // TODO: document actual design
         if (a == EVE) return EVE;
         
         nextUrl = skeepSpacesAndOnePlus(nextUrl);
@@ -388,11 +388,11 @@ Arrow xls_url(Arrow s, char* aUrl) {
     return arrow;
 }
 
-Arrow xls_urlMaybe(Arrow s, char* aUrl) {
-    TRACEPRINTF("BEGIN xls_urlMaybe(%O, '%s')", s, aUrl);
+Arrow xls_urlIfAny(Arrow s, char* aUrl) {
+    TRACEPRINTF("BEGIN xls_urlIfAny(%O, '%s')", s, aUrl);
     Arrow locked = a(atom("locked"), s);
     Arrow arrow = fromUrl(locked, aUrl, 1);
-    TRACEPRINTF("END xls_urlMaybe(%O, '%s') = %O", s, aUrl, arrow);
+    TRACEPRINTF("END xls_urlIfAny(%O, '%s') = %O", s, aUrl, arrow);
     return arrow;
 }
 
