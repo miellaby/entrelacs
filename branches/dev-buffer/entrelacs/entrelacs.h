@@ -96,16 +96,16 @@ Arrow xl_isAtom(Arrow); ///< returns given arrow if an atom, else Eve.
 Arrow xl_isPair(Arrow); ///< returns given arrow if a pair, else Eve.
 
 /* Browsing */
-#define EOE ((XLEnum)0xFFFFFFF)
-typedef void* XLEnum; ///< enumerator type, as returned by xl_childrenOf.
-int    xl_enumNext(XLEnum); ///< iterate enumerator. Return 0 if exhausted. !0 otherwise.
-Arrow  xl_enumGet(XLEnum); ///< get current arrow from enumerator.
-void   xl_freeEnum(XLEnum); ///< free enumerator.
+#define EOE ((XLConnectivity)0xFFFFFFF)
+typedef void* XLConnectivity; ///< enumerator type, as returned by xl_connectivityOf.
+Arrow  xl_nextChild(XLConnectivity); ///< iterate enumerator. Return child arrow or EVE when over.
+int    xl_rootFlag(XLConnectivity); ///< return the root flag from connectivity info
+int    xl_stamp(XLConnectivity); ///< return a modification time stamp about connectivity
+void   xl_freeEnum(XLConnectivity); ///< free enumerator.
 
-XLEnum xl_childrenOf(Arrow); ///< return all known children of an arrow as an enumerator.
-                             ///< enumerator must be freed by xl_freeEnum
+XLConnectivity xl_connectivityOf(Arrow); ///< return all known children of an arrow as an enumerator.
+                                         ///< enumerator must be freed by xl_freeEnum
 Arrow  xl_childOf(Arrow); ///< return only one child or Eve if there's none. If several children, result is stochastisc( TBC?).
-
 typedef Arrow (*XLCallBack)(Arrow arrow, Arrow context); ///< generic callback type for arrow fetching
 void xl_childrenOfCB(Arrow, XLCallBack, Arrow context); ///< apply a given function to each children of an arrow
 

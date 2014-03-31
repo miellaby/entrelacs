@@ -51,7 +51,8 @@
 #define isPair(A) xl_isPair(A)
 #define equal(A,B) xl_equal(A, B)
 
-#define childrenOf(A) xl_childrenOf(A)
+#define connectivityOf(A) xl_connectivityOf(A)
+#define childrenOf(A) xl_connectivityOf(A)
 #define childrenOfCB(A, CB, C) xl_childrenOfCB(A, CB, C)
 
 #define operator(H, C) xl_operator(H, C)

@@ -1,18 +1,19 @@
 /* TODO List
-* buffer.h 
- * any new arrow: set spaceId = 0
- * one "resolves"  a buffered arrow (bind it to its server counterpart) on demand. That is,
-   * at first call of buffer_isRooted()
-   * or at first call of buffer_childrenOf()
- * detect the first call of buffer_childrenOf()
-   * call_xlChildrenOf()
-   * "pull" each child on buffer_next
-   * buffer_pull(serverId)
+ * better way to know it's a first call to bxl_childrenOf or bxl_isRooted
+  * proposal: a uint16 to store a revision number for mutable property
+  * at creation, rvision nulmber is zero
+  * when xl_isRooted or xl_connectivityOf is called, revision number is set
+  * new API xl_connectivyOf(Arrow, &rooted, &enum, &stamp)
+ * at first call of bxl_childrenOf()
+   * resolve the buffer arrow
+   * if bound to a server arrow, call_xlChildrenOf()
+   * "pull" each child on bxl_next
+   * bxl_pull(serverId)
  * pull ends when new cell types : PLACEHOLDER; INCOMING_PLACEHOLDER; OUTGOING_...
  * Placeholders are created for every unknown pair pulled from space
    * typically when retrieving the spatial children list
    * or browsing the ancestors or retrieved arrows.
- * 1st call to buffer_children retrieve the server children list (xl_children)
+ * 1st call to bxl_children retrieve the server children list (xl_children)
    Subsequent calls compare the children list revision between buffer and server. 
    If different revisions, fetch again the server list.
    the children iterator not being atomic, one may have new children fetched before
@@ -20,36 +21,36 @@
  * when pulling a server children list, one call "pull(spaceId)" for each retrieved arrow 
  * buffer can be reserved/freed as a whole
  * buffer is zeroed after usage.
- * buffer_sync: ~~resolve + fetch~~ reset server root flag and children list for one arrow/every arrow =~ empty cache / force cache refresh
+ * bxl_sync: ~~resolve + fetch~~ reset server root flag and children list for one arrow/every arrow =~ empty cache / force cache refresh
  * blob in separate directories (/var/tmp)
  * blob are lazy loaded!!!!!!!
- * space children retrieval algorithm if based on a buffer_pull() fonction
+ * space children retrieval algorithm if based on a bxl_pull() fonction
  * pulling = loading a space arrow known by its spaceId into the buffer
- * buffer_pull(spaceId) =
-   * read hash=xl_hashOf(spaceId)
-   * look for hash-indexed arrows in the buffer bank
-   * if the hash matches to local unresolved arrows,
-   * resolve these local arrow(s) first,
-   * so to compare the spaceId and avoid duping with local copies,
-   * if no local copy then eventually retrieve the pulled arrow definition
-   * if the arrow is a pair,
-     * create a placeholder containing a spaceId as one of its ends.
-     * Outgoing placeholders got buffer Id for tail and space Id for heads 
-     * Incoming placeholders got buffer Id for heads, space Id for tails
-   * if the arrow is a small/tag atom, retrieve its full definition
-   * if the space arrow is a blob, only retrieve its footprint,
-   * raw data is pulled on buffer on demand
-   * buffer_tailOf (resp. buffer_headOf) will convert a placeholder into a regular pair
-      * if cell.arrow.type == OUTGOING_PLACEHOLDER || ...PLACEHOLDER
-      * cell.arrow.tailId  = buffer_pull(cell.arrow.tailId)
-      * if ...PLACEHOLDER { cell.arrow.headId = .... }
-      * cell.arrow.type = PAIR
-   * when assimlating a buffered pair, one probes for an existing singleton as usual,
-   * but ...
-     * if the buffered pair spaceId is not nil (happens if one end is nil)
-     * and if one finds a checksum-matching placeholder pair while probing,
-     * then one resolves the bufferer pair (call spaceId = xl_pair(buffer_resolve(tail), buffer_resolve(head))
-     * if both spaceId match, its a probing hit 
+ * bxl_pull(spaceId) =
+   * OK read hash=xl_hashOf(spaceId)
+   * OK look for hash-indexed arrows in the buffer bank
+   * OK if the hash matches to local unresolved arrows,
+   * OK resolve these local arrow(s) first,
+   * OK so to compare the spaceId and avoid duping with local copies,
+   * OK if no local copy then eventually retrieve the pulled arrow definition
+   * OK if the arrow is a small/tag atom, retrieve its full definition
+   * NOK if the space arrow is a blob, only retrieve its footprint, <==== ! how?
+   * NOK raw data is pulled on buffer on demand
+   * OK if the arrow is a pair,
+     * OK create a placeholder containing spaceId as ends.
+     * OK Detect Outgoing placeholder: got buffer Id for tail and space Id for heads 
+     * OK Incoming placeholder: got buffer Id for heads, space Id for tails
+ * bxl_tailOf (resp. bxl_headOf) will convert a placeholder into a regular pair
+    * if cell.arrow.type == OUTGOING_PLACEHOLDER || ...PLACEHOLDER
+    * cell.arrow.tailId  = bxl_pull(cell.arrow.tailId)
+    * if ...PLACEHOLDER { cell.arrow.headId = .... }
+    * cell.arrow.type = PAIR
+ * when assimlating a buffered pair, one probes for an existing singleton as usual,
+ * but ...
+   * if the buffered pair spaceId is not nil (case when one end is nil)
+   * and if one finds a checksum-matching placeholder pair while probing,
+   * then one resolves the bufferer pair (call spaceId = xl_pair(bxl_resolve(tail), bxl_resolve(head))
+   * if both spaceId match, its a probing hit 
 */
 #define _XOPEN_SOURCE 600
 #include <stdio.h>
@@ -91,9 +92,9 @@ static struct s_buffer_stats {
   int atom; //< atom creation counter
   int pair; //< pair cration counter
   int forget; //< forget op counter
-} buffer_stats_zero = {
+} bxl_stats_zero = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-}, buffer_stats = {
+}, bxl_stats = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
@@ -111,7 +112,7 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
 static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
-static int apiActivity = 0; // Activity counter; Incremented/Decremented by buffer_begin/buffer_over. Decremented when waiting for commit. Incremented again after.
+static int apiActivity = 0; // Activity counter; Incremented/Decremented by bxl_begin/bxl_over. Decremented when waiting for commit. Incremented again after.
 static int bufferGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC done
 
 
@@ -395,7 +396,7 @@ static Arrow resolve(BArrow a, int ifAny) {
       }
   } else {
     uint32_t lengthP;
-    char* p = buffer_memOf(a, &lengthP);
+    char* p = bxl_memOf(a, &lengthP);
     if (p) {
         spaceId = ifAny ? xl_atomnIfAny(lengthP, p) : xl_atomn(lengthP, p);
     } else {
@@ -750,7 +751,7 @@ static RamAddress jumpToNext(Cell* cell, RamAddress address, RamAddress offset) 
 }
 
 /** return Eve */
-BArrow buffer_Eve() {
+BArrow bxl_Eve() {
     return EVE;
 }
 
@@ -768,7 +769,7 @@ BArrow payload(int cellType, int length, char* str, uint64_t payloadHash, int if
     unsigned i, jump;
     char c, *p;
 
-    buffer_stats.atom++;
+    bxl_stats.atom++;
 
     if (!length) {
         return EVE;
@@ -822,7 +823,7 @@ BArrow payload(int cellType, int length, char* str, uint64_t payloadHash, int if
           if (!l && sliceCell.full.type == CELLTYPE_LAST
              && sliceCell.last.size == i) {
             // exact match
-            buffer_stats.found++;
+            bxl_stats.found++;
             return probeAddress; // found arrow
           } // match
         } // if candidate
@@ -841,8 +842,8 @@ BArrow payload(int cellType, int length, char* str, uint64_t payloadHash, int if
     }
     // else ... one creates a corresponding arrow right now
 
-    buffer_stats.new++;
-    buffer_stats.atom++;
+    bxl_stats.new++;
+    bxl_stats.atom++;
 
     if (firstFreeAddress == EVE) {
         Cell probed;
@@ -881,7 +882,7 @@ BArrow payload(int cellType, int length, char* str, uint64_t payloadHash, int if
     newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = cellType;
-    newCell.arrow.dr = buffer_stats.new & 0xFFu;
+    newCell.arrow.dr = bxl_stats.new & 0xFFu;
 
     hChain = hashChain(&newCell) % PRIM1;
     if (!hChain) hChain = 1; // offset can't be 0
@@ -1076,7 +1077,7 @@ uint32_t hashOf(BArrow a) {
     }
 }
 
-uint32_t buffer_hashOf(BArrow a) {
+uint32_t bxl_hashOf(BArrow a) {
     LOCK();
     uint32_t cs = hashOf(a);
     return LOCK_OUT(cs);
@@ -1124,7 +1125,7 @@ static BArrow small(int length, char* str, int ifExist) {
     buffer[2] = buffer[2] ^ buffer[6] ^ buffer[10];
     buffer[3] = buffer[3] ^ buffer[7] ^ buffer[11];
 
-    buffer_stats.get++;
+    bxl_stats.get++;
 
     // Compute hashs
     hash = uint_buffer[0];
@@ -1150,7 +1151,7 @@ static BArrow small(int length, char* str, int ifExist) {
 
         } else if (probed.full.type == CELLTYPE_SMALL
                 && 0 == memcmp(probed.full.data, buffer, 12)) {
-            buffer_stats.found++;
+            bxl_stats.found++;
             return probeAddress; // OK: arrow found!
         }
         // Not the singleton
@@ -1166,8 +1167,8 @@ static BArrow small(int length, char* str, int ifExist) {
     if (ifExist) // one only want to test for singleton existence in the arrows buffer
         return EVE; // Eve means not found
 
-    buffer_stats.new++;
-    buffer_stats.pair++;
+    bxl_stats.new++;
+    bxl_stats.pair++;
 
     if (firstFreeAddress == EVE) {
         Cell probed;
@@ -1191,10 +1192,11 @@ static BArrow small(int length, char* str, int ifExist) {
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
     memcpy(&newCell, buffer, 12);
+    newCell.arrow.spaceId = 0;
     newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_SMALL;
-    newCell.arrow.dr = buffer_stats.new & 0xFFu;
+    newCell.arrow.dr = bxl_stats.new & 0xFFu;
     memcpy(newCell.full.data, buffer, 12);
     ram_set(newArrow, (RamCell *)&newCell);
     ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
@@ -1240,7 +1242,7 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
  
      // FIXME : Load both ends cells, check validity and don't use hashOf/serverIdOf
 
-    buffer_stats.get++;
+    bxl_stats.get++;
 
     // Compute hashs
     hash = hashPair(hashOf(tail), hashOf(head));
@@ -1264,7 +1266,7 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
                 && probed.pair.tail == tail
                 && probed.pair.head == head
                 && probeAddress /* ADAM can't be put at EVE place! TODO: optimize */) {
-            buffer_stats.found++;
+            bxl_stats.found++;
             return probeAddress; // OK: arrow found!
         }
         // Not the singleton
@@ -1280,8 +1282,8 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
     if (ifExist) // one only want to test for singleton existence in the arrows buffer
         return EVE; // Eve means not found
 
-    buffer_stats.new++;
-    buffer_stats.pair++;
+    bxl_stats.new++;
+    bxl_stats.pair++;
 
     if (firstFreeAddress == EVE) {
         i = PROBE_LIMIT;
@@ -1315,7 +1317,7 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
     newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_PAIR;
-    newCell.arrow.dr = buffer_stats.new & 0xFFu;
+    newCell.arrow.dr = bxl_stats.new & 0xFFu;
     
     // buffer-local arrows necessarily produces buffer-local children
     if (serverIdOf(tail) == NIL || serverIdOf(head) == NIL)
@@ -1348,13 +1350,13 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
     return newArrow;
 }
 
-BArrow buffer_pair(BArrow tail, BArrow head) {
+BArrow bxl_pair(BArrow tail, BArrow head) {
     LOCK();
     BArrow a = pair(tail, head, 0);
     return LOCK_OUT(a);
 }
 
-BArrow buffer_pairIfAny(BArrow tail, BArrow head) {
+BArrow bxl_pairIfAny(BArrow tail, BArrow head) {
     LOCK();
     BArrow a= pair(tail, head, 1);
     return LOCK_OUT(a);
@@ -1387,7 +1389,7 @@ static BArrow blob(uint32_t size, char* data, int ifExist) {
     return payload(CELLTYPE_BLOB, signature_size, signature, hash, ifExist);
 }
 
-BArrow buffer_atom(char* str) {
+BArrow bxl_atom(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
     LOCK();
@@ -1401,7 +1403,7 @@ BArrow buffer_atom(char* str) {
     return LOCK_OUT(a);
 }
 
-BArrow buffer_atomIfAny(char* str) {
+BArrow bxl_atomIfAny(char* str) {
     uint32_t size;
     uint64_t hash = hashStringAndGetSize(str, &size);
     LOCK();
@@ -1415,7 +1417,7 @@ BArrow buffer_atomIfAny(char* str) {
     return LOCK_OUT(a);
 }
 
-BArrow buffer_atomn(uint32_t size, char* mem) {
+BArrow bxl_atomn(uint32_t size, char* mem) {
     BArrow a;
     LOCK();
     if (size == 0)
@@ -1430,7 +1432,7 @@ BArrow buffer_atomn(uint32_t size, char* mem) {
     return LOCK_OUT(a);
 }
 
-BArrow buffer_atomnIfAny(uint32_t size, char* mem) {
+BArrow bxl_atomnIfAny(uint32_t size, char* mem) {
     BArrow a;
     LOCK();
     if (size == 0)
@@ -1445,7 +1447,7 @@ BArrow buffer_atomnIfAny(uint32_t size, char* mem) {
     return LOCK_OUT(a);
 }
 
-BArrow buffer_headOf(BArrow a) {
+BArrow bxl_headOf(BArrow a) {
     if (a == EVE)
         return EVE;
     LOCK();
@@ -1462,7 +1464,7 @@ BArrow buffer_headOf(BArrow a) {
         return LOCK_OUT(cell.pair.head);
 }
 
-BArrow buffer_tailOf(BArrow a) {
+BArrow bxl_tailOf(BArrow a) {
     if (a == EVE)
         return EVE;
 
@@ -1576,7 +1578,7 @@ static char* payloadOf(BArrow a, uint32_t* lengthP) {
 
 /** return the content behind an atom
 */
-char* buffer_memOf(BArrow a, uint32_t* lengthP) {
+char* bxl_memOf(BArrow a, uint32_t* lengthP) {
     if (a == EVE) { // Eve has an empty payload
         return payloadOf(a, lengthP);
     }
@@ -1615,9 +1617,9 @@ char* buffer_memOf(BArrow a, uint32_t* lengthP) {
     return LOCK_OUT(payload);
 }
 
-char* buffer_strOf(BArrow a) {
+char* bxl_strOf(BArrow a) {
     uint32_t lengthP;
-    char* p = buffer_memOf(a, &lengthP);
+    char* p = bxl_memOf(a, &lengthP);
     return p;
 }
 
@@ -1703,7 +1705,7 @@ static char* toURI(BArrow a, uint32_t *l) { // TODO: could be rewritten with geo
         }
         case CELLTYPE_BLOB:
         { // return a BLOB digest
-            return buffer_digestOf(a, l);
+            return bxl_digestOf(a, l);
         }
         case CELLTYPE_SMALL:
         case CELLTYPE_TAG:
@@ -1711,7 +1713,7 @@ static char* toURI(BArrow a, uint32_t *l) { // TODO: could be rewritten with geo
 
             // get atom content
             uint32_t memLength, encodedDataLength;
-            char* mem = buffer_memOf(a, &memLength);
+            char* mem = bxl_memOf(a, &memLength);
             char *uri = malloc(3 * memLength + 1); // memory allocation for encoded content
             if (!uri) { // allocation failed
                free(mem);
@@ -1731,10 +1733,10 @@ static char* toURI(BArrow a, uint32_t *l) { // TODO: could be rewritten with geo
         case CELLTYPE_PAIR:
         { // concat tail and head identifiers into /tail+head style URI
             uint32_t l1, l2;
-            char *tailUri = toURI(buffer_tailOf(a), &l1);
+            char *tailUri = toURI(bxl_tailOf(a), &l1);
             if (tailUri == NULL) return NULL;
 
-            char *headUri = toURI(buffer_headOf(a), &l2);
+            char *headUri = toURI(bxl_headOf(a), &l2);
             if (headUri == NULL) {
                 free(tailUri);
                 return NULL;
@@ -1766,8 +1768,8 @@ static char* toURI(BArrow a, uint32_t *l) { // TODO: could be rewritten with geo
 #define DIGEST_HASH_SIZE 8
 #define DIGEST_SIZE (2 + CRYPTO_SIZE + DIGEST_HASH_SIZE)
 
-char* buffer_digestOf(BArrow a, uint32_t *l) {
-    TRACEPRINTF("BEGIN buffer_digestOf(%06x)", a);
+char* bxl_digestOf(BArrow a, uint32_t *l) {
+    TRACEPRINTF("BEGIN bxl_digestOf(%06x)", a);
 
     if (a >= RAM_SIZE) { // Address anomaly
         return NULL;
@@ -1825,7 +1827,7 @@ char* buffer_digestOf(BArrow a, uint32_t *l) {
         case CELLTYPE_TAG:
         {
             uint32_t dataSize;
-            char* data = buffer_memOf(a, &dataSize);
+            char* data = bxl_memOf(a, &dataSize);
             crypto(dataSize, data, hashStr);
             free(data);
             break;
@@ -1870,14 +1872,14 @@ char* buffer_digestOf(BArrow a, uint32_t *l) {
     return LOCK_OUTSTR(digest);
 }
 
-char* buffer_uriOf(BArrow a, uint32_t *l) {
+char* bxl_uriOf(BArrow a, uint32_t *l) {
     LOCK();
     char *str = toURI(a, l);
     return LOCK_OUTSTR(str);
 }
 
-BArrow buffer_digestIfAny(char* digest) {
-    TRACEPRINTF("BEGIN buffer_digestIfAny(%.58s)", digest);
+BArrow bxl_digestIfAny(char* digest) {
+    TRACEPRINTF("BEGIN bxl_digestIfAny(%.58s)", digest);
 
     // read the hash at the digest beginning
     int i = 2; // jump over '$H' string
@@ -1912,7 +1914,7 @@ BArrow buffer_digestIfAny(char* digest) {
             && probed.arrow.hash == hash) { // found candidate
 
             // get its digest
-            char* otherDigest = buffer_digestOf(probeAddress, NULL);
+            char* otherDigest = bxl_digestOf(probeAddress, NULL);
             if (!strcmp(otherDigest, digest)) { // both digest match
                 free(otherDigest);
                 return LOCK_OUT(probeAddress); // hit! arrow found!
@@ -1968,7 +1970,7 @@ static BArrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, 
                     break;
                 }
 
-                a = buffer_digestIfAny(uri);
+                a = bxl_digestIfAny(uri);
                 
                 if (a == NIL) // Non assimilated blob
                     uriLength = NAN;
@@ -2106,31 +2108,31 @@ static BArrow uri(uint32_t size, char *uri, int ifExist) { // TODO: document act
     return a;
 }
 
-BArrow buffer_uri(char* aUri) {
+BArrow bxl_uri(char* aUri) {
     LOCK();
     BArrow a = uri(NAN, aUri, 0);
     return LOCK_OUT(a);
 }
 
-BArrow buffer_uriIfAny(char* aUri) {
+BArrow bxl_uriIfAny(char* aUri) {
     LOCK();
     BArrow a = uri(NAN, aUri, 1);
     return LOCK_OUT(a);
 }
 
-BArrow buffer_urin(uint32_t aSize, char* aUri) {
+BArrow bxl_urin(uint32_t aSize, char* aUri) {
     LOCK();
     BArrow a = uri(aSize, aUri, 0);
     return LOCK_OUT(a);
 }
 
-BArrow buffer_urinIfAny(uint32_t aSize, char* aUri) {
+BArrow bxl_urinIfAny(uint32_t aSize, char* aUri) {
     LOCK();
     BArrow a = uri(aSize, aUri, 1);
     return LOCK_OUT(a);
 }
 
-BArrow buffer_anonymous() {
+BArrow bxl_anonymous() {
     char anonymous[CRYPTO_SIZE + 1];
     BArrow a = NIL;
     do {
@@ -2139,10 +2141,10 @@ BArrow buffer_anonymous() {
           char random[80];
           snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
           crypto(80, random,  anonymous); // Access to unitialized data is deliberate/wanted
-          a = buffer_atomIfAny(anonymous);
+          a = bxl_atomIfAny(anonymous);
           assert(a != NIL);
       } while (a); // while not locally unique
-      a = buffer_atom(anonymous);
+      a = bxl_atom(anonymous);
     } while (resolve(a, 1) != NIL); // while not globally unique
 
     // what's brillant is that serverIdOf(a) == NIL so any descendant will be auto-local
@@ -2151,7 +2153,7 @@ BArrow buffer_anonymous() {
 }
 
 static BArrow unrootChild(BArrow child, BArrow context) {
-    buffer_unroot(child);
+    bxl_unroot(child);
     return EVE;
 }
 
@@ -2160,28 +2162,28 @@ static BArrow getHookBadge() {
     if (hookBadge != EVE) return hookBadge; // try to avoid the costly lock.
     LOCK();
     if (hookBadge != EVE) return LOCK_OUT(hookBadge);
-    hookBadge = buffer_atom("XLhO0K");
-    buffer_root(hookBadge); 
+    hookBadge = bxl_atom("XLhO0K");
+    bxl_root(hookBadge); 
     
     // prevent previous hooks to survive the reboot.
-    buffer_childrenOfCB(hookBadge, unrootChild, EVE);
+    bxl_childrenOfCB(hookBadge, unrootChild, EVE);
     
     return LOCK_OUT(hookBadge);
 }
 
-BArrow buffer_hook(void* hookp) {
+BArrow bxl_hook(void* hookp) {
   char hooks[64]; 
   snprintf(hooks, 64, "%p", hookp);
   // Note: hook must be bottom-rooted to be valid
-  BArrow hook = buffer_root(buffer_pair(getHookBadge(), buffer_atom(hooks)));
+  BArrow hook = bxl_root(bxl_pair(getHookBadge(), bxl_atom(hooks)));
   return hook;
 }
 
-void* buffer_pointerOf(BArrow a) { // Only bottom-rooted hook is accepted to limit hook forgery
-    if (!buffer_isPair(a) || buffer_tailOf(a) != getHookBadge() || !buffer_isRooted(a))
+void* bxl_pointerOf(BArrow a) { // Only bottom-rooted hook is accepted to limit hook forgery
+    if (!bxl_isPair(a) || bxl_tailOf(a) != getHookBadge() || !bxl_isRooted(a))
         return NULL;
     
-    char* hooks = buffer_strOf(buffer_headOf(a));
+    char* hooks = bxl_strOf(bxl_headOf(a));
     void* hookp;
     int n = sscanf(hooks, "%p", &hookp);
     if (!n) hookp = NULL;
@@ -2189,11 +2191,11 @@ void* buffer_pointerOf(BArrow a) { // Only bottom-rooted hook is accepted to lim
     return hookp;
 }
 
-int buffer_isEve(BArrow a) {
+int bxl_isEve(BArrow a) {
     return (a == EVE);
 }
 
-BArrow buffer_isPair(BArrow a) {
+BArrow bxl_isPair(BArrow a) {
     if (a == EVE) {
       return EVE; 
     }
@@ -2214,7 +2216,7 @@ BArrow buffer_isPair(BArrow a) {
     return (cell.full.type == CELLTYPE_PAIR ? a : EVE);
 }
 
-BArrow buffer_isAtom(BArrow a) {
+BArrow bxl_isAtom(BArrow a) {
     if (a == EVE) {
       return EVE; 
     }
@@ -2235,7 +2237,7 @@ BArrow buffer_isAtom(BArrow a) {
     return (cell.full.type == CELLTYPE_PAIR ? EVE : a);
 }
 
-enum e_xlType buffer_typeOf(BArrow a) {
+enum e_xlType bxl_typeOf(BArrow a) {
     if (a == EVE) {
       return XL_EVE; 
     }
@@ -2284,7 +2286,7 @@ enum e_xlType buffer_typeOf(BArrow a) {
 static void connect(BArrow a, BArrow child, int childWeakness, int outgoing) {
     TRACEPRINTF("connect child=%06x to a=%06x weakness=%1x outgoing=%1x", child, a, childWeakness, outgoing);
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
-    buffer_stats.connect++;
+    bxl_stats.connect++;
     
     // get the cell at a
     Cell cell;
@@ -2487,7 +2489,7 @@ static void connect(BArrow a, BArrow child, int childWeakness, int outgoing) {
  */
 static void disconnect(BArrow a, BArrow child, int weakness, int outgoing) {
     TRACEPRINTF("disconnect child=%06x from a=%06x weakness=%1x outgoing=%1x", child, a, weakness, outgoing);
-    buffer_stats.disconnect++;
+    bxl_stats.disconnect++;
     if (a == EVE) return; // One doesn't store Eve connectivity.
 
     // get parent arrow definition
@@ -2639,8 +2641,8 @@ static void disconnect(BArrow a, BArrow child, int weakness, int outgoing) {
 /** Get children
 *
 */
-void buffer_childrenOfCB(BArrow a, XLCallBack cb, BArrow context) {
-    TRACEPRINTF("buffer_childrenOf a=%06x", a);
+void bxl_childrenOfCB(BArrow a, XLCallBack cb, BArrow context) {
+    TRACEPRINTF("bxl_childrenOf a=%06x", a);
 
     if (a == EVE) {
         return; // Eve connectivity not traced
@@ -2728,8 +2730,10 @@ void buffer_childrenOfCB(BArrow a, XLCallBack cb, BArrow context) {
 }
 
 typedef struct iterator_s {
+    XLConnectivity spaceConnectivity;
     Cell     currentCell;
     BArrow    parent;
+    Arrow     parentSpaceId;
     RamAddress  pos;
     BArrow    current;
     uint32_t hChild;
@@ -2737,7 +2741,7 @@ typedef struct iterator_s {
     int      type;
 } iterator_t;
 
-static int buffer_enumNextChildOf(XLEnum e) {
+static int connectivity_nextChild(BXLConnectivity e) {
     iterator_t *iteratorp = e;
 
     // iterate from current address stored in childrenOf iterator
@@ -2853,30 +2857,162 @@ static int buffer_enumNextChildOf(XLEnum e) {
     // FIXME what happens if terminator is removed while iterating
 }
 
-int buffer_enumNext(XLEnum e) {
+BArrow pull(Arrow spaceArrow, int* actuallyPulled) {
+  uint32_t hash = xl_hashOf(spaceArrow);
+  RamAddress hashAddress = hash % PRIM0 % RAM_SIZE;
+  RamAddress hashProbe = hash % PRIM1;
+  // Search for a buffered version of spaceArrow
+  RamAddress firstFreeAddress = EVE;
+  RamAddress probeAddress = hashAddress;
+  while (1) {
+    ram_get(probeAddress, (RamCell *)&probed);
+    ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+
+    if (probed.full.type == CELLTYPE_EMPTY) {
+        firstFreeAddress = probeAddress;
+
+    } else if (probed.full.type <= CELLTYPE_ARROWLIMIT
+              && probed.arrow.hash == hash) {
+      if (!probed.arrow.spaceId) {
+        Arrow actualSpaceId = resolve(cell.pair.tail, 1 /* ifAny */);
+        if (actualSpaceId == spaceId) {
+          // found!
+          if (actuallyPulled) *actuallyPulled = 0;
+          return probeAddress;
+        }
+      } else if (probed.arrow.spaceId == spaceId) {
+          // found!
+          if (actuallyPulled) *actuallyPulled = 0;
+          return probeAddress;
+      }
+    }
+    if (!probed.full.peeble) { // nothing further
+      break; // Miss
+    }
+    ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
+  }
+  if (actuallyPulled) *actuallyPulled = 1;
+  XLType spaceArrowType = xl_typeOf(spaceId);
+  if (spaceArrowType == XL_UNDEF) return NIL;
+  if (spaceArrowType == XL_EVE) return BXL_EVE;
+  if (spaceArrowType == XL_ATOM) {
+    uint32_t size;
+    char* buffer = xl_memOf(spaceId, &size);
+    Barrow pulled = bxl_atomn(size, buffer);
+    free(buffer);
+    return pulled;
+  }
+  // if spaceArrowType == XL_PAIR ...
+
+  // one creates a spaceHolder;
+  // find a free cell if not done yet
+  if (firstFreeAddress == EVE) {
+    Cell probed;
+    i = PROBE_LIMIT; // TODO correct everywhere : probe_limit should be counted from the default address
+    while (--i) {
+        ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
+        ram_get(probeAddress, (RamCell *)&probed);
+        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        if (probed.full.type == CELLTYPE_EMPTY) {
+            firstFreeAddress = probeAddress;
+            break;
+        }
+    }
+    assert(i);
+  }
+  Arrow head = xl_headOf(spaceId);
+  Arrow tail = xl_tailOf(spaceId);
+
+  // read the free cell
+  RamAddress newArrow = firstFreeAddress;
+  Cell newCell;
+  ram_get(newArrow, (RamCell *)&newCell);
+  ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
+
+  // write a placeholder
+  newCell.full.type = CELLTYPE_PLACEHOLDER;
+  newCell.arrow.spaceId = spaceId;
+  newCell.pair.tail = tail;
+  newCell.pair.head = head;
+  newCell.arrow.hash = hash;
+  newCell.arrow.mutables = 0;
+  newCell.arrow.child0 = 0;
+  newCell.arrow.dr = bxl_stats.new & 0xFFu;
+    
+  ram_set(newArrow, (RamCell *)&newCell);
+  ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
+
+  /* Now incremeting "peeble" counters in the probing path up to the new singleton
+   */
+  probeAddress = hashAddress;
+  hashProbe = hash % PRIM1; // reset hashProbe to default
+  if (!hashProbe) hashProbe = 1; // offset can't be 0
+
+  while (probeAddress != newArrow) {
+      ram_get(probeAddress, (RamCell *)&probed);
+      ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+      if (probed.full.peeble != PEEBLE_MAX)
+        probed.full.peeble++;
+      
+      ram_set(probeAddress, (RamCell *)&probed);
+      ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
+      ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
+  }
+
+  // record new arrow as loose arrow
+  looseLogAdd(newArrow);
+  return newArrow;
+}
+
+int bxl_nextChild(BXLConnectivity e) {
     assert(e);
     iterator_t *iteratorp = e;
     assert(iteratorp->type == 0);
     if (iteratorp->type == 0) {
-        return buffer_enumNextChildOf(e);
+        if (connectivity_nextChild(e)) {
+           return iteratorp->current;
+        } else if (iteratorp->spaceConnectivity) {
+          Arrow spaceChild = xl_nextChild(iteratorp->spaceConnectivity);
+          BArrow pulled;
+          int actuallyPulled;
+          while (spaceChild != EVE) {
+            pulled = pull(spaceChild, &actuallyPulled);
+            if (actuallyPulled) {
+              RamCell pulledCell;
+              ram_get(pulled, (RamCell *)&pulledCell);
+              ONDEBUG((SHOWCELL('R', pulled, &pulledCell)));
+              assert(pulledCell.arrow.type == CELLTYPE_PLACEHOLDER);
+              if (pulledCell.pair.head == iteratorp->parentSpaceId) {
+                pulledCell.arrow.type == CELLTYPE_INCOMING_PLACEHOLDER;
+                pulledCell.pair.head = iteratorp->parent;
+              }
+              if (pulledCell.pair.tail == iteratorp->parentSpaceId) {
+                pulledCell.arrow.type == CELLTYPE_PLACEHOLDER ?
+                  CELLTYPE_OUTGOING_PLACEHOLDER : CELLTYPE_PAIR;
+                pulledCell.pair.tail = iteratorp->parent;
+              }
+              ram_set(pulled, (RamCell *)&pulledCell);
+              ONDEBUG((SHOWCELL('W', pulled, &pulledCell)));
+              break;
+            } 
+
+            // already known locally, so keep on looking
+            spaceChild = xl_nextChild(iteratorp->spaceConnectivity);
+          }
+          return spaceChild != EVE ? pulled : EVE;
+        } else {
+          return EVE;   
+        }
     }
+    return NIL;
 }
 
-BArrow buffer_enumGet(XLEnum e) {
-    assert(e);
-    iterator_t *iteratorp = e;
-    assert(iteratorp->type == 0);
-    if (iteratorp->type == 0) {
-        return iteratorp->current;
-    }
-}
-
-void buffer_freeEnum(XLEnum e) {
+void bxl_freeEnum(BXLConnectivity e) {
     free(e);
 }
 
-XLEnum buffer_childrenOf(BArrow a) {
-    TRACEPRINTF("buffer_childrenOf a=%06x", a);
+BXLConnectivity bxl_connectivityOf(BArrow a) {
+    TRACEPRINTF("bxl_connectivityOf a=%06x", a);
 
     if (a == EVE) {
         return NULL; // Eve connectivity not traced
@@ -2901,20 +3037,26 @@ XLEnum buffer_childrenOf(BArrow a) {
     iteratorp->type = 0; // iterator type = childrenOf
     iteratorp->hChild = hChild; // hChild
     iteratorp->parent = a; // parent arrow
+    iteratorp->rooted = (cell.arrow.RWWnCn & FLAGS_ROOTED) ? 1 : 0;
+    iteratorp->stamp = (((cell.arrow.child0 << 8) ^ cell.arrow.RWWnCn) << 8) | cell.arrow.cr;
     iteratorp->current = EVE; // current child
     iteratorp->pos = EVE; // current cell holding child back-ref
     iteratorp->iSlot = 0; // position of child back-ref in cell : 0..5
+    iteratorp->parentSpaceId = bxl_resolve(a, ifAny);
+    iteratorp->spaceConnectivity = iteratorp->parentSpaceId && iteratorp->parentSpaceId != NIL ?
+       xl_connectivityOf(spaceId) : NULL;
+
     iteratorp->currentCell = cell; // user to detect change
     return iteratorp;
 }
 
-BArrow buffer_childOf(BArrow a) {
-    XLEnum e = buffer_childrenOf(a);
+BArrow bxl_childOf(BArrow a) {
+    BXLConnectivity e = bxl_connectivityOf(a);
     if (!e) return EVE;
     int n = 0;
     BArrow chosen = EVE;
-    while (buffer_enumNext(e)) {
-        BArrow child = buffer_enumGet(e);
+    while (bxl_enumNext(e)) {
+        BArrow child = bxl_enumGet(e);
         n++;
         if (n == 1 || rand() % n == 1) {
             chosen = child;
@@ -2924,8 +3066,8 @@ BArrow buffer_childOf(BArrow a) {
 }
 
 /** root an arrow */
-BArrow buffer_root(BArrow a) {
-    buffer_stats.root++;
+BArrow bxl_root(BArrow a) {
+    bxl_stats.root++;
     if (a == EVE) {
         return EVE; // no
     }
@@ -2974,8 +3116,8 @@ BArrow buffer_root(BArrow a) {
 }
 
 /** unroot a rooted arrow */
-BArrow buffer_unroot(BArrow a) {
-    buffer_stats.unroot++;
+BArrow bxl_unroot(BArrow a) {
+    bxl_stats.unroot++;
 
     if (a == EVE)
         return EVE; // no.
@@ -3025,7 +3167,7 @@ BArrow buffer_unroot(BArrow a) {
 }
 
 /** return the root status */
-int buffer_isRooted(BArrow a) {
+int bxl_isRooted(BArrow a) {
     if (a == EVE) return EVE;
       
     LOCK();
@@ -3088,7 +3230,7 @@ int buffer_isRooted(BArrow a) {
 }
 
 /** check if an arrow is loose */
-int buffer_isLoose(BArrow a) {
+int bxl_isLoose(BArrow a) {
     if (a == EVE) return EVE;
 
     LOCK();
@@ -3110,7 +3252,7 @@ int buffer_isLoose(BArrow a) {
     return 1;
 }
 
-int buffer_equal(BArrow a, BArrow b) {
+int bxl_equal(BArrow a, BArrow b) {
     return (a == b);
 }
 
@@ -3123,7 +3265,7 @@ int buffer_equal(BArrow a, BArrow b) {
 /** forget a loose arrow, that is actually remove it from the main memory */
 static void forget(BArrow a) {
     TRACEPRINTF("forget loose arrow %06x", a);
-    buffer_stats.forget++;
+    bxl_stats.forget++;
 
     Cell cell;
     ram_get(a, (RamCell *)&cell);
@@ -3197,7 +3339,7 @@ static void forget(BArrow a) {
 
 }
 
-void buffer_begin() {
+void bxl_begin() {
     LOCK();
     ACTIVITY_BEGIN();
     LOCK_END();
@@ -3206,20 +3348,20 @@ void buffer_begin() {
 /** type an arrow as a "state" arrow.
  *  TODO: is it necessary?
  */
-BArrow buffer_state(BArrow a) {
+BArrow bxl_state(BArrow a) {
     static BArrow systemStateBadge = EVE;
     if (systemStateBadge == EVE) { // to avoid locking in most cases
             LOCK();
             if (systemStateBadge == EVE) {
-                systemStateBadge = buffer_atom("XLsTAT3");
-                buffer_root(systemStateBadge);
+                systemStateBadge = bxl_atom("XLsTAT3");
+                bxl_root(systemStateBadge);
 
                 // prevent previous session saved states to survive the reboot.
-                buffer_childrenOfCB(systemStateBadge, unrootChild, EVE);
+                bxl_childrenOfCB(systemStateBadge, unrootChild, EVE);
             }
             LOCK_END();
     }
-    return buffer_pair(systemStateBadge, a);
+    return bxl_pair(systemStateBadge, a);
 }
 
 
@@ -3229,24 +3371,24 @@ static void bufferGC() {
     for (unsigned i = looseLogSize; i > 0; i--) { // loose stack scanning
         BArrow a = looseLog[i - 1];
 
-        if (buffer_isLoose(a)) { // a loose arrow is removed NOW
+        if (bxl_isLoose(a)) { // a loose arrow is removed NOW
             forget(a);
         }
     }
 
     TRACEPRINTF("END bufferGC() looseLogSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
-        looseLogSize, buffer_stats.get, buffer_stats.root,
-        buffer_stats.unroot, buffer_stats.new, 
-        buffer_stats.pair, buffer_stats.atom, buffer_stats.found,
-        buffer_stats.connect, buffer_stats.disconnect, buffer_stats.forget);
-    buffer_stats = buffer_stats_zero;
+        looseLogSize, bxl_stats.get, bxl_stats.root,
+        bxl_stats.unroot, bxl_stats.new, 
+        bxl_stats.pair, bxl_stats.atom, bxl_stats.found,
+        bxl_stats.connect, bxl_stats.disconnect, bxl_stats.forget);
+    bxl_stats = bxl_stats_zero;
 
     zeroalloc((char**) &looseLog, &looseLogMax, &looseLogSize);
 
     bufferGCNeeded = 0;
 }
 
-void buffer_over() {
+void bxl_over() {
     bufferGCNeeded = 1;
 
     LOCK();
@@ -3261,8 +3403,8 @@ void buffer_over() {
     LOCK_END();
 }
 
-void buffer_commit() {
-    TRACEPRINTF("buffer_commit (looseLogSize = %d)", looseLogSize);
+void bxl_commit() {
+    TRACEPRINTF("bxl_commit (looseLogSize = %d)", looseLogSize);
     bufferGCNeeded = 1;
     
     LOCK();
@@ -3283,18 +3425,18 @@ void buffer_commit() {
     
 }
 
-/** buffer_yield */
-void buffer_yield(BArrow a) {
+/** bxl_yield */
+void bxl_yield(BArrow a) {
     BArrow stateBArrow = EVE;
-    TRACEPRINTF("buffer_yield (looseLogSize = %d)", looseLogSize);
+    TRACEPRINTF("bxl_yield (looseLogSize = %d)", looseLogSize);
     if (a != EVE) {
-        stateArrow = buffer_state(a);
-        buffer_root(stateArrow);
+        stateArrow = bxl_state(a);
+        bxl_root(stateArrow);
     }
-    buffer_over();
-    buffer_begin();
+    bxl_over();
+    bxl_begin();
     if (stateArrow != EVE) {
-        buffer_unroot(stateArrow);
+        bxl_unroot(stateArrow);
     }
 }
 
@@ -3304,7 +3446,7 @@ static int printf_arrow_extension(FILE *stream,
         const void *const *args) {
     static const char* nilFakeURI = "(NIL)";
     BArrow arrow = *((BArrow*) (args[0]));
-    char* uri = arrow != NIL ? buffer_uriOf(arrow, NULL) : (char *)nilFakeURI;
+    char* uri = arrow != NIL ? bxl_uriOf(arrow, NULL) : (char *)nilFakeURI;
     if (uri == NULL)
         uri = (char *)nilFakeURI;
     int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
@@ -3324,10 +3466,10 @@ static int printf_arrow_arginfo_size(const struct printf_info *info, size_t n,
 }
 
 /** initialize a buffered Entrelacs system */
-int buffer_init() {
-    static int buffer_init_done = 0;
-    if (buffer_init_done) return 0;
-    buffer_init_done = 1;
+int bxl_init() {
+    static int bxl_init_done = 0;
+    if (bxl_init_done) return 0;
+    bxl_init_done = 1;
   
 
     assert(sizeof(RamCell) == sizeof(Cell));
@@ -3352,7 +3494,7 @@ int buffer_init() {
     return rc;
 }
 
-void buffer_destroy() {
+void bxl_destroy() {
     // TODO complete
     free(looseLog);
     free(changeLog);
