@@ -2456,7 +2456,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 *
 */
 void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
-    TRACEPRINTF("xl_childrenOf a=%06x", a);
+    TRACEPRINTF("xl_connectivityOf a=%06x", a);
 
     if (a == EVE) {
         return; // Eve connectivity not traced
@@ -2551,9 +2551,21 @@ typedef struct iterator_s {
     uint32_t hChild;
     int      iSlot;
     int      type;
+    int      rooted;
+    int      stamp;
 } iterator_t;
 
-static int xl_enumNextChildOf(XLEnum e) {
+int xl_stamp(XLConnectivity e) {
+    iterator_t *iteratorp = e;
+    return iteratorp->stamp;
+}
+
+int xl_rootFlag(XLConnectivity e) {
+    iterator_t *iteratorp = e;
+    return iteratorp->rooted;
+}
+
+static int connectivity_nextChild(XLConnectivity e) {
     iterator_t *iteratorp = e;
 
     // iterate from current address stored in childrenOf iterator
@@ -2669,30 +2681,26 @@ static int xl_enumNextChildOf(XLEnum e) {
     // FIXME what happens if terminator is removed while iterating
 }
 
-int xl_enumNext(XLEnum e) {
+Arrow xl_nextChild(XLConnectivity e) {
     assert(e);
     iterator_t *iteratorp = e;
     assert(iteratorp->type == 0);
     if (iteratorp->type == 0) {
-        return xl_enumNextChildOf(e);
-    }
-}
-
-Arrow xl_enumGet(XLEnum e) {
-    assert(e);
-    iterator_t *iteratorp = e;
-    assert(iteratorp->type == 0);
-    if (iteratorp->type == 0) {
+      if (connectivity_nextChild(e)) {
         return iteratorp->current;
+      } else {
+        return EVE;
+      }
     }
+    return NIL;
 }
 
-void xl_freeEnum(XLEnum e) {
+void xl_freeEnum(XLConnectivity e) {
     free(e);
 }
 
-XLEnum xl_childrenOf(Arrow a) {
-    TRACEPRINTF("xl_childrenOf a=%06x", a);
+XLConnectivity xl_connectivityOf(Arrow a) {
+    TRACEPRINTF("xl_connectivityOf a=%06x", a);
 
     if (a == EVE) {
         return NULL; // Eve connectivity not traced
@@ -2717,20 +2725,21 @@ XLEnum xl_childrenOf(Arrow a) {
     iteratorp->type = 0; // iterator type = childrenOf
     iteratorp->hChild = hChild; // hChild
     iteratorp->parent = a; // parent arrow
+    iteratorp->rooted = (cell.arrow.RWWnCn & FLAGS_ROOTED) ? 1 : 0;
+    iteratorp->stamp = (((cell.arrow.child0 << 8) ^ cell.arrow.RWWnCn) << 8) | cell.arrow.cr;
     iteratorp->current = EVE; // current child
     iteratorp->pos = EVE; // current cell holding child back-ref
     iteratorp->iSlot = 0; // position of child back-ref in cell : 0..5
-    iteratorp->currentCell = cell; // user to detect change
+    iteratorp->currentCell = cell; // used to detect change
     return iteratorp;
 }
 
 Arrow xl_childOf(Arrow a) {
-    XLEnum e = xl_childrenOf(a);
+    XLConnectivity e = xl_connectivityOf(a);
     if (!e) return EVE;
     int n = 0;
     Arrow chosen = EVE;
-    while (xl_enumNext(e)) {
-        Arrow child = xl_enumGet(e);
+    for (Arrow child = xl_nextChild(e); child != EVE; child = xl_nextChild(e)) {
         n++;
         if (n == 1 || rand() % n == 1) {
             chosen = child;

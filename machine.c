@@ -649,7 +649,7 @@ Arrow headOfHook(Arrow CM, Arrow hookParameter) {
 
 Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     Arrow parent = xl_argInMachine(CM);
-    XLEnum e;
+    XLConnectivity e;
     if (hookParameter == EVE) {
         e = childrenOf(parent);
         return xl_reduceMachine(CM, operator(childrenReviewOfHook, xl_hook(e)));
@@ -659,24 +659,23 @@ Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     Arrow child;
     if (!e) {
         child = EVE;
-    } else if (xl_enumNext(e)) {
-        child = xl_enumGet(e);
     } else {
+      child = xl_nextChild(e);
+      if (child == EVE) {
         xl_freeEnum(e); // FIXME : only on forget
         xl_unroot(hookParameter); // should made it unreadable
-        child = EVE;
+      }
     }
     return xl_reduceMachine(CM, child);
 }
 
 Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
     Arrow parent = xl_argInMachine(CM);
-    XLEnum e = childrenOf(parent);
+    XLConnectivity e = connectivityOf(parent);
     if (!e) return xl_reduceMachine(CM, EVE);
 
     Arrow list = EVE;
-    while (xl_enumNext(e)) {
-        Arrow child = xl_enumGet(e);
+    for (Arrow child = xl_nextChild(e); child != EVE; child = xl_nextChild(e)) { 
         list = a(child, list);
     }
     xl_freeEnum(e);

@@ -105,11 +105,11 @@ Arrow xls_unroot(Arrow c, Arrow e) {
 void xls_reset(Arrow c) {
     if (c == EVE) return;
 
-    XLEnum childrenEnum = xl_childrenOf(c);
-    Arrow next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
+    XLConnectivity childrenEnum = xl_connectivityOf(c);
+    Arrow next = xl_nextChild(childrenEnum);
     while (next != EVE) {
         Arrow child = next;
-        next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
+        next = xl_nextChild(childrenEnum);
 
         if (tailOf(child) == c) { // Only outgoing arrow
             xls_reset(child);
@@ -184,16 +184,15 @@ static Arrow get(Arrow c, Arrow key) {
     Arrow keyContext = pairIfAny(c, key);
     if (keyContext != EVE) {
 
-        XLEnum enumChildren = xl_childrenOf(keyContext);
-        while (xl_enumNext(enumChildren)) {
-            Arrow keyValue = xl_enumGet(enumChildren);
+        XLConnectivity connectivity = xl_connectivityOf(keyContext);
+        for (Arrow keyValue = xl_nextChild(connectivity); keyValue != NIL; keyValue = xl_nextChild(connectivity)) {
             if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
             if (isRooted(keyValue)) {
                 value = headOf(keyValue);
                 break;
             }
         }
-        xl_freeEnum(enumChildren);
+        xl_freeEnum(connectivity);
     }
 
     if (value != NIL)
@@ -221,9 +220,9 @@ Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
     Arrow contextPair = xl_pairIfAny(c, a);
     if (contextPair == EVE) return list;
     
-    XLEnum enumChildren = xl_childrenOf(contextPair);
-    while (xl_enumNext(enumChildren)) {
-        Arrow pair = xl_enumGet(enumChildren);
+    XLConnectivity connectivity = xl_connectivityOf(contextPair);
+    for (Arrow pair = xl_nextChild(connectivity); pair != EVE;
+         pair = xl_nextChild(connectivity)) {
         int outgoing = (xl_headOf(pair) != contextPair);
         Arrow other = (outgoing ? xl_headOf(pair) : xl_tailOf(pair));
         if (xl_isRooted(pair) && xl_tailOf(other) == c) {
@@ -231,7 +230,7 @@ Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
             list = xl_pair(outgoing ? xl_pair(a, value) : xl_pair(value, a), list);
         }
     }
-    xl_freeEnum(enumChildren);
+    xl_freeEnum(connectivity);
 
     if (tailOf(c) == c)
         return list;

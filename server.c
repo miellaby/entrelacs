@@ -371,12 +371,12 @@ int main(void) {
       dputs("House Cleaning ...");
 
       Arrow sessionTag = xl_atom("session");
-      XLEnum e = xl_childrenOf(sessionTag);
+      XLConnectivity e = xl_connectivityOf(sessionTag);
 
-      Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+      Arrow next = e ? xl_nextChild(e) : EVE;
       while (next != EVE) {
           Arrow session = next;
-          next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+          next = xl_nextChild(e);
 
           if (xl_tailOf(session) != sessionTag)
               continue; // Not a /session+* arrow
@@ -394,16 +394,16 @@ int main(void) {
               // restart loop as deep close may remove in-enum arrow
               xl_freeEnum(e);
               sessionTag =  xl_atom("session");
-              e = xl_childrenOf(sessionTag);
-              next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+              e = xl_connectivityOf(sessionTag);
+              next = e ? xl_nextChild(e) : EVE;
           } else if (*expire_time < now) {
               dputs("session %O outdated.", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
               xl_freeEnum(e);
               sessionTag =  xl_atom("session");
-              e = xl_childrenOf(sessionTag);
-              next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+              e = xl_connectivityOf(sessionTag);
+              next = e ? xl_nextChild(e) : EVE;
           }
       
       }
