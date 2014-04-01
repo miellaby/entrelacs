@@ -531,7 +531,7 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
 
 /* Cell testing */
 #define CELL_CONTAINS_ARROW(CELL) ((CELL).full.type != CELLTYPE_EMPTY && (CELL).full.type <= CELLTYPE_ARROWLIMIT)
-#define CELL_CONTAINS_ATOM(CELL) ((CELL).full.type == CELLTYPE_BLOB || (CELL).full.type <= CELLTYPE_TAG)
+#define CELL_CONTAINS_ATOM(CELL) ((CELL).full.type == CELLTYPE_BLOB || (CELL).full.type == CELLTYPE_TAG)
 
 /** function used to go to the first cell in a chain
  */
