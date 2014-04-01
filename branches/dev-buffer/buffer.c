@@ -1,18 +1,17 @@
 /* TODO List
- * better way to know it's a first call to bxl_childrenOf or bxl_isRooted
+ * better way to know it's a first call to bxl_connectivityOf or bxl_isRooted
   * proposal: a uint16 to store a revision number for mutable property
   * at creation, rvision nulmber is zero
   * when xl_isRooted or xl_connectivityOf is called, revision number is set
   * new API xl_connectivyOf(Arrow, &rooted, &enum, &stamp)
- * at first call of bxl_childrenOf()
-   * resolve the buffer arrow
-   * if bound to a server arrow, call_xlChildrenOf()
-   * "pull" each child on bxl_next
-   * bxl_pull(serverId)
+ * OK at first call of bxl_childrenOf()
+   * OK resolve the buffer arrow
+   * OK if bound to a server arrow, call_xlChildrenOf()
+   * OK "pull" each child on bxl_next
  * pull ends when new cell types : PLACEHOLDER; INCOMING_PLACEHOLDER; OUTGOING_...
- * Placeholders are created for every unknown pair pulled from space
-   * typically when retrieving the spatial children list
-   * or browsing the ancestors or retrieved arrows.
+ * OK Placeholders are created for every unknown pair pulled from space
+   * OK typically when retrieving the spatial children list (connectivityOf)
+   * OK or browsing the ancestors or retrieved arrows (headOf/tailOf).
  * 1st call to bxl_children retrieve the server children list (xl_children)
    Subsequent calls compare the children list revision between buffer and server. 
    If different revisions, fetch again the server list.
@@ -40,11 +39,10 @@
      * OK create a placeholder containing spaceId as ends.
      * OK Detect Outgoing placeholder: got buffer Id for tail and space Id for heads 
      * OK Incoming placeholder: got buffer Id for heads, space Id for tails
- * bxl_tailOf (resp. bxl_headOf) will convert a placeholder into a regular pair
-    * if cell.arrow.type == OUTGOING_PLACEHOLDER || ...PLACEHOLDER
-    * cell.arrow.tailId  = bxl_pull(cell.arrow.tailId)
-    * if ...PLACEHOLDER { cell.arrow.headId = .... }
-    * cell.arrow.type = PAIR
+ * OK bxl_tailOf (resp. bxl_headOf) will convert a placeholder into a regular pair
+    * OK if cell.arrow.type == OUTGOING_PLACEHOLDER || ...PLACEHOLDER
+    * OK cell.arrow.tailId  = bxl_pull(cell.arrow.tailId)
+    * OK cell.arrow.type = PAIR/I/O_PLACEHOLDER
  * when assimlating a buffered pair, one probes for an existing singleton as usual,
  * but ...
    * if the buffered pair spaceId is not nil (case when one end is nil)
@@ -249,6 +247,7 @@ typedef union u_cell {
   *   | arrowID|  hash  |  tail  |  head  |  mutables |  Child0  | cr | dr |
   *   +--------+--------+--------+--------+-----------+----------+----+----+
   *        4       4        4        4         4            4       1    1
+  * TODO: New property: ssStamp;Server-side connectivity stamp
   */
   struct s_pair {
      uint32_t spaceId;
@@ -419,7 +418,7 @@ static int changeLogFlush() {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || (cell.full.type & 0xF)  > CELLTYPE_ARROWLIMIT)
       continue;
   
     if (cell.arrow.mutables & FLAGS_ROOTSETTED) {
@@ -482,7 +481,7 @@ static void showCell(int line, char operation, RamAddress address, Cell* cell) {
         return;
 
     }
-    if (type <= CELLTYPE_ARROWLIMIT) {
+    if ((type & 0xF) <= CELLTYPE_ARROWLIMIT) {
       char flags[] = {
           (cell->arrow.mutables & FLAGS_ROOTED ? 'R' : '.'),
           (cell->arrow.mutables & FLAGS_WEAK ? 'W' : '.'),
@@ -687,8 +686,8 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
          (NEW = (((ADDRESS) + (31 * (JUMP) + ((OFFSET) * (JUMP) * (1 + JUMP) / 2)) / 32) % (RAM_SIZE)))
 
 /* Cell testing */
-#define CELL_CONTAINS_ARROW(CELL) ((CELL).full.type != CELLTYPE_EMPTY && (CELL).full.type <= CELLTYPE_ARROWLIMIT)
-#define CELL_CONTAINS_ATOM(CELL) ((CELL).full.type == CELLTYPE_BLOB || (CELL).full.type <= CELLTYPE_TAG)
+#define CELL_CONTAINS_ARROW(CELL) ((CELL).full.type != CELLTYPE_EMPTY && ((CELL).full.type & 0xF) <= CELLTYPE_ARROWLIMIT)
+#define CELL_CONTAINS_ATOM(CELL) ((CELL).full.type == CELLTYPE_BLOB || (CELL).full.type == CELLTYPE_TAG)
 
 /** function used to go to the first cell in a chain
  */
@@ -1054,7 +1053,7 @@ Arrow serverIdOf(BArrow a) {
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
-       || cell.full.type > CELLTYPE_ARROWLIMIT)
+       || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
         return NIL; // Not an arrow
     return cell.arrow.spaceId; // current serverId
 }
@@ -1070,7 +1069,7 @@ uint32_t hashOf(BArrow a) {
       ram_get(a, (RamCell *)&cell);
       ONDEBUG((SHOWCELL('R', a, &cell)));
       if (cell.full.type == CELLTYPE_EMPTY
-         || cell.full.type > CELLTYPE_ARROWLIMIT)
+         || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
         return 0; // Not an arrow
       else
         return cell.arrow.hash; // hash
@@ -1236,6 +1235,7 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
     RamAddress hashAddress, hashProbe;
     RamAddress probeAddress, firstFreeAddress;
     int i;
+    Arrow spaceId = 0;
 
     if (tail == NIL || head == NIL)
         return NIL;
@@ -1259,18 +1259,37 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
         ram_get(probeAddress, (RamCell *)&probed);
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
     
-        if (probed.full.type == CELLTYPE_EMPTY)
+        if (probed.full.type == CELLTYPE_EMPTY) {
             firstFreeAddress = probeAddress;
-    
-        else if (probed.full.type == CELLTYPE_PAIR
+        } else if (probed.full.type == CELLTYPE_PAIR
                 && probed.pair.tail == tail
                 && probed.pair.head == head
                 && probeAddress /* ADAM can't be put at EVE place! TODO: optimize */) {
             bxl_stats.found++;
             return probeAddress; // OK: arrow found!
-        }
-        // Not the singleton
+        } else if (spaceId != NIL
+                && (probed.full.type == CELLTYPE_PLACEHOLDER
+                    || probed.full.type == CELLTYPE_INCOMING_PLACEHOLDER
+                       && probed.pair.head == head
+                    || probed.full.type == CELLTYPE_OUTGOING_PLACEHOLDER
+                       && probed.pair.head == tail)) {
+          if (!spaceId) {
+            Arrow t = resolve(tail, ifExist);
+            Arrow h = resolve(head, ifExist);
+            if (t != NIL && h != NIL) {
+              spaceId = ifAny ? xl_pairIfAny(t, h) : xl_pair(t, h);
+            } else {
+              spaceId = NIL;
+            }
+          }
 
+          if (spaceId != NIL && spaceId == probed.arrow.spaceId) {
+              bxl_stats.found++;
+              return probeAddress; // OK: arrow found!
+          }
+        }
+
+        // Not the singleton
         if (probed.full.peeble == 0) {
             break; // Probing over. It's a miss.
         }
@@ -1320,7 +1339,9 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
     newCell.arrow.dr = bxl_stats.new & 0xFFu;
     
     // buffer-local arrows necessarily produces buffer-local children
-    if (serverIdOf(tail) == NIL || serverIdOf(head) == NIL)
+    if (spaceId)
+      newCell.arrow.spaceId = spaceId;
+    else if (serverIdOf(tail) == NIL || serverIdOf(head) == NIL)
       newCell.arrow.spaceId = NIL;
     else
       newCell.arrow.spaceId = 0;
@@ -1454,14 +1475,26 @@ BArrow bxl_headOf(BArrow a) {
     Cell cell;
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
-    if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return LOCK_OUT(-1); // Invalid id
 
-    if (cell.full.type != CELLTYPE_PAIR)
+    if (cell.full.type == CELLTYPE_EMPTY
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT) {
+        return LOCK_OUT(-1); // Invalid id
+    } else if (cell.full.type == CELLTYPE_PLACEHOLDER
+       || cell.full.type == CELLTYPE_OUTGOING_PLACEHOLDER) {
+      Arrow spaceId = cell.pair.head;
+      BArrow pulled = pull(spaceId, NULL);
+      cell.arrow.type =
+        (cell.full.type == CELLTYPE_PLACEHOLDER ?
+            CELLTYPE_INCOMING_PLACEHOLDER : CELLTYPE_PAIR);
+      cell.pair.head = pulled;
+      ram_set(a, (RamCell *)&cell);
+      ONDEBUG((SHOWCELL('W', a, &cell)));
+      return LOCK_OUT(pulled);
+    } else if (cell.full.type != CELLTYPE_PAIR) {
         return LOCK_OUT(a); // for atom, head = self
-    else
+    } else {
         return LOCK_OUT(cell.pair.head);
+    }
 }
 
 BArrow bxl_tailOf(BArrow a) {
@@ -1472,14 +1505,26 @@ BArrow bxl_tailOf(BArrow a) {
     Cell cell;
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
-    if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return LOCK_OUT(-1); // Invalid id
 
-    if (cell.full.type != CELLTYPE_PAIR)
+    if (cell.full.type == CELLTYPE_EMPTY
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT) {
+        return LOCK_OUT(-1); // Invalid id
+    } else if (cell.full.type == CELLTYPE_PLACEHOLDER
+       || cell.full.type == CELLTYPE_INCOMING_PLACEHOLDER) {
+      Arrow spaceId = cell.pair.tail;
+      BArrow pulled = pull(spaceId, NULL);
+      cell.arrow.type =
+        (cell.full.type == CELLTYPE_PLACEHOLDER ?
+            CELLTYPE_OUTGOING_PLACEHOLDER : CELLTYPE_PAIR);
+      cell.pair.tail = pulled;
+      ram_set(a, (RamCell *)&cell);
+      ONDEBUG((SHOWCELL('W', a, &cell)));
+      return LOCK_OUT(pulled);
+    } else if (cell.full.type != CELLTYPE_PAIR) {
         return LOCK_OUT(a); // for atom, tail = self
-    else
+    } else {
         return LOCK_OUT(cell.pair.tail);
+    }
 }
 
 /** return the payload of an arrow (blob/tag/small), NULL on error */
@@ -1795,7 +1840,7 @@ char* bxl_digestOf(BArrow a, uint32_t *l) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
 
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT) {
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT) {
         // Address anomaly : not an arrow
         return LOCK_OUTSTR(NULL);
     }
@@ -1910,7 +1955,7 @@ BArrow bxl_digestIfAny(char* digest) {
         ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
 
         if (probed.full.type != CELLTYPE_EMPTY
-            && probed.full.type <= CELLTYPE_ARROWLIMIT
+            && (probed.full.type & 0xF) <= CELLTYPE_ARROWLIMIT
             && probed.arrow.hash == hash) { // found candidate
 
             // get its digest
@@ -2210,7 +2255,7 @@ BArrow bxl_isPair(BArrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
 
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
+    if (cell.full.type == CELLTYPE_EMPTY || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
         return NIL;
 
     return (cell.full.type == CELLTYPE_PAIR ? a : EVE);
@@ -2231,7 +2276,7 @@ BArrow bxl_isAtom(BArrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
 
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
+    if (cell.full.type == CELLTYPE_EMPTY || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
         return NIL;
 
     return (cell.full.type == CELLTYPE_PAIR ? EVE : a);
@@ -2252,7 +2297,7 @@ enum e_xlType bxl_typeOf(BArrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     LOCK_END();
 
-    if (cell.full.type > CELLTYPE_ARROWLIMIT)
+    if ((cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
         return NIL;
 
     static const enum e_xlType map[] = {
@@ -2292,7 +2337,7 @@ static void connect(BArrow a, BArrow child, int childWeakness, int outgoing) {
     Cell cell;
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
-    assert(cell.full.type != CELLTYPE_EMPTY && cell.full.type <= CELLTYPE_ARROWLIMIT);
+    assert(cell.full.type != CELLTYPE_EMPTY && (cell.full.type & 0xF) <= CELLTYPE_ARROWLIMIT);
   
     // is the parent arrow (@a) loose?
     int childrenCount = (int)(cell.arrow.mutables & FLAGS_CHILDRENMASK);
@@ -2497,7 +2542,7 @@ static void disconnect(BArrow a, BArrow child, int weakness, int outgoing) {
     ram_get(a, (RamCell *)&parent);
     ONDEBUG((SHOWCELL('R', a, &parent)));
     // check it's a valid arrow
-    assert(parent.full.type != CELLTYPE_EMPTY && parent.full.type <= CELLTYPE_ARROWLIMIT);
+    assert(parent.full.type != CELLTYPE_EMPTY && (parent.full.type & 0xF) <= CELLTYPE_ARROWLIMIT);
 
     // get counters
     int childrenCount = (int)(parent.arrow.mutables & FLAGS_CHILDRENMASK);
@@ -2656,7 +2701,7 @@ void bxl_childrenOfCB(BArrow a, XLCallBack cb, BArrow context) {
 
     // check arrow
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
       return; // invalid ID. TODO one might call cb with a
 
 
@@ -2871,7 +2916,7 @@ BArrow pull(Arrow spaceArrow, int* actuallyPulled) {
     if (probed.full.type == CELLTYPE_EMPTY) {
         firstFreeAddress = probeAddress;
 
-    } else if (probed.full.type <= CELLTYPE_ARROWLIMIT
+    } else if ((probed.full.type & 0xF) <= CELLTYPE_ARROWLIMIT
               && probed.arrow.hash == hash) {
       if (!probed.arrow.spaceId) {
         Arrow actualSpaceId = resolve(cell.pair.tail, 1 /* ifAny */);
@@ -3024,7 +3069,7 @@ BXLConnectivity bxl_connectivityOf(BArrow a) {
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
-      || cell.full.type > CELLTYPE_ARROWLIMIT)
+      || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
       return LOCK_OUT(NULL); // Invalid id
     LOCK_END();
     
@@ -3042,10 +3087,18 @@ BXLConnectivity bxl_connectivityOf(BArrow a) {
     iteratorp->current = EVE; // current child
     iteratorp->pos = EVE; // current cell holding child back-ref
     iteratorp->iSlot = 0; // position of child back-ref in cell : 0..5
-    iteratorp->parentSpaceId = bxl_resolve(a, ifAny);
-    iteratorp->spaceConnectivity = iteratorp->parentSpaceId && iteratorp->parentSpaceId != NIL ?
-       xl_connectivityOf(spaceId) : NULL;
+    iteratorp->parentSpaceId = bxl_resolve(a, 1 /* ifAny */);
 
+    iteratorp->spaceConnectivity = NULL;
+    if (iteratorp->parentSpaceId
+            && iteratorp->parentSpaceId != NIL) {
+      XLConnectivity con = xl_connectivityOf(spaceId);
+      if (con) {
+        int stamp = xl_getStamp(con);
+        cell.arrow.
+      }    iteratorp->spaceConnectivity = i ?
+        : NULL;
+    }
     iteratorp->currentCell = cell; // user to detect change
     return iteratorp;
 }
@@ -3077,7 +3130,7 @@ BArrow bxl_root(BArrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
 
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
       return LOCK_OUT(EVE);
 
     if (cell.arrow.mutables & FLAGS_ROOTED) { // already rooted
@@ -3129,7 +3182,7 @@ BArrow bxl_unroot(BArrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
       return LOCK_OUT(EVE);
     
     if (!(cell.arrow.mutables & FLAGS_ROOTED)) {
@@ -3177,7 +3230,7 @@ int bxl_isRooted(BArrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
       return LOCK_OUT(EVE);
     
     if (cell.arrow.spaceId == 0
@@ -3240,7 +3293,7 @@ int bxl_isLoose(BArrow a) {
     LOCK_END();
     
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || (cell.full.type & 0xF) > CELLTYPE_ARROWLIMIT)
       return 0;
 
     if (cell.arrow.mutables & FLAGS_ROOTED)
@@ -3271,7 +3324,7 @@ static void forget(BArrow a) {
     ram_get(a, (RamCell *)&cell);
     ONDEBUG((SHOWCELL('R', a, &cell)));
     assert(cell.full.type != CELLTYPE_EMPTY
-        || cell.full.type <= CELLTYPE_ARROWLIMIT);
+        && (cell.full.type & 0xF) <= CELLTYPE_ARROWLIMIT);
 
     uint32_t hash = cell.arrow.hash;
     RamAddress hashAddress; // base address
