@@ -38,5 +38,15 @@ int ram_init() {
   return 0;
 }
 
+/** reset
+  @return 0
+*/
+int ram_reset() {
+  memset(ramBank, sizeof(ramBank), 0);
+  return 0;
+}
+
+/** destroy
+*/
 int ram_destroy() {
 }

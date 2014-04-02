@@ -1,26 +1,28 @@
 /* TODO List
- * better way to know it's a first call to bxl_connectivityOf or bxl_isRooted
-  * proposal: a uint16 to store a revision number for mutable property
-  * at creation, rvision nulmber is zero
-  * when xl_isRooted or xl_connectivityOf is called, revision number is set
-  * new API xl_connectivyOf(Arrow, &rooted, &enum, &stamp)
+ * OK new API xl_connectivyOf(Arrow) in place of xl_childrenOf()
+  * OK xl_nextChild() to fetch children, xl_stamp to get a numeric tag à la HTTP eTag
+  * OK xl_stamp() value change when children list change
+  * OK also xl_rootFlag() can retrieve the root flag (stored in XLConnectivity)
+ * OK way to know one needs to synchronise buffer to space when retrieving arrow connectivity
+  * OK ssStamp : space-side stamp of connectivity, stored in every arrow definition
+  * OK at creation, set to zero
+  * OK when xl_connectivityOf is called, set to value returned by xl_stamp(XLConnectivity)
  * OK at first call of bxl_childrenOf()
    * OK resolve the buffer arrow
    * OK if bound to a server arrow, call_xlChildrenOf()
-   * OK "pull" each child on bxl_next
- * pull ends when new cell types : PLACEHOLDER; INCOMING_PLACEHOLDER; OUTGOING_...
+   * OK bxl_nextChild() first returns locally buffered arrows then "pulled" space arrows
+   * OK pull(xl_nextChild(spaceConnectivity)) to pull each child in the space list
+   * OK set "ssStamp" when space-side child fetching is over
+   * OK reminder: the children iterator isn't atomic, new children can be set while iterating.
+ * OK at next calls of bxl_childrenOf()
+   * OK check space-side stamp (by xl_connectivityOf then xl_stamp )
+   * OK compare with "ssStamp" in parent definition
+   * OK if unchanged, ignore space-side connectivity info
  * OK Placeholders are created for every unknown pair pulled from space
    * OK typically when retrieving the spatial children list (connectivityOf)
    * OK or browsing the ancestors or retrieved arrows (headOf/tailOf).
- * 1st call to bxl_children retrieve the server children list (xl_children)
-   Subsequent calls compare the children list revision between buffer and server. 
-   If different revisions, fetch again the server list.
-   the children iterator not being atomic, one may have new children fetched before
-   the iterator ended. It's important to store the children revision number before iterating
- * when pulling a server children list, one call "pull(spaceId)" for each retrieved arrow 
- * buffer can be reserved/freed as a whole
- * buffer is zeroed after usage.
- * bxl_sync: ~~resolve + fetch~~ reset server root flag and children list for one arrow/every arrow =~ empty cache / force cache refresh
+ * OK: buffer is cleaned as a whole with bxl_reset() after usage.
+ * bxl_sync: force children list refresh for one arrow
  * blob in separate directories (/var/tmp)
  * blob are lazy loaded!!!!!!!
  * space children retrieval algorithm if based on a bxl_pull() fonction
@@ -143,16 +145,16 @@ const BArrow Eve = EVE;
  */
 
 
-/**  Cell structure (28 bytes).
+/**  Cell structure (32 bytes).
  *
  *   +---------------------------------------+---+---+
  *   |                  data                 | T | P |
  *   +---------------------------------------+---+---+
- *                       26                    1   1
+ *                       30                    1   1
  *
- *      P: "Peeble" count aka "More" counter (8 bits)
+ *       P: "Peeble" count aka "More" counter (8 bits)
  *       T: Cell type ID (8 bits)
- *    Data: Data (26 bytes)
+ *    Data: Data (30 bytes)
  *
  *
  */
@@ -162,7 +164,7 @@ const BArrow Eve = EVE;
 typedef union u_cell {
   struct u_full {
 
-    char data[26];
+    char data[30];
     unsigned char peeble;
     unsigned char type;
   } full;
@@ -191,32 +193,34 @@ typedef union u_cell {
    * raw
   */
   struct s_uint {
-    uint32_t data[7];
+    uint32_t data[8];
+    utin16_t last;
   } uint;
 
   /*   T = 0: empty cell.
    *   +---------------------------------------------------+
    *   |                      junk                         |
    *   +---------------------------------------------------+
-   *                         26 bytes
+   *                         30 bytes
    */
 
   /** T = 1, 2, 3, 4: arrow definition.
-  *   +--------+--------+----------------------+-----------+----------+----+----+
-  *   | arrowID|  hash  | full or partial def  |  mutables |  Child0  | cr | dr |
-  *   +--------+--------+----------------------+-----------+----------+----+----+
-  *        4       4                8                4          4        1    1
+  *   +--------+--------+----------------------+-----------+----------+----------+----+----+
+  *   | arrowID|  hash  | full or partial def  |  mutables |  child0  | ssStamp  | cr | dr |
+  *   +--------+--------+----------------------+-----------+----------+----------+----+----+
+  *        4       4                8                4          4          4        1    1
   *   where mutables = R|W|C0d|wS|Wn|rS|Cn
   *
   *   R = root flag (1 bit)
   *   W = weak flag (1 bit)
   *   rS = root setted flag (1 bit)
   *   wS = weak setted flag (1 bit) 
-  *   C0d = child0 direction (1 bit)
+  *   child0 = child0 direction (1 bit)
   *   Wn = Weak children count (14 bits)
   *   Cn = Non-weak children count  (15 bits)
   *   
   *   child0 = 1st child of this arrow
+  *   ssStamp = Server-side connectivity stamp
   *   cr = children revision
   *   dr = definition revision
   */
@@ -226,6 +230,7 @@ typedef union u_cell {
      char  def[8];
      uint32_t mutables;
      uint32_t child0;
+     uint32_t ssStamp;
      unsigned char cr;
      unsigned char dr;
   } arrow;
@@ -243,10 +248,10 @@ typedef union u_cell {
 #define FLAGS_ROOTSETTED       0x00004000u
   /* T = 1: regular pair.
   *  T = 16, 17, 18: pair with one or both unloaded end(s), aka a placeholder
-  *   +--------+--------+--------+--------+-----------+----------+----+----+
-  *   | arrowID|  hash  |  tail  |  head  |  mutables |  Child0  | cr | dr |
-  *   +--------+--------+--------+--------+-----------+----------+----+----+
-  *        4       4        4        4         4            4       1    1
+  *   +--------+--------+--------+--------+-----------+----------+----------+----+----+
+  *   | arrowID|  hash  |  tail  |  head  |  mutables |  child0  | ssStamp  | cr | dr |
+  *   +--------+--------+--------+--------+-----------+----------+----------+----+----+
+  *        4       4        4        4         4            4         4        1    1
   * TODO: New property: ssStamp;Server-side connectivity stamp
   */
   struct s_pair {
@@ -256,15 +261,16 @@ typedef union u_cell {
      uint32_t head;
      uint32_t mutables;
      uint32_t child0;
+     uint32_t ssStamp;
      unsigned char cr;
      unsigned char dr;
   } pair;
 
   /* T = 2: small.
-  *   +--------+---+-------+-------------------+------------+----------+----+----+
-  *   | arrowID| s | hash3 |        data       |  mutables  |  Child0  | cr | dr |
-  *   +--------+---+-------+-------------------+------------+----------+----+----+
-  *        4     1    3               8      
+  *   +--------+---+-------+-------------------+------------+----------+----------+----+----+
+  *   | arrowID| s | hash3 |        data       |  mutables  |  child0  | ssStamp  | cr | dr |
+  *   +--------+---+-------+-------------------+------------+----------+----------+----+----+
+  *        4     1    3               8   
   *            <---hash--->
   *
   *   s : small size (0 < s <= 11)
@@ -278,15 +284,16 @@ typedef union u_cell {
     char data[8];
     uint32_t mutables;
     uint32_t child0;
+    uint32_t ssStamp;
     unsigned char cr;
     unsigned char dr;
   } small;
      
   /* T = 3: tag or 4: blob footprint.
-  *   +--------+--------+------------+----+-----------+----------+----+----+
-  *   | arrowID|  hash  |   slice0   | J0 |  mutables |  Child0  | cr | dr |
-  *   +--------+--------+------------+----+-----------+----------+----+----+
-  *        4       4          7        1                     
+  *   +--------+--------+------------+----+-----------+----------+----------+----+----+
+  *   | arrowID|  hash  |   slice0   | J0 |  mutables |  child0  | ssStamp  | cr | dr |
+  *   +--------+--------+------------+----+-----------+----------+----------+----+----+
+  *        4       4          7        1
   *   J = first slice jump, h-sequence multiplier (1 byte)
   */
   struct s_tagOrBlob {
@@ -296,6 +303,7 @@ typedef union u_cell {
     unsigned char jump0;
     uint32_t mutables;
     uint32_t child0;
+    uint32_t ssStamp;
     unsigned char cr;
     unsigned char dr;
   } tagOrBlob;
@@ -872,7 +880,7 @@ BArrow payload(int cellType, int length, char* str, uint64_t payloadHash, int if
     ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
 
 
-    /*   |  hash  | slice0  | J |  mutables |  Child0  | cr | dr |
+    /*   |  hash  | slice0  | J |  mutables |  child0  |  ssStamp | cr | dr |
     *       4          7        1                     
     */
     newCell.tagOrBlob.spaceId = 0;
@@ -880,6 +888,7 @@ BArrow payload(int cellType, int length, char* str, uint64_t payloadHash, int if
     memcpy(newCell.tagOrBlob.slice0, str, sizeof(newCell.tagOrBlob.slice0));
     newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
+    newCell.arrow.ssSTamp = 0;
     newCell.full.type = cellType;
     newCell.arrow.dr = bxl_stats.new & 0xFFu;
 
@@ -1194,6 +1203,7 @@ static BArrow small(int length, char* str, int ifExist) {
     newCell.arrow.spaceId = 0;
     newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
+    newCell.arrow.ssStamp = 0;
     newCell.full.type = CELLTYPE_SMALL;
     newCell.arrow.dr = bxl_stats.new & 0xFFu;
     memcpy(newCell.full.data, buffer, 12);
@@ -1335,6 +1345,7 @@ static BArrow pair(BArrow tail, BArrow head, int ifExist) {
     newCell.arrow.hash = hash;
     newCell.arrow.mutables = 0;
     newCell.arrow.child0 = 0;
+    newCell.arrow.sssTamp = 0;
     newCell.full.type = CELLTYPE_PAIR;
     newCell.arrow.dr = bxl_stats.new & 0xFFu;
     
@@ -2779,6 +2790,7 @@ typedef struct iterator_s {
     Cell     currentCell;
     BArrow    parent;
     Arrow     parentSpaceId;
+    uint32_t  ssStamp;
     RamAddress  pos;
     BArrow    current;
     uint32_t hChild;
@@ -3044,7 +3056,20 @@ int bxl_nextChild(BXLConnectivity e) {
             // already known locally, so keep on looking
             spaceChild = xl_nextChild(iteratorp->spaceConnectivity);
           }
-          return spaceChild != EVE ? pulled : EVE;
+          if (spaceChild == EVE) {
+            // at the end of the space-side connectivity browsing
+            // one updates the ssStamp property of the parent arrow
+            // to know that we've already pulled this arrow children
+            RamCell cell;
+            ram_get(iteratorp->parent, (RamCell *)&cell);
+            ONDEBUG((SHOWCELL('R', iteratorp->parent, &cell)));
+            cell.arrow.ssStamp = iteratop->ssStamp;
+            ram_set(iteratorp->parent, (RamCell *)&cell);
+            ONDEBUG((SHOWCELL('W', iteratorp->parent, &cell)));
+            return EVE;
+          } else {
+            return pulled;
+          }
         } else {
           return EVE;   
         }
@@ -3094,10 +3119,11 @@ BXLConnectivity bxl_connectivityOf(BArrow a) {
             && iteratorp->parentSpaceId != NIL) {
       XLConnectivity con = xl_connectivityOf(spaceId);
       if (con) {
-        int stamp = xl_getStamp(con);
-        cell.arrow.
-      }    iteratorp->spaceConnectivity = i ?
-        : NULL;
+        iteratorp->ssStamp = xl_getStamp(con);
+        if (iteratorp->ssStamp !=  cell.arrow.ssStamp) { // not up-to-date
+           iteratorp->spaceConnectivity = con;
+        }
+      }
     }
     iteratorp->currentCell = cell; // user to detect change
     return iteratorp;
@@ -3547,6 +3573,15 @@ int bxl_init() {
     return rc;
 }
 
+int bxl_reset() {
+  int rc = ram_reset();
+  if (rc < 0)
+    return rc;
+  zeroalloc((char **)&changeLog, &changeLogMax, &changeLogSize);
+  zeroalloc((char **)&looseLog, &looseLogMax, &looseLogSize);
+  return 0;
+}
+<
 void bxl_destroy() {
     // TODO complete
     free(looseLog);
