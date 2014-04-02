@@ -10,10 +10,10 @@
 #define RAMSIZE (0x100000)
 // 0x10000 cells
 
-/** RAM Cell. A 28 bytes long bucket
+/** RAM Cell. A 32 bytes long bucket
   */
 typedef struct s_ramCell {
-    char raw[28];
+    char raw[32];
 } RamCell;
 
 /** Cell address.
@@ -38,6 +38,10 @@ int ram_set(RamAddress, RamCell*);
  @return 0 if OK
  */
 int ram_get(RamAddress, RamCell*);
+
+/** "RAM" reset
+*/
+int ram_reset();
 
 /** "RAM" release
  */

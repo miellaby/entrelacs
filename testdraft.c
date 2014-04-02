@@ -1,5 +1,4 @@
 #include "entrelacs/entrelacsm.h"
-#include "mem.h" // for geoalloc
 #include <stdlib.h> // free & co
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
