@@ -14,7 +14,7 @@ LDFLAGS += -lpthread
 
 TARGETS = libentrelacs.so libentrelacs.a server
 # entrelacsd
-OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
+OBJECTS = log.o geoalloc.o mem0.o mem.o sha1.o space.o machine.o session.o
 TESTS = space uri script machine shell
 
 PERSISTENCE_FILE=/tmp/entrelacs_test.dat
