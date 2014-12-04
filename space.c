@@ -117,7 +117,7 @@ const Arrow Eve = EVE;
  *
  *      P: "Peeble" count aka "More" counter (8 bits)
  *       T: Cell type ID (8 bits)
- *    Data: Data (18 bytes)
+ *    Data: Data (22 bytes)
  *
  *
  */
@@ -216,9 +216,9 @@ typedef union u_cell {
   } pair;
 
   /* T = 2: small.
-  *   +---+-------+-------------------+------------+----------+----+----+
-  *   | s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
-  *   +---+-------+-------------------+------------+----------+----+----+
+  *   +---+-------+-------------------+-----------+----------+----+----+
+  *   | s | hash3 |        data       | RWC0dWnCn |  Child0  | cr | dr |
+  *   +---+-------+-------------------+-----------+----------+----+----+
   *     1    3               8      
   *   <---hash--->
   *
@@ -238,7 +238,7 @@ typedef union u_cell {
      
   /* T = 3: tag or 4: blob footprint.
   *   +--------+------------+----+-----------+----------+----+----+
-  *   |  hash  |   slice0   | J0 | R.W.Wn.Cn |  Child0  | cr | dr |
+  *   |  hash  |   slice0   | J0 | RWC0dWnCn |  Child0  | cr | dr |
   *   +--------+------------+----+-----------+----------+----+----+
   *       4          7        1                     
   *   J = first slice jump, h-sequence multiplier (1 byte)
@@ -292,9 +292,9 @@ typedef union u_cell {
     char junk[14];
   } reattachment;
 
-  /*   T = 8: children with same hash
+  /*   T = 8: children cell
    *   +------+------+------+------+------+---+
-   *   |  C4  |  C3  |  C2  |  C1  |  C0  | td|
+   *   |  C4  |  C3  |  C2  |  C1  |  C0  |td |
    *   +------+------+------+------+------+---+
    *       4     4      4      4       4    2
    *   Ci : Child or list terminator
@@ -467,9 +467,7 @@ static void looseLogRemove(Address a) {
  *     hProbe = hashArrow(tail, head) % PRIM1 for a regular pair
  * * hashChain: offset to separate chained cells
  *       chained data slices (and tuple ends) are separated by JUMP * h3 cells
- * * hashChild : offset to separate children cells
- *       first child in parent children list is at @parent + cell.child0 * hChild
- *       chained children cells are separated by JUMP * hChild cells
+ * * hashChild : offset to probe children cells
  */
 
 /* hash function to get H1 from a regular pair definition */
