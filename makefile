@@ -9,8 +9,7 @@
 # make entrelacsd
 # make run.testshell
 .PHONY: help server clean all clean.% test% run.% tests run start
-CPPFLAGS += -std=c99 -pthread
-LDFLAGS += -lpthread
+CPPFLAGS += -std=c99 -pthread -fPIC
 
 TARGETS = libentrelacs.so libentrelacs.a server
 # entrelacsd
@@ -36,7 +35,7 @@ $(TESTS:%=clean.test%):
 tests: all $(TESTS:%=test%)
 
 test%: test%.o libentrelacs.a
-	$(CC) $(LDFLAGS) $^ -o $(@)
+	$(CC) $(LDFLAGS) $^ -o $(@) -lpthread
 
 
 run: $(TESTS:%=run.%)
@@ -49,7 +48,7 @@ run.%: test%
 server: entrelacsd
 
 entrelacsd: mongoose.o session.o server.o libentrelacs.a
-	$(CC) -lpthread -ldl -o $(@) $^
+	$(CC) -B dynamic -pthread -o $(@) $^ -ldl
 
 draft: testdraft.o testdraft run.draft
 shell: testshell

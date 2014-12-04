@@ -30,7 +30,7 @@ int mem_get(Address, CellBody*);
  @param Cell Stamp Pointer
  @return 0 if OK
  */
-int mem_get_advanced(Address, CellBody*, uint16_t* stamp_p);
+int mem_get_advanced(Address, CellBody*, uint32_t* stamp_p);
 
 /** close current micro-transaction,
  by making all memory changes from last commit persistent
@@ -49,11 +49,11 @@ uint32_t mem_pokes();
 
 /** setup or reinitialize a geometrically growing RAM area
  */
-void zeroalloc(char** pp, size_t* maxp, size_t* sp);
+void zeroalloc(char** pp, uint32_t* maxp, uint32_t* sp);
 
 /** change content size inside a geometrically growing RAM area
  */
-void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s);
+void geoalloc(char** pp, uint32_t* maxp, uint32_t* sp, uint32_t us, uint32_t s);
 
 
 /** "mem" release
