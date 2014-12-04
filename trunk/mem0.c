@@ -29,7 +29,7 @@ char* mem0_dirname(char* path) {
       d = strdup(path);
   }
   assert(d);
-  size_t n = strlen(d);
+  uint32_t n = strlen(d);
   if (n == 1 && *d == '/') return d; // special "/" case
   char* p = strrchr(d, '/'); // find last '/' char
   if (p == d) // special case: "/something" in root
@@ -50,7 +50,7 @@ char* mem0_dirname(char* path) {
 }
 
 char* mem0_basename(char* path) {
-  size_t n = strlen(path);
+  uint32_t n = strlen(path);
   char* b = (char *)malloc(n + 1);
   assert(b);
   char* p = strrchr(path, '/'); // find last '/' char

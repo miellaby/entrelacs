@@ -68,9 +68,9 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define LOCK() pthread_mutex_lock(&apiMutex)
 #define LOCK_END() pthread_mutex_unlock(&apiMutex)
-#define LOCK_OUT(X) ((Arrow)pthread_mutex_unlock(&apiMutex), X)
-#define LOCK_OUT64(X) ((uint64_t)pthread_mutex_unlock(&apiMutex), X)
-#define LOCK_OUTSTR(X) ((char*)pthread_mutex_unlock(&apiMutex), X)
+#define LOCK_OUT(X) (pthread_mutex_unlock(&apiMutex), (Arrow)X)
+#define LOCK_OUT64(X) (pthread_mutex_unlock(&apiMutex), (uint64_t))
+#define LOCK_OUTSTR(X) (pthread_mutex_unlock(&apiMutex), (char*)X)
 
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
@@ -1228,7 +1228,7 @@ static Arrow blob(uint32_t size, char* data, int ifExist) {
     // A BLOB consists in:
     // - A signature, stored as a specialy typed tag in the arrows space.
     // - data stored separatly in some traditional filer outside the arrows space.
-    mem0_saveData(signature, size, data);
+    mem0_saveData(signature, (size_t)size, data);
     // TODO: remove data when cell at h is recycled.
 
     return payload(CELLTYPE_BLOB, signature_size, signature, hash, ifExist);
@@ -1438,28 +1438,31 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
 
     if (cell.full.type < CELLTYPE_SMALL
         || cell.full.type > CELLTYPE_BLOB) { // Not an atom (empty cell, pair, ...)
-        return (char *) LOCK_OUT(NULL);
+        return LOCK_OUTSTR(NULL);
     }
 
     
     uint32_t payloadLength;
     char* payload = payloadOf(a, &payloadLength);
     if (payload == NULL) { // Error
-        return (char *) LOCK_OUT(NULL);
+        return LOCK_OUTSTR(NULL);
     }
 
     if (cell.full.type == CELLTYPE_BLOB) {
         // The payload is a BLOB footprint
-        uint32_t blobLength;
-        char* blobData = mem0_loadData(payload, lengthP);
+        size_t blobLength;
+        char* blobData = mem0_loadData(payload, &blobLength);
+        if (blobLength > UINT32_MAX)
+          blobLength = UINT32_MAX;
+        *lengthP = blobLength;
         free(payload); // one doesn't return the payload, free...
         //* lengthP = ... set by mem0_loadData call
-        return LOCK_OUT(blobData);
+        return LOCK_OUTSTR(blobData);
     }
 
     // else: Tag or small case
     *lengthP = payloadLength;
-    return LOCK_OUT(payload);
+    return LOCK_OUTSTR(payload);
 }
 
 char* xl_strOf(Arrow a) {
@@ -1472,10 +1475,10 @@ char* xl_strOf(Arrow a) {
 // URL-encode input buffer into destination buffer.
 // 0-terminate the destination buffer.
 
-static void percent_encode(const char *src, size_t src_len, char *dst, size_t* dst_len_p) {
+static void percent_encode(const char *src, uint32_t src_len, char *dst, uint32_t* dst_len_p) {
     static const char *dont_escape = "_-,;~()";
     static const char *hex = "0123456789abcdef";
-    size_t i, j;
+    uint32_t i, j;
     for (i = j = 0; i < src_len; i++, src++, dst++, j++) {
         if (*src && (isalnum(*(const unsigned char *) src) ||
                 strchr(dont_escape, * (const unsigned char *) src) != NULL)) {
@@ -1497,8 +1500,8 @@ static void percent_encode(const char *src, size_t src_len, char *dst, size_t* d
 // URL-decode input buffer into destination buffer.
 // 0-terminate the destination buffer.
 
-static void percent_decode(const char *src, size_t src_len, char *dst, size_t* dst_len_p) {
-    size_t i, j;
+static void percent_decode(const char *src, uint32_t src_len, char *dst, uint32_t* dst_len_p) {
+    uint32_t i, j;
     int a, b;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
 
@@ -1775,7 +1778,7 @@ Arrow xl_digestMaybe(char* digest) {
         // shift probe
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
-    return LOCK_OUT(NIL); // Probing over. It's a miss
+    return LOCK_END(), NIL; // Probing over. It's a miss
 }
 
 static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, int ifExist) {
@@ -2729,7 +2732,7 @@ XLEnum xl_childrenOf(Arrow a) {
     ONDEBUG((SHOWCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
       || cell.full.type > CELLTYPE_ARROWLIMIT)
-      return LOCK_OUT(NULL); // Invalid id
+      return LOCK_END(), NULL; // Invalid id
     LOCK_END();
     
     // compute hashChild

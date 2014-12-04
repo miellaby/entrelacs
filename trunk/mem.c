@@ -45,8 +45,8 @@ static uint32_t reserveHead = 0; ///< cache reserve stack head
  This is a log of all changes made in cached memory. It grows geometrically (see geoalloc() function).
  */
 static Address* log = NULL; ///< dynamically allocated
-static size_t   logMax = 0; ///< heap allocated log size
-static size_t   logSize = 0; ///< significative log size
+static uint32_t   logMax = 0; ///< heap allocated log size
+static uint32_t   logSize = 0; ///< significative log size
 
 static struct s_mem_stats {
     int notFound;
@@ -72,7 +72,7 @@ static struct s_mem_stats {
 
 
 /** set-up or reset a tuple {allocated memory, allocated size, significative size} used by geoalloc() function */
-void zeroalloc(char** pp, size_t* maxp, size_t* sp) {
+void zeroalloc(char** pp, uint32_t* maxp, uint32_t* sp) {
   if (*maxp) {
     free(*pp);
     *maxp = 0;
@@ -82,7 +82,7 @@ void zeroalloc(char** pp, size_t* maxp, size_t* sp) {
 }
 
 /** geometricaly grow a heap allocated memory area by providing a tuple {allocated memory, allocated size, current significative size} and a new significative size */
-void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
+void geoalloc(char** pp, uint32_t* maxp, uint32_t* sp, uint32_t us, uint32_t s) {
   if (!*maxp)	{
       *maxp = (s < 128 ? 256 : s + 128 );
       *pp = (char *)malloc(*maxp * us);
@@ -97,7 +97,7 @@ void geoalloc(char** pp, size_t* maxp, size_t* sp, size_t us, size_t s) {
 }
 
 /** Get a cell */
-int mem_get_advanced(Address a, CellBody* pCellBody, uint16_t* stamp_p) {
+int mem_get_advanced(Address a, CellBody* pCellBody, uint32_t* stamp_p) {
   TRACEPRINTF("mem_get(%06x) begin", a);
   Address i;
   Address offset = a % MEMSIZE;
