@@ -34,6 +34,8 @@
 #define HOUSECLEANING_PERIOD 60
 #endif
 
+/** assimilate a file descriptor
+*/
 static Arrow fdatom(int fd) {
  Arrow a = EVE;
  if (fd < 0) return EVE;
@@ -55,6 +57,9 @@ static Arrow fdatom(int fd) {
 }
 
 static const char *HTTP_500 = "HTTP/1.0 500 Server Error\r\n\r\n";
+
+/** assimilate a PUT BODY in an arrow /Content-Typed/$mimeType+$body
+*/
 
 static Arrow assimilateUploadedData(struct mg_connection *conn) {
   const char* contentLengthHeader;

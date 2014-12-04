@@ -513,15 +513,6 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   dputs("    p == (t0:s t1:v) # a really trivial application");
   Arrow t0 = s;
   Arrow t1 = v;
-  if (ws_type == paddock && isTrivialOrBound(pair(s, t1), e, C, M, &w)) {
-      dputs("s is bound to a paddock and /s+t1 is bound to %O, one evals the expression", w);
-      M = a(w, a(evalOp, ek));
-      return M;
-  } else if (ws_type != paddock && isTrivialOrBound(pair(s, wv), e, C, M, &w)) {
-      dputs("/s+resolve(v) is bound to something and s is not bound to a paddock!");
-      M = a(a(escape, w), ek);
-      return M;
-  }
 
   if (ws_type == operator) { // System call case
       // resolve(t0) == (operator (hook context))
