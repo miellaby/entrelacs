@@ -59,14 +59,14 @@ static struct s_mem_stats {
     int setCount;
     int dontKnown;
 } mem_stats_zero = {
-    0, 0, 0, 0, 0, 0, 0, 0
+    0, 0, 0, 0, 0, 0, 0, 0, 0
 }, mem_stats = {
-    0, 0, 0, 0, 0, 0, 0, 0    
+    0, 0, 0, 0, 0, 0, 0, 0, 0 
 };
 
 
-#define MEM1_CHANGED 0x0001
-#define MEM1_EMPTY   0x0100
+#define MEM1_CHANGED ((uint16_t)0x0001)
+#define MEM1_EMPTY   ((uint16_t)0x0100)
 #define memIsEmpty(M) ((M)->flags == MEM1_EMPTY)
 #define memIsChanged(M) ((M)->flags & MEM1_CHANGED)
 
@@ -219,14 +219,17 @@ int mem_set(Address a, CellBody *pCellBody) {
     return 0;
 }
 
-static int _addressCmp(const void *a, const void *b) {
+static int _addressCmp(const void *pa, const void *pb) {
+  Address a = *(Address *)pa;
+  Address b = *(Address *)pb;
   return (a == b ? 0 : (a > b ? 1 : -1));
 }
 
 /** commit */
 int mem_commit() {
   TRACEPRINTF("BEGIN mem_commit() logSize=%d", logSize);
-  Address i;
+  int i;
+  Address a, offset;
 
   if (!logSize) {
       // nothing to commit
@@ -239,20 +242,26 @@ int mem_commit() {
 
   // TODO: optimize by commiting all reserved cells first then all logged cells found in mem
   for (i = 0; i < logSize; i++) {
-    Address a = log[i];
-    Address offset = a % MEMSIZE;
+    a = log[i];
+    offset = a % memSize;
     CellBody c;
-    if (mem_get(a, &c))
+    if (mem_get(a, &c)) {
+      ERRORPRINTF("END mem_commit() failed mem_get");
       return -1;
+    }
 
-    if (mem0_set(a, &c))
+    if (mem0_set(a, &c)) {
+      ERRORPRINTF("END mem_commit() failed mem0_set");
       return -1;
-
+    }
+    
     mem[offset].flags &= 0xFFFE; // reset changed flag for this offset (even if the changed cell is actually in reserve)
   }
 
-  if (mem0_commit())
+  if (mem0_commit()) {
+    ERRORPRINTF("END mem_commit() failed mem0_commit");
     return -1;
+  }
 
   if (mem_is_out_of_sync) { // Reset cache because out of sync
     for (i = 0; i < memSize; i++) {
