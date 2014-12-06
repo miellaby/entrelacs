@@ -1,6 +1,6 @@
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
-#include <assert.h>include
+#include <assert.h>
 #include "log.h"
 #include "entrelacs/entrelacs.h"
 #include "session.h"
