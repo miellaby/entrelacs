@@ -131,7 +131,6 @@ static int openJournal(int forWrite) {
     computeJournalFilePath();
     journalHandler = fopen(mem0_journalFilePath, forWrite == JOURNAL_WRITING ? "wb" : "rb");
     if (forWrite == JOURNAL_WRITING && !journalHandler) {
-        perror("");
         LOGPRINTF(LOG_FATAL, "Can't open journal for writing");
     }
     return (journalHandler == NULL);
@@ -288,7 +287,7 @@ int mem0_init() {
     if (F) {
       // set it up to its max size
       CellBody lastCell;
-      memset(&lastCell, 0, 20);
+      memset(&lastCell, 0, sizeof(CellBody));
       _mem0_set(SPACE_SIZE - 1, &lastCell);
       if (ftell(F) <= 0) {
          LOGPRINTF(LOG_FATAL, "mem0 not writable?");
@@ -380,7 +379,6 @@ void mem0_saveData(char *h, size_t size, char* data) {
   chdir(dirname);
   FILE* fd = fopen(filename, "w");
   if (!fd) {
-     perror("");
      LOGPRINTF(LOG_FATAL, "Can't open blob file '%s' in '%s'", filename, dirname);
   }
   chdir("..");
@@ -409,7 +407,6 @@ char* mem0_loadData(char* h, size_t* sizeP) {
   FILE* fd = fopen(filename, "r");
   chdir("..");
   if (!fd) {
-      perror("");
       LOGPRINTF(LOG_FATAL, "Can't open blob file '%s' in '%s'", filename, dirname);
       return NULL;
   }
