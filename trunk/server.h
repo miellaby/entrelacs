@@ -15,7 +15,7 @@ extern const char *server_options[];
 #ifdef SERVER_C
 const char *server_options[] = {
   "document_root", "html",
-  "listening_ports", "8008", // "8008,4433s" activates SSL redirection
+  "listening_ports", "8080", // "8008,4433s" activates SSL redirection
   //"ssl_certificate", "ssl_cert.pem",
   "num_threads", "5",
   NULL
