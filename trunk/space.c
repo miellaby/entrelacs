@@ -325,8 +325,12 @@ static void cell_getSmallPayload(Cell *cell, char* buffer) {
     memcpy(buffer, cell->small.data, bigSmall ? 8 : cell->small.s);
     if (bigSmall) {
         buffer[8] = cell->small.hash3[0] ^ cell->small.data[1] ^ cell->small.data[5];
-        buffer[9] = cell->small.hash3[1] ^ cell->small.data[2] ^ cell->small.data[6];
-        buffer[10] = cell->small.hash3[2] ^ cell->small.data[3] ^ cell->small.data[7];
+        if (cell->small.s > 9) {
+            buffer[9] = cell->small.hash3[1] ^ cell->small.data[2] ^ cell->small.data[6];
+            if (cell->small.s > 10) {
+                 buffer[10] = cell->small.hash3[2] ^ cell->small.data[3] ^ cell->small.data[7];
+            }
+        }
     }
 
 }
@@ -1456,7 +1460,7 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
           blobLength = UINT32_MAX;
         *lengthP = blobLength;
         free(payload); // one doesn't return the payload, free...
-        //* lengthP = ... set by mem0_loadData call
+        // *lengthP = ... set by mem0_loadData call
         return LOCK_OUTSTR(blobData);
     }
 
