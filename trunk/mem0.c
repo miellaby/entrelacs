@@ -478,6 +478,7 @@ int mem0_commit() {
     time_t current_mtime = 
       (stat(mem0_filePath, &st) == 0? st.st_mtime : 0);
     mem_is_out_of_sync = (last_mtime != current_mtime);
+    return 0;
 }
 
 void mem0_destroy() {
