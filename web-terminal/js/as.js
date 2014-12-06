@@ -68,7 +68,7 @@ Arrow.FILTER_INCOMING = 4;
 Arrow.indexSize = 2000; // "Nobody Will Ever Need More Than 640k RAM!"
 
 /** default public server base URL */
-Arrow.publicEntrelacsServer = "http://miellaby.selfip.net:8008/"; // Famous well-known epic server
+Arrow.publicEntrelacsServer = "https://entrelacs-miellaby.c9.io/"; // Default public server
 
 // indexes (as maps of lists of arrows)
 //
