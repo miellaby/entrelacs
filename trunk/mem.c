@@ -159,6 +159,44 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint32_t* stamp_p) {
   return 0;
 }
 
+static void mem_log(int line, char operation, Address offset) {
+      LOGPRINTF(LOG_DEBUG, "%03d %c@%d: page=%d, address=%d, flags=[%c%c] stamp=%d %s",
+            line, operation, offset,
+            (int)mem[offset].page, (int)mem[offset].page * memSize + offset,
+            mem[offset].flags & MEM1_CHANGED ? 'C' : ' ',
+            mem[offset].flags & MEM1_EMPTY ? 'E' : ' ', mem[offset].stamp,
+            mem[offset].flags == MEM1_EMPTY ? "EMPTY!" : "");
+      
+}
+
+static void mem_show(Address offset) {
+      offset = offset % memSize; // address is ok
+      mem_log(__LINE__, 'R', offset);
+}
+
+static int mem_whereIs(Address a) {
+  Address offset = a % MEMSIZE;
+  uint32_t  page = a / MEMSIZE;
+  struct s_mem* m = &mem[offset];
+  int i;
+  if (!memIsEmpty(m) && m->page == page) { // cache hit
+    INFOPRINTF("%06x LOADED %s stamp=%d", a,
+                m->flags & MEM1_CHANGED ? "MODIFIED" : "", m->stamp);
+    return 1;
+  }
+   
+  for (i = 0; i < reserveHead ; i++) {
+    if (reserve[i].a == a) { // reserve hit
+      INFOPRINTF("%06x IN RESERVE (SO MODIFIED) stamp=%d", a, reserve[i].stamp);
+      return 2;
+    }
+  }
+  
+  return 0;
+}
+
+#define MEM_LOG(operation, offset) mem_log(__LINE__, operation, offset)
+
 /** Get a cell */
 int mem_get(Address a, CellBody *pCellBody) {
     return mem_get_advanced(a, pCellBody, NULL);
@@ -171,7 +209,8 @@ int mem_set(Address a, CellBody *pCellBody) {
     uint32_t  page = a / MEMSIZE;
     mem_stats.setCount++;
     struct s_mem* m = &mem[offset];
-
+    ONDEBUG(MEM_LOG('R', offset));
+    
     if (!memIsEmpty(m) && m->page != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
             if (reserve[i].a == a) {
@@ -180,6 +219,7 @@ int mem_set(Address a, CellBody *pCellBody) {
                 reserve[i].c = *pCellBody;
                 reserve[i].stamp = ++pokes;
                 mem_stats.reserveFound++;
+
                 return 0; // no need to log it (it's already done)
             }
         }
@@ -215,6 +255,7 @@ int mem_set(Address a, CellBody *pCellBody) {
     m->page = page;
     m->stamp = ++pokes;
     m->c = *pCellBody;
+    ONDEBUG(MEM_LOG('W', offset));
     DEBUGPRINTF("mem_set end, logSize=%d", logSize);
     return 0;
 }
@@ -256,6 +297,7 @@ int mem_commit() {
     }
     
     mem[offset].flags &= 0xFFFE; // reset changed flag for this offset (even if the changed cell is actually in reserve)
+    ONDEBUG(MEM_LOG('W', offset));
   }
 
   if (mem0_commit()) {
