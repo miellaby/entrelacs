@@ -41,6 +41,9 @@
 #define LOG_CURRENT LOG_SPACE
 #include "log.h"
 
+/** Memory corruption trigger */
+#define MAX_CHILDCELLPROBE 32
+
 /** statistic structure and variables
  */
 static struct s_space_stats {
@@ -125,6 +128,9 @@ const Arrow Eve = EVE;
 #pragma pack(1)     /* set alignment to 1 byte boundary */
 
 typedef union u_cell {
+  /** opaque for mem1 */
+  CellBody u_body;
+  
   struct u_full {
 
     char data[22];
@@ -340,7 +346,7 @@ static void cell_getSmallPayload(Cell *cell, char* buffer) {
 * address
 * cell pointer
 */
-static void showCell(int line, char operation, Address address, Cell* cell) {
+static void logCell(int line, char operation, Address address, Cell* cell) {
     static const char* cats[] = {
           "EMPTY",
           "PAIR",
@@ -356,7 +362,7 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
     unsigned peeble = (unsigned)cell->full.peeble;
     const char* cat = cats[type];
     if (type == CELLTYPE_EMPTY) {
-        dputs("%d %c %06x EMPTY (peeble=%02x)",
+        LOGPRINTF(LOG_DEBUG, "%d %c %06x EMPTY (peeble=%02x)",
           line, operation, address, peeble);
         return;
 
@@ -375,7 +381,7 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
       int dr = (int)cell->arrow.dr;
 
       if (type == CELLTYPE_PAIR) {
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s tail=%08x head=%08x",
+        LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
           line, operation, address, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
@@ -385,25 +391,25 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
         int s = (int)cell->small.s;
         char buffer[11];
         cell_getSmallPayload(cell, buffer);
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s size=%d data=%.*s",
+        LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
           line, operation, address, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        dputs("%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%08x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+        LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
           line, operation, address, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
       }
     } else if (type == CELLTYPE_SLICE) {
-      dputs("%d %c %06x peeble=%02x type=%1x %s jump=%1x data=%.21s",
+      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s jump=%1x data=%.21s",
         line, operation, address, peeble, type, cat,
         (int)cell->slice.jump, cell->slice.data);
 
     } else if (type == CELLTYPE_LAST) {
-      dputs("%d %c %06x peeble=%02x type=%1x %s size=%d data=%.*s",
+      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s size=%d data=%.*s",
         line, operation, address, peeble, type, cat,
         (int)cell->last.size,
         (int)cell->last.size,
@@ -425,7 +431,7 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
           ']',
           '\0'
       };
-      dputs("%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
+      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
         line, operation, address, peeble, type, cat,
         cell->children.C[0],
         cell->children.C[1],
@@ -435,17 +441,23 @@ static void showCell(int line, char operation, Address address, Cell* cell) {
         directions);
 
     } else if (type == CELLTYPE_REATTACHMENT) {
-      dputs("%d %c %06x peeble=%02x type=%1x %s from=%x to=%x",
+      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s from=%x to=%x",
         line, operation, address, peeble, type, cat,
         (int)cell->reattachment.from, cell->reattachment.to);
 
     } else {
-      dputs("%d %c %06x peeble=%02x type=%1x ANOMALY",
+      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x ANOMALY",
         line, operation, address, peeble, type);
       assert(0 == 1);
     }
 }
-#define SHOWCELL(operation, address, cell) showCell(__LINE__, operation, address, cell)
+#define LOGCELL(operation, address, cell) logCell(__LINE__, operation, address, cell)
+
+static void showCell(Address a) {
+  Cell cell;
+  mem_get(a, &cell.u_body);
+  LOGCELL('R', a, &cell);
+}
 
 static void looseLogAdd(Address a) {
     geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof (Arrow), looseLogSize + 1);
@@ -576,16 +588,16 @@ static Address jumpToFirst(Cell* cell, Address address, Address offset) {
     if (jump == MAX_JUMP0) {
         // one needs to look for a reattachment (sync) cell
         Cell probed;
-        mem_get(next, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', next, &probed)));
+        mem_get(next, &probed.u_body);
+        ONDEBUG((LOGCELL('R', next, &probed)));
 
         int i = PROBE_LIMIT;
         while (--i && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
-            mem_get(next, (CellBody *)&probed);
-            ONDEBUG((SHOWCELL('R', next, &probed)));
+            mem_get(next, &probed.u_body);
+            ONDEBUG((LOGCELL('R', next, &probed)));
         }
         assert(i);
 
@@ -605,16 +617,16 @@ static Address jumpToNext(Cell* cell, Address address, Address offset) {
     if (jump == MAX_JUMP) {
         // one needs to look for a reattachment (sync) cell
         Cell probed;
-        mem_get(next, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', next, &probed)));
+        mem_get(next, &probed.u_body);
+        ONDEBUG((LOGCELL('R', next, &probed)));
 
         int i = PROBE_LIMIT;
         while (--i && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
-            mem_get(next, (CellBody *)&probed);
-            ONDEBUG((SHOWCELL('R', next, &probed)));
+            mem_get(next, &probed.u_body);
+            ONDEBUG((LOGCELL('R', next, &probed)));
         }
         assert(i);
 
@@ -658,8 +670,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     probeAddress = hashAddress;
     firstFreeAddress = EVE;
     while (1) {
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
 
         if (probed.full.type == CELLTYPE_EMPTY) {
             firstFreeAddress = probeAddress;
@@ -678,8 +690,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
           i = 0;
 
           next = jumpToFirst(&probed, probeAddress, hChain);
-          mem_get(next, (CellBody *)&sliceCell);
-          ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+          mem_get(next, &sliceCell.u_body);
+          ONDEBUG((LOGCELL('R', next, &sliceCell)));
 
           while ((c = *p++) == sliceCell.slice.data[i++] && --l) { // cmp loop
             if (i == sizeof(sliceCell.slice.data)) {
@@ -688,8 +700,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                     break; // the chain is over
                 }
                 next = jumpToNext(&sliceCell, next, hChain);
-                mem_get(next, (CellBody *)&sliceCell);
-                ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+                mem_get(next, &sliceCell.u_body);
+                ONDEBUG((LOGCELL('R', next, &sliceCell)));
                 i = 0;
             }
           } // cmp loop
@@ -725,8 +737,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         while (--i) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
 
-            mem_get(probeAddress, (CellBody *)&probed);
-            ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+            mem_get(probeAddress, &probed.u_body);
+            ONDEBUG((LOGCELL('R', probeAddress, &probed)));
             
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
@@ -742,8 +754,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     Address current, newArrow = firstFreeAddress;
     Cell newCell, nextCell, currentCell;
 
-    mem_get(newArrow, (CellBody *)&newCell);
-    ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
+    mem_get(newArrow, &newCell.u_body);
+    ONDEBUG((LOGCELL('R', newArrow, &newCell)));
 
 
     /*   |  hash  | slice0  | J | R.W.Wn.Cn |  Child0  | cr | dr |
@@ -762,8 +774,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     Address offset = hChain;
     ADDRESS_SHIFT(newArrow, next, offset);
     
-    mem_get(next, (CellBody *)&nextCell);
-    ONDEBUG((SHOWCELL('R', next, &nextCell)));
+    mem_get(next, &nextCell.u_body);
+    ONDEBUG((LOGCELL('R', next, &nextCell)));
 
     jump = 0;
     i = PROBE_LIMIT;
@@ -771,8 +783,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         jump++;
         ADDRESS_SHIFT(next, next, offset);
 
-        mem_get(next, (CellBody *)&nextCell);
-        ONDEBUG((SHOWCELL('R', next, &nextCell)));
+        mem_get(next, &nextCell.u_body);
+        ONDEBUG((LOGCELL('R', next, &nextCell)));
     }
     assert(i);
 
@@ -783,36 +795,36 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         syncCell.reattachment.from = newArrow;
         syncCell.reattachment.to   = newArrow; // will be overwritten as soon as possible
         
-        mem_set(sync, (CellBody *)&syncCell);
-        ONDEBUG((SHOWCELL('W', sync, &syncCell)));
+        mem_set(sync, &syncCell.u_body);
+        ONDEBUG((LOGCELL('W', sync, &syncCell)));
         
         offset = hChain;
         ADDRESS_SHIFT(next, next, offset);
         
-        mem_get(next, (CellBody *)&nextCell);
-        ONDEBUG((SHOWCELL('R', next, &nextCell)));
+        mem_get(next, &nextCell.u_body);
+        ONDEBUG((LOGCELL('R', next, &nextCell)));
 
         i = PROBE_LIMIT;
         while (nextCell.full.type == CELLTYPE_EMPTY && --i) {
           ADDRESS_SHIFT(next, next, offset);
 
-          mem_get(next, (CellBody *)&nextCell);
-          ONDEBUG((SHOWCELL('R', next, &nextCell)));
+          mem_get(next, &nextCell.u_body);
+          ONDEBUG((LOGCELL('R', next, &nextCell)));
         }
         assert(i);
 
         syncCell.reattachment.to = next;
         
-        mem_set(sync, (CellBody *)&syncCell);
-        ONDEBUG((SHOWCELL('W', sync, &syncCell)));
+        mem_set(sync, &syncCell.u_body);
+        ONDEBUG((LOGCELL('W', sync, &syncCell)));
 
         jump = MAX_JUMP;
     }
 
     newCell.tagOrBlob.jump0 = jump;
 
-    mem_set(newArrow, (CellBody *)&newCell);
-    ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
+    mem_set(newArrow, &newCell.u_body);
+    ONDEBUG((LOGCELL('W', newArrow, &newCell)));
     
     current = next;
     currentCell = nextCell;
@@ -830,8 +842,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                 Address offset = hChain;
                 ADDRESS_SHIFT(current, next, offset);
     
-                mem_get(next, (CellBody *)&nextCell);
-                ONDEBUG((SHOWCELL('R', next, &nextCell)));
+                mem_get(next, &nextCell.u_body);
+                ONDEBUG((LOGCELL('R', next, &nextCell)));
                 
                 jump = 0;
                 i = PROBE_LIMIT;
@@ -839,8 +851,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                     jump++;
                     ADDRESS_SHIFT(next, next, offset);
                 
-                    mem_get(next, (CellBody *)&nextCell);
-                    ONDEBUG((SHOWCELL('R', next, &nextCell)));
+                    mem_get(next, &nextCell.u_body);
+                    ONDEBUG((LOGCELL('R', next, &nextCell)));
                 }
                 assert(i);
                 
@@ -851,48 +863,48 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                   syncCell.reattachment.from = current;
                   syncCell.reattachment.to   = current; // will be overwritten as soon as possible
                   
-                  mem_set(sync, (CellBody *)&syncCell);
-                  ONDEBUG((SHOWCELL('W', sync, &syncCell)));
+                  mem_set(sync, &syncCell.u_body);
+                  ONDEBUG((LOGCELL('W', sync, &syncCell)));
                   
                   offset = hChain;
                   ADDRESS_SHIFT(next, next, offset);
                   
-                  mem_get(next, (CellBody *)&nextCell);
-                  ONDEBUG((SHOWCELL('R', next, &nextCell)));
+                  mem_get(next, &nextCell.u_body);
+                  ONDEBUG((LOGCELL('R', next, &nextCell)));
 
                   int j = PROBE_LIMIT;
                   while (nextCell.full.type == CELLTYPE_EMPTY && --j) {
                     ADDRESS_SHIFT(next, next, offset);
 
-                    mem_get(next, (CellBody *)&nextCell);
-                    ONDEBUG((SHOWCELL('R', next, &nextCell)));
+                    mem_get(next, &nextCell.u_body);
+                    ONDEBUG((LOGCELL('R', next, &nextCell)));
                   }
                   assert(j);
 
                   syncCell.reattachment.to = next;
                   
-                  mem_set(sync, (CellBody *)&syncCell);
-                  ONDEBUG((SHOWCELL('W', sync, &syncCell)));
+                  mem_set(sync, &syncCell.u_body);
+                  ONDEBUG((LOGCELL('W', sync, &syncCell)));
 
                   jump = MAX_JUMP;
                 }
                 currentCell.full.type = CELLTYPE_SLICE;
                 currentCell.slice.jump = jump;
 
-                mem_set(current, (CellBody *)&currentCell);
-                ONDEBUG((SHOWCELL('W', current, &currentCell)));
+                mem_set(current, &currentCell.u_body);
+                ONDEBUG((LOGCELL('W', current, &currentCell)));
 
                 i = 0;
                 current = next;
-                mem_get(current, (CellBody *)&currentCell);
+                mem_get(current, &currentCell.u_body);
             }
 
         }
     }
     currentCell.full.type = CELLTYPE_LAST;
     currentCell.last.size = 1 + i /* size */;
-    mem_set(current, (CellBody *)&currentCell);
-    ONDEBUG((SHOWCELL('W', current, &currentCell)));
+    mem_set(current, &currentCell.u_body);
+    ONDEBUG((LOGCELL('W', current, &currentCell)));
 
     // Now incremeting "peeble" counters in the probing path up to the new singleton
     // important to reinitialize probing variables  
@@ -902,13 +914,13 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
       hashProbe = 1;
     while (probeAddress != newArrow) {
         Cell probed;
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         if (probed.full.peeble != PEEBLE_MAX)
           probed.full.peeble++;
         
-        mem_set(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
+        mem_set(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
 
@@ -926,8 +938,8 @@ uint32_t hashOf(Arrow a) {
     else if (a >= SPACE_SIZE)
       return 0; // Out of space
     else {
-      mem_get(a, (CellBody *)&cell);
-      ONDEBUG((SHOWCELL('R', a, &cell)));
+      mem_get(a, &cell.u_body);
+      ONDEBUG((LOGCELL('R', a, &cell)));
       if (cell.full.type == CELLTYPE_EMPTY
          || cell.full.type > CELLTYPE_ARROWLIMIT)
         return 0; // Not an arrow
@@ -1001,8 +1013,8 @@ static Arrow small(int length, char* str, int ifExist) {
     
         // get probed cell
         Cell probed;
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
 
         if (probed.full.type == CELLTYPE_EMPTY) {
             // save the address of the free cell encountered
@@ -1034,8 +1046,8 @@ static Arrow small(int length, char* str, int ifExist) {
         i = PROBE_LIMIT;
         while (--i) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
-            mem_get(probeAddress, (CellBody *)&probed);
-            ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+            mem_get(probeAddress, &probed.u_body);
+            ONDEBUG((LOGCELL('R', probeAddress, &probed)));
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
                 break;
@@ -1047,8 +1059,8 @@ static Arrow small(int length, char* str, int ifExist) {
     // Create a singleton
     Address newArrow = firstFreeAddress;
     Cell newCell;
-    mem_get(newArrow, (CellBody *)&newCell);
-    ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
+    mem_get(newArrow, &newCell.u_body);
+    ONDEBUG((LOGCELL('R', newArrow, &newCell)));
 
     memcpy(&newCell, buffer, 12);
     newCell.arrow.RWWnCn = 0;
@@ -1056,8 +1068,8 @@ static Arrow small(int length, char* str, int ifExist) {
     newCell.full.type = CELLTYPE_SMALL;
     newCell.arrow.dr = space_stats.new & 0xFFu;
     memcpy(newCell.full.data, buffer, 12);
-    mem_set(newArrow, (CellBody *)&newCell);
-    ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
+    mem_set(newArrow, &newCell.u_body);
+    ONDEBUG((LOGCELL('W', newArrow, &newCell)));
 
     /* Now incremeting "more" counters in the probing path up to the new singleton
      */
@@ -1069,13 +1081,13 @@ static Arrow small(int length, char* str, int ifExist) {
 
         // get probed cell
         Cell probed;
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         if (probed.full.peeble != PEEBLE_MAX)
           probed.full.peeble++;
         
-        mem_set(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
+        mem_set(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
 
@@ -1112,8 +1124,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     firstFreeAddress = EVE;
     i = PROBE_LIMIT;
     while (--i) {
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
     
         if (probed.full.type == CELLTYPE_EMPTY)
             firstFreeAddress = probeAddress;
@@ -1147,8 +1159,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
         
             Cell probed;
-            mem_get(probeAddress, (CellBody *)&probed);
-            ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+            mem_get(probeAddress, &probed.u_body);
+            ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
@@ -1163,8 +1175,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     // read the free cell
     Address newArrow = firstFreeAddress;
     Cell newCell;
-    mem_get(newArrow, (CellBody *)&newCell);
-    ONDEBUG((SHOWCELL('R', newArrow, &newCell)));
+    mem_get(newArrow, &newCell.u_body);
+    ONDEBUG((LOGCELL('R', newArrow, &newCell)));
 
     //
     newCell.pair.tail = tail;
@@ -1174,8 +1186,8 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     newCell.arrow.child0 = 0;
     newCell.full.type = CELLTYPE_PAIR;
     newCell.arrow.dr = space_stats.new & 0xFFu;
-    mem_set(newArrow, (CellBody *)&newCell);
-    ONDEBUG((SHOWCELL('W', newArrow, &newCell)));
+    mem_set(newArrow, &newCell.u_body);
+    ONDEBUG((LOGCELL('W', newArrow, &newCell)));
 
     /* Now incremeting "peeble" counters in the probing path up to the new singleton
      */
@@ -1184,13 +1196,13 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
     if (!hashProbe) hashProbe = 1; // offset can't be 0
 
     while (probeAddress != newArrow) {
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         if (probed.full.peeble != PEEBLE_MAX)
           probed.full.peeble++;
         
-        mem_set(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('W', probeAddress, &probed)));
+        mem_set(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
 
@@ -1301,8 +1313,8 @@ Arrow xl_headOf(Arrow a) {
         return EVE;
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
         return LOCK_OUT(-1); // Invalid id
@@ -1319,8 +1331,8 @@ Arrow xl_tailOf(Arrow a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT)
         return LOCK_OUT(-1); // Invalid id
@@ -1353,8 +1365,8 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
     // Get the cell pointed by a
     Cell    cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     
     if (cell.full.type == CELLTYPE_SMALL) { // type "small"
       // small typed cell is a simple case
@@ -1388,8 +1400,8 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
     Address next = jumpToFirst(&cell, a, hChain);
     Cell sliceCell;
-    mem_get(next, (CellBody *)&sliceCell);
-    ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+    mem_get(next, &sliceCell.u_body);
+    ONDEBUG((LOGCELL('R', next, &sliceCell)));
 
     while (1) {
         int s = sliceCell.full.type == CELLTYPE_SLICE
@@ -1408,8 +1420,8 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
         // go to next slice
         next = jumpToNext(&sliceCell, next, hChain);
-        mem_get(next, (CellBody *)&sliceCell);
-        ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+        mem_get(next, &sliceCell.u_body);
+        ONDEBUG((LOGCELL('R', next, &sliceCell)));
     }
 
     // payload size
@@ -1437,8 +1449,8 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
 
     // get the cell pointed by a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
 
     if (cell.full.type < CELLTYPE_SMALL
         || cell.full.type > CELLTYPE_BLOB) { // Not an atom (empty cell, pair, ...)
@@ -1547,8 +1559,8 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 
     // Get cell pointed by a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
 
     switch (cell.full.type) {
         case CELLTYPE_EMPTY:
@@ -1643,8 +1655,8 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
 
     // Get cell pointed by a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
 
     if (cell.full.type == CELLTYPE_EMPTY
         || cell.full.type > CELLTYPE_ARROWLIMIT) {
@@ -1758,8 +1770,8 @@ Arrow xl_digestMaybe(char* digest) {
     while (--i) { // probing limit
         Cell probed;
         
-        mem_get(probeAddress, (CellBody *)&probed);
-        ONDEBUG((SHOWCELL('R', probeAddress, &probed)));
+        mem_get(probeAddress, &probed.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &probed)));
 
         if (probed.full.type != CELLTYPE_EMPTY
             && probed.full.type <= CELLTYPE_ARROWLIMIT
@@ -2051,8 +2063,8 @@ Arrow xl_isPair(Arrow a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     LOCK_END();
 
     if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -2072,8 +2084,8 @@ Arrow xl_isAtom(Arrow a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     LOCK_END();
 
     if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -2093,8 +2105,8 @@ enum e_xlType xl_typeOf(Arrow a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     LOCK_END();
 
     if (cell.full.type > CELLTYPE_ARROWLIMIT)
@@ -2135,26 +2147,22 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     
     // get the cell at a
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     assert(cell.full.type != CELLTYPE_EMPTY && cell.full.type <= CELLTYPE_ARROWLIMIT);
   
-    // is the parent arrow (@a) loose?
+    // is the parent arrow (@a) loose or connected?
     int childrenCount = (int)(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
     int weakChildrenCount = (int)((cell.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
-
     int loose = (childrenCount == 0 && !(cell.arrow.RWWnCn & FLAGS_ROOTED));
-    if (loose && !childWeakness) {
-          // parent is not loose anymore
-
-          // (try to) remove 'a' from the loose log if strong child
-          looseLogRemove(a);
+    int unconnected = loose & weakChildrenCount == 0; // a loose arrow without even weak children
+    if (loose && !childWeakness) {  // parent is not loose anymore
+        // (try to) remove 'a' from the loose log if strong child
+        looseLogRemove(a);
     }
 
-    // propagate connection
-    if (childrenCount == 0 && weakChildrenCount == 0) { // the parent arrow was not connected yet
-       
-        // the parent arrow is now connected. So one "connects" it to its own parents.
+    if (unconnected) { // the parent arrow was not connected yet
+        // the parent arrow is now connected. So it gets "connected" to both its own parents.
         if (cell.full.type == CELLTYPE_PAIR) {
             connect(cell.pair.tail, a, 0, 1 /* outgoing */);
             connect(cell.pair.head, a, 0, 0 /* incoming */);
@@ -2200,8 +2208,8 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     }
     
     // write parent cell
-    mem_set(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('W', a, &cell)));
+    mem_set(a, &cell.u_body);
+    ONDEBUG((LOGCELL('W', a, &cell)));
 
     if (child == EVE) {
       // child0 was empty and got the back-ref, nothing left to do
@@ -2225,8 +2233,8 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, (CellBody *)&nextCell);
-      ONDEBUG((SHOWCELL('R', next, &nextCell)));
+      mem_get(next, &nextCell.u_body);
+      ONDEBUG((LOGCELL('R', next, &nextCell)));
 
       if (nextCell.full.type == CELLTYPE_EMPTY) {
         // One found a free cell
@@ -2263,8 +2271,8 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
                 nextCell.children.directions
                 & ((0x101 << j) ^ 0xFFFF)
                 | (outgoing ? (1 << j) : 0);
-              mem_set(next, (CellBody *)&nextCell);
-              ONDEBUG((SHOWCELL('W', next, &nextCell)));
+              mem_set(next, &nextCell.u_body);
+              ONDEBUG((LOGCELL('W', next, &nextCell)));
         
               // now search for a free slot to put a terminator
               child = a;
@@ -2285,8 +2293,8 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
                 & ((1 << j) ^ 0xFFFF)
                 & ((1 << (8 + j)) ^ 0xFFFF)
                 | (outgoing ? (1 << j) : 0);
-              mem_set(next, (CellBody *)&nextCell);
-              ONDEBUG((SHOWCELL('W', next, &nextCell)));
+              mem_set(next, &nextCell.u_body);
+              ONDEBUG((LOGCELL('W', next, &nextCell)));
         
               // Now one keeps on probing for a free slot to put the terminator into
               child = a;
@@ -2309,8 +2317,8 @@ static void connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
       & ((0x101 << j) ^ 0xFFFF)
       | ((child != a && outgoing) ? (1 << j) : 0) // outgoing flag
       | (child == a ? (0x100 << j) : 0); // terminator flag if one puts the terminator
-    mem_set(next, (CellBody *)&nextCell);
-    ONDEBUG((SHOWCELL('W', next, &nextCell)));
+    mem_set(next, &nextCell.u_body);
+    ONDEBUG((LOGCELL('W', next, &nextCell)));
  }
 
 /** disconnect a child pair from its parent arrow "a".
@@ -2339,8 +2347,8 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
     // get parent arrow definition
     Cell parent;
-    mem_get(a, (CellBody *)&parent);
-    ONDEBUG((SHOWCELL('R', a, &parent)));
+    mem_get(a, &parent.u_body);
+    ONDEBUG((LOGCELL('R', a, &parent)));
     // check it's a valid arrow
     assert(parent.full.type != CELLTYPE_EMPTY && parent.full.type <= CELLTYPE_ARROWLIMIT);
 
@@ -2362,17 +2370,19 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
        & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu) 
        | (weakChildrenCount << 15) | childrenCount;
 
-    // check "loose" status evolution
-    int loose = (childrenCount == 0 && !(parent.arrow.RWWnCn & FLAGS_ROOTED));
+    // check "loose" status evolution after child counters update
+    int loose = (childrenCount == 0
+                 && !(parent.arrow.RWWnCn & FLAGS_ROOTED));
     if (!weakness && loose) { // parent arrow got loose by removing the last strong child
        // add 'a' into the loose log if strong child
        looseLogAdd(a);
     }
 
-    // propagate disconnection    
-    if (childrenCount == 0 && weakChildrenCount == 0) { // parent arrow not connected any more 
-        // the parent arrow got disconnected. So one "disconnects" it to its own parents.
-        if (parent.full.type == CELLTYPE_PAIR) {
+    if (parent.full.type == CELLTYPE_PAIR) { // parent arrow is a pair
+        int disconnected = (childrenCount == 0 && weakChildrenCount == 0
+                        && !(parent.arrow.RWWnCn & FLAGS_ROOTED));
+        if (disconnected) { // got disconnected
+            // So one "disconnects" it from its own parents.
             disconnect(parent.pair.tail, a, 0, 1);
             disconnect(parent.pair.head, a, 0, 0);
         }
@@ -2389,8 +2399,8 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     }
 
     // write parent cell
-    mem_set(a, (CellBody *)&parent);
-    ONDEBUG((SHOWCELL('W', a, &parent)));
+    mem_set(a, &parent.u_body);
+    ONDEBUG((LOGCELL('W', a, &parent)));
 
     if (child == 0) { // OK done
       return;
@@ -2424,8 +2434,8 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, (CellBody *)&nextCell);
-      ONDEBUG((SHOWCELL('R', next, &nextCell)));
+      mem_get(next, &nextCell.u_body);
+      ONDEBUG((LOGCELL('R', next, &nextCell)));
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
         // One found a children cell
@@ -2462,8 +2472,8 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
                   nextCell.full.type = CELLTYPE_EMPTY;
                   // but don't delete peeble!
               } 
-              mem_set(next, (CellBody *)&nextCell);
-              ONDEBUG((SHOWCELL('W', next, &nextCell)));
+              mem_set(next, &nextCell.u_body);
+              ONDEBUG((LOGCELL('W', next, &nextCell)));
 
               if (!removeTerminatorNow) {
                 return; // back-ref removed. Job done
@@ -2496,13 +2506,16 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
     // get the parent cell
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
 
     // check arrow
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
-      return; // invalid ID. TODO one might call cb with a
+        || cell.full.type > CELLTYPE_ARROWLIMIT) {
+      // invalid ID
+      LOCK_END();
+      return;
+    }
 
 
     if (!(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
@@ -2536,8 +2549,8 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, (CellBody *)&nextCell);
-      ONDEBUG((SHOWCELL('R', next, &nextCell)));
+      mem_get(next, &nextCell.u_body);
+      ONDEBUG((LOGCELL('R', next, &nextCell)));
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
         // One found a children cell
@@ -2556,8 +2569,8 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
 
             // get child cell
             Cell childCell;
-            mem_get(child, (CellBody *)&childCell);
-            ONDEBUG((SHOWCELL('R', child, &childCell)));
+            mem_get(child, &childCell.u_body);
+            ONDEBUG((LOGCELL('R', child, &childCell)));
 
             // check at least one arrow end is a
             // TODO check direction so to not at a same child twice because its back-reference
@@ -2574,13 +2587,91 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
     } // child probing loop
 }
 
+/** debug: show children sequence
+*
+*/
+void showChildrenSequence(Arrow a) {
+    INFOPRINTF("showChildrenSequence a=%06x", a);
+
+    if (a == EVE) {
+        return; // Eve connectivity not traced
+    }
+
+    // get the parent cell
+    LOCK();
+    Cell cell;
+    mem_get(a, &cell.u_body);
+    LOGCELL('R', a, &cell);
+
+    // check arrow
+    if (cell.full.type == CELLTYPE_EMPTY
+        || cell.full.type > CELLTYPE_ARROWLIMIT) {
+        ERRORPRINTF("Not an arrow");
+        LOCK_END();
+        return; // invalid ID. TODO one might call cb with a
+    }
+
+    if (!(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
+      // no child
+      WARNPRINTF("Not an arrow");
+      LOCK_END();
+      return;
+    }
+
+    // compute hashChild
+    uint32_t hChild = hashChild(&cell) % PRIM1;
+    if (!hChild) hChild = 2; // offset can't be 0
+
+    if (cell.arrow.child0) {
+      // child0
+      if ((cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK)) == 1) {
+        // child0 is the only child
+        INFOPRINTF("child0=%06x is the only child,", cell.arrow.child0);
+        LOCK_END();
+        return;
+      } else {
+        INFOPRINTF("child0=%06x is the first child.", cell.arrow.child0);
+      }
+    }
+
+    // probe children
+    Address next = a;
+    Cell nextCell;
+
+    while(1) { // child probing loop
+
+      // shift
+      ADDRESS_SHIFT(next, next, hChild);
+
+      // get the next cell
+      mem_get(next, &nextCell.u_body);
+      LOGCELL('R', next, &nextCell);
+
+      if (nextCell.full.type == CELLTYPE_CHILDREN) {
+        // One found a children cell
+
+        int j = 0; //< slot index
+        while (j < 5) { // slot scanning
+          Address inSlot = nextCell.children.C[j];
+          if (inSlot == a && (nextCell.children.directions & (1 << (8 + j)))) {
+            INFOPRINTF("Terminator found at slot %d of cell@%06x.", j, next);
+            LOCK_END();
+            return; // no child left
+          } // child maybe found
+          j++;
+        } // slot loop
+      } // children cell found
+    } // child probing loop
+}
+
 typedef struct iterator_s {
     Cell     currentCell;
     Arrow    parent;
     Address  pos;
     Arrow    current;
-    uint32_t hChild;
+    uint32_t offset;
     int      iSlot;
+    int      iCell;
     int      type;
 } iterator_t;
 
@@ -2590,14 +2681,16 @@ static int xl_enumNextChildOf(XLEnum e) {
     // iterate from current address stored in childrenOf iterator
     Address pos = iteratorp->pos;
     int     i   = iteratorp->iSlot;
+    int     ic  = iteratorp->iCell;
     Arrow   a   = iteratorp->parent;
+    uint32_t offset = iteratorp->offset;
 
     LOCK();
 
     // get current cell
     Cell cell;
-    mem_get(pos ? pos : a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', pos ? pos : a, &cell)));
+    mem_get(pos ? pos : a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', pos ? pos : a, &cell)));
 
     if (pos == EVE || pos == a) { // current cell is parent cell
         
@@ -2616,21 +2709,30 @@ static int xl_enumNextChildOf(XLEnum e) {
           return LOCK_OUT(0); // no child
         }
 
-        if (pos == EVE && cell.arrow.child0) {
-          // return child0
-          iteratorp->pos = a;
-          iteratorp->iSlot = 0;
-          iteratorp->current = cell.arrow.child0;
-          return LOCK_OUT(!0);
-        }
-
-        // pos == a (or EVE without child0)
-        if (1 == (cell.arrow.RWWnCn &
-              (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))
-            && cell.arrow.child0) {
+        if (pos == EVE) {
+          if (cell.arrow.child0) {
+            // return child0, and prepare listing other children 
+            iteratorp->pos = a;
+            iteratorp->iSlot = 0;
+            iteratorp->current = cell.arrow.child0;
+            return LOCK_OUT(!0);
+          } else {
             return LOCK_OUT(0); // no child left
+          }
+        } else { // pos == a
+          if (1 == (cell.arrow.RWWnCn &
+                (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))
+              && cell.arrow.child0) {
+              return LOCK_OUT(0); // no child left
+          } else {
+            // 1st shift
+            ADDRESS_SHIFT(pos, pos, offset);
+            mem_get(pos, &cell.u_body);
+            ONDEBUG((LOGCELL('R', pos, &cell)));
+            ic = 1;
+            i = 0;
+          }
         }
-        pos = a;
     } else {
 
       // check current children cell is unchanged:
@@ -2648,20 +2750,21 @@ static int xl_enumNextChildOf(XLEnum e) {
       i++;
     }
 
-    uint32_t hChild = iteratorp->hChild;
-    int iProbe = 0xFFFFF;
-    while (1) { // children loop
+    int iProbe = MAX_CHILDCELLPROBE;
+    while (iProbe) { // children cells loop
       if (cell.full.type == CELLTYPE_CHILDREN) {
 
-        while (i < 5) {
+        while (i < 5) { // cell slots loop
           Address inSlot = cell.children.C[i];
           if (inSlot == a && (cell.children.directions & (1 << (8 + i)))) {
             // terminator found
             iteratorp->currentCell = cell;
             iteratorp->pos     = pos;
             iteratorp->iSlot   = i;
+            iteratorp->iCell  = ic;
             iteratorp->current = NIL;
-            iteratorp->hChild  = hChild;
+            iteratorp->offset  = offset;
+            TRACEPRINTF("terminator found in probed #%d", ic);
             return LOCK_OUT(0); // no child left
 
           } else if (inSlot != 0) {
@@ -2670,8 +2773,8 @@ static int xl_enumNextChildOf(XLEnum e) {
 
             // get child cell
             Cell childCell;
-            mem_get(child, (CellBody *)&childCell);
-            ONDEBUG((SHOWCELL('R', child, &childCell)));
+            mem_get(child, &childCell.u_body);
+            ONDEBUG((LOGCELL('R', child, &childCell)));
 
             // check at least one arrow end is a
             if (childCell.pair.head == a || childCell.pair.tail == a) {
@@ -2679,25 +2782,35 @@ static int xl_enumNextChildOf(XLEnum e) {
               iteratorp->currentCell = cell;
               iteratorp->pos = pos;
               iteratorp->iSlot = i;
+              iteratorp->iCell = ic;
               iteratorp->current = child;
-              iteratorp->hChild  = hChild;
+              iteratorp->offset  = offset;
               return LOCK_OUT(!0);
             }
           } // child maybe found
           i++;        
         } // slot loop
-        iProbe = 0xFFFFF;
-      } // children cell
-       else {
-          assert(--iProbe);
+        iProbe = MAX_CHILDCELLPROBE;
+      } else { // not children cell
+        assert(--iProbe);
       }
       // shift
-      ADDRESS_SHIFT(pos, pos, hChild);
-      mem_get(pos, (CellBody *)&cell);
-      ONDEBUG((SHOWCELL('R', pos, &cell)));
+      ADDRESS_SHIFT(pos, pos, offset);
+      mem_get(pos, &cell.u_body);
+      ONDEBUG((LOGCELL('R', pos, &cell)));
+      ic++; // next cell
+      i=0; // first slot in next cell
     } // children loop
 
     // FIXME what happens if terminator is removed while iterating
+    assert(0 == "It can't be");
+    iteratorp->currentCell = cell;
+    iteratorp->pos = pos;
+    iteratorp->iSlot = i;
+    iteratorp->iCell = ic;
+    iteratorp->current = EVE;
+    iteratorp->offset  = offset;
+    return LOCK_OUT(0);
 }
 
 int xl_enumNext(XLEnum e) {
@@ -2732,8 +2845,8 @@ XLEnum xl_childrenOf(Arrow a) {
     // get parent cell
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     if (cell.full.type == CELLTYPE_EMPTY
       || cell.full.type > CELLTYPE_ARROWLIMIT)
       return LOCK_END(), NULL; // Invalid id
@@ -2746,7 +2859,7 @@ XLEnum xl_childrenOf(Arrow a) {
     iterator_t *iteratorp = (iterator_t *) malloc(sizeof (iterator_t));
     assert(iteratorp);
     iteratorp->type = 0; // iterator type = childrenOf
-    iteratorp->hChild = hChild; // hChild
+    iteratorp->offset = hChild; // hChild
     iteratorp->parent = a; // parent arrow
     iteratorp->current = EVE; // current child
     iteratorp->pos = EVE; // current cell holding child back-ref
@@ -2772,74 +2885,104 @@ Arrow xl_childOf(Arrow a) {
 
 /** root an arrow */
 Arrow xl_root(Arrow a) {
-    space_stats.root++;
     if (a == EVE) {
         return EVE; // no
     }
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
+    
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || cell.full.type > CELLTYPE_ARROWLIMIT) {
+      // bad reference
+      WARNPRINTF("Not an arrow");
       return LOCK_OUT(EVE);
-    if (cell.arrow.RWWnCn & FLAGS_ROOTED)
+    }
+    
+    if (cell.arrow.RWWnCn & FLAGS_ROOTED) {
+      // already rooted
+      DEBUGPRINTF("%06x already rooted", a);
       return LOCK_OUT(a);
-
-    // If this arrow had no child before, it was loose
+    }
+    
+    // This arrow was not rooted yet.
+    // If it had no child, it was not connected.
     int loose = !(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
 
     // change the arrow to ROOTED state
     cell.arrow.RWWnCn = cell.arrow.RWWnCn | FLAGS_ROOTED;
-    mem_set(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('W', a, &cell)));
+    mem_set(a, &cell.u_body);
+    ONDEBUG((LOGCELL('W', a, &cell)));
 
-    if (loose) { // if arrow was loose, one now connects it to its parents
-        if (cell.full.type == CELLTYPE_PAIR) {
+    space_stats.root++;
+
+    if (cell.full.type == CELLTYPE_PAIR) { // parent arrow is a pair
+        int unconnected = !(cell.arrow.RWWnCn
+                            & (FLAGS_CHILDRENMASK
+                               | FLAGS_WEAKCHILDRENMASK));
+        if (unconnected) { // parent arrow was not connected yet
+            // it is not anymore. So one connect it to its own parents
             connect(cell.pair.tail, a, 0, 1);
             connect(cell.pair.head, a, 0, 0);
         }
-        // TODO tuple case
+    }
+    
+    if (loose) {
         // (try to) remove 'a' from the loose log
         looseLogRemove(a);
     }
+    
     return LOCK_OUT(a);
 }
 
 /** unroot a rooted arrow */
 Arrow xl_unroot(Arrow a) {
-    space_stats.unroot++;
-
     if (a == EVE)
         return EVE; // no.
 
     LOCK();
-
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
+
     if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
+        || cell.full.type > CELLTYPE_ARROWLIMIT) {
+      // bad reference
+      WARNPRINTF("Not an arrow");
       return LOCK_OUT(EVE);
-    if (!(cell.arrow.RWWnCn & FLAGS_ROOTED))
-        return LOCK_OUT(a);
+    }
+    
+    if (!(cell.arrow.RWWnCn & FLAGS_ROOTED)) {
+      // already unrooted
+      DEBUGPRINTF("%06x already unrooted", a);
+
+      return LOCK_OUT(a);
+    }
+
+    space_stats.unroot++;
 
     // change the arrow to UNROOTED state
     cell.arrow.RWWnCn ^= FLAGS_ROOTED;
-    mem_set(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('W', a, &cell)));
+    mem_set(a, &cell.u_body);
+    ONDEBUG((LOGCELL('W', a, &cell)));
 
-    // If this arrow has no child, it's now loose
+    // If this arrow has no strong child left, it's now loose
     int loose = !(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
     if (loose) {
         // loose log
         looseLogAdd(a);
 
-        // If it's loose, one disconnects it from its parents.
-        if (cell.full.type == CELLTYPE_PAIR) {
-            disconnect(cell.pair.tail, a, 0, 1);
-            disconnect(cell.pair.head, a, 0, 0);
-        } // TODO Tuple case
+        if (cell.full.type == CELLTYPE_PAIR) { // parent arrow is a pair
+            int disconnected = !(cell.arrow.RWWnCn
+                                 & (FLAGS_CHILDRENMASK
+                                    | FLAGS_WEAKCHILDRENMASK));
+            if (disconnected) { // got disconnected
+              // one disconnects it from its own parents.
+              disconnect(cell.pair.tail, a, 0, 1);
+              disconnect(cell.pair.head, a, 0, 0);
+            }
+        }
     }
     return LOCK_OUT(a);
 }
@@ -2850,8 +2993,8 @@ int xl_isRooted(Arrow a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     LOCK_END();
     
     if (cell.full.type == CELLTYPE_EMPTY
@@ -2869,8 +3012,8 @@ int xl_isLoose(Arrow a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     LOCK_END();
     
     if (cell.full.type == CELLTYPE_EMPTY
@@ -2902,8 +3045,8 @@ static void forget(Arrow a) {
     space_stats.forget++;
 
     Cell cell;
-    mem_get(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('R', a, &cell)));
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
     assert(cell.full.type != CELLTYPE_EMPTY
         || cell.full.type <= CELLTYPE_ARROWLIMIT);
 
@@ -2920,8 +3063,8 @@ static void forget(Arrow a) {
 
         Address next = jumpToFirst(&cell, a, hChain);
         Cell sliceCell;
-        mem_get(next, (CellBody *)&sliceCell);
-        ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+        mem_get(next, &sliceCell.u_body);
+        ONDEBUG((LOGCELL('R', next, &sliceCell)));
         while (sliceCell.full.type == CELLTYPE_SLICE) {
             // free cell
             Address current = next;
@@ -2930,26 +3073,26 @@ static void forget(Arrow a) {
             memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
             sliceCell.full.type = CELLTYPE_EMPTY;
  
-            mem_set(current, (CellBody *)&sliceCell);
-            ONDEBUG((SHOWCELL('W', current, &sliceCell)));
+            mem_set(current, &sliceCell.u_body);
+            ONDEBUG((LOGCELL('W', current, &sliceCell)));
             
-            mem_get(next, (CellBody *)&sliceCell);
-            ONDEBUG((SHOWCELL('R', next, &sliceCell)));
+            mem_get(next, &sliceCell.u_body);
+            ONDEBUG((LOGCELL('R', next, &sliceCell)));
         }
         assert(sliceCell.full.type == CELLTYPE_LAST);
         // free cell
         memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
         sliceCell.full.type = CELLTYPE_EMPTY;
  
-        mem_set(next, (CellBody *)&sliceCell);
-        ONDEBUG((SHOWCELL('W', next, &sliceCell)));
+        mem_set(next, &sliceCell.u_body);
+        ONDEBUG((LOGCELL('W', next, &sliceCell)));
     }
 
     // Free definition start cell
     memset(cell.full.data, 0, sizeof(cell.full.data));
     cell.full.type = CELLTYPE_EMPTY;
-    mem_set(a, (CellBody *)&cell);
-    ONDEBUG((SHOWCELL('W', a, &cell)));
+    mem_set(a, &cell.u_body);
+    ONDEBUG((LOGCELL('W', a, &cell)));
 
     hashAddress = hash % PRIM0; // base address
     hashProbe = hash % PRIM1; // probe offset
@@ -2961,13 +3104,13 @@ static void forget(Arrow a) {
     Address probeAddress = hashAddress;
     // ONDEBUG(if (probeAddress != a) DEBUGPRINTF("real address %X != open Address %X", a, probeAddress));
     while (probeAddress != a) {
-        mem_get(probeAddress, (CellBody *)&cell);
-        ONDEBUG((SHOWCELL('R', probeAddress, &cell)));
+        mem_get(probeAddress, &cell.u_body);
+        ONDEBUG((LOGCELL('R', probeAddress, &cell)));
         if (cell.full.peeble)
           cell.full.peeble--;
 
-        mem_set(probeAddress, (CellBody *)&cell);
-        ONDEBUG((SHOWCELL('W', probeAddress, &cell)));
+        mem_set(probeAddress, &cell.u_body);
+        ONDEBUG((LOGCELL('W', probeAddress, &cell)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
 
@@ -3138,8 +3281,8 @@ int xl_init() {
         EveCell.arrow.child0 = 0;
         EveCell.full.type = CELLTYPE_PAIR;
         EveCell.arrow.dr = 0;
-        mem_set(EVE, (CellBody *)&EveCell);
-        ONDEBUG((SHOWCELL('W', EVE, &EveCell)));
+        mem_set(EVE, &EveCell.u_body);
+        ONDEBUG((LOGCELL('W', EVE, &EveCell)));
         mem_commit();
     }
     
