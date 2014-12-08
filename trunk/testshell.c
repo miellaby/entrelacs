@@ -15,7 +15,13 @@ int main(int argc, char **argv) {
     xl_begin();
 //   Arrow p = xls_url(EVE, buffer);
     Arrow p = xl_uri(buffer);
-    if (p) {
+    if (p == NIL) {
+        fprintf(stderr, "Illegal input. Embedded URI may be wrong.\n");
+    
+    } else if (p == EVE) {
+        fprintf(stderr, "EVE\n");
+        
+    } else {
         Arrow r = xl_eval(EVE, p, EVE);
         fprintf(stderr, "eval %O =\n\t%O\n", p, r);
     }
