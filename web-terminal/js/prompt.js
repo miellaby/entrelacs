@@ -35,7 +35,7 @@ function Prompt(string, terminal, x, y, immediate) {
         blur: function(event) {
             self.closeIfLoose();
             var flies = self.d.children('.fileinput-button,.split,.wiki-checkbox,.ok-button');
-            flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200);
+            flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200).fadeOut();
             if (!self.bar.hasClass('hover'))
                 self.bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
             return true;

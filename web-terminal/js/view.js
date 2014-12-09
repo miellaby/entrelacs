@@ -146,7 +146,7 @@ function View(arrow, terminal, d) {
 View.prototype = {
     addBar: function() {
         var d = this.d;
-        var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>?</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
+        var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>⚡</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
         h.children('a').click(this.on.bar.click);
