@@ -75,7 +75,7 @@ int basic() {
     assert(head(_hello_world) == world);
 
     test_title("Test Adam special case");
-    assert(pair(EVE, EVE) != EVE);
+    assert(A(EVE, EVE) != EVE);
 
     // Check atoms
     test_title("check atoms");
@@ -214,7 +214,7 @@ int stress() {
             atoms[i] = atom(buffer);
             if (i % 2) {
                 int j = (i - 1) / 2;
-                pairs[j] = pair(atoms[i - 1], atoms[i]);
+                pairs[j] = A(atoms[i - 1], atoms[i]);
                 printArrow(tailOf(pairs[j]), Eve());
                 printArrow(headOf(pairs[j]), Eve());
                 printArrow(pairs[j], Eve());
@@ -227,7 +227,7 @@ int stress() {
             assert(atoms[i] == tagi);
             if (i % 2) {
                 int j = (i - 1) / 2;
-                Arrow pairj = pair(atoms[i - 1], atoms[i]);
+                Arrow pairj = A(atoms[i - 1], atoms[i]);
                 assert(pairs[j] == pairj);
             }
         }
@@ -253,12 +253,12 @@ int stress() {
     {
         root(connectMe);
         for (int i = 0; i < 200; i++) {
-            Arrow child = pair(connectMe, atoms[i]);
+            Arrow child = A(connectMe, atoms[i]);
             root(child);
         }
         for (int j = 0; j < 100; j++) {
             printArrow(pairs[j], Eve());
-            Arrow child = pair(connectMe, pairs[j]);
+            Arrow child = A(connectMe, pairs[j]);
             root(child);
         }
         childrenOfCB(connectMe, printArrow, Eve());
@@ -268,11 +268,11 @@ int stress() {
     test_title("disconnection stress");
     {
         for (int i = 0; i < 200; i++) {
-            Arrow child = pair(connectMe, atoms[i]);
+            Arrow child = A(connectMe, atoms[i]);
             unroot(child);
         }
         for (int j = 0; j < 100; j++) {
-            Arrow child = pair(connectMe, pairs[j]);
+            Arrow child = A(connectMe, pairs[j]);
             unroot(child);
         }
         childrenOfCB(connectMe, printArrow, Eve());
@@ -285,15 +285,15 @@ int stress() {
         big = loose;
         for (int i = 0; i < 2; i++) {
             if (i % 2)
-                big = pair(big, atoms[i]);
+                big = A(big, atoms[i]);
             else
-                big = pair(atoms[i], big);
+                big = A(atoms[i], big);
         }
         for (int j = 0; j < 100; j++) {
             if (j % 2)
-                big = pair(big, pairs[j]);
+                big = A(big, pairs[j]);
             else
-                big = pair(pairs[j], big);
+                big = A(pairs[j], big);
         }
         root(big);
         commit();

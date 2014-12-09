@@ -16,7 +16,7 @@
 // A TERMINER / A ETUDIER
 // Option: types de rootage faibles: par la queue, par la tete, doublement
 //  API: weak(arrow)
-//   exemple d'usage: root(pair(weak(root(atom('hello'))), atom('world'))
+//   exemple d'usage: root(A(weak(root(atom('hello'))), atom('world'))
 // si 'hello' déracinée, 'hello'->'world' aussi
 // weak(A) est immédiatement "loose" (sur le point d'être oubliée) si aucun des 2 bouts de A n'est enraciné
 // B: Brotherhood flag, indique que la flèche sert à relier entre elles les composantes d'une collection des flèches enfants d'une autre flèche
@@ -1101,7 +1101,7 @@ static Arrow small(int length, char* str, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-static Arrow pair(Arrow tail, Arrow head, int ifExist) {
+static Arrow A(Arrow tail, Arrow head, int ifExist) {
     uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress, firstFreeAddress;
@@ -1213,13 +1213,13 @@ static Arrow pair(Arrow tail, Arrow head, int ifExist) {
 
 Arrow xl_pair(Arrow tail, Arrow head) {
     LOCK();
-    Arrow a = pair(tail, head, 0);
+    Arrow a = A(tail, head, 0);
     return LOCK_OUT(a);
 }
 
 Arrow xl_pairMaybe(Arrow tail, Arrow head) {
     LOCK();
-    Arrow a= pair(tail, head, 1);
+    Arrow a= A(tail, head, 1);
     return LOCK_OUT(a);
 }
 
@@ -1880,7 +1880,7 @@ static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, i
                     break;
                 }
 
-                a = pair(tail, head, ifExist);
+                a = A(tail, head, ifExist);
                 if (a == EVE || a == NIL) { // Non assimilated pair
                     a = head; // NIL or EVE
                     uriLength = NAN;
@@ -1963,7 +1963,7 @@ static Arrow uri(uint32_t size, char *uri, int ifExist) { // TODO: document actu
         if (size != NAN) size -= gap;
         uriLength += gap;
     
-        a = pair(a, b, ifExist);
+        a = A(a, b, ifExist);
         if (a == EVE) {
           return EVE; // not assimilated pair
         }

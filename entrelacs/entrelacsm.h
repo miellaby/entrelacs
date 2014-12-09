@@ -11,10 +11,9 @@
 #define anonymous() xl_anonymous()
 #define hook(P)     xl_hook(P)
 
-#define t(S)    xl_atom(S)
-#define a(T, H) xl_pair(T, H)
-#define DEFATOM(V) Arrow V = xl_atom(#V)
-#define DEFA(T, H) Arrow _##T##_##H = a(T, H)
+#define A(T, H)     xl_pair(T, H)
+#define DEFATOM(V) Arrow V = S(#V)
+#define DEFA(T, H) Arrow _##T##_##H = A(T, H)
 
 
 #define pairMaybe(T, H)   xl_pairMaybe(T, H)
