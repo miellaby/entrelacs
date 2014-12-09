@@ -15,6 +15,7 @@
         <link rel="stylesheet" href="css/terminal.css">
         <link rel="shortcut icon" href="./favicon.ico">
 
+        <script src="js/vendor/LAB-debug.min.js"></script>
         <script src="js/vendor/modernizr-2.6.2.min.js"></script>
     </head>
     <body>
@@ -25,24 +26,28 @@
         <div id='area' class='area'>
           <div class='wizard_box' style='display: none;'><div class='close'><a href='#'>&times;</a></div><div id='wizard_says'>Welcome new user!<p>Click bellow to start a quick tutorial</div></div>
         </div>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
-        <!-- <script src="https://code.jquery.com/jquery-migrate-1.2.1.js"></script> -->
-        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>')</script>
+        <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script> -->
+        <!-- <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>');</script> -->
 
-        <script src="js/plugins.js"></script>
-        <script src="https://cdn.jsdelivr.net/jquery.cookie/1.3.1/jquery.cookie.js"></script>
-        <script src="js/vendor/jquery.ajaxfileupload.js"></script>
-        <script src="js/as.js"></script>
-        <script src="js/vendor/creole.js"></script>
-        <script src="js/view.js"></script>
-        <script src="js/prompt.js"></script>
-        <script src="js/atomView.js"></script>
-        <script src="js/blobView.js"></script>
-        <script src="js/placeholder.js"></script>
-        <script src="js/pairView.js"></script>
-        <script src="js/terminal.js"></script>
-        <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery.colorbox/1.3.27/jquery.colorbox-min.js'></script>
-        <script src="js/main.js"></script>
-
+        <script>
+                $LAB.setGlobalDefaults({
+                    Debug: true
+                }).script('js/vendor/jquery-1.9.0.min.js')
+                    .wait()
+                    .script("js/vendor/jquery.cookie-1.3.1.js")
+                    .script("js/vendor/jquery.ajaxfileupload.js")
+                    .script("js/vendor/jquery.colorbox-1.3.27.min.js")
+                    .script("js/vendor/creole.js")
+                    .script("js/as.js")
+                    .script("js/view.js")
+                    .script("js/prompt.js")
+                    .script("js/terminal.js")
+                    .wait()
+                    .script("js/atomView.js")
+                    .script("js/blobView.js")
+                    .script("js/placeholder.js")
+                    .script("js/pairView.js")
+                    .script("js/main.js");
+        </script>
     </body>
 </html>

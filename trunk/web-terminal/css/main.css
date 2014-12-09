@@ -61,7 +61,6 @@ textarea {
    Author's custom styles
    ========================================================================== */
 
-   
 .wizard_box {
     min-width: 60%;
     position: fixed;
@@ -70,7 +69,6 @@ textarea {
 }
 
 .wizard_box {
-    background: #88b7d5;
     border: 24px solid #c2e1f5;
     padding: 10px;
     font: 26px/1.286 "Lucida Grande","Lucida Sans Unicode","DejaVu Sans",Lucida,Arial,Helvetica,sans-serif;
@@ -86,15 +84,17 @@ textarea {
     float: right;
     border: 20px solid #c2e1f5;
     border-radius: 20px;
-    margin-left: 20px;
 }
 
 .wizard_box  .close>a {
     display: block;
-    margin: -19px -12px;
+    margin: -15px -12px;;
     color: #88b7d5;
     font-weight:900;
+    font-size: 26px;
+    line-height: 26px;
     cursor: pointer;
+    font-family: Cantarell,Verdana,Geneva;;
 }
 
 
@@ -108,8 +108,6 @@ textarea {
 }
 
 .wizard_box:after {
-    border-color: rgba(136, 183, 213, 0);
-    border-top-color: #88b7d5;
     border-width: 20px;
     left: 50%;
     margin-left: -20px;
@@ -186,73 +184,3 @@ textarea {
     *zoom: 1;
 }
 
-/* ==========================================================================
-   Print styles
-   ========================================================================== */
-
-@media print {
-    * {
-        background: transparent !important;
-        color: #000 !important; /* Black prints faster: h5bp.com/s */
-        box-shadow: none !important;
-        text-shadow: none !important;
-    }
-
-    a,
-    a:visited {
-        text-decoration: underline;
-    }
-
-    a[href]:after {
-        content: " (" attr(href) ")";
-    }
-
-    abbr[title]:after {
-        content: " (" attr(title) ")";
-    }
-
-    /*
-     * Don't show links for images, or javascript/internal links
-     */
-
-    .ir a:after,
-    a[href^="javascript:"]:after,
-    a[href^="#"]:after {
-        content: "";
-    }
-
-    pre,
-    blockquote {
-        border: 1px solid #999;
-        page-break-inside: avoid;
-    }
-
-    thead {
-        display: table-header-group; /* h5bp.com/t */
-    }
-
-    tr,
-    img {
-        page-break-inside: avoid;
-    }
-
-    img {
-        max-width: 100% !important;
-    }
-
-    @page {
-        margin: 0.5cm;
-    }
-
-    p,
-    h2,
-    h3 {
-        orphans: 3;
-        widows: 3;
-    }
-
-    h2,
-    h3 {
-        page-break-after: avoid;
-    }
-}

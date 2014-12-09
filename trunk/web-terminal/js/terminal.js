@@ -5,7 +5,7 @@ function Terminal(area, entrelacs, animatePlease) {
     this.entrelacs = entrelacs;
     this.area.data('terminal', this);
 
-    protoEntry = $("<div class='prompt'><input type='text' /><span class='fileinput-button'><span>...</span><input type='file' name='files[]'> /></span></div>");
+    var protoEntry = $("<div class='prompt'><input type='text' /><span class='fileinput-button'><span>...</span><input type='file' name='files[]'> /></span></div>");
     protoEntry.appendTo(area);
     this.defaultEntryWidth = protoEntry.width();
     this.defaultEntryHeight = protoEntry.height();
@@ -18,7 +18,7 @@ function Terminal(area, entrelacs, animatePlease) {
             self.show(Arrow.atom(window.location.hash.substr(1)),  area.height() / 2, area.width() / 2).update();
         });
     } else {
-        this.connect = $("<p class='connect' align='center'><button id='go'>&rarr;|</button></p>");
+        this.connect = $("<p class='connect' align='center'><button id='go'>...</button></p>");
         this.connect.children('button').click(function() {
             alert("Leaving sand box. Entering public area ...");
             window.location = "#pub";
@@ -72,8 +72,8 @@ Terminal.prototype = {
         } else if (a.getTail() == Arrow.atom('Content-Typed')) {
             view = new BlobView(a, this, x, y);
         } else {
-            var tv = terminal.show(a.getTail(), x - 100 - this.defaultEntryWidth, y - 170, ctx);
-            var hv = terminal.show(a.getHead(), x + 100, y - 130, ctx);
+            var tv = this.show(a.getTail(), x - 100 - this.defaultEntryWidth, y - 170, ctx);
+            var hv = this.show(a.getHead(), x + 100, y - 130, ctx);
             view = new PairView(a, this, tv, hv, ctx);
             view.restoreGeometry(null, ctx || view);
         }
@@ -96,7 +96,7 @@ Terminal.prototype = {
         }
         
         this.commitTimeout = setTimeout(function() {
-            this.commitTimeout = null;
+            self.commitTimeout = null;
             self.commit();
         }, 5000);
     },
@@ -227,27 +227,25 @@ Terminal.prototype = {
     moveLoadindBarOnView: function(view) {
        var p = view.d.position();
        this.loading
-            .css('top', (p.top + this.defaultEntryHeight) + 'px')
-            .css('left', p.left + 'px');
+            .css('top', (p.top) + 'px')
+            .css('left', (p.left + view.d.width() / 2 - (this.loading.width() * 0.5)) + 'px');
     },
 
     arrowEvent: function(a) {
-        if (a == null) { // reset!
+        if (a === null) { // reset!
             // TODO: move out reconnection
             if (window.location.hash) {
                 var promise = this.entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
             }
             return;
         }
-        var self = this;
+        var views = a.get('views');
         if (a.hc === undefined ) { // a is GC-ed
-            var views = a.get('views');
             views && views.forEach(function(view) {
                 view.edit();
             });
         } else {
             var r = a.isRooted();
-            var views = a.get('views');
             views && views.forEach(function(view) { view.d.find('.toolbar .rooted input').prop('checked', r); });
         }
     },    

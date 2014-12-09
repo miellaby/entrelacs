@@ -33,11 +33,16 @@ function Prompt(string, terminal, x, y, immediate) {
         },
         
         blur: function(event) {
-            self.closeIfLoose();
-            var flies = self.d.children('.fileinput-button,.split,.wiki-checkbox,.ok-button');
-            flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200).fadeOut();
-            if (!self.bar.hasClass('hover'))
-                self.bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
+            setTimeout(function() {
+                var focused = document.activeElement;
+                if (!focused || !(document.hasFocus() && $.contains(self.d[0], focused))) {
+                    self.closeIfLoose();
+                    var flies = self.d.children('.fileinput-button,.split,.wiki-checkbox,.ok-button');
+                    flies.delay(300).animate({'margin-right': '40px', opacity: 0}, 200).fadeOut();
+                    if (!self.bar.hasClass('hover'))
+                        self.bar.children('div,a').animate({'height': '0px', opacity: 0}, 500);
+                }
+            }, 0);
             return true;
         },
         
@@ -174,20 +179,20 @@ function Prompt(string, terminal, x, y, immediate) {
     i.on('dragleave', this.on.dragleave);
     i.on('dragover', function() { return false; });
     
-    // split button
-    $("<a class='split'>&nbsp;|&nbsp;</a>")
-            .prependTo(d)
-            .click(this.on.split.click);
+    // wiki button
+    var wb = $("<a class='wiki-checkbox'>.__.</a>")
+        .appendTo(d)
+        .click(this.on.wikiButton.click);
 
     // file upload button
     $("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>")
             .appendTo(d)
             .click(this.on.fileInputButton.click);
 
-    // wiki button
-    var wb = $("<a class='wiki-checkbox'>.__.</a>")
-        .appendTo(d)
-        .click(this.on.wikiButton.click);
+    // split button
+    $("<a class='split'>&nbsp;|&nbsp;</a>")
+            .appendTo(d)
+            .click(this.on.split.click);
 
     // Cross-domain form posts can't be queried back!
     // So we build up a secret and pair it with our uploaded file, then we get back our secret child!
@@ -205,7 +210,7 @@ function Prompt(string, terminal, x, y, immediate) {
             self.terminal.loading.show();
         },
         'onComplete': function(response) {
-            if (typeof response == "Object" && response.status === false)
+            if (typeof response == "object" && response.status === false)
                 return;
                 
             self.terminal.uploadCount--;
@@ -317,8 +322,8 @@ $.extend(Prompt.prototype, View.prototype, {
         if (this.isLoose()) {
             var self = this;
             setTimeout(function() {
-                if (document.hasFocus()
-                        && !self.d.find('input[type="text"],textarea').is(':focus')
+                if (!(document.hasFocus()
+                      && $.contains(self.d[0], document.activeElement))
                         && self.isLoose())
                     self.close();
                 // TODO : if the document has lost focus, one should check loose prompts latter
