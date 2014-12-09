@@ -5,84 +5,92 @@
 # make tests
 # make run
 # CFLAGS="-g -o0" make clean.testmachine testmachine
-# make run.testmachine
-# make entrelacsd
-# make run.testshell
+# make run.machine
+# make server
+# make run.shell
 # make start
-# make gdb_start
-# make valgrind_start
+# make gdb
+# make valgrind
 .PHONY: help server clean all clean.% test% run.% tests run start
 CPPFLAGS += -std=c99 -pthread -fPIC
+BINDIR = bin
 
-TARGETS = libentrelacs.so libentrelacs.a server
-# entrelacsd
+TARGETS = libentrelacs.so libentrelacs.a entrelacsd
 OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
+OBJECTS_entrelacsd = mongoose.o server.o
+
 TESTS = space uri script machine shell
 
 PERSISTENCE_FILE=/tmp/entrelacs_test.dat
 
-all: $(TARGETS)
+
+BINTARGETS = $(TARGETS:%=$(BINDIR)/%)
+BINOBJECTS = $(OBJECTS:%=$(BINDIR)/%)
+BINOBJECTS_entrelacsd = $(OBJECTS_entrelacsd:%=$(BINDIR)/%)
+
+all: $(BINTARGETS)
 
 help:
-	@head makefile | grep '^#'
+	@head makefile | grep '^#' | sed -e '/# .*/ s/# \(.*\)/\1/'
 
-clean: $(TESTS:%=clean.test%) clean.server
-	-rm -f $(OBJECTS) $(TARGETS)
-
-clean.server:
-	-rm -f mongoose.o server.o entrelacsd
+clean: $(TESTS:%=clean.test%)
+	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd)
 
 $(TESTS:%=clean.test%):
-	-rm $(@:clean.%=%) $(@:clean.%=%.o)
+	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
 
-tests: all $(TESTS:%=test%)
+tests: all $(TESTS:%=$(BINDIR)/test%)
 
-test%: test%.o libentrelacs.a
+server: $(BINDIR)/entrelacsd
+
+draft: $(BINDIR)/testdraft.o $(BINDIR)/testdraft run.draft
+
+shell: $(BINDIR)/testshell
+
+$(BINDIR)/test%: $(BINDIR)/test%.o $(BINDIR)/libentrelacs.a
 	$(CC) $(LDFLAGS) $^ -o $(@) -lpthread
 
+$(BINDIR)/libentrelacs.a: $(BINOBJECTS)
+	ar rvs $(@) $^
+	
+$(BINDIR)/libentrelacs.so: $(BINOBJECTS)
+	$(LD) $(LDFLAGS) -o $(@) $^ -shared -lc
+
+$(BINDIR)/entrelacsd: $(BINOBJECTS_entrelacsd) $(BINDIR)/session.o $(BINDIR)/libentrelacs.a
+	$(CC) -B dynamic -pthread -o $(@) $^ -ldl
+
+$(BINDIR)/*.o: *.h
+
+$(BINDIR)/%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+prompt: run.shell
 
 run: $(TESTS:%=run.%)
 
-run.%: test%
+run.%: $(BINDIR)/test%
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
 
-server: entrelacsd
-
-entrelacsd: mongoose.o session.o server.o libentrelacs.a
-	$(CC) -B dynamic -pthread -o $(@) $^ -ldl
-
-draft: testdraft.o testdraft run.draft
-shell: testshell
-prompt: run.shell
-
-libentrelacs.a: $(OBJECTS)
-	ar rvs $(@) $^
-	
-libentrelacs.so: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $(@) $^ -shared -lc
-
-*.o: *.h
-
 start: server
 	-pkill entrelacsd
 	# -[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
-	ENTRELACS=$(PERSISTENCE_FILE) ./entrelacsd
-	od -t x1z -w8 $(PERSISTENCE_FILE)
+	ENTRELACS=$(PERSISTENCE_FILE) $(BINDIR)/entrelacsd
+	# od -t x1z -w8 $(PERSISTENCE_FILE)
 
-gdb_start: server
+gdb:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
 	CFLAGS="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) gdb ./entrelacsd
-	od -t x1z -w8 $(PERSISTENCE_FILE)
+	ENTRELACS=$(PERSISTENCE_FILE) gdb $(BINDIR)/entrelacsd
+	#od -t x1z -w8 $(PERSISTENCE_FILE)
 
-valgrind_start: server
+valgrind:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
 	CFLAGS="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) valgrind ./entrelacsd
-	od -t x1z -w8 $(PERSISTENCE_FILE)
+	ENTRELACS=$(PERSISTENCE_FILE) valgrind $(BINDIR)/entrelacsd
+	# od -t x1z -w8 $(PERSISTENCE_FILE)
