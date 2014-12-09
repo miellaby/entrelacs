@@ -323,12 +323,12 @@ static void *event_handler(enum mg_event event,
 int main(void) {
   struct mg_context *ctx;
 #ifdef DEBUG
-  log_init(NULL, "session,machine,space,server=debug,mem=trace");
+  log_init(NULL, "session,machine,server=debug,space,mem=trace");
 #else
 #ifdef PRODUCTION
   log_init(NULL, "session,machine,space,mem,server=warn");
 #else
-  log_init(NULL, "session,machine,space,mem=info,server=trace");
+  log_init(NULL, "session,machine,space,mem=info,space,server=trace");
 #endif
 #endif
 
