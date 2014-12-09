@@ -1,3 +1,6 @@
+// global variables
+var entrelacs, terminal;
+
 function init() {
     var area = $('#area');
     entrelacs = new Entrelacs();
@@ -5,20 +8,13 @@ function init() {
     $(document).scrollTop(area.height() / 2 - $(window).height() / 2);
     $(document).scrollLeft(area.width() / 2 - $(window).width() / 2);
 
-    
-    creole = new Parse.Simple.Creole({forIE: document.all,
-                                     interwiki: {
-                WikiCreole: 'http://www.wikicreole.org/wiki/',
-                Wikipedia: 'http://en.wikipedia.org/wiki/'},
-                                     linkFormat: '' });
-                                     
     //findFeaturedArrows();
     var wizardState = "beginning";
     
     var center = function(elt) {
         var p = elt.position();
         var x = p.left - ($(window).width() / 2);
-        var y = p.top - elt.height() - ($(window).height() * 0.8);
+        var y = p.top - elt.height() - ($(window).height() * 0.5);
         $('html, body').animate({scrollLeft: x, scrollTop: y}, 1000);
     };
 
@@ -72,7 +68,7 @@ function init() {
 
         } else if (wizardState == 'root') {
             if ((o = Arrow.pair(Arrow.atom('hello'), Arrow.atom('world'))).isRooted()) {
-                $('#wizard_says').hide().html("So you've just <i>rooted hello&rarr;word</i>&nbsp!<br>:)<br>That tells the system this arrow is right and worth keeping.<p>Would you mind refresh the page now?").fadeIn();
+                $('#wizard_says').hide().html("So you've just <i>rooted hello&rarr;word</i>&nbsp!<br>:)<br>That tells the system this arrow is right and worth keeping.<p>Would you mind <a href='#' onClick='document.location.reload();'>refresh</a> the page now?").fadeIn();
                 center(o.get('views')[0].d);
                 wizardState = "clean";
             }
