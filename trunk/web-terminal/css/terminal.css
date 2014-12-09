@@ -193,7 +193,7 @@ animation-delay:0.45s;
     margin-left: -40px;
     left: 50%;
     z-index: 21;
-    height: 17px;
+    height: 19px;
     line-height: 16px;
     bottom: -17px;
 }
@@ -417,13 +417,13 @@ animation-delay:0.45s;
 }
 
 .split {
-    right: -28px;
+    right: -32px;
     top: 0px;
     padding: 0 3px;
 }
 
 .split:hover {
-    right: -32px;
+    right: -36px;
     top: -4px;
     padding: 4px 7px;
 }
@@ -455,25 +455,25 @@ animation-delay:0.45s;
 }
 
 .wiki-checkbox {
-    right: -54px;
-    top: 32px;
+    right: 14px;
+    top: -48px;
     padding: 4px 6px;
 }
 
 .wiki-checkbox:hover {
-    right: -56px;
-    top: 30px;
+    right: 18px;
+    top: -50px;
     padding: 6px 8px;
 }
 
 .ok-button {
     right: -38px;
-    top: 0px;
+    top: 50px;
     padding: 0 3px;
 }
 
 .ok-button:hover {
     right: -42px;
-    top: -4px;
+    top: 46px;
     padding: 4px 7px;
 }

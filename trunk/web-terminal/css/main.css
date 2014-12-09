@@ -72,12 +72,13 @@ textarea {
 .wizard_box {
     background: #88b7d5;
     border: 24px solid #c2e1f5;
-    border-radius: 20px;
     padding: 10px;
     font: 26px/1.286 "Lucida Grande","Lucida Sans Unicode","DejaVu Sans",Lucida,Arial,Helvetica,sans-serif;
     color: #c2e1f5;
     text-align: center;
+    border-radius: 50px;
 }
+
 .wizard_box >.close {
     height:0;
     width:0;
