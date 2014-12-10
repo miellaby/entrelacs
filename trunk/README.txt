@@ -12,15 +12,8 @@ _______
 
 Install & test:
 ______________
-make all ; # compile everythings
-make libentrelacs.a libentrelacs.so ; # compile libraries
-make tests ; # also compile tests
-make server ; # compile the server
-make start ; # compile then start the HTTP server
-make run ; # compile and perform regression tests
-make help ; # echo additional suggestions
-make clean ; # clean in order to rebuild
-make clean.sometest : # clean test exe
+make tests ; # compile and tests everythings (type Ctrl+D when in the shell)
+make help ; # see other build commands
 
 Additional configuration:
 ________________________
