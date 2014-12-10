@@ -40,13 +40,13 @@ function init() {
         var o;
         if (wizardState == "beginning") {
             if ((o = $(':focus').parent()).hasClass('prompt')) {
-                $('#wizard_says').hide().html("Now please type <i>hello</i> and validate with the <i>Return/Enter</i> key").fadeIn();
+                $('#wizard_says').hide().html("Type <i>hello</i><br/>and validate.").fadeIn();
                 center(o);
                 wizardState = "hello";
             }
         } else if (wizardState == 'hello') {
             if ((o = Arrow.atom('hello').get('views')) !== undefined) {
-                $('#wizard_says').hide().html("You've just submitted your first <i>atomic arrow</i>.<p>Now find and click the &darr;&nbsp;button.").fadeIn();
+                $('#wizard_says').hide().html("Here is an <i>atomic arrow</i>.<p>Find and click the &darr;&nbsp;button.").fadeIn();
                 center(o[0].d);
                 wizardState = "outgoing";
             }

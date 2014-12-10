@@ -42,6 +42,9 @@ function View(arrow, terminal, d) {
                         if (arrow.isRooted()) {
                             arrow.unroot();
                             self.cleanAllGeometryAfterUnroot(arrow);
+                            if (!self.children.length) {
+                                self.close();
+                            }
                         } else {
                             arrow.root();
                             self.saveAllGeometryAfterRoot(arrow);
@@ -168,15 +171,19 @@ View.prototype = {
         console.log(Arrow.serialize(arrow) + " " + views.length + " views");
         
         // re-binding
-        if (this.replaced) {
+        if (this.replaced && this.replaced != this.arrow) {
+            var replacedWasRooted = false;
             if (this.replaced.hc !== undefined) {
+                replacedWasRooted = this.replaced.isRooted();
                 this.replaced.unroot();
                 this.cleanAllGeometryAfterUnroot(this.replaced);
             }
             delete this.replaced;
-            this.arrow.root();
-            this.saveAllGeometryAfterRoot(this.arrow);
-            this.terminal.commit();
+            if (replacedWasRooted) {
+                this.arrow.root();
+                this.saveAllGeometryAfterRoot(this.arrow);
+                this.terminal.commit();
+            }
         }
         
         this.d.find('.toolbar .rooted input').prop('checked', arrow.isRooted());
@@ -211,8 +218,8 @@ View.prototype = {
         if (this.children.length) {
             var d = this.d;
             // TODO pourquoi d.position() ne fonctionne pas?
-            var x = parseInt(d.css('left'));
-            var y = parseInt(d.css('top'));
+            var x = parseInt(d.css('left'), 10);
+            var y = parseInt(d.css('top'), 10);
             var placeholder = new PlaceholderView(this.arrow, this.terminal, x, y);
             this.replaceWith(placeholder);
         } else { // no child
@@ -416,8 +423,8 @@ View.prototype = {
         if ((c = it()) != null) {
             console.log(Arrow.serialize(c));
             c = c.getHead();
-            var w = parseInt(c.getTail().getBody());
-            var h = parseInt(c.getHead().getBody());
+            var w = parseInt(c.getTail().getBody(), 10);
+            var h = parseInt(c.getHead().getBody(), 10);
             this.setGeometry(floating, w, h);
         }
     },
@@ -488,15 +495,29 @@ View.prototype = {
     },
 
     confirmDescendants: function() {
+        var self = this;
         var f = this.for;
         if (!f.length) { // terminal case: tree to be recorded
-            this.confirm().update();
+            var confirmedView = this.confirm();
+            var promise = confirmedView.update();
+            promise.done(function() {
+                if (confirmedView.arrow === null) {
+                    console.log('!? GCed');
+                } else {
+                    console.log('root it');
+                    confirmedView.arrow.root();
+                    confirmedView.saveAllGeometryAfterRoot(confirmedView.arrow);
+                }
+            });
+            return [promise];
         } else {
             // get back to the roots (recursive calls to all waiting prompt arrows)
+            var promises=[];
             for (var i = 0 ; i < f.length; i++) {
-                f[i].confirmDescendants();
+                promises = promises.concat(f[i].confirmDescendants());
             }
-        };
+            return promises;
+        }
     },
 
     edit: function() {
@@ -528,6 +549,10 @@ View.prototype = {
             var d = self.d;
             var p = d.position();
             var source = self.arrow;
+            if (!source) {
+                console.log("View got CGed before processPartners");
+                return;
+            }
             console.log(Arrow.serialize(source) + " partners = {");
             while (list !== Arrow.eve) {
                 var pair = list.getTail();
@@ -570,17 +595,18 @@ View.prototype = {
             console.log("}");
         };
 
+        var knownPartners = self.arrow.getPartners();
+        processPartners(knownPartners);
+
         self.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
         self.terminal.moveLoadindBarOnView(self);
         var promise = self.terminal.entrelacs.isRooted(self.arrow);
-        promise.done(function () {
+        promise = promise.pipe(function () {
             self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
-            var knownPartners = self.arrow.getPartners();
-            processPartners(knownPartners);
-            var promise = self.terminal.entrelacs.getPartners(self.arrow);
-            promise.done(function(partners) {
-                processPartners(partners);
-            });
+            return self.terminal.entrelacs.getPartners(self.arrow);
+        });
+        promise.done(function(partners) {
+            processPartners(partners);
         });
         return promise;
     },

@@ -278,8 +278,9 @@ animation-delay:0.45s;
 
 #area {
     position: absolute;
-    width: 10000px;
-    height: 10000px;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
 .atom, .blob, .prompt {
@@ -347,7 +348,7 @@ animation-delay:0.45s;
    border-top-width: 0;
    border-right-width: 0;
    border-bottom-left-radius: 10px;
-   box-shadow: -4px 8px 8px rgba(0, 0, 0, 0.1);
+   box-shadow: -2px 2px 2px rgba(0, 0, 0, 0.1);
 }
 
 .pair .head, .ipair .tail {
@@ -358,7 +359,7 @@ animation-delay:0.45s;
    border-top-width: 0;
    border-right-width: 1px;
    border-bottom-right-radius: 10px;
-   box-shadow: 4px 8px 8px rgba(0, 0, 0, 0.1);
+   box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
 }
 
 .tailEnd {
