@@ -205,7 +205,7 @@ function Prompt(string, terminal, x, y, immediate) {
         'validate_extensions': false,
         'action': terminal.entrelacs.serverUrl + prog,
         'onStart':  function() {
-            self.terminal.uploadCount++;
+            self.terminal.transfertCount++;
             self.terminal.moveLoadindBarOnView(self);
             self.terminal.loading.show();
         },
@@ -213,7 +213,9 @@ function Prompt(string, terminal, x, y, immediate) {
             if (typeof response == "object" && response.status === false)
                 return;
                 
-            self.terminal.uploadCount--;
+            if (self.terminal.transfertCount) self.terminal.transfertCount--;
+            if (!self.terminal.transfertCount) self.terminal.loading.hide();
+            
             // response is not readable
             // however one can search for the arrow child
             var query = self.terminal.entrelacs.getChildren(secret);

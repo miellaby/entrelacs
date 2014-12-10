@@ -14,9 +14,13 @@ function BlobView(a, terminal, x, y) {
             ? $("<div class='content' tabIndex=1></div>")
             : (isOctetStream
                 ? $("<a class='content' target='_blank' tabIndex=1></a>").attr('href', server + '/escape+' + uri).text(uri)
-                : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri)))).appendTo(d);
+                : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri))));
 
     d.css({'left': x + 'px', 'top': y + 'px'});
+    d.css({
+            'margin-left': -parseInt(d.width() / 2) + 'px',
+            'margin-top': -d.height() + 'px'
+    });
     View.call(this, a, terminal, d);
     this.contentType = type;
     
@@ -35,9 +39,11 @@ function BlobView(a, terminal, x, y) {
                     'margin-left': -parseInt(w / 2) + 'px',
                     'margin-top': -h + 'px'
                 });
+                o.appendTo(d);
             });
         } else {
             terminal.creole.parse(o[0], contentArrow.getBody());
+            o.appendTo(d);
             var w = d.width();
             var h = d.height();
             d.css({
@@ -47,14 +53,21 @@ function BlobView(a, terminal, x, y) {
         }
     } else {
         o.colorbox({href: terminal.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
+        self.terminal.transfertCount++;
+        self.terminal.moveLoadindBarOnView(self);
+        self.terminal.loading.show();
         o.load(function() {
+            if (self.terminal.transfertCount) self.terminal.transfertCount--;
+            if (!self.terminal.transfertCount) self.terminal.loading.hide();
+            
+            o.appendTo(d);
             var wo = o.width();
             var ho = o.height();
             if (wo > ho)
                 o.css({width: '100px', 'max-height': 'auto'});
             else
                 o.css({height: '100px', 'max-width': 'auto'});
-            
+
             var w = d.width();
             var h = d.height();
             d.css({
