@@ -47,7 +47,7 @@ function Terminal(area, entrelacs, animatePlease) {
     this.commitTimeout = null;
 
 
-    var mx0, my0, deltaSum;
+    var mx0, my0, deltaSum, movingArea;
     
     this.on = {
         area: {
@@ -65,16 +65,19 @@ function Terminal(area, entrelacs, animatePlease) {
                 mx0 = event.pageX;
                 my0 = event.pageY;
                 deltaSum = 0;
+                movingArea = false;
                 area.on("mousemove", self.on.area.mousemove);
                 return true;
             },
             mouseup: function(event) {
                 area.off('mousemove', self.on.area.mousemove);
+                area.css( 'cursor', 'pointer' );
                 return true;
             },
             mouseleave: function(event) {
                 area.off('mousemove', self.on.area.mousemove);
-                deltaSum = 0;
+                area.css( 'cursor', 'pointer' );
+                   deltaSum = 0;
                 return true;
             },
             mousemove: function(event) {
@@ -84,6 +87,10 @@ function Terminal(area, entrelacs, animatePlease) {
               my0 = event.pageY;
               deltaSum += Math.abs(dx) + Math.abs(dy);
               if (deltaSum > 5) {
+                    if(!movingArea) {
+                       movingArea = true;
+                       area.css( 'cursor', 'move' );
+                    }
                 self.scroll(dx, dy);
               }
                 
