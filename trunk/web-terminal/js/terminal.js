@@ -29,7 +29,7 @@ function Terminal(area, entrelacs, animatePlease) {
         this.connect.appendTo(area);
     }
     this.circleAngle = 0;
-    this.uploadCount = 0;
+    this.transfertCount = 0;
 
     this.creole = new Parse.Simple.Creole({forIE: document.all,
                                      interwiki: {
@@ -39,9 +39,11 @@ function Terminal(area, entrelacs, animatePlease) {
 
     Arrow.listeners.push(function(a) { self.arrowEvent(a); });
     $(document).ajaxStart(function(){
+        self.transfertCount++;
         self.loading.show();
     }).ajaxStop(function(){
-        if (!self.uploadCount) self.loading.hide();
+        if (self.transfertCount) self.transfertCount--;
+        if (!self.transfertCount) self.loading.hide();
     });
     
     this.commitTimeout = null;
@@ -272,8 +274,8 @@ Terminal.prototype = {
     moveLoadindBarOnView: function(view) {
        var p = view.d.position();
        this.loading
-            .css('top', (p.top) + 'px')
-            .css('left', (p.left + view.d.width() / 2 - (this.loading.width() * 0.5)) + 'px');
+            .css('top', p.top + 'px')
+            .css('left', p.left + 'px');
     },
 
     arrowEvent: function(a) {
