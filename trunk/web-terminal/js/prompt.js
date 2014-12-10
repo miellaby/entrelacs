@@ -366,9 +366,24 @@ $.extend(Prompt.prototype, View.prototype, {
     },
 
     confirm: function() {
-        if (this.arrow) return this;
+        // if (this.arrow) return this;
         return this.turnIntoAtomView();
     },
 
+    confirmDescendants: function() {
+        var self = this;
+        var aLotOfPromises = View.prototype.confirmDescendants.call(this);
+        console.log(aLotOfPromises);
+        return $.when.apply($, aLotOfPromises).done(function() {
+            console.log("commit");
+            self.terminal.commit();
+        });
+    },
+
+    update: function() {
+       // update a prompt ==> confirm and see
+       this.confirmDescendants();
+    },
+    
     isPairView: function() { return false; }
 });
