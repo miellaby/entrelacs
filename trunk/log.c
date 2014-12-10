@@ -32,6 +32,7 @@ int log_init(const char *filename, const char *debug_str)
         rhs = lhs = (char*) debug_str;
         while (rhs && (rhs = strchr(rhs, '='))) {
             rhs++;
+
             p = strchr(rhs, ',');
             n = p ? p - rhs : strlen(rhs);
             for (level=0; level_name[level]; level++) {
@@ -43,6 +44,7 @@ int log_init(const char *filename, const char *debug_str)
                 // unknown level
                 continue;
             }
+
             do {
                 if (*lhs==',') lhs++;
                 p = strpbrk(lhs, ",=");
@@ -56,6 +58,7 @@ int log_init(const char *filename, const char *debug_str)
                 }
                 lhs = p;
             } while (*lhs && *lhs==',');
+            lhs = rhs;
         }
     }
 
