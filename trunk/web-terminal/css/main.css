@@ -69,12 +69,12 @@ textarea {
 }
 
 .wizard_box {
-    border: 24px solid #c2e1f5;
+    border: 5px solid #c2e1f5;
     padding: 10px;
-    font: 26px/1.286 "Lucida Grande","Lucida Sans Unicode","DejaVu Sans",Lucida,Arial,Helvetica,sans-serif;
+    font: 20px/1.286 "Lucida Grande","Lucida Sans Unicode","DejaVu Sans",Lucida,Arial,Helvetica,sans-serif;
     color: #c2e1f5;
     text-align: center;
-    border-radius: 50px;
+    border-radius: 15px;
 }
 
 .wizard_box >.close {
@@ -116,7 +116,7 @@ textarea {
 .wizard_box:before {
     border-color: rgba(194, 225, 245, 0);
     border-top-color: #c2e1f5;
-    border-width: 64px;
+    border-width: 12px;
     left: 50%;
     margin-left: -64px;
 }

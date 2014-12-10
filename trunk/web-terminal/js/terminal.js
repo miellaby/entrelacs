@@ -15,7 +15,7 @@ function Terminal(area, entrelacs, animatePlease) {
     // TODO: move out connection button
     if (window.location.hash) {
         entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
-            self.show(Arrow.atom(window.location.hash.substr(1)),  area.height() / 2, area.width() / 2).update();
+            self.show(Arrow.atom(window.location.hash.substr(1)),  area.width() / 2, area.height() / 2).update();
         });
     } else {
         this.connect = $("<p class='connect' align='center'><button id='go'>...</button></p>");
@@ -46,17 +46,55 @@ function Terminal(area, entrelacs, animatePlease) {
     
     this.commitTimeout = null;
 
+
+    var mx0, my0, deltaSum;
+    
     this.on = {
         area: {
             click: function(event) {
-                var x = event.pageX;
-                var y = event.pageY;
-                var p = new Prompt("", self, x, y);
-                p.focus();
+                if (deltaSum < 5) {
+                    var x = event.pageX;
+                    var y = event.pageY;
+                    var p = new Prompt("", self, x, y);
+                    p.focus();
+                }
+            },
+            mousedown: function(event) {
+                if (event.target != area[0]) return;
+                
+                mx0 = event.pageX;
+                my0 = event.pageY;
+                deltaSum = 0;
+                area.on("mousemove", self.on.area.mousemove);
+                return true;
+            },
+            mouseup: function(event) {
+                area.off('mousemove', self.on.area.mousemove);
+                return true;
+            },
+            mouseleave: function(event) {
+                area.off('mousemove', self.on.area.mousemove);
+                deltaSum = 0;
+                return true;
+            },
+            mousemove: function(event) {
+              var dx = event.pageX - mx0;
+              var dy = event.pageY - my0;
+              mx0 = event.pageX;
+              my0 = event.pageY;
+              deltaSum += Math.abs(dx) + Math.abs(dy);
+              if (deltaSum > 5) {
+                self.scroll(dx, dy);
+              }
+                
+              return true;
             }
         }
     }
     area.click(this.on.area.click);
+    area.mousedown(this.on.area.mousedown);
+    area.mouseup(this.on.area.mouseup);
+    area.mouseleave(this.on.area.mouseleave);
 }
 
 Terminal.prototype = {
@@ -249,5 +287,13 @@ Terminal.prototype = {
             views && views.forEach(function(view) { view.d.find('.toolbar .rooted input').prop('checked', r); });
         }
     },    
-    
+
+    scroll: function(dx, dy) {
+        var i = 0;
+        this.area.children().each(function(i, element) {
+            element = $(element)
+            var position = element.position();
+            element.css({left: (position.left + dx) + 'px', top: (position.top + dy) + 'px'});
+        });
+    }
 };
