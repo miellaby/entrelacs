@@ -12,7 +12,7 @@
 #define hook(P)     xl_hook(P)
 
 #define A(T, H)     xl_pair(T, H)
-#define DEFATOM(V) Arrow V = S(#V)
+#define DEFATOM(V) Arrow V = atom(#V)
 #define DEFA(T, H) Arrow _##T##_##H = A(T, H)
 
 

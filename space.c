@@ -2700,12 +2700,14 @@ static int xl_enumNextChildOf(XLEnum e) {
             || iteratorp->currentCell.arrow.dr != cell.arrow.dr
             || memcmp(iteratorp->currentCell.arrow.def,
                  cell.arrow.def, sizeof(cell.arrow.def)) != 0) {
+            TRACEPRINTF("arrow changed");
             return LOCK_OUT(0); // arrow changed
         }
 
         if (!(cell.arrow.RWWnCn &
           (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
           // no child
+          TRACEPRINTF("no child");
           return LOCK_OUT(0); // no child
         }
 
@@ -2715,23 +2717,24 @@ static int xl_enumNextChildOf(XLEnum e) {
             iteratorp->pos = a;
             iteratorp->iSlot = 0;
             iteratorp->current = cell.arrow.child0;
+            TRACEPRINTF("child 0 %06x", iteratorp->current);
             return LOCK_OUT(!0);
           } else {
-            return LOCK_OUT(0); // no child left
+            pos = a;
           }
-        } else { // pos == a
-          if (1 == (cell.arrow.RWWnCn &
+        }
+        // pos == a
+        if (1 == (cell.arrow.RWWnCn &
                 (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))
               && cell.arrow.child0) {
-              return LOCK_OUT(0); // no child left
-          } else {
-            // 1st shift
-            ADDRESS_SHIFT(pos, pos, offset);
-            mem_get(pos, &cell.u_body);
-            ONDEBUG((LOGCELL('R', pos, &cell)));
-            ic = 1;
-            i = 0;
-          }
+          return LOCK_OUT(0); // no child left
+        } else {
+          // 1st shift
+          ADDRESS_SHIFT(pos, pos, offset);
+          mem_get(pos, &cell.u_body);
+          ONDEBUG((LOGCELL('R', pos, &cell)));
+          ic = 1;
+          i = 0;
         }
     } else {
 
@@ -2785,6 +2788,8 @@ static int xl_enumNextChildOf(XLEnum e) {
               iteratorp->iCell = ic;
               iteratorp->current = child;
               iteratorp->offset  = offset;
+              TRACEPRINTF("child %d.%d %06x", ic, i, iteratorp->current);
+
               return LOCK_OUT(!0);
             }
           } // child maybe found

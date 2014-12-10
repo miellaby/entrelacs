@@ -1,18 +1,25 @@
 # Suggested calls:
+# make run # compile and perform regression tests
+# make server # compile the server
+# make run.shell # simple REPL
+# make start # compile then start the server
+# make gdb
+# make valgrind
+# 
+# make run.machine # compile and run one test
+# make tests # compile tests
+# make clean # clean in order to rebuild
+# make clean.testmachine # clean one test
+# 
 # CFLAGS=-DPRODUCTION make clean all
 # CFLAGS="-g -o0" make clean all
 # CFLAGS="-DDEBUG -g -o0" make clean all
-# make tests
-# make run
 # CFLAGS="-g -o0" make clean.testmachine testmachine
-# make run.machine
-# make server
-# make run.shell
-# make start
-# make gdb
-# make valgrind
+# 
+# make help # this help
+
 .PHONY: help server clean all clean.% test% run.% tests run start
-CPPFLAGS += -std=c99 -pthread -fPIC
+CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
@@ -31,7 +38,7 @@ BINOBJECTS_entrelacsd = $(OBJECTS_entrelacsd:%=$(BINDIR)/%)
 all: $(BINTARGETS)
 
 help:
-	@head makefile | grep '^#' | sed -e '/# .*/ s/# \(.*\)/\1/'
+	@head -30 makefile | grep '^#' | sed -e '/# .*/ s/# \(.*\)/\1/'
 
 clean: $(TESTS:%=clean.test%)
 	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd)
@@ -39,7 +46,9 @@ clean: $(TESTS:%=clean.test%)
 $(TESTS:%=clean.test%):
 	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
 
-tests: all $(TESTS:%=$(BINDIR)/test%)
+test.%: $(BINDIR)/test%
+
+tests: all $(TESTS:%=test.%)
 
 server: $(BINDIR)/entrelacsd
 
