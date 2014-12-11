@@ -567,7 +567,7 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
 #define PROBE_LIMIT 20
 #define ADDRESS_SHIFT(ADDRESS, NEW, OFFSET) \
          (NEW = (((ADDRESS) + (31 + (OFFSET)++) / 32) % (SPACE_SIZE)))
-
+// FIXME ADDRESS_JUMP
 #define ADDRESS_JUMP(ADDRESS, NEW, OFFSET, JUMP) \
          (NEW = (((ADDRESS) + (31 * (JUMP) + ((OFFSET) * (JUMP) * (1 + JUMP) / 2)) / 32) % (SPACE_SIZE)))
 
@@ -585,8 +585,9 @@ static Address jumpToFirst(Cell* cell, Address address, Address offset) {
 
     ADDRESS_JUMP(address, next, offset, jump);
 
-    if (jump == MAX_JUMP0) {
+    if (jump == MAX_JUMP0 + 1) {
         // one needs to look for a reattachment (sync) cell
+        offset += MAX_JUMP0 + 1;
         Cell probed;
         mem_get(next, &probed.u_body);
         ONDEBUG((LOGCELL('R', next, &probed)));
@@ -614,12 +615,12 @@ static Address jumpToNext(Cell* cell, Address address, Address offset) {
 
     ADDRESS_JUMP(address, next, offset, jump);
 
-    if (jump == MAX_JUMP) {
+    if (jump == MAX_JUMP + 1) {
         // one needs to look for a reattachment (sync) cell
         Cell probed;
         mem_get(next, &probed.u_body);
         ONDEBUG((LOGCELL('R', next, &probed)));
-
+        offset += MAX_JUMP + 1;
         int i = PROBE_LIMIT;
         while (--i && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
@@ -1397,7 +1398,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
     }
 
     memcpy(payload, cell.tagOrBlob.slice0, sizeof(cell.tagOrBlob.slice0));
-
+    
     Address next = jumpToFirst(&cell, a, hChain);
     Cell sliceCell;
     mem_get(next, &sliceCell.u_body);
