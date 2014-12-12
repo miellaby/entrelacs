@@ -108,12 +108,30 @@ int basic() {
     assert(isRooted(more_bigger_string_11111111111111111111));
 
     { // check very big string (blob)
+        test_title("check very big string (blob)");
+
         char* bigStr = "11111111112222222222233333333333334444444444445555555555566666666666677777777777788888888888888999999999999999";
         Arrow bigAtom = atom(bigStr);
         char* bigStrBack = strOf(bigAtom);
         assert(0 == strcmp(bigStrBack, bigStr));
         assert(xl_isAtom(bigAtom));
         free(bigStrBack);
+        
+        { //  digest computation
+            test_title("check digest computation");
+            char* digest = digestOf(bigAtom, NULL);
+            assert(digest);
+            fprintf(stderr, "digest: %s\n", digest);
+        
+            { // check digest
+            test_title("check digest-based arrow retrieval");
+            Arrow byDigest = digestMaybe(digest);
+            assert(byDigest == bigAtom);
+            }
+
+            free(digest);
+
+        }
     }
 
     // check GC

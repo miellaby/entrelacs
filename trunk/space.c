@@ -1746,6 +1746,7 @@ Arrow xl_digestMaybe(char* digest) {
     TRACEPRINTF("BEGIN xl_digestMaybe(%.*s)", DIGEST_SIZE, digest);
 
     // read the hash at the digest beginning
+    assert(digest[0] == '$' && digest[1] == 'H');
     int i = 2; // jump over '$H' string
     uint32_t hash = HEXTOI(digest[i]);
     while (++i < 10) { // read 8 hexa digit
