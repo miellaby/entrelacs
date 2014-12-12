@@ -57,11 +57,19 @@ int main(int argc, char* argv[]) {
 
     test_title("check Blob URI");
     {
-        Arrow someBlob = blobFromFile(__FILE__);
-        char* a = uriOf(someBlob, NULL);
-        assert(a);
-        fprintf(stderr, "%s\n", a);
-        assert(uri(a) == someBlob);
+        Arrow someBlob = blobFromFile("web-terminal/help.wiki");
+        char* u = uriOf(someBlob, NULL);
+        assert(u);
+        fprintf(stderr, "%s\n", u);
+        assert(uri(u) == someBlob);
+        char* s = xl_strOf(someBlob);
+        char forgedUri[100];
+        sprintf(forgedUri, "/%s+%s", u, u);
+        assert(headOf(uri(forgedUri)) == someBlob);
+        assert(s);
+        // fprintf(stderr, "%s\n", s);
+        free(s);
+        free(u);
     }
     return 0;
 }
