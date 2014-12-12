@@ -17,7 +17,7 @@ static struct s_buffer {
 } buffer = {0, 0, NULL};
 
 Arrow _printArrow(Arrow a) {
-
+    
     if (xl_isRooted(a)) {
         int size = buffer.size;
         geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + 1);
@@ -327,9 +327,12 @@ int stress() {
     return 0;
 }
 
+int space_unitTest();
+
 int main(int argc, char* argv[]) {
     log_init(NULL, "space=debug");
     xl_init();
+    space_unitTest();
     basic();
     stress();
     return 0;

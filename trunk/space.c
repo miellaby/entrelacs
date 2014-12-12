@@ -566,10 +566,10 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
 #define SHIFT_LIMIT 20
 #define PROBE_LIMIT 20
 #define ADDRESS_SHIFT(ADDRESS, NEW, OFFSET) \
-         (NEW = (((ADDRESS) + (31 + (OFFSET)++) / 32) % (SPACE_SIZE)))
+         (NEW = (((ADDRESS) + ((OFFSET)++)) % (SPACE_SIZE)))
 // FIXME ADDRESS_JUMP
 #define ADDRESS_JUMP(ADDRESS, NEW, OFFSET, JUMP) \
-         (NEW = (((ADDRESS) + (31 * (JUMP) + ((OFFSET) * (JUMP) * (1 + JUMP) / 2)) / 32) % (SPACE_SIZE)))
+         (NEW = (((((ADDRESS) + ((JUMP) * (OFFSET))) % (SPACE_SIZE)) + ((JUMP) * ((JUMP) - 1) / 2)) % (SPACE_SIZE)))
 
 /* Cell testing */
 #define CELL_CONTAINS_ARROW(CELL) ((CELL).full.type != CELLTYPE_EMPTY && (CELL).full.type <= CELLTYPE_ARROWLIMIT)
@@ -833,74 +833,73 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     l = length - sizeof(newCell.tagOrBlob.slice0);
     i = 0;
     c = 0;
-    if (l) {
-        while (1) {
-            c = *p++;
-            currentCell.slice.data[i] = c;
-            if (!--l) break;
-            if (++i == sizeof(currentCell.slice.data)) {
+    assert(l);
+    while (1) {
+        c = *p++;
+        currentCell.slice.data[i] = c;
+        if (!--l) break;
+        if (++i == sizeof(currentCell.slice.data)) {
 
-                Address offset = hChain;
-                ADDRESS_SHIFT(current, next, offset);
-    
+            Address offset = hChain;
+            ADDRESS_SHIFT(current, next, offset);
+
+            mem_get(next, &nextCell.u_body);
+            ONDEBUG((LOGCELL('R', next, &nextCell)));
+            
+            jump = 0;
+            i = PROBE_LIMIT;
+            while (nextCell.full.type != CELLTYPE_EMPTY && --i) {
+                jump++;
+                ADDRESS_SHIFT(next, next, offset);
+            
                 mem_get(next, &nextCell.u_body);
                 ONDEBUG((LOGCELL('R', next, &nextCell)));
-                
-                jump = 0;
-                i = PROBE_LIMIT;
-                while (nextCell.full.type != CELLTYPE_EMPTY && --i) {
-                    jump++;
-                    ADDRESS_SHIFT(next, next, offset);
-                
-                    mem_get(next, &nextCell.u_body);
-                    ONDEBUG((LOGCELL('R', next, &nextCell)));
-                }
-                assert(i);
-                
-                if (jump >= MAX_JUMP) {
-                  Address sync = next;
-                  Cell syncCell = nextCell; 
-                  syncCell.full.type = CELLTYPE_REATTACHMENT;
-                  syncCell.reattachment.from = current;
-                  syncCell.reattachment.to   = current; // will be overwritten as soon as possible
-                  
-                  mem_set(sync, &syncCell.u_body);
-                  ONDEBUG((LOGCELL('W', sync, &syncCell)));
-                  
-                  offset = hChain;
-                  ADDRESS_SHIFT(next, next, offset);
-                  
-                  mem_get(next, &nextCell.u_body);
-                  ONDEBUG((LOGCELL('R', next, &nextCell)));
-
-                  int j = PROBE_LIMIT;
-                  while (nextCell.full.type == CELLTYPE_EMPTY && --j) {
-                    ADDRESS_SHIFT(next, next, offset);
-
-                    mem_get(next, &nextCell.u_body);
-                    ONDEBUG((LOGCELL('R', next, &nextCell)));
-                  }
-                  assert(j);
-
-                  syncCell.reattachment.to = next;
-                  
-                  mem_set(sync, &syncCell.u_body);
-                  ONDEBUG((LOGCELL('W', sync, &syncCell)));
-
-                  jump = MAX_JUMP;
-                }
-                currentCell.full.type = CELLTYPE_SLICE;
-                currentCell.slice.jump = jump;
-
-                mem_set(current, &currentCell.u_body);
-                ONDEBUG((LOGCELL('W', current, &currentCell)));
-
-                i = 0;
-                current = next;
-                mem_get(current, &currentCell.u_body);
             }
+            assert(i);
+            
+            if (jump >= MAX_JUMP) {
+              Address sync = next;
+              Cell syncCell = nextCell; 
+              syncCell.full.type = CELLTYPE_REATTACHMENT;
+              syncCell.reattachment.from = current;
+              syncCell.reattachment.to   = current; // will be overwritten as soon as possible
+              
+              mem_set(sync, &syncCell.u_body);
+              ONDEBUG((LOGCELL('W', sync, &syncCell)));
+              
+              offset = hChain;
+              ADDRESS_SHIFT(next, next, offset);
+              
+              mem_get(next, &nextCell.u_body);
+              ONDEBUG((LOGCELL('R', next, &nextCell)));
 
+              int j = PROBE_LIMIT;
+              while (nextCell.full.type == CELLTYPE_EMPTY && --j) {
+                ADDRESS_SHIFT(next, next, offset);
+
+                mem_get(next, &nextCell.u_body);
+                ONDEBUG((LOGCELL('R', next, &nextCell)));
+              }
+              assert(j);
+
+              syncCell.reattachment.to = next;
+              
+              mem_set(sync, &syncCell.u_body);
+              ONDEBUG((LOGCELL('W', sync, &syncCell)));
+
+              jump = MAX_JUMP;
+            }
+            currentCell.full.type = CELLTYPE_SLICE;
+            currentCell.slice.jump = jump;
+
+            mem_set(current, &currentCell.u_body);
+            ONDEBUG((LOGCELL('W', current, &currentCell)));
+
+            i = 0;
+            current = next;
+            mem_get(current, &currentCell.u_body);
         }
+
     }
     currentCell.full.type = CELLTYPE_LAST;
     currentCell.last.size = 1 + i /* size */;
@@ -1744,7 +1743,7 @@ char* xl_uriOf(Arrow a, uint32_t *l) {
 }
 
 Arrow xl_digestMaybe(char* digest) {
-    TRACEPRINTF("BEGIN xl_digestMaybe(%.58s)", digest);
+    TRACEPRINTF("BEGIN xl_digestMaybe(%.*s)", DIGEST_SIZE, digest);
 
     // read the hash at the digest beginning
     int i = 2; // jump over '$H' string
@@ -1780,7 +1779,7 @@ Arrow xl_digestMaybe(char* digest) {
 
             // get its digest
             char* otherDigest = xl_digestOf(probeAddress, NULL);
-            if (!strcmp(otherDigest, digest)) { // both digest match
+            if (!strncmp(otherDigest, digest, DIGEST_SIZE)) { // both digest match
                 free(otherDigest);
                 return LOCK_OUT(probeAddress); // hit! arrow found!
             } else { // full digest mismatch
@@ -3306,4 +3305,20 @@ void xl_destroy() {
     pthread_mutex_destroy(&apiMutex);
 
     mem_destroy();
+}
+
+int space_unitTest() {
+    Address a = 0x7f3f3a;
+    Address offset = 0x7a5dc6;
+    Address result;
+    int many = 100;
+    for (int i = 0; i < many; i++) {
+      ADDRESS_SHIFT(a, a, offset);
+    }
+    result = a;
+    a = 0x7f3f3a;
+    offset = 0x7a5dc6;
+    ADDRESS_JUMP(a, a, offset, many);
+    assert(result == a);
+
 }
