@@ -57,6 +57,7 @@ char *level_name[] = {
 extern int log_level[LOG_FACILITY_COUNT];
 extern int log_init(const char *filename, const char *debug_str);
 extern void log_msg(int level, enum _log_facility facility, char *fname, int lineno, char *fmt, ...);
+extern int log_verbose();
 
 #define LOGPRINTF(level, fmt, arg...) { log_msg(level, LOG_CURRENT, __FILE__, __LINE__, fmt, ##arg); }
 

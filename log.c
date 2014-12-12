@@ -17,6 +17,12 @@ static FILE *log_fp = NULL;
 #endif
 int log_level[LOG_FACILITY_COUNT];
 
+int log_verbose()
+{
+    for (int i=0; i<LOG_FACILITY_COUNT; i++)
+        log_level[i] = LOG_DEBUG;
+}
+
 int log_init(const char *filename, const char *debug_str)
 {
     int i;
