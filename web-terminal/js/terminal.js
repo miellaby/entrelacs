@@ -170,7 +170,7 @@ Terminal.prototype = {
     },
     
     getPointOnCircle: function(radius) {
-        this.circleAngle += 4;
+        this.circleAngle += 3;
         var x = radius * Math.sin(2 * Math.PI * this.circleAngle / 23);
         var y = radius * Math.cos(2 * Math.PI * this.circleAngle / 23);
         var p = { x: parseInt(x), y: parseInt(y)};
@@ -180,16 +180,16 @@ Terminal.prototype = {
     leave: function(view, incoming) {
        var d = view.d;
        var p = d.position();
-       var c = this.getPointOnCircle(100);
+       var c = this.getPointOnCircle(80);
        var n, a;
        if (incoming) {
           n = new Prompt("", this,
-                    p.left - 100 - c.x,
+                    p.left - 250 + c.x,
                     p.top - c.y, true /* immediate */);
           a = new PairView(null, terminal, n, view);
        } else {
           n = new Prompt("", this,
-                    p.left + 100 + c.x,
+                    p.left + 250 - c.x,
                     p.top + c.y, true /* immediate */);
           a = new PairView(null, terminal, view, n);
        }
