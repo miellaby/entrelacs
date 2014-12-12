@@ -101,5 +101,5 @@ valgrind:
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
 	CFLAGS="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) valgrind $(BINDIR)/entrelacsd
+	ENTRELACS=$(PERSISTENCE_FILE) valgrind --leak-check=full $(BINDIR)/entrelacsd
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
