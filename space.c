@@ -325,6 +325,8 @@ static Arrow  *looseLog = NULL;
 static uint32_t looseLogMax = 0;
 static uint32_t looseLogSize = 0;
 
+// private functions
+char* digestOf(Arrow a, Cell* cellp, uint32_t *l);
 
 static void cell_getSmallPayload(Cell *cell, char* buffer) {
     int bigSmall = cell->small.s > 8;
@@ -592,15 +594,15 @@ static Address jumpToFirst(Cell* cell, Address address, Address offset) {
         mem_get(next, &probed.u_body);
         ONDEBUG((LOGCELL('R', next, &probed)));
 
-        int i = PROBE_LIMIT;
-        while (--i && !(
+        int safeguard = PROBE_LIMIT;
+        while (--safeguard && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
             mem_get(next, &probed.u_body);
             ONDEBUG((LOGCELL('R', next, &probed)));
         }
-        assert(i);
+        assert(safeguard);
 
         next = probed.reattachment.to;
     }
@@ -621,15 +623,15 @@ static Address jumpToNext(Cell* cell, Address address, Address offset) {
         mem_get(next, &probed.u_body);
         ONDEBUG((LOGCELL('R', next, &probed)));
         offset += MAX_JUMP + 1;
-        int i = PROBE_LIMIT;
-        while (--i && !(
+        int safeguard = PROBE_LIMIT;
+        while (--safeguard && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
             mem_get(next, &probed.u_body);
             ONDEBUG((LOGCELL('R', next, &probed)));
         }
-        assert(i);
+        assert(safeguard);
 
         next = probed.reattachment.to;
     }
@@ -652,7 +654,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     Address probeAddress, firstFreeAddress, next;
     Cell probed, sliceCell;
 
-    unsigned i, jump;
+    unsigned i, safeguard, jump;
     char c, *p;
 
     space_stats.atom++;
@@ -734,8 +736,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     if (firstFreeAddress == EVE) {
         Cell probed;
 
-        int i = PROBE_LIMIT;
-        while (--i) {
+        int safeguard = PROBE_LIMIT;
+        while (--safeguard) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
 
             mem_get(probeAddress, &probed.u_body);
@@ -746,7 +748,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
                 break;
             }
         }
-        assert(i);
+        assert(safeguard);
     }
 
    
@@ -779,15 +781,15 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     ONDEBUG((LOGCELL('R', next, &nextCell)));
 
     jump = 0;
-    i = PROBE_LIMIT;
-    while (nextCell.full.type != CELLTYPE_EMPTY && --i) {
+    safeguard = PROBE_LIMIT;
+    while (--safeguard && nextCell.full.type != CELLTYPE_EMPTY) {
         jump++;
         ADDRESS_SHIFT(next, next, offset);
 
         mem_get(next, &nextCell.u_body);
         ONDEBUG((LOGCELL('R', next, &nextCell)));
     }
-    assert(i);
+    assert(safeguard);
 
     if (jump >= MAX_JUMP) {
         Address sync = next;
@@ -805,14 +807,14 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         mem_get(next, &nextCell.u_body);
         ONDEBUG((LOGCELL('R', next, &nextCell)));
 
-        i = PROBE_LIMIT;
-        while (nextCell.full.type == CELLTYPE_EMPTY && --i) {
+        safeguard = PROBE_LIMIT;
+        while (--safeguard && nextCell.full.type == CELLTYPE_EMPTY) {
           ADDRESS_SHIFT(next, next, offset);
 
           mem_get(next, &nextCell.u_body);
           ONDEBUG((LOGCELL('R', next, &nextCell)));
         }
-        assert(i);
+        assert(safeguard);
 
         syncCell.reattachment.to = next;
         
@@ -840,22 +842,22 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         if (!--l) break;
         if (++i == sizeof(currentCell.slice.data)) {
 
-            Address offset = hChain;
+            offset = hChain;
             ADDRESS_SHIFT(current, next, offset);
 
             mem_get(next, &nextCell.u_body);
             ONDEBUG((LOGCELL('R', next, &nextCell)));
             
             jump = 0;
-            i = PROBE_LIMIT;
-            while (nextCell.full.type != CELLTYPE_EMPTY && --i) {
+            int safeguard = PROBE_LIMIT;
+            while (nextCell.full.type != CELLTYPE_EMPTY && --safeguard) {
                 jump++;
                 ADDRESS_SHIFT(next, next, offset);
             
                 mem_get(next, &nextCell.u_body);
                 ONDEBUG((LOGCELL('R', next, &nextCell)));
             }
-            assert(i);
+            assert(safeguard);
             
             if (jump >= MAX_JUMP) {
               Address sync = next;
@@ -873,14 +875,14 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
               mem_get(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('R', next, &nextCell)));
 
-              int j = PROBE_LIMIT;
-              while (nextCell.full.type == CELLTYPE_EMPTY && --j) {
+              int safeguard = PROBE_LIMIT;
+              while (--safeguard && nextCell.full.type == CELLTYPE_EMPTY) {
                 ADDRESS_SHIFT(next, next, offset);
 
                 mem_get(next, &nextCell.u_body);
                 ONDEBUG((LOGCELL('R', next, &nextCell)));
               }
-              assert(j);
+              assert(safeguard);
 
               syncCell.reattachment.to = next;
               
@@ -967,7 +969,6 @@ static Arrow small(int length, char* str, int ifExist) {
     Address probeAddress, firstFreeAddress;
     uint32_t uint_buffer[3];
     char* buffer = (char *)uint_buffer;
-    int i;
 
     if (length == 0 || length > 11)
         return NIL;
@@ -1008,8 +1009,8 @@ static Arrow small(int length, char* str, int ifExist) {
     probeAddress = hashAddress;
     firstFreeAddress = EVE;
 
-    i = PROBE_LIMIT;
-    while (--i) { // probe loop
+    int safeguard = PROBE_LIMIT;
+    while (--safeguard) { // probe loop
     
         // get probed cell
         Cell probed;
@@ -1043,8 +1044,8 @@ static Arrow small(int length, char* str, int ifExist) {
 
     if (firstFreeAddress == EVE) {
         Cell probed;
-        i = PROBE_LIMIT;
-        while (--i) {
+        safeguard = PROBE_LIMIT;
+        while (--safeguard) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
             mem_get(probeAddress, &probed.u_body);
             ONDEBUG((LOGCELL('R', probeAddress, &probed)));
@@ -1053,7 +1054,7 @@ static Arrow small(int length, char* str, int ifExist) {
                 break;
             }
         }
-        assert(i);
+        assert(safeguard);
     }
 
     // Create a singleton
@@ -1105,7 +1106,7 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress, firstFreeAddress;
-    int i;
+    int safeguard;
 
     if (tail == NIL || head == NIL)
         return NIL;
@@ -1122,8 +1123,8 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     Cell probed;
     probeAddress = hashAddress;
     firstFreeAddress = EVE;
-    i = PROBE_LIMIT;
-    while (--i) {
+    safeguard = PROBE_LIMIT;
+    while (--safeguard) {
         mem_get(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
     
@@ -1154,8 +1155,8 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     space_stats.pair++;
 
     if (firstFreeAddress == EVE) {
-        i = PROBE_LIMIT;
-        while (--i) {
+        safeguard = PROBE_LIMIT;
+        while (--safeguard) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
         
             Cell probed;
@@ -1167,7 +1168,7 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
                 break;
             }
         }
-        assert(i);
+        assert(safeguard);
     }
 
     // Create a singleton
@@ -1345,7 +1346,7 @@ Arrow xl_tailOf(Arrow a) {
 
 /** return the payload of an arrow (blob/tag/small), NULL on error */
 
-static char* payloadOf(Arrow a, uint32_t* lengthP) {
+static char* payloadOf(Arrow a, Cell* cellp, uint32_t* lengthP) {
      // the result
     char* payload = NULL;
     uint32_t size = 0;
@@ -1363,11 +1364,9 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
         return payload;
     }
 
-    // Get the cell pointed by a
-    Cell    cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-    
+    // cell pointed by a
+    Cell cell = *cellp;
+
     if (cell.full.type == CELLTYPE_SMALL) { // type "small"
       // small typed cell is a simple case
 
@@ -1387,7 +1386,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
     }
 
     // the offset used for chain retrieval
-    uint32_t hChain = hashChain(&cell) % PRIM1;
+    uint32_t hChain = hashChain(cellp) % PRIM1;
     if (!hChain) hChain = 1; // offset can't be 0
 
     uint32_t max = 0; // geoalloc() state variables
@@ -1398,12 +1397,14 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 
     memcpy(payload, cell.tagOrBlob.slice0, sizeof(cell.tagOrBlob.slice0));
     
-    Address next = jumpToFirst(&cell, a, hChain);
+    Address next = jumpToFirst(cellp, a, hChain);
     Cell sliceCell;
     mem_get(next, &sliceCell.u_body);
     ONDEBUG((LOGCELL('R', next, &sliceCell)));
 
     while (1) {
+        assert (sliceCell.full.type == CELLTYPE_SLICE || sliceCell.full.type == CELLTYPE_LAST);
+      
         int s = sliceCell.full.type == CELLTYPE_SLICE
           ? sizeof(sliceCell.slice.data)
           : sliceCell.last.size;
@@ -1441,7 +1442,7 @@ static char* payloadOf(Arrow a, uint32_t* lengthP) {
 */
 char* xl_memOf(Arrow a, uint32_t* lengthP) {
     if (a == EVE) { // Eve has an empty payload
-        return payloadOf(a, lengthP);
+        return payloadOf(a, NULL, lengthP);
     }
 
     // Lock mem access
@@ -1459,7 +1460,7 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
 
     
     uint32_t payloadLength;
-    char* payload = payloadOf(a, &payloadLength);
+    char* payload = payloadOf(a, &cell, &payloadLength);
     if (payload == NULL) { // Error
         return LOCK_OUTSTR(NULL);
     }
@@ -1569,7 +1570,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
         }
         case CELLTYPE_BLOB:
         { // return a BLOB digest
-            return xl_digestOf(a, l);
+          char *digest = digestOf(a, &cell, l);
         }
         case CELLTYPE_SMALL:
         case CELLTYPE_TAG:
@@ -1577,7 +1578,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 
             // get atom content
             uint32_t memLength, encodedDataLength;
-            char* mem = xl_memOf(a, &memLength);
+            char* mem = payloadOf(a, &cell, &memLength);
             char *uri = malloc(3 * memLength + 1); // memory allocation for encoded content
             if (!uri) { // allocation failed
                free(mem);
@@ -1632,41 +1633,20 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
 #define DIGEST_HASH_SIZE 8
 #define DIGEST_SIZE (2 + CRYPTO_SIZE + DIGEST_HASH_SIZE)
 
-char* xl_digestOf(Arrow a, uint32_t *l) {
-    TRACEPRINTF("BEGIN xl_digestOf(%06x)", a);
-
-    if (a >= SPACE_SIZE) { // Address anomaly
-        return NULL;
-    }
-
+char* digestOf(Arrow a, Cell* cellp, uint32_t *l) {
     char    *digest;
     uint32_t hash;
+
     char    *hashStr = (char *) malloc(CRYPTO_SIZE + 1);
     if (!hashStr) { // alloc failed
       return NULL;
     }
 
-    if (a == XL_EVE) { // Even Eve has a digest
-        hash = hashOf(a);
-        crypto(0, "", hashStr);
-    }
-
-    LOCK();
-
-    // Get cell pointed by a
-    Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT) {
-        // Address anomaly : not an arrow
-        return LOCK_OUTSTR(NULL);
-    }
-    
-    hash = cell.arrow.hash;
-
-    switch (cell.full.type) {
+    hash = cellp->arrow.hash;
+    if (a == XL_EVE) {
+      crypto(0, "", hashStr);
+    } else {
+      switch (cellp->full.type) {
         case CELLTYPE_PAIR:
         {
             uint32_t uriLength;
@@ -1682,7 +1662,7 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
         {
             uint32_t hashLength;
             free(hashStr);
-            hashStr = payloadOf(a, &hashLength);
+            hashStr = payloadOf(a, cellp, &hashLength);
             if (hashStr == NULL)
               return NULL;
             break;
@@ -1691,13 +1671,16 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
         case CELLTYPE_TAG:
         {
             uint32_t dataSize;
-            char* data = xl_memOf(a, &dataSize);
+            char* data = payloadOf(a, cellp, &dataSize);
+            if (data == NULL)
+              return NULL;
             crypto(dataSize, data, hashStr);
             free(data);
             break;
         }
         default:
             assert(0);
+      }
     }
 
     uint32_t digestLength;
@@ -1722,9 +1705,11 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
         hex[(hash >> 4)  & 0xF],
         hex[hash & 0xF]
     };
+    
     // copy the hash hexa at the digest beginning
     strncpy(digest + digestLength, hashMap, DIGEST_HASH_SIZE);
     digestLength += DIGEST_HASH_SIZE;
+    
     // then copy the crypto hash
     strncpy(digest + digestLength, hashStr, CRYPTO_SIZE);
     free(hashStr);
@@ -1733,6 +1718,29 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
 
     // return result and its length if asked
     if (l) *l = digestLength;
+}
+
+char* xl_digestOf(Arrow a, uint32_t *l) {
+    TRACEPRINTF("BEGIN xl_digestOf(%06x)", a);
+
+    if (a >= SPACE_SIZE) { // Address anomaly
+        return NULL;
+    }
+
+    LOCK();
+
+    Cell cell;
+    mem_get(a, &cell.u_body);
+    ONDEBUG((LOGCELL('R', a, &cell)));
+
+    if (cell.full.type == CELLTYPE_EMPTY
+        || cell.full.type > CELLTYPE_ARROWLIMIT) {
+        // Address anomaly : not an arrow
+        return LOCK_OUTSTR(NULL);
+    }
+
+    char *digest = digestOf(a, &cell, l);
+    
     return LOCK_OUTSTR(digest);
 }
 
@@ -1742,21 +1750,20 @@ char* xl_uriOf(Arrow a, uint32_t *l) {
     return LOCK_OUTSTR(str);
 }
 
-Arrow xl_digestMaybe(char* digest) {
-    TRACEPRINTF("BEGIN xl_digestMaybe(%.*s)", DIGEST_SIZE, digest);
-
-    // read the hash at the digest beginning
-    assert(digest[0] == '$' && digest[1] == 'H');
-    int i = 2; // jump over '$H' string
-    uint32_t hash = HEXTOI(digest[i]);
-    while (++i < 10) { // read 8 hexa digit
-        hash = (hash << 4) | (uint64_t)HEXTOI(digest[i]);
-    }
-    
+Arrow digestMaybe(char *digest) {
+    uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress;
     Cell cell;
 
+    // read the hash at the digest beginning
+    assert(digest[0] == '$' && digest[1] == 'H');
+    int i = 2; // jump over '$H' string
+    hash = HEXTOI(digest[i]);
+    while (++i < 10) { // read 8 hexa digit
+        hash = (hash << 4) | (uint64_t)HEXTOI(digest[i]);
+    }
+    
     hashAddress = hash % PRIM0; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
@@ -1764,11 +1771,9 @@ Arrow xl_digestMaybe(char* digest) {
     // Probe for an existing singleton
     DEBUGPRINTF("hash is %06x so probe from %06x", hash, hashAddress);
 
-    LOCK();
-
     probeAddress = hashAddress;
-    i = PROBE_LIMIT;
-    while (--i) { // probing limit
+    int safeguard = PROBE_LIMIT;
+    while (--safeguard) { // probing limit
         Cell probed;
         
         mem_get(probeAddress, &probed.u_body);
@@ -1779,7 +1784,7 @@ Arrow xl_digestMaybe(char* digest) {
             && probed.arrow.hash == hash) { // found candidate
 
             // get its digest
-            char* otherDigest = xl_digestOf(probeAddress, NULL);
+            char* otherDigest = digestOf(probeAddress, &probed, NULL);
             if (!strncmp(otherDigest, digest, DIGEST_SIZE)) { // both digest match
                 free(otherDigest);
                 return LOCK_OUT(probeAddress); // hit! arrow found!
@@ -1795,7 +1800,14 @@ Arrow xl_digestMaybe(char* digest) {
         // shift probe
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
-    return LOCK_END(), NIL; // Probing over. It's a miss
+    
+    return NIL; //< Probing over. It's a miss
+}
+
+Arrow xl_digestMaybe(char* digest) {
+    TRACEPRINTF("BEGIN xl_digestMaybe(%.*s)", DIGEST_SIZE, digest);
+    LOCK();
+    return LOCK_OUT(digestMaybe(digest));
 }
 
 static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, int ifExist) {
@@ -1835,7 +1847,7 @@ static Arrow fromUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, i
                     break;
                 }
 
-                a = xl_digestMaybe(uri);
+                a = digestMaybe(uri);
                 
                 if (a == NIL) // Non assimilated blob
                     uriLength = NAN;
@@ -3061,7 +3073,7 @@ static void forget(Arrow a) {
     Address hashProbe; // probe offset
     
     if (cell.full.type == CELLTYPE_TAG
-        || cell.full.type > CELLTYPE_BLOB) {
+        || cell.full.type == CELLTYPE_BLOB) {
         // Free chain
         // FIXME this code doesn't erase reattachment cells :( don't use jump functions
         Address hChain = hashChain(&cell) % PRIM1;
