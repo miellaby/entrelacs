@@ -813,7 +813,7 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     getUri: function (a, secondTry) {
-        var promise;
+        var promise, futur;
         var self = this;
         
         if (a.get(this.uriKey)) {
@@ -823,24 +823,28 @@ $.extend(Entrelacs.prototype, {
             if (a.server != this.serverUrl) throw "bad url";
             return $.when(a.uri);
         } else if (a.isAtomic()) {
-            var req = this.serverUrl + '/escape+' +
-                encodeURIComponent(a.getBody()) + '?iDepth=0';
-            promise = self.chain.pipe(function () {
+            futur = function () {
+                if (a.hc === undefined) return $.when(null); // a is GC-ed
+                var req = self.serverUrl + '/escape+' +
+                    encodeURIComponent(a.getBody()) + '?iDepth=0';
                 return $.ajax({url: req, xhrFields: { withCredentials: true }});
-            });
+            }
+            promise = self.chain.pipe(futur, futur);
 
         } else {
             var pt = self.getUri(a.getTail());
             var ph = self.getUri(a.getHead());
-            promise = self.chain.pipe(function () {
+            futur = function () {
+                if (a.hc === undefined) return $.when(null); // a is GC-ed
                 var req = self.serverUrl + '/escape/'
                     + a.getTail().get(self.uriKey) + '+' + a.getHead().get(self.uriKey) + '?iDepth=0';
                 return $.ajax({url: req, xhrFields: { withCredentials: true }});
-            });
+            }
+            promise = self.chain.pipe(futur, futur);
         }
 
         promise.done(function (uri) {
-            if (a.hc === undefined) return; // a is GC-ed
+            if (a.hc === undefined || uri === null) return; // a is GC-ed
             self.checkCookie();
             self.bindUri(a, uri);
         });
@@ -894,15 +898,19 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     unroot: function (a, secondTry) {
-        var isAtomic = (typeof a == "string") ? false : a.isAtomic();
-        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
         // TODO unlinkify
-        var operator = (isAtomic ? "unroot" : "unlinkTailAndHead");
-        var req = self.serverUrl + '/' + operator + '/escape+' + uri;
-        var promise = self.chain.pipe(function () {
+        var futur = function () {
+            if (a.hc === undefined) {
+                return $.when(null);   
+            }
+            var isAtomic = (typeof a == "string") ? false : a.isAtomic();
+            var uri = (typeof a == "string") ? a : Arrow.serialize(a);
+            var operator = (isAtomic ? "unroot" : "unlinkTailAndHead");
+            var req = self.serverUrl + '/' + operator + '/escape+' + uri;
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
+        };
+        var promise = self.chain.pipe(futur, futur);
 
         if (!secondTry) {
             promise = promise.pipe(null, function() {
@@ -921,13 +929,14 @@ $.extend(Entrelacs.prototype, {
      * @return {Promise}
      */
     isRooted: function (a, secondTry) {
-        var isAtomic = (typeof a == "string") ? false : a.isAtomic();
-        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
-        var req = self.serverUrl + '/isRooted/escape+' + uri;
-        var promise = self.chain.pipe(function () {
+        var futur = function () {
+            if (a.hc === undefined) return $.when(null); // a is GC-ed
+            var uri = (typeof a == "string") ? a : Arrow.serialize(a);
+            var req = self.serverUrl + '/isRooted/escape+' + uri;
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
+        };
+        var promise = self.chain.pipe(futur, futur);
         promise.done(function (r) {
             if (a.hc === undefined) return; // a is GC-ed
             self.checkCookie();
@@ -955,21 +964,24 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     getChildren: function (a, secondTry) {
-        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
-        var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
-        
-        var promise = self.chain.pipe(function () {
+        var futur = function () {
+            if (a.hc === undefined) return $.when(null); // a is GC-ed
+            var uri = (typeof a == "string") ? a : Arrow.serialize(a);
+            var req = self.serverUrl + '/childrenOf/escape+' + uri + '?iDepth=10';
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
-
+        };
         
-        promise = promise.pipe(function(arrowURI) {
+        var promise = self.chain.pipe(futur, futur);
+        var futur2 = function(arrowURI) {
+            if (a.hc === undefined) return Arrow.eve; // a is GC-ed
+            if (arrowURI === null) return Arrow.eve;
             self.checkCookie();
-            //if (a.hc === undefined) return Arrow.eve; // a is GC-ed
             var children = Arrow.decodeURI(arrowURI, self.serverUrl);
             return children;
-        });
+        };
+        
+        promise = promise.pipe(futur2, futur2);
         
         if (!secondTry) {
             promise = promise.pipe(null, function() {
@@ -988,14 +1000,20 @@ $.extend(Entrelacs.prototype, {
      * @return {JQuery.Promise}
      */
     getPartners: function (a, secondTry) {
-        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
-        var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
-        var promise = self.chain.pipe(function () {
+        var futur = function () {
+            if (a.hc === undefined) return $.when(null); // a is GC-ed
+            var uri = (typeof a == "string") ? a : Arrow.serialize(a);
+            var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
+        };
+        
+        var promise = self.chain.pipe(futur, futur);
         
         promise = promise.pipe(function(arrowURI) {
+            if (a.hc === undefined || arrowURI === null)
+                return Arrow.eve; // a is GC-ed
+            
             self.checkCookie();
             var list = Arrow.decodeURI(arrowURI, self.serverUrl);
             var partners = list;
@@ -1023,13 +1041,14 @@ $.extend(Entrelacs.prototype, {
      * @return {Promise}
      */
     invoke: function (a, secondTry) {
-        var uri = (typeof a == "string") ? a : Arrow.serialize(a);
         var self = this;
-
-        var req = self.serverUrl + uri; // no escape this time
-        var promise = self.chain.pipe(function () {
+        var futur = function () {
+            if (a.hc === undefined) return $.when(null); // a is GC-ed
+            var uri = (typeof a == "string") ? a : Arrow.serialize(a);
+            var req = self.serverUrl + uri; // no escape this time
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
+        };
+        var promise = self.chain.pipe(futur, futur);
 
 //        promise = promise.pipe(function(arrowURI) {
 //            self.checkCookie();
@@ -1066,10 +1085,12 @@ $.extend(Entrelacs.prototype, {
         depth = depth || 10;
         var self = this;
         // ' query /+p instead of p to avoid any blob (file) to be directly returned in its binary form
-        var req = this.serverUrl + '/escape/+' + uri + '?iDepth=' + depth;
-        var promise = self.chain = self.chain.pipe(function () {
+        var futur = function () {
+            var req = self.serverUrl + '/escape/+' + uri + '?iDepth=' + depth;
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
+        };
+        
+        var promise = self.chain = self.chain.pipe(futur, futur);
         promise = promise.pipe(function (uri) {
             self.checkCookie();
             var unfolded = Arrow.decodeURI(uri, self.serverUrl).getHead(); 
@@ -1112,10 +1133,11 @@ $.extend(Entrelacs.prototype, {
      */
     commit: function (secondTry) {
         var self = this;
-        var req = this.serverUrl + '/commit+';
-        var promise = self.chain.pipe(function () {
+        var futur = function () {
+            var req = self.serverUrl + '/commit+';
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
-        });
+        };
+        var promise = self.chain.pipe(futur, futur);
         
         if (!secondTry) {
             promise = promise.pipe(null, function() {

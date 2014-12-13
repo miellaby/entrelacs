@@ -508,6 +508,8 @@ View.prototype = {
                     confirmedView.arrow.root();
                     confirmedView.saveAllGeometryAfterRoot(confirmedView.arrow);
                 }
+            }).fail(function() {
+                    confirmedView.arrow.root();
             });
             return [promise];
         } else {
@@ -602,7 +604,16 @@ View.prototype = {
         self.terminal.moveLoadindBarOnView(self);
         var promise = self.terminal.entrelacs.isRooted(self.arrow);
         promise = promise.pipe(function () {
+            if (!self.arrow) {
+                console.log("View got CGed before isRooted");
+                return;
+            }
             self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
+            return self.terminal.entrelacs.getPartners(self.arrow);
+        }).fail(function () {
+            if (self.arrow) {
+                self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
+            }
             return self.terminal.entrelacs.getPartners(self.arrow);
         });
         promise.done(function(partners) {
