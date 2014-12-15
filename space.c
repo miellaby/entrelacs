@@ -1571,6 +1571,7 @@ static char* toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoa
         case CELLTYPE_BLOB:
         { // return a BLOB digest
           char *digest = digestOf(a, &cell, l);
+          return digest;
         }
         case CELLTYPE_SMALL:
         case CELLTYPE_TAG:
