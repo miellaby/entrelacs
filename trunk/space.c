@@ -1719,6 +1719,8 @@ char* digestOf(Arrow a, Cell* cellp, uint32_t *l) {
 
     // return result and its length if asked
     if (l) *l = digestLength;
+    
+    return digest;
 }
 
 char* xl_digestOf(Arrow a, uint32_t *l) {
