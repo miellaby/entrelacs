@@ -6,6 +6,23 @@ function init() {
     entrelacs = new Entrelacs();
     terminal = new Terminal(area, entrelacs, true);
 
+    // TODO: move out connection button
+    if (window.location.hash) {
+        entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
+            terminal.show(Arrow.atom(window.location.hash.substr(1)),  area.width() / 2, area.height() / 2).update();
+        });
+    } else {
+        var connect = $("<p class='connect' align='center'><button id='go'>...</button></p>");
+        connect.children('button').click(function() {
+            alert("Leaving sand box. Entering public area ...");
+            window.location = "#pub";
+            var promise = entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
+            promise.done(function() { window.location.reload(); });
+            return false;
+        });
+        connect.appendTo(area.parent());
+    }
+    
     //findFeaturedArrows();
     var wizardState = "beginning";
     
