@@ -830,7 +830,23 @@ $.extend(Entrelacs.prototype, {
      */
     bindUri: function (a, uri) {
         var p = this.uriMap[uri]; // is there a placeholder here?
+
+        a.set(this.uriKey, uri);
+        this.uriMap[uri] = a;
+
+        if (!p && uri[0] == '$' && uri[1] == 'H') {
+            p = Arrow.digestIndex[uri];
+        }
+
         if (p && p !== a && p.hc !== undefined) {
+            if (a.uri && p.uri === undefined) {
+                // keep p. Ignore a
+                console.log('found a better arrow with this uri ' + uri);
+                var temp = a;
+                a = p;
+                p = temp;
+            }
+            
             // p == a, let's rewire all its children
             var child, iterator = p.getChildren();
             while ((child = iterator()) != null) {
@@ -845,8 +861,6 @@ $.extend(Entrelacs.prototype, {
             }
         }
 
-        a.set(this.uriKey, uri);
-        this.uriMap[uri] = a;
         // at this step, p should be GCed by JS
     },
 
