@@ -260,10 +260,11 @@ $.extend(Prompt.prototype, View.prototype, {
         i.blur(this.on.blur);
         i.focus(this.on.focus);
         i.keydown(this.on.keydown);
-        i.click(this.on.click);
+        // i.click(this.on.click);
+        d.attr('draggable', false); // not draggable anymore
         i.on('dragenter', this.on.dragenter);
         i.on('dragleave', this.on.dragleave);
-        i.focus();
+        
         
         // ok button
         var ok = $("<a class='ok-button'>OK</a>")

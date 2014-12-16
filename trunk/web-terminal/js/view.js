@@ -149,7 +149,7 @@ function View(arrow, terminal, d) {
 View.prototype = {
     addBar: function() {
         var d = this.d;
-        var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>⚡</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
+        var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>∊</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
         h.children('a').click(this.on.bar.click);
@@ -510,7 +510,7 @@ View.prototype = {
                 if (confirmedView.arrow === null) {
                     console.log('!? GCed');
                 } else {
-                    //self.terminal.entrelacs.getUri(confirmedView.arrow);
+                    self.terminal.entrelacs.getUri(confirmedView.arrow);
                     console.log('root it');
                     confirmedView.arrow.root();
                     confirmedView.saveAllGeometryAfterRoot(confirmedView.arrow);
@@ -606,6 +606,11 @@ View.prototype = {
 
         self.terminal.moveLoadindBarOnView(self);
     
+        var promise = self.terminal.entrelacs.isRooted(self.arrow);
+        promise.always(function () {
+            self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
+        });
+
         // process local partners
         var futur = function() {
             var knownPartners = self.arrow.getPartners();
@@ -616,23 +621,8 @@ View.prototype = {
         self.terminal.entrelacs.chain = self.terminal.entrelacs.chain.pipe(futur, futur);
         
         // process remote partners
-        var promise = self.terminal.entrelacs.isRooted(self.arrow);
-        promise = promise.pipe(function () {
-            if (!self.arrow) {
-                console.log("View got CGed before isRooted");
-                return;
-            }
-            self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
-            return self.terminal.entrelacs.getPartners(self.arrow);
-        }).fail(function () {
-            if (self.arrow) {
-                self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
-            }
-            return self.terminal.entrelacs.getPartners(self.arrow);
-        });
-        promise.done(function(partners) {
-            processPartners(partners);
-        });
+        promise = self.terminal.entrelacs.getPartners(self.arrow);
+        promise.done(processPartners);
         return promise;
     },
 
