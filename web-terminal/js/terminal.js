@@ -54,15 +54,18 @@ function Terminal(area, entrelacs, animatePlease) {
     this.on = {
         area: {
             click: function(event) {
+                if (event.target !== self.area[0]) return true;
                 if (deltaSum < 5) {
                     var x = event.pageX;
                     var y = event.pageY;
                     var p = new Prompt("", self, x, y);
                     p.focus();
+                    return false;
                 }
+                return true;
             },
             mousedown: function(event) {
-                if (event.target != area[0]) return;
+                if (event.target != area[0]) return true;
                 
                 mx0 = event.pageX;
                 my0 = event.pageY;
@@ -173,7 +176,7 @@ Terminal.prototype = {
         this.circleAngle += 3;
         var x = radius * Math.sin(2 * Math.PI * this.circleAngle / 23);
         var y = radius * Math.cos(2 * Math.PI * this.circleAngle / 23);
-        var p = { x: parseInt(x), y: parseInt(y)};
+        var p = { x: parseInt(x, 10), y: parseInt(y, 10)};
         return p;
     },
 

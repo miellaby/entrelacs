@@ -471,19 +471,19 @@ animation-delay:0.45s;
 }
 
 .wiki-checkbox:hover {
-    right: 18px;
+    right: 12px;
     top: -50px;
     padding: 6px 8px;
 }
 
 .ok-button {
     right: -38px;
-    top: 50px;
+    bottom: -24px;
     padding: 0 3px;
 }
 
 .ok-button:hover {
     right: -42px;
-    top: 46px;
+    bottom: -28px;
     padding: 4px 7px;
 }

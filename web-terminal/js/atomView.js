@@ -16,7 +16,7 @@ function AtomView(a, terminal, x, y) {
     var w = Math.max(s.width(), 100);
     s.css({width: '' + w + 'px'});
     d.css({
-        'margin-left': -parseInt(d.width() / 2) + 'px',
+        'margin-left': -parseInt(d.width() / 2, 10) + 'px',
         'margin-top': -d.height() + 'px'
     });
     d.attr('draggable', true);
@@ -26,7 +26,8 @@ function AtomView(a, terminal, x, y) {
         },
                 
         dblclick: function(event) {
-            self.edit();
+            var prompt = self.edit();
+            if (prompt) prompt.focus();
             return false;
         },
                 
@@ -56,7 +57,7 @@ $.extend(AtomView.prototype, View.prototype, {
         View.prototype.edit.call(this);
     
         var p = this.d.position();
-        var prompt = new Prompt(v, this.terminal, p.left, p.top);
+        var prompt = new Prompt(v, this.terminal, p.left, p.top, true);
         this.replaceWith(prompt);
         return prompt;
     },

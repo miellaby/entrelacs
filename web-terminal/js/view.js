@@ -199,6 +199,12 @@ View.prototype = {
         this.arrow = null;
     },
     
+    rebind: function(a) {
+        this.unbind();
+        this.arrow = a || null;
+        this.bind();
+    },
+    
     detach: function() {
         // detach this.d
         this.d.remove();
@@ -504,6 +510,7 @@ View.prototype = {
                 if (confirmedView.arrow === null) {
                     console.log('!? GCed');
                 } else {
+                    //self.terminal.entrelacs.getUri(confirmedView.arrow);
                     console.log('root it');
                     confirmedView.arrow.root();
                     confirmedView.saveAllGeometryAfterRoot(confirmedView.arrow);
@@ -555,7 +562,7 @@ View.prototype = {
                 console.log("View got CGed before processPartners");
                 return;
             }
-            console.log(Arrow.serialize(source) + " partners = {");
+            console.log((self.terminal.entrelacs.uriIfKnown(source) || Arrow.serialize(source)) + " partners = {");
             while (list !== Arrow.eve) {
                 var pair = list.getTail();
                 console.log(Arrow.serialize(pair) + ",");
@@ -597,11 +604,18 @@ View.prototype = {
             console.log("}");
         };
 
-        var knownPartners = self.arrow.getPartners();
-        processPartners(knownPartners);
-
-        self.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
         self.terminal.moveLoadindBarOnView(self);
+    
+        // process local partners
+        var futur = function() {
+            var knownPartners = self.arrow.getPartners();
+            self.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
+            processPartners(knownPartners);
+            return $.when(knownPartners);
+        };
+        self.terminal.entrelacs.chain = self.terminal.entrelacs.chain.pipe(futur, futur);
+        
+        // process remote partners
         var promise = self.terminal.entrelacs.isRooted(self.arrow);
         promise = promise.pipe(function () {
             if (!self.arrow) {
