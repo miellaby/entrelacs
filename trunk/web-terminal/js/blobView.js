@@ -11,7 +11,7 @@ function BlobView(a, terminal, x, y) {
     var o = (isImage
         ? $("<img class='content' tabIndex=1></img>").attr('src', server + '/escape+' + uri)
             : (isCreole
-            ? $("<div class='content' tabIndex=1></div>")
+            ? $("<div class='content' tabIndex=1><div class='scrollable'></div></div>")
             : (isOctetStream
                 ? $("<a class='content' target='_blank' tabIndex=1></a>").attr('href', server + '/escape+' + uri).text(uri)
                 : $("<object class='content' tabIndex=1></object>").attr('data', server + '/escape+' + uri))));
@@ -25,16 +25,14 @@ function BlobView(a, terminal, x, y) {
     this.contentType = type;
     
     if (isCreole) {
-        d.css({
-            'width': "33%"
-        });
+        d.addClass('wiki');
 
         var contentArrow = a.getHead().getHead();
         if (!contentArrow.getBody) { // placeholder
             var contentArrowUri =  contentArrow.uri;
             var promise = terminal.entrelacs.invoke("/escape+" + contentArrowUri);
             promise.done(function (text) {
-                terminal.creole.parse(o[0], text);
+                terminal.creole.parse(o.children('.scrollable')[0], text);
                 contentArrow = Arrow.atom(text);
                 // terminal.entrelacs.bindUri(contentArrow, contentArrowUri);
                 // rewire a with atom
@@ -49,7 +47,7 @@ function BlobView(a, terminal, x, y) {
                 });
             });
         } else {
-            terminal.creole.parse(o[0], contentArrow.getBody());
+            terminal.creole.parse(o.children('scrollable')[0], contentArrow.getBody());
             o.appendTo(d);
             var w = d.width();
             var h = d.height();

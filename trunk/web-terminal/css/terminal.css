@@ -286,6 +286,10 @@ animation-delay:0.45s;
 .atom, .blob, .prompt {
    z-index: 20;
    position: absolute;
+   border: 1px solid #eee;
+   border-radius: 10px;
+   box-shadow: 0px 5px 15px rgba(50, 0, 0, 0.5);
+   max-height: 80%;
 }
 .prompt {
     background: #FFF;
@@ -296,16 +300,28 @@ animation-delay:0.45s;
 .prompt>input, .prompt>textarea, .atom>.content, .blob>.content {
    display: block;
    position: relative;
-   border: 1px solid #eee;
-   border-radius: 10px;
    background: -webkit-radial-gradient(top, #eee, #dde);
    background: -moz-radial-gradient(top, #eee, #dde);
    background: radial-gradient(top, #eee, #dde);
    min-width: 50px;
-   max-width: 500px;
    min-height: 1em;
    margin: 0;
-   box-shadow: 0px 5px 15px rgba(50, 0, 0, 0.5);
+   border: 0px;
+   border-radius: 10px;
+}
+
+
+.blob.wiki {
+    max-width:33%;
+}
+
+.blob.wiki>.content {
+    overflow: hidden;
+}
+.blob.wiki>.content>.scrollable {
+    padding: 10px;
+    overflow: auto;
+    max-height: 400px;
 }
 
 .prompt>input, .prompt>textarea[draggable], .atom>.content, .blob>.content {
@@ -465,6 +481,10 @@ animation-delay:0.45s;
   cursor: pointer;
   width: 100%;
   height: 100%;
+}
+
+.atom, .blob {
+    max-height: 80%;
 }
 
 .wiki-checkbox {
