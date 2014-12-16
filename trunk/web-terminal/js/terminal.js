@@ -12,22 +12,7 @@ function Terminal(area, entrelacs, animatePlease) {
     protoEntry.detach();
     this.loading = $("<div class='loading bar' id='loading'><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>");
     this.loading.appendTo(area);
-    // TODO: move out connection button
-    if (window.location.hash) {
-        entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
-            self.show(Arrow.atom(window.location.hash.substr(1)),  area.width() / 2, area.height() / 2).update();
-        });
-    } else {
-        this.connect = $("<p class='connect' align='center'><button id='go'>...</button></p>");
-        this.connect.children('button').click(function() {
-            alert("Leaving sand box. Entering public area ...");
-            window.location = "#pub";
-            var promise = entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
-            promise.done(function() { window.location.reload(); });
-            return false;
-        });
-        this.connect.appendTo(area);
-    }
+    
     this.circleAngle = 0;
     this.transfertCount = 0;
 

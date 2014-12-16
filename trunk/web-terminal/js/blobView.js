@@ -47,12 +47,12 @@ function BlobView(a, terminal, x, y) {
                 });
             });
         } else {
-            terminal.creole.parse(o.children('scrollable')[0], contentArrow.getBody());
+            terminal.creole.parse(o.children('.scrollable')[0], contentArrow.getBody());
             o.appendTo(d);
             var w = d.width();
             var h = d.height();
             d.css({
-                'margin-left': -parseInt(w / 2) + 'px',
+                'margin-left': -parseInt(w / 2, 10) + 'px',
                 'margin-top': -h + 'px'
             });
         }
