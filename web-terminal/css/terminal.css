@@ -288,13 +288,13 @@ animation-delay:0.45s;
 
 .blob.wiki>.content {
     overflow: hidden;
+    width: 400px;
 }
 .blob.wiki>.content>.scrollable {
     padding: 10px;
     overflow: auto;
     min-height: 50px;
     max-height: 400px;
-    width:400px;
 }
 
 .prompt>input, .prompt>textarea[draggable], .atom>.content, .blob>.content {
