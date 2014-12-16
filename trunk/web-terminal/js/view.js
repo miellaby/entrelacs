@@ -137,7 +137,7 @@ function View(arrow, terminal, d) {
 
     this.addBar();
 
-    d.attr('draggable', true);
+    d.attr('draggable', !this.isPairView());
     d.on('dragstart', this.on.dragstart);
     d.on('dragend', this.on.dragend);
     d.find('.close a').click(this.on.close.click);
@@ -150,6 +150,7 @@ View.prototype = {
     addBar: function() {
         var d = this.d;
         var h = $("<div class='toolbar'><a class='in'>&uarr;</a> <div class='rooted'><input type='checkbox'></div> <a class='poke'>∊</a> <a class='close'>&times;</a> <a class='out'>&darr;</a></div>");
+        h.attr('draggable', this.isPairView());
         h.appendTo(d);
         h.hover(this.on.bar.enter, this.on.bar.leave);
         h.children('a').click(this.on.bar.click);

@@ -8,8 +8,8 @@ function PairView(a, terminal, tv, hv, root) {
     var d = $("<div class='" + (x0 < x1 ? "pair" : "ipair") + "'><div class='tail'><div class='tailEnd'></div></div><div class='head'><div class='headEnd'></div></div></div>"); // <div class='close'><a href='#'>&times;</a></div>
     var margin = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
     d.css({
-        'left': parseInt((x0 + x1) / 2) + 'px',
-        'margin-left': -parseInt(Math.abs(x1 - x0) / 2) + 'px',
+        'left': parseInt((x0 + x1) / 2, 10) + 'px',
+        'margin-left': -parseInt(Math.abs(x1 - x0) / 2, 10) + 'px',
         'top': Math.max(y0, y1) + margin + 'px',
         'margin-top': -(Math.abs(y1 - y0) + margin) + 'px',
         'width': Math.abs(x1 - x0) + 'px',
@@ -93,8 +93,8 @@ $.extend(PairView.prototype, View.prototype, {
         }
         var margin = Math.max(20, Math.min(50, Math.abs(y1 - y0)));
         d.css({
-            'left': parseInt((x0 + x1) / 2) + 'px',
-            'margin-left': -parseInt(Math.abs(x1 - x0) / 2) + 'px',
+            'left': parseInt((x0 + x1) / 2, 10) + 'px',
+            'margin-left': -parseInt(Math.abs(x1 - x0) / 2, 10) + 'px',
             'top': Math.max(y0, y1) + margin + 'px',
             'margin-top': -(Math.abs(y1 - y0) + margin) + 'px',
             'width': Math.abs(x1 - x0) + 'px',
