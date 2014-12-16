@@ -119,7 +119,7 @@ $.extend(BlobView.prototype, View.prototype, {
             // blob can't be edited
             // terminal.entrelacs.bindUri(contentArrow, contentArrowUri);
             var contentArrowUri =  contentArrow.uri;
-            promise = terminal.entrelacs.invoke("/escape+" + contentArrowUri);
+            promise = this.terminal.entrelacs.invoke("/escape+" + contentArrowUri);
         } else {
             var data = contentArrow.getBody();
             promise = $.when(data);
