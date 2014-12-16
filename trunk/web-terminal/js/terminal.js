@@ -50,7 +50,10 @@ function Terminal(area, entrelacs, animatePlease) {
                 return true;
             },
             mousedown: function(event) {
-                if (event.target != area[0]) return true;
+                var t = $(event.target);
+                if (event.target != area[0] &&
+                   !(t.hasClass('head') || t.hasClass('tail')
+                     || t.hasClass('pair'))) return true;
                 
                 mx0 = event.pageX;
                 my0 = event.pageY;
