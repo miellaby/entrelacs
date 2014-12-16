@@ -1,6 +1,6 @@
 == Browse content
 
-Use //?// button to display children.
+Use the //Poke (⚡)// button to display children.
 Repeat to //go meta//.
 
 Enter a seed arrow to get back connected information. Try it with //42//.

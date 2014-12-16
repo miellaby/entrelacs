@@ -25,21 +25,28 @@ function BlobView(a, terminal, x, y) {
     this.contentType = type;
     
     if (isCreole) {
+        d.css({
+            'width': "33%"
+        });
+
         var contentArrow = a.getHead().getHead();
         if (!contentArrow.getBody) { // placeholder
-            var promise = terminal.entrelacs.invoke("/escape+" + contentArrow.uri);
+            var contentArrowUri =  contentArrow.uri;
+            var promise = terminal.entrelacs.invoke("/escape+" + contentArrowUri);
             promise.done(function (text) {
                 terminal.creole.parse(o[0], text);
-                self.unbind();
-                self.arrow = Arrow.atom(text);
-                self.bind();
+                contentArrow = Arrow.atom(text);
+                // terminal.entrelacs.bindUri(contentArrow, contentArrowUri);
+                // rewire a with atom
+                //a = Arrow.pair(a.getTail(), Arrow.pair(a.getHead().getTail(), contentArrow));
+                //self.rebind(a);
+                o.appendTo(d);
                 var w = d.width();
                 var h = d.height();
                 d.css({
-                    'margin-left': -parseInt(w / 2) + 'px',
+                    'margin-left': -parseInt(w / 2, 10) + 'px',
                     'margin-top': -h + 'px'
                 });
-                o.appendTo(d);
             });
         } else {
             terminal.creole.parse(o[0], contentArrow.getBody());
@@ -71,7 +78,7 @@ function BlobView(a, terminal, x, y) {
             var w = d.width();
             var h = d.height();
             d.css({
-                'margin-left': -parseInt(w / 2) + 'px',
+                'margin-left': -parseInt(w / 2, 10) + 'px',
                 'margin-top': -h + 'px'
             });
         });
@@ -81,10 +88,12 @@ function BlobView(a, terminal, x, y) {
     $.extend(this.on, {
         click: function(event) {
             event.stopPropagation();
+            return false;
         },
                 
         dblclick: function(event) {
-            self.edit();
+            var prompt = self.edit();
+            if (prompt) prompt.focus();
             return false;
         },
                 
@@ -106,19 +115,31 @@ $.extend(BlobView.prototype, View.prototype, {
     isPairView: function() { return false; },
 
     edit: function() {
-        if (!this.arrow.getHead().getHead().getBody) {
+        var contentArrow = this.arrow.getHead().getHead();
+        var promise;
+        if (!contentArrow.getBody) {
             // blob can't be edited
-            return this;
-        }
-        
-        var v = this.arrow.getHead().getHead().getBody();
-        View.prototype.edit.call(this);
-      
-        var p = this.d.position();
-        var prompt = new Prompt(v, this.terminal, p.left, p.top);
-        prompt.setWikiFormated(true);
-        this.replaceWith(prompt);
-        return prompt;
+            // terminal.entrelacs.bindUri(contentArrow, contentArrowUri);
+            var contentArrowUri =  contentArrow.uri;
+            promise = terminal.entrelacs.invoke("/escape+" + contentArrowUri);
+        } else {
+            var data = contentArrow.getBody();
+            promise = $.when(data);
+        }    
+
+        var self = this;
+        promise.done(function(text) {
+            var type = self.arrow.getHead().getTail().getBody();
+            View.prototype.edit.call(self);
+            var w = self.d.width(), h = self.d.height();
+            var p = self.d.position();
+            var prompt = new Prompt(text, self.terminal, p.left, p.top, true);
+            prompt.d.children('textarea').css({'width': w + 'px', 'height': h + 'px'});
+            prompt.d.css({'margin-left': -(w / 2) + 'px', 'margin-top': -h + 'px'});
+            prompt.setWikiFormated(type == "text/x-creole");
+            self.replaceWith(prompt);
+            return prompt;
+        });
     }
 
 

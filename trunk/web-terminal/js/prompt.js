@@ -123,9 +123,13 @@ function Prompt(string, terminal, x, y, immediate) {
             },
         },
         wikiButton: {
-            click: function(event) {
-                self.setWikiFormated();
-                self.focus();
+            mousedown: function(event) {
+                if (!self.isEnlarged()) {
+                    self.enlarge();
+                } else {
+                    self.setWikiFormated();
+                }
+                event.preventDefault();
                 return false;
             },
         },        
@@ -171,7 +175,7 @@ function Prompt(string, terminal, x, y, immediate) {
     var i = d.children('input[type="text"]');
     // set listeners
     i.blur(this.on.blur);
-    i.click(this.on.click);
+    i.on('click', this.on.click);
     i.focus(this.on.focus);
     i.keypress(this.on.keypress);
     i.keydown(this.on.keydown);
@@ -182,7 +186,7 @@ function Prompt(string, terminal, x, y, immediate) {
     // wiki button
     var wb = $("<a class='wiki-checkbox'>.__.</a>")
         .appendTo(d)
-        .click(this.on.wikiButton.click);
+        .on('mousedown', this.on.wikiButton.mousedown);
 
     // file upload button
     $("<span class='fileinput-button'><span>...</span><input type='file' name='files[]'></span>")
@@ -210,7 +214,7 @@ function Prompt(string, terminal, x, y, immediate) {
             self.terminal.loading.show();
         },
         'onComplete': function(response) {
-            if (typeof response == "object" && response.status === false)
+            if (response && typeof response == "object" && response.status === false)
                 return;
                 
             if (self.terminal.transfertCount) self.terminal.transfertCount--;
@@ -218,9 +222,11 @@ function Prompt(string, terminal, x, y, immediate) {
             
             // response is not readable
             // however one can search for the arrow child
-            var query = self.terminal.entrelacs.getChildren(secret);
-            query.done(function(response) {
-                self.turnIntoBlobView(response.getTail().getHead() /* head of first outgoing arrow */);
+            var query = self.terminal.entrelacs.getChildren(Arrow.atom(secret));
+            query.done(function(children) {
+                var child0 = children.getTail().getHead();  /* head of first outgoing arrow */
+                self.turnIntoBlobView(child0);
+                self.confirmDescendants();
             });
         },
         'onCancel': function() {
@@ -239,12 +245,11 @@ function Prompt(string, terminal, x, y, immediate) {
         }
     }
    
-};
+}
 
 $.extend(Prompt.prototype, View.prototype, {
     enlarge: function() {
         var d = this.d;
-        var w0 = d.width();
         var i = d.children('input');
         var v = i.val();
         d.children('.fileinput-button,.split').detach();
@@ -271,6 +276,8 @@ $.extend(Prompt.prototype, View.prototype, {
             'margin-left': -parseInt(w / 2) + 'px',
             'margin-top': -d.height() + 'px'
         });
+
+        this.setWikiFormated(false);
     },
 
     isEnlarged: function() {
@@ -281,9 +288,6 @@ $.extend(Prompt.prototype, View.prototype, {
         if (isWikiFormated === undefined) {
             isWikiFormated = !this.isWikiFormated();
         }
-        
-        if (isWikiFormated && !this.isEnlarged())
-           this.enlarge();
 
         var c = this.d.children('.wiki-checkbox');
         c.text(isWikiFormated ? 'Wiki' : 'raw');
@@ -305,10 +309,12 @@ $.extend(Prompt.prototype, View.prototype, {
         if (this.isWikiFormated()) {
             arrow = Arrow.pair(Arrow.atom('Content-Typed'), Arrow.pair(Arrow.atom('text/x-creole'), arrow));
             atomView = new BlobView(arrow, this.terminal, p.left, p.top);
+            this.replaceWith(atomView);
+            //this.terminal.entrelacs.getUri(arrow);
         } else {
             atomView = new AtomView(arrow, this.terminal, p.left, p.top);
+            this.replaceWith(atomView);
         }
-        this.replaceWith(atomView);
         return atomView;
     },
 
