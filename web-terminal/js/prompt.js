@@ -78,6 +78,7 @@ function Prompt(string, terminal, x, y, immediate) {
                 
             } else if (event.ctrlKey && (event.keyCode == 191 /* / */ || event.keyCode == 80 /* p */)) {
                 self.split();
+                event.preventDefault();
                 return false;
                 
             } else if (event.keyCode == 27 /* escape */) {
@@ -126,6 +127,7 @@ function Prompt(string, terminal, x, y, immediate) {
             mousedown: function(event) {
                 if (!self.isEnlarged()) {
                     self.enlarge();
+                    
                 } else {
                     self.setWikiFormated();
                 }
@@ -274,11 +276,12 @@ $.extend(Prompt.prototype, View.prototype, {
 
         var w = d.width();
         d.css({
-            'margin-left': -parseInt(w / 2) + 'px',
+            'margin-left': -parseInt(w / 2, 10) + 'px',
             'margin-top': -d.height() + 'px'
         });
 
         this.setWikiFormated(false);
+        i.focus();
     },
 
     isEnlarged: function() {
