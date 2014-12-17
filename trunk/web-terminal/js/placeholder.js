@@ -4,7 +4,7 @@ function PlaceholderView(a, terminal, x, y) {
     d.css({left: x + 'px', top: y + 'px'});
     View.call(this, a, terminal, d);
     d.css({
-        'margin-left': -parseInt(d.width() / 2) + 'px',
+        'margin-left': -parseInt(d.width() / 2, 10) + 'px',
         'margin-top': -(d.height() + 5) + 'px'
     });
     d.children('button').attr('draggable', true);
@@ -27,14 +27,14 @@ $.extend(PlaceholderView.prototype, View.prototype, {
         var arrow = this.arrow;
         var terminal = this.terminal;
         var p = this.d.position();
-        if (arrow.uri !== undefined) { // an unknown placeholder
+        if (arrow.url !== undefined) { // an unknown placeholder
             var promise = terminal.entrelacs.open(arrow);
             promise.done(function(unfolded) {
-                var view = terminal.show(unfolded, p.left, p.top);
+                var view = terminal.show(unfolded, p.left, p.top, undefined, self);
                 self.replaceWith(view);
             });
         } else { // a folded known arrow
-            var view = terminal.show(arrow, p.left, p.top);
+            var view = terminal.show(arrow, p.left, p.top, undefined, self);
             self.replaceWith(view);
         }
     }

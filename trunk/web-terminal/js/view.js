@@ -85,12 +85,12 @@ function View(arrow, terminal, d) {
         
         dragstart: function(event) {
             if (event.currentTarget != self.d[0]) {
-                console.log('not');
+                // console.log('not');
                 event.preventDefault();
                     return;
             }
             
-            console.log('dragstart');
+            // console.log('dragstart');
             // dragStartX = ($.browser.mozilla ? e.originalEvent.screenX : e.originalEvent.pageX);
             // dragStartY = ($.browser.mozilla ? e.originalEvent.screenY : e.originalEvent.pageY);
 
@@ -105,7 +105,7 @@ function View(arrow, terminal, d) {
         },
         
         dragend: function(event) {
-            console.log('dragend');
+            // console.log('dragend');
             var bugInducingElement = self.d.children("input[type='text'],textarea");
             bugInducingElement.css('visibility', 'visible');
 
@@ -169,7 +169,7 @@ View.prototype = {
         }
         views.push(this);
         
-        console.log(Arrow.serialize(arrow) + " " + views.length + " views");
+        console.log(Arrow.serialize(arrow) + " +1 = " + views.length + " views");
         
         // re-binding
         if (this.replaced && this.replaced != this.arrow) {
@@ -196,13 +196,13 @@ View.prototype = {
         var vs = arrow.get('views');
         if (!vs) return;
         vs.splice(vs.indexOf(this), 1);
-        console.log(Arrow.serialize(arrow) + " " + vs.length + " views");
+        console.log(Arrow.serialize(arrow) + " -1 = " + vs.length + " views");
         this.arrow = null;
     },
     
     rebind: function(a) {
         this.unbind();
-        this.arrow = a || null;
+        this.arrow = a;
         this.bind();
     },
     
@@ -424,11 +424,11 @@ View.prototype = {
             key = Arrow.pair(Arrow.atom("geometry"), a);
         }
         
-        console.log("check " + Arrow.serialize(key));
+        // console.log("check " + Arrow.serialize(key));
         var it = key.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
         var c;
         if ((c = it()) != null) {
-            console.log(Arrow.serialize(c));
+            // console.log(Arrow.serialize(c));
             c = c.getHead();
             var w = parseInt(c.getTail().getBody(), 10);
             var h = parseInt(c.getHead().getBody(), 10);
@@ -511,7 +511,6 @@ View.prototype = {
                 if (confirmedView.arrow === null) {
                     console.log('!? GCed');
                 } else {
-                    self.terminal.entrelacs.getUri(confirmedView.arrow);
                     console.log('root it');
                     confirmedView.arrow.root();
                     confirmedView.saveAllGeometryAfterRoot(confirmedView.arrow);
@@ -563,7 +562,7 @@ View.prototype = {
                 console.log("View got CGed before processPartners");
                 return;
             }
-            console.log((self.terminal.entrelacs.uriIfKnown(source) || Arrow.serialize(source)) + " partners = {");
+            console.log(Arrow.serialize(source) + " partners = {");
             while (list !== Arrow.eve) {
                 var pair = list.getTail();
                 console.log(Arrow.serialize(pair) + ",");

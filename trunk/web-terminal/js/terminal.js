@@ -22,7 +22,7 @@ function Terminal(area, entrelacs, animatePlease) {
                 Wikipedia: 'http://en.wikipedia.org/wiki/'},
                                      linkFormat: '' });
 
-    Arrow.listeners.push(function(a) { self.arrowEvent(a); });
+    Arrow.listeners.push(function(a, r) { self.arrowEvent(a, r); });
     $(document).ajaxStart(function(){
         self.transfertCount++;
         self.loading.show();
@@ -99,11 +99,11 @@ function Terminal(area, entrelacs, animatePlease) {
 
 Terminal.prototype = {
 
-    show: function(a, x, y, ctx) {
-        var view = this.findNearestArrowView(a, {left: x, top: y}, 1000);
+    show: function(a, x, y, ctx, except) {
+        var view = this.findNearestArrowView(a, {left: x, top: y}, 1000, except);
         if (view) return view;
         
-        if (a.uri !== undefined) { // placeholder
+        if (a.url !== undefined) { // placeholder
             view = new PlaceholderView(a, this, x, y);
         } else if (a.isAtomic()) {
             view = new AtomView(a, this, x, y);
@@ -139,13 +139,13 @@ Terminal.prototype = {
         }, 5000);
     },
     
-    findNearestArrowView: function(arrow, position, limit) {
+    findNearestArrowView: function(arrow, position, limit, except) {
         var views = arrow.get('views');
         if (views === undefined || !views.length) return null;
         var distance = -1;
         var nearest = null;
         views.forEach(function(view) {
-            if (view.d.hasClass('placeholder')) return;
+            if (view === except) return;
             
             var vp = view.d.position();
             var vd = Math.abs(vp.left - position.left) + Math.abs(vp.top - position.top);
@@ -269,19 +269,26 @@ Terminal.prototype = {
             .css('left', p.left + 'px');
     },
 
-    arrowEvent: function(a) {
+    arrowEvent: function(a, replacing) {
         if (a === null) { // reset!
             // TODO: move out reconnection
             if (window.location.hash) {
-                var promise = this.entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
+                this.entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
             }
             return;
         }
         var views = a.get('views');
-        if (a.hc === undefined ) { // a is GC-ed
+        if (replacing === null) { // a is GC-ed
             views && views.forEach(function(view) {
-                view.edit();
+                view.edit(); // TODO erase ?
             });
+        } else if (replacing !== undefined) {
+            if (views && views.length) {
+                console.log("replacing in " + views.length + " view(s).");
+                views.forEach(function(view) { view.rebind(replacing); });
+            } else {
+                console.log("replacing in no view.");
+            }
         } else {
             var r = a.isRooted();
             views && views.forEach(function(view) { view.d.find('.toolbar .rooted input').prop('checked', r); });
@@ -289,9 +296,8 @@ Terminal.prototype = {
     },    
 
     scroll: function(dx, dy) {
-        var i = 0;
         this.area.children().each(function(i, element) {
-            element = $(element)
+            element = $(element);
             var position = element.position();
             element.css({left: (position.left + dx) + 'px', top: (position.top + dy) + 'px'});
         });

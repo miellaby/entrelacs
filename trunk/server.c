@@ -257,7 +257,8 @@ static void *event_handler(enum mg_event event,
         char* output_url = xls_urlOf(session, output, l_depth);
         int isAtomic  = xl_isAtom(output);
 
-#if 0 // FIXME
+// TODO
+#if 1
 #define URI_CONTENT_TYPE "text/uri-list"
 #else
 #define URI_CONTENT_TYPE "text/plain"

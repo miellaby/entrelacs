@@ -28,17 +28,12 @@ function BlobView(a, terminal, x, y) {
         d.addClass('wiki');
 
         var contentArrow = a.getHead().getHead();
-        if (!contentArrow.getBody) { // placeholder
-            var contentArrowUri =  contentArrow.uri;
-            var promise = terminal.entrelacs.invoke("/escape+" + contentArrowUri);
-            promise.done(function (text) {
-                terminal.creole.parse(o.children('.scrollable')[0], text);
-                contentArrow = Arrow.atom(text);
-                // terminal.entrelacs.bindUri(contentArrow, contentArrowUri);
-                // rewire a with atom
-                //a = Arrow.pair(a.getTail(), Arrow.pair(a.getHead().getTail(), contentArrow));
-                //self.rebind(a);
-                o.appendTo(d);
+        if (contentArrow.url) { // placeholder
+            // TODO turn this into entrelacs method (check content type)
+            var promise = terminal.entrelacs.invoke("/escape+" + contentArrow.url);
+            promise.done(function (atom) {
+                terminal.creole.parse(o.children('.scrollable')[0], atom.getBody());
+                contentArrow.replaceWith(atom);
                 var w = d.width();
                 var h = d.height();
                 d.css({
@@ -48,14 +43,14 @@ function BlobView(a, terminal, x, y) {
             });
         } else {
             terminal.creole.parse(o.children('.scrollable')[0], contentArrow.getBody());
-            o.appendTo(d);
-            var w = d.width();
-            var h = d.height();
-            d.css({
-                'margin-left': -parseInt(w / 2, 10) + 'px',
-                'margin-top': -h + 'px'
-            });
         }
+        o.appendTo(d);
+        var w = d.width();
+        var h = d.height();
+        d.css({
+            'margin-left': -parseInt(w / 2, 10) + 'px',
+            'margin-top': -h + 'px'
+        });
     } else {
         o.colorbox({href: terminal.entrelacs.serverUrl + '/escape+' + uri, photo: isImage });
         self.terminal.transfertCount++;
@@ -115,29 +110,29 @@ $.extend(BlobView.prototype, View.prototype, {
     edit: function() {
         var contentArrow = this.arrow.getHead().getHead();
         var promise;
-        if (!contentArrow.getBody) {
+        if (contentArrow.url) {
             // blob can't be edited
             // terminal.entrelacs.bindUri(contentArrow, contentArrowUri);
-            var contentArrowUri =  contentArrow.uri;
-            promise = this.terminal.entrelacs.invoke("/escape+" + contentArrowUri);
+            promise = this.terminal.entrelacs.invoke("/escape+" + contentArrow.url);
         } else {
-            var data = contentArrow.getBody();
-            promise = $.when(data);
-        }    
+            promise = $.when(contentArrow);
+        }
 
         var self = this;
-        promise.done(function(text) {
+        promise.done(function(atom) {
             var type = self.arrow.getHead().getTail().getBody();
             View.prototype.edit.call(self);
             var w = self.d.width(), h = self.d.height();
             var p = self.d.position();
-            var prompt = new Prompt(text, self.terminal, p.left, p.top, true);
+            var prompt = new Prompt(atom.getBody(), self.terminal, p.left, p.top, true);
             prompt.d.children('textarea').css({'width': w + 'px', 'height': h + 'px'});
             prompt.d.css({'margin-left': -(w / 2) + 'px', 'margin-top': -h + 'px'});
             prompt.setWikiFormated(type == "text/x-creole");
             self.replaceWith(prompt);
             return prompt;
         });
+        
+        return promise;
     }
 
 
