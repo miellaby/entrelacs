@@ -65,6 +65,10 @@ const Address SPACE_SIZE = _PRIM0;
   */
 #define PERSISTENCE_JOURNALFILE "entrelacs.journal"
 
+/** Persistence blob storage dir. May be relative to PERSISTENCE_DIR
+ */
+#define PERSISTENCE_BLOBDIR "blob"
+
 /** Actual value of the persitence directory.
 */
 extern char* mem0_dirPath;
@@ -76,6 +80,10 @@ extern char* mem0_filePath;
 /** Actual value of the journal file path.
 */
 extern char* mem0_journalFilePath;
+
+/** Actual value of the blob directory path.
+ */
+extern char* mem0_blobDirPath;
 
 /** set by mem0_commit to notify that mem0 caches are out of sync with disk (concurrent disk access?)
 */
