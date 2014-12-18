@@ -80,8 +80,8 @@ function BlobView(a, terminal, x, y) {
     
     $.extend(this.on, {
         click: function(event) {
-            event.stopPropagation();
-            return false;
+            //event.stopPropagation();
+            //return false;
         },
                 
         dblclick: function(event) {
@@ -100,7 +100,7 @@ function BlobView(a, terminal, x, y) {
         }
     });
     if (isCreole) {
-        o.click(this.on.click).dblclick(this.on.dblclick).focus(this.on.focus).blur(this.on.blur);
+        o.dblclick(this.on.dblclick).focus(this.on.focus).blur(this.on.blur);
     };
 }
 
