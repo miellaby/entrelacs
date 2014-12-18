@@ -1,11 +1,10 @@
-== Browse content
+== Browse existing content
 
-Use the //Poke (⚡)// button to display children.
-Repeat to //go meta//.
+Arrows connected to //pub// are shown at startup.
 
-Enter a seed arrow to get back connected information. Try it with //42//.
+Click in the background to open a prompt and enter anything to get back connected information. Try it with //42//.
 
-Unwanted arrows  may be hidden with ''x'' button.
+Hide arrows  with ''x'' button. Show hidden children with //∊// button.  Repeat on subsequent children to //go meta//.
 
 == Add content
 
@@ -18,30 +17,23 @@ Type into prompts and validate to create //atoms//.
 Drag & drop existing arrows into prompts to reuse them in new structures.
 Or use //incoming// and //outgoing// buttons.
 
-Root arrows to make them //real//, that is persistant.
-Avoid directly rooting non-repeatable atoms -like random data- or
-space will be lost.
+Note direct rooting of atoms often leads to space loss.
 
 == Modify content
 
 Unroot arrows to remove them for good.
 
-Double-click existing atoms to edit them.
-Changes will be propaged to visible descendants.
+Double-click to edit atoms. Changes will be propaged to visible descendants.
 
 == Advanced text editing
 
-Turn prompts into text areas with //whale of text// button (.___.).
+Turn prompts into text areas with the //whale of text// button (.___.).
 Then choose between //raw// and //wiki// text format. Wiki syntax is
 [[http://wikicreole.org/wiki/Creole1.0|Creole 1.0]].
 
-Alternatively, //Ctrl+Enter// also helps unfold then submit a wall of text.
+//Ctrl+Enter// also enlarges prompts and submits text input.
 
 == File upload
 
-Use //(...)// button to upload content into a prompt.
+Use //[...]// button to upload a file into a prompt.
 
-== Auto display
-
-Arrows linked to //hello// atom are displayed at startup.
-Links must be //rooted//.
