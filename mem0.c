@@ -13,6 +13,7 @@
 
 static FILE* F = NULL;
 int mem_is_out_of_sync = 0;
+char* mem0_blobDirPath = NULL;
 
 /** internal function */
 int _mem0_set(Address address, CellBody* data);
@@ -127,8 +128,24 @@ static void computeJournalFilePath() {
     TRACEPRINTF("mem0_journalFilePath is '%s'", mem0_journalFilePath);
 }
 
+static void computeBlobDirPath() {
+    if (mem0_blobDirPath != NULL) return;
+    char* env = getenv(PERSISTENCE_ENV);
+    if (env) {
+       char* d = mem0_dirname(env);
+       mem0_path(&mem0_blobDirPath, d, PERSISTENCE_BLOBDIR);
+       free(d);
+    } else {
+       mem0_path(&mem0_blobDirPath, PERSISTENCE_DIR, PERSISTENCE_BLOBDIR);
+    }
+    assert(mem0_blobDirPath);
+    WARNPRINTF("mem0_blobDirPath is '%s'", mem0_blobDirPath);
+
+    mkdir(mem0_blobDirPath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ;
+}
+
 static int openJournal(int forWrite) {
-    computeJournalFilePath();
+    mem0_journalFilePath == NULL ? computeJournalFilePath() : (void)0;
     journalHandler = fopen(mem0_journalFilePath, forWrite == JOURNAL_WRITING ? "wb" : "rb");
     if (forWrite == JOURNAL_WRITING && !journalHandler) {
         LOGPRINTF(LOG_FATAL, "Can't open journal for writing");
@@ -307,7 +324,7 @@ int mem0_init() {
       return -1;      
   }
   
-
+  computeBlobDirPath();
 
   // recover from previous journal if any
   if (!mem0_openPreviousJournal()) {
@@ -372,9 +389,11 @@ void mem0_saveData(char *h, size_t size, char* data) {
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size) return;
 
+  mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
+
   char *dirname = h + strlen(h) - 2; // FIXME escape binary codes here and there
   char *filename = h; // FIXME escape binary codes here and there
-  chdir(PERSISTENCE_DIR);
+  chdir(mem0_blobDirPath);
   mkdir(dirname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ;
   chdir(dirname);
   FILE* fd = fopen(filename, "w");
@@ -398,7 +417,10 @@ char* mem0_loadData(char* h, size_t* sizeP) {
   size_t size;
   char *filename = h;
   char *dirname = h + strlen(h) - 2;
-  chdir(PERSISTENCE_DIR);
+  
+  mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
+
+  chdir(mem0_blobDirPath);
   int rc = chdir(dirname);
   if (rc) {
      LOGPRINTF(LOG_FATAL, "Can't move into '%s' directory", dirname);
