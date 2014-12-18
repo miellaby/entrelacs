@@ -116,6 +116,8 @@ void xls_reset(Arrow c) {
             if (xl_isRooted(child) != EVE) {
                 xls_unroot(c, headOf(child));
             }
+        } else {
+            TRACEPRINTF("xls_reset left %O", child);
         }
     }
 

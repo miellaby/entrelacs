@@ -333,7 +333,7 @@ View.prototype = {
                         Arrow.pair(Arrow.atom("geometry"), da),
                         Arrow.pair(Arrow.atom("geometry"), child.arrow));
                 }
-                Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
+                key.mapChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED, Arrow.unroot);
                 Arrow.pair(key, child.getGeometry()).root();
             }
             var list = descendant.children;
@@ -385,7 +385,7 @@ View.prototype = {
                     Arrow.pair(Arrow.atom("geometry"), r),
                     Arrow.pair(Arrow.atom("geometry"), a)
                 );
-                Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
+                key.mapChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED, Arrow.unroot);
                 Arrow.pair(key, view.getGeometry()).root();
             }
             if (view.isPairView()) {
@@ -399,7 +399,7 @@ View.prototype = {
         }
         if (this.getGeometry) {
             var key = Arrow.pair(Arrow.atom("geometry"), r);
-            Arrow.eveIfNull(key.getChild(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED)).unroot();
+            key.mapChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED, Arrow.unroot);
             Arrow.pair(key, this.getGeometry()).root();
         }
     },
@@ -425,15 +425,14 @@ View.prototype = {
         }
         
         // console.log("check " + Arrow.serialize(key));
-        var it = key.getChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED);
-        var c;
-        if ((c = it()) != null) {
+        var self = this;
+        key.mapChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED, function(c) {
             // console.log(Arrow.serialize(c));
             c = c.getHead();
             var w = parseInt(c.getTail().getBody(), 10);
             var h = parseInt(c.getHead().getBody(), 10);
-            this.setGeometry(floating, w, h);
-        }
+            self.setGeometry(floating, w, h);
+        });
     },
  
     replaceInDescendants: function(newA, except) {
@@ -579,17 +578,18 @@ View.prototype = {
                 if (!pairView || pairView.tv !== (outgoing ? self: a) || pairView.hv !== (outgoing ? a : self)) {
                     pairView = outgoing ? new PairView(pair, self.terminal, self, a, pair) : new PairView(pair, self.terminal, a, self, pair);
                     pairView.restoreGeometry(a, pairView);
+
+                    var geoKey = Arrow.pair(Arrow.atom("geometry"), pair);
+                    (function(geoKey, pairView, a, pair) {
+                        self.terminal.entrelacs.getPartners(geoKey).done(function() {
+                            pairView.restoreGeometry(a, pairView);
+                        });
+                    })(geoKey, pairView, a, pair);
+                    
                 } else {
                     pairView.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
                 }
 
-                var geoKey = Arrow.pair(Arrow.atom("geometry"), pair);
-                (function(geoKey, pairView, a, pair) {
-                    self.terminal.entrelacs.getPartners(geoKey).done(function() {
-                        pairView.restoreGeometry(a, pairView);
-                    });
-                })(geoKey, pairView, a, pair);
-            
                 var next = list.getHead();
                 if (next)
                     list = next;

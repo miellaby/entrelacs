@@ -296,6 +296,8 @@ static void *event_handler(enum mg_event event,
         mg_printf(conn, "HTTP/1.1 200 OK\r\nCache: no-cache\r\n"
                   "Access-Control-Allow-Origin: %s\r\n"
                   "Access-Control-Allow-Credentials: true\r\n"
+                  "Access-Control-Allow-Headers: X-Entrelacs\r\n"
+                  "Access-Control-Expose-Headers: X-Entrelacs, Set-Cookie\r\n"
                   "Content-Location: %s\r\n"
                   "Content-Length: %d\r\n",
                   origin ? origin : "*",
@@ -304,7 +306,8 @@ static void *event_handler(enum mg_event event,
         if (content_type) {
             mg_printf(conn, "Content-Type: %s\r\n", content_type);
         }
-        mg_printf(conn, "Set-Cookie: session=%s; max-age=60; path=/; http-only\r\n",  session_id);
+        mg_printf(conn, "Set-Cookie: session=%s; max-age=60; path=/\r\n",  session_id);
+        mg_printf(conn, "X-Entrelacs: %s\r\n",  session_id);
         mg_printf(conn, "\r\n");
         mg_write(conn, content, (size_t)content_length);
         free(output_url);

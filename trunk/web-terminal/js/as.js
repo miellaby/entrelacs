@@ -287,6 +287,23 @@ $.extend(Arrow.prototype, {
         return this.getChildren(filters)();
     },
     
+    /** Children map
+     *  
+     */
+    mapChildren: function(filters, map, condition) {
+        var cl = this.getChildren(filters);
+        var c;
+        var r = [];
+        while ((c = cl()) !== null) {
+            if (condition !== undefined && !condition(c)) continue;
+            if (map === undefined)
+                r.push(c);
+            else
+                r.push(map(c));
+        }
+        return r;
+    },
+    
     /**
      * @this {Arrow}
      * @return a list of partners (context-rooted children)
@@ -394,8 +411,31 @@ $.extend(Arrow.prototype, {
         
         // (this) will be erased by next GC
         return a;
-    }
+    },
 
+    /**
+     * Get a valid URI from an arrow definition
+     */
+    serialize: function() {
+        if (this.url) { // placeholder
+            return this.url;
+        } else if (this.digest) {
+            return this.digest;
+        } else if (this.isAtomic()) {
+            return encodeURIComponent(this.getBody());
+        } else {
+            var tailUrl = Arrow.serialize(this.getTail());
+            var headUrl = Arrow.serialize(this.getHead());
+            return '/' + tailUrl + '+' + headUrl;
+        }
+    },
+    
+    /**
+     *
+     */
+    toString: function() {
+        return this.serialize();
+    }
 });
 
 /** Advertise change */
@@ -557,12 +597,54 @@ Arrow.eve = new Atom("", "".hashCode()).root();
 Arrow.eve.rooted = true;
 Arrow.changelog = [];
 
-
+/** helper */
 Arrow.eveIfNull = function(v) {
-    if (!v)
+    if (!v && v !== 0)
         return Arrow.eve;
     else
         return v;
+};
+
+/** helper */
+Arrow.unroot = function(arrow) {
+    return arrow.unroot();
+};
+
+/** helper */
+Arrow.root = function(arrow) {
+    return arrow.root();
+};
+
+/** helper */
+Arrow.isRooted = function(arrow) {
+    return arrow.isRooted();
+};
+
+/** helper */
+Arrow.getTail = function(arrow) {
+    return arrow.getTail();
+};
+
+/** helper */
+Arrow.getHead = function(arrow) {
+    return arrow.getHead();
+};
+
+/** helper */
+Arrow.isAtomic = function(arrow) {
+    return arrow.isAtomic();
+};
+
+/** helper */
+Arrow.isPair = function(arrow) {
+    return arrow.isPair();
+};
+
+/**
+ * helper
+ */
+Arrow.serialize = function(arrow) {
+    return arrow.serialize();
 };
 
 /**
@@ -783,23 +865,6 @@ Arrow.decodeURI = function () {
 }();
 
 /**
- * Get a valid URI from an arrow definition
- */
-Arrow.serialize = function(arrow) {
-    if (arrow.url) { // placeholder
-        return arrow.url;
-    } else if (arrow.digest) {
-        return arrow.digest;
-    } else if (arrow.isAtomic()) {
-        return encodeURIComponent(arrow.getBody());
-    } else {
-        var tailUrl = Arrow.serialize(arrow.getTail());
-        var headUrl = Arrow.serialize(arrow.getHead());
-        return '/' + tailUrl + '+' + headUrl;
-    }
-};
-
-/**
  * Garbage collector
  */
 Arrow.gc = function () {
@@ -916,9 +981,9 @@ $.extend(Entrelacs.prototype, {
     /** 
      * check cookie and detect session loss
      */
-    checkCookie: function () {
-        if (!$.cookie) return;
-        var currentCookie = $.cookie('session');
+    checkCookie: function (jqXHR) {
+        var currentCookie = jqXHR.getResponseHeader('X-Entrelacs');
+        console.log('currentCookie=' + currentCookie + ', lastCookie=' + this.lastCookie);
         if (currentCookie != this.lastCookie) {
             console.log('session loss');
             // session is lost, invalidate all URI
@@ -956,8 +1021,8 @@ $.extend(Entrelacs.prototype, {
                 var bodyUri = encodeURIComponent(a.getBody()); // TODO POST content
                 var req = self.serverUrl + '/escape/+' + bodyUri + '?iDepth=2';
                 promise = $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
-                promise.done(function (uri) {
-                   self.checkCookie();
+                promise.done(function (uri, textStatus, jqXHR) {
+                   self.checkCookie(jqXHR);
                 });
                 promise = promise.pipe(function (uri) { // uri == /+$Hxxxx
                     uri = uri.substring(2);
@@ -1007,8 +1072,8 @@ $.extend(Entrelacs.prototype, {
         var promise = self.chain.pipe(function () {
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         });
-        promise.done(function (r) {
-            self.checkCookie();
+        promise.done(function (r, textStatus, jqXHR) {
+            self.checkCookie(jqXHR);
             if (a.hc === undefined) return; // a is GC-ed
         });
 
@@ -1068,9 +1133,9 @@ $.extend(Entrelacs.prototype, {
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
         var promise = self.chain.pipe(futur, futur);
-        promise.done(function (r) {
+        promise.done(function (r, textStatus, jqXHR) {
             if (a.hc === undefined) return; // a is GC-ed
-            self.checkCookie();
+            self.checkCookie(jqXHR);
             if (r) {
                 if (a.url) { // placeholder
                     a.replaceWith(self.decodeURI(a, r));
@@ -1097,20 +1162,20 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow}
      * @return {JQuery.Promise}
      */
-    getChildren: function (a, secondTry) {
+    getChildren: function (a, secondTry, iDepth) {
         var self = this;
         var futur = function () {
             if (a.hc === undefined) return $.when(null); // a is GC-ed
             var url = Arrow.serialize(a);
-            var req = self.serverUrl + '/childrenOf/escape+' + url + '?iDepth=10';
+            var req = self.serverUrl + '/childrenOf/escape+' + url + '?iDepth=' + (iDepth ? iDepth : 10);
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
         
         var promise = self.chain.pipe(futur, futur);
-        var futur2 = function(arrowURL) {
+        var futur2 = function(arrowURL, textStatus, jqXHR) {
             if (a.hc === undefined) return Arrow.eve; // a is GC-ed
             if (arrowURL === null) return Arrow.eve;
-            self.checkCookie();
+            self.checkCookie(jqXHR);
             var children = Arrow.decodeURI(arrowURL, self.serverUrl);
             return children;
         };
@@ -1144,11 +1209,11 @@ $.extend(Entrelacs.prototype, {
         
         var promise = self.chain.pipe(futur, futur);
         
-        promise = promise.pipe(function(arrowURL) {
+        promise = promise.pipe(function(arrowURL, textStatus, jqXHR) {
             if (a.hc === undefined)
                 return Arrow.eve; // a is GC-ed
             
-            self.checkCookie();
+            self.checkCookie(jqXHR);
             var list = Arrow.decodeURI(arrowURL, self.serverUrl);
             var partners = list;
             while (list !== Arrow.eve) {
@@ -1174,7 +1239,7 @@ $.extend(Entrelacs.prototype, {
      * @param {Arrow} or {URI string}
      * @return {Promise}
      */
-    invoke: function (a, secondTry) {
+    invoke: function (a, secondTry, immediate) {
         var self = this;
         var futur = function () {
             if (typeof a === 'object' && a.hc === undefined) return $.when(null); // a is GC-ed
@@ -1182,11 +1247,16 @@ $.extend(Entrelacs.prototype, {
             var req = self.serverUrl + uri; // no escape this time
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
-        var promise = self.chain.pipe(futur, futur);
-
-        promise = promise.pipe(function(arrowURIorText,  textStatus, xhr) {
-            self.checkCookie();
-            if (xhr.getResponseHeader("content-type") == "text/plain") {
+        var promise;
+        if (immediate) {
+            promise = futur();
+        } else {
+            promise = self.chain.pipe(futur, futur);
+        }
+        
+        promise = promise.pipe(function(arrowURIorText,  textStatus, jqXHR) {
+            self.checkCookie(jqXHR);
+            if (jqXHR.getResponseHeader("content-type") == "text/plain") {
                 var atom = Arrow.atom(arrowURIorText);
                 return atom;
             } else {
@@ -1226,9 +1296,9 @@ $.extend(Entrelacs.prototype, {
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         };
         
-        var promise = self.chain = self.chain.pipe(futur, futur);
-        promise = promise.pipe(function (unfoldedUri) {
-            self.checkCookie();
+        var promise = self.chain.pipe(futur, futur);
+        promise = promise.pipe(function (unfoldedUri, textStatus, jqXHR) {
+            self.checkCookie(jqXHR);
             // don't forget one looks for the head
             var unfolded = Arrow.decodeURI(unfoldedUri, self.serverUrl).getHead(); 
             p.replaceWith(unfolded);
