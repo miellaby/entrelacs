@@ -271,10 +271,6 @@ Terminal.prototype = {
 
     arrowEvent: function(a, replacing) {
         if (a === null) { // reset!
-            // TODO: move out reconnection
-            if (window.location.hash) {
-                this.entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
-            }
             return;
         }
         var views = a.get('views');

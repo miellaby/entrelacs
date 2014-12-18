@@ -6,11 +6,21 @@ function init() {
     entrelacs = new Entrelacs();
     terminal = new Terminal(area, entrelacs, true);
 
-    // TODO: move out connection button
     if (window.location.hash) {
+        // public area
         entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
             terminal.show(Arrow.atom(window.location.hash.substr(1)),  area.width() / 2, area.height() / 2).update();
         });
+
+        // reset handler: re-land        
+        Arrow.listeners.push(function(a, replacing) {
+            if (a === null) { // reset!
+                entrelacs.invoke(
+                    "/escalate/escape//mudo+chut//fall+/escape+demo/,/land+",
+                    true, true /* immediate */);
+            }
+        });
+    
     } else {
         var connect = $("<p class='connect' align='center'><button id='go'>...</button></p>");
         connect.children('button').click(function() {
