@@ -53,8 +53,13 @@ Arrow deepRoot(Arrow c, Arrow e) {
 /* root in a context */
 Arrow xls_root(Arrow c, Arrow e) {
     INFOPRINTF("xls_root(%O,%O)", c, e);
-    deepRoot(c, e);
-    return root(A(c, e));
+    if (c == EVE) {
+        root(e);
+        return A(EVE, e);
+    } else {
+        deepRoot(c, e);
+        return root(A(c, e));
+    }
 }
 
 #if 0
@@ -72,6 +77,9 @@ Arrow deepIsRooted(Arrow c, Arrow e) {
 #endif
 
 Arrow xls_isRooted(Arrow c, Arrow e) {
+    if (c == EVE)
+        return isRooted(e) ? A(c, e) : EVE;
+        
     Arrow m = pairMaybe(c, e);
     if (m == EVE || !isRooted(m))
         return EVE;
@@ -92,9 +100,16 @@ void deepUnroot(Arrow c, Arrow e) {
 }
 
 Arrow xls_unroot(Arrow c, Arrow e) {
+    Arrow u;
     DEBUGPRINTF("xls_unroot(%O,%O)", c, e);
-    deepUnroot(c, e);
-    Arrow u = unroot(A(c, e));
+    if (c == EVE) {
+        u = A(EVE, e);
+        unroot(u);
+        unroot(e);
+    } else {
+        deepUnroot(c, e);
+        u = unroot(A(c, e));
+    }
     // DEBUGPRINTF("xls_unroot(%O,%O) done.", c, e);
     return u;
 }
@@ -113,9 +128,9 @@ void xls_reset(Arrow c) {
 
         if (tailOf(child) == c) { // Only outgoing arrow
             xls_reset(child);
-            if (xl_isRooted(child) != EVE) {
+//            if (xl_isRooted(child) != EVE) {
                 xls_unroot(c, headOf(child));
-            }
+//            }
         } else {
             TRACEPRINTF("xls_reset left %O", child);
         }
@@ -256,6 +271,7 @@ Arrow xls_partnersOf(Arrow c, Arrow a) {
 Arrow xls_close(Arrow s) {
     TRACEPRINTF("BEGIN xls_close(%O)", s);
     /* $session =  /$s/session/$agent+$uuid */
+    xls_reset(A(atom("locked"), s));
     xls_reset(s);
     xls_unroot(tailOf(s), headOf(s));
     TRACEPRINTF("END xls_close(%O)", s);
