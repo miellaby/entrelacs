@@ -201,6 +201,7 @@ View.prototype = {
     },
     
     rebind: function(a) {
+        if (!a) throw new Error('rebind to falsy');
         this.unbind();
         this.arrow = a;
         this.bind();
@@ -587,7 +588,7 @@ View.prototype = {
                     })(geoKey, pairView, a, pair);
                     
                 } else {
-                    pairView.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
+                    pairView.d.animate({'border-width': '5px', 'margin-left': '-=5px', 'margin-top': '-=5px'}, 0).animate({'border-width': 0, 'margin-top': '+=5px', 'margin-left': '+=5px'});
                 }
 
                 var next = list.getHead();
@@ -608,13 +609,14 @@ View.prototype = {
     
         var promise = self.terminal.entrelacs.isRooted(self.arrow);
         promise.always(function () {
-            self.bar.find('.rooted input').prop('checked', self.arrow.isRooted());
+            self.bar.find('.rooted input').prop('checked', self.arrow && self.arrow.isRooted());
         });
 
         // process local partners
         var futur = function() {
             var knownPartners = self.arrow.getPartners();
-            self.d.css('border-bottom-width', '5px').animate({'border-bottom-width': 0});
+            self.d.animate({'border-width': '5px', 'margin-left': '-=5px', 'margin-top': '-=5px'}, 0).animate({'border-width': 0, 'margin-top': '+=5px', 'margin-left': '+=5px'});
+
             processPartners(knownPartners);
             return $.when(knownPartners);
         };

@@ -983,7 +983,7 @@ $.extend(Entrelacs.prototype, {
      */
     checkCookie: function (jqXHR) {
         var currentCookie = jqXHR.getResponseHeader('X-Entrelacs');
-        console.log('currentCookie=' + currentCookie + ', lastCookie=' + this.lastCookie);
+        // console.log('currentCookie=' + currentCookie + ', lastCookie=' + this.lastCookie);
         if (currentCookie != this.lastCookie) {
             console.log('session loss');
             // session is lost, invalidate all URI
@@ -1256,7 +1256,7 @@ $.extend(Entrelacs.prototype, {
         
         promise = promise.pipe(function(arrowURIorText,  textStatus, jqXHR) {
             self.checkCookie(jqXHR);
-            if (jqXHR.getResponseHeader("content-type") == "text/plain") {
+            if (jqXHR.getResponseHeader("content-type") == "application/octet-stream") {
                 var atom = Arrow.atom(arrowURIorText);
                 return atom;
             } else {
