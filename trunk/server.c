@@ -259,15 +259,13 @@ static void *event_handler(enum mg_event event,
 
 // TODO
 #if 1
-#define URI_CONTENT_TYPE "text/uri-list"
-#else
 #define URI_CONTENT_TYPE "text/plain"
 #endif
         char* content_type =
                 (i_depth == 0
                  ? URI_CONTENT_TYPE
                  : (isAtomic 
-                       ? "text/plain"
+                       ? "application/octet-stream"
                        : URI_CONTENT_TYPE));
         char* contentTypeCopy = NULL;
         if (i_depth != 0 && !isAtomic && xl_tailOf(output) == xl_atom("Content-Typed")) {
@@ -390,9 +388,9 @@ int main(void) {
 
           if (xl_tailOf(session) != sessionTag)
               continue; // Not a /session+* arrow
-          session = xls_isRooted(EVE, session);
-          if (session == EVE)
-              continue; // session is not rooted
+          // session = xls_isRooted(EVE, session);
+          // if (session == EVE)
+          //      continue; // session is not rooted
           sessionCount++;
           Arrow expire = xls_get(session, xl_atom("expire"));
           uint32_t var_size = 0;
@@ -402,10 +400,10 @@ int main(void) {
               LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
               xls_close(session);
               // restart loop as deep close may remove in-enum arrow
-              xl_freeEnum(e);
-              sessionTag =  xl_atom("session");
-              e = xl_childrenOf(sessionTag);
-              next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+              //xl_freeEnum(e);
+              //sessionTag =  xl_atom("session");
+              //e = xl_childrenOf(sessionTag);
+              //next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           } else if (*expire_time < now) {
               dputs("session %O outdated.", session);
               xls_close(session);
