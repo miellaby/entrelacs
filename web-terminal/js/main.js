@@ -22,7 +22,7 @@ function init() {
         });
     
     } else {
-        var connect = $("<p class='connect' align='center'><button id='go'>...</button></p>");
+        var connect = $("<div class='connect' align='center'><button id='go'>...</button></div>");
         connect.children('button').click(function() {
             alert("Leaving sand box. Entering public area ...");
             window.location = "#pub";
@@ -30,7 +30,7 @@ function init() {
             promise.done(function() { window.location.reload(); });
             return false;
         });
-        connect.appendTo(area.parent());
+        connect.appendTo(area.parent().children('.areaTools'));
     }
     
     //findFeaturedArrows();

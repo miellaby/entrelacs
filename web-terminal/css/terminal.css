@@ -136,25 +136,31 @@ animation-delay:0.45s;
       filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#00FFFFFF,endColorstr=#00FFFFFF);
     }
 
-.connect {
+.areaTools {
     position: fixed;
     right: 0px;
-    margin-top: 50px;
-    margin-right: 50px;
+    margin-top: 15px;
+    margin-right: 55px;
+    background: transparent;
 }
-.connect :hover {
+
+.connect, .move {
+    float: right;
+}
+
+.connect:hover, .move:hover {
     background: #FFF;
 }
 
-.connect button {
+.connect, .connect button, .move {
     color: #88B7D5;
     font: 26px/1.286 Lucida,Arial,Helvetica,sans-serif;
     font-weight:900;
-    background: #C2E1F5;
+    background: transparent;
     border: 0px;
     border-radius: 30px;
-    min-width: 50px;
-    min-height: 50px;
+    width: 50px;
+    height: 50px;
 }
 
 .toolbar {
@@ -167,7 +173,6 @@ animation-delay:0.45s;
     line-height: 16px;
     bottom: -19px;
     font-weight:900;
-
 }
 
 .pair .toolbar, .ipair .toolbar {
@@ -488,3 +493,44 @@ animation-delay:0.45s;
     bottom: -28px;
     padding: 4px 7px;
 }
+
+.triangle { 
+     position: relative;
+     margin-top: 20px;
+     width: 20px;
+}
+     .triangle>div { 
+         width: 21.85px;
+         margin-left: -0.6px;
+         height: 1.8px;
+         background: #88B7D5;
+     }
+
+     .triangle>div:before {
+         content: " ";
+         display: block;
+         width: 21px;
+         height: 1.8px;
+         background: #88B7D5;
+         -webkit-transform: rotate(-56deg);
+         -moz-transform: rotate(-56deg);
+         -ms-transform: rotate(-56deg);
+         transform: rotate(56deg);
+         position: absolute;
+         top: 8px;
+         right: 5px;
+     }
+     .triangle>div:after {
+         content: " ";
+         display: block;
+         width: 22px;
+         height: 1.8px;
+         background: #88B7D5;
+         -webkit-transform: rotate(56deg);
+         -moz-transform: rotate(56deg);
+         -ms-transform: rotate(56deg);
+         transform: rotate(-56deg);
+         position: absolute;
+         top: 8px;
+         left: 5px;
+     }
