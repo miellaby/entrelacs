@@ -12,6 +12,14 @@ function Terminal(area, entrelacs, animatePlease) {
     protoEntry.detach();
     this.loading = $("<div class='loading bar' id='loading'><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>");
     this.loading.appendTo(area);
+
+
+    this.toolbar = $("<div class='areaTools' align='center'><div class='move'><div class='triangle'><div></div></div></div></div>");
+    this.toolbar.children('.move').click(function() {
+        self.smoothScroll(0, self.area.height() * -1.1);
+    });
+    this.toolbar.appendTo(this.area.parent());
+
     
     this.circleAngle = 0;
     this.transfertCount = 0;
@@ -31,8 +39,13 @@ function Terminal(area, entrelacs, animatePlease) {
         if (!self.transfertCount) self.loading.hide();
     });
     
+    // timers
+    this.smoothScrollInterval = null;
     this.commitTimeout = null;
 
+    // used by smooth scroll
+    this.remainingDx= 0;
+    this.remainingDy = 0;
 
     var mx0, my0, deltaSum, movingArea;
     
@@ -295,7 +308,38 @@ Terminal.prototype = {
         this.area.children().each(function(i, element) {
             element = $(element);
             var position = element.position();
+            if (element.data('view') && Math.abs(position.left) + Math.abs(position.top) > 5000) {
+                element.data('view').dismiss();
+            }
             element.css({left: (position.left + dx) + 'px', top: (position.top + dy) + 'px'});
         });
+    },
+
+    smoothScrollIterate: function() {
+        var dx = this.remainingDx,
+            dy = this.remainingDy;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 130) {
+            this.scroll(dx, dy);
+            clearInterval(this.smoothScrollInterval);
+            this.smoothScrollInterval = null;
+            this.remainingDx = 0;
+            this.remainingDy;
+        } else {
+            var ddx = dx / d * 100, ddy = dy / d * 100;
+            this.remainingDx -= ddx;
+            this.remainingDy -= ddy;
+            this.scroll(ddx, ddy);
+        }
+    },
+    
+    smoothScroll: function(dx, dy) {
+        this.remainingDx += dx;
+        this.remainingDy += dy;
+        
+        if (this.smoothScrollInterval === null) {
+            var self = this;
+            this.smoothScrollInterval = setInterval(function(){self.smoothScrollIterate();}, 1000 / 30);
+        }
     }
 };
