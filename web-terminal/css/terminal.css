@@ -262,6 +262,11 @@ animation-delay:0.45s;
    box-shadow: 0px 5px 15px rgba(50, 0, 0, 0.5);
    max-height: 80%;
 }
+
+.atom:focus, .blob:focus, .prompt:focus {
+ z-index: 21;
+}
+
 .prompt {
     background: #FFF;
     border:0;

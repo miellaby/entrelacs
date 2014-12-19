@@ -114,11 +114,11 @@ function init() {
 
     $('.wizard_box>.close>a').click(function() {
         $('.wizard_box>.close').hide();
-        $('#wizard_says').hide().html("Erase cookies to make me come again!").fadeIn();
+        // $('#wizard_says').hide().html("...").fadeIn();
         wizardState = 'end';
         $.cookie('wizard', '1');
         clearInterval(wizardScrutation);
-        $('.wizard_box').fadeOut(4000);
+        $('.wizard_box').fadeOut(1000);
         return false;
     });
     
