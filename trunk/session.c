@@ -128,9 +128,9 @@ void xls_reset(Arrow c) {
 
         if (tailOf(child) == c) { // Only outgoing arrow
             xls_reset(child);
-//            if (xl_isRooted(child) != EVE) {
+            if (xl_isRooted(child) != EVE) {
                 xls_unroot(c, headOf(child));
-//            }
+            }
         } else {
             TRACEPRINTF("xls_reset left %O", child);
         }
