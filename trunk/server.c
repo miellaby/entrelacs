@@ -321,6 +321,63 @@ static void *event_handler(enum mg_event event,
     return processed;
 }
 
+int _houseCleaning(void) {
+    xl_begin();
+    Arrow sessionTag = xl_atom("session");
+    Arrow expireTag = xl_atom("expire");
+    XLEnum e = xl_childrenOf(sessionTag);
+    time_t now = time(NULL);
+    dputs("House Cleaning ...");
+
+      
+    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+    int sessionCount = 0;
+    while (next != EVE) {
+          Arrow session = next;
+          next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+          if (xl_tailOf(session) != sessionTag)
+              continue; // Not a /session+* arrow
+          // consider /+/session+*
+          session = xl_pairMaybe(EVE, session); 
+          if (session == EVE)
+            continue; // maybe not a root session
+          // session = xls_isRooted(EVE, session);
+          // if (session == EVE)
+          //      continue; // session is not rooted
+          sessionCount++;
+          Arrow expire = xls_get(session, expireTag);
+          uint32_t var_size = 0;
+          time_t* expire_time = (expire != NIL ? (time_t *)xl_memOf(expire, &var_size) : NULL);
+
+          if (expire == NIL || var_size != sizeof(time_t)) {
+              LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
+              xls_close(session);
+              xls_unset(EVE, session);
+              // restart loop as deep close may remove in-enum arrow
+              //xl_freeEnum(e);
+              //sessionTag =  xl_atom("session");
+              //e = xl_childrenOf(sessionTag);
+              //next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+          } else if (*expire_time < now) {
+              dputs("session %O outdated.", session);
+              xls_close(session);
+              xls_unset(EVE, session);
+              // restart loop as deep close may remove in-enum arrow
+              xl_freeEnum(e);
+              // sessionTag =  xl_atom("session");
+              e = xl_childrenOf(sessionTag);
+              next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+          }
+          if (expire_time) {
+              free(expire_time);
+          }
+      }
+    LOGPRINTF(LOG_WARN, "%d sessions", sessionCount);
+    xl_commit();
+    xl_over();
+    xl_freeEnum(e);
+    dputs("House Cleaning done.");
+}
 
 int main(void) {
   struct mg_context *ctx;
@@ -343,7 +400,6 @@ int main(void) {
       xls_set(EVE, xl_atom("PUT"), xl_uri("/paddock//x/arrow/set+/var+x+"));
       xls_set(EVE, xl_atom("POST"), xl_uri("/paddock//x+x+"));
       xls_set(EVE, xl_atom("DELETE"), xl_uri("/paddock//x/arrow/unset+/var+x+"));
-      xl_commit();
   }
 
   {   // store secret as server-secret<->"/session-secret-pair-uri" hidden pair
@@ -352,9 +408,10 @@ int main(void) {
       // meta-user do : mudo
       xls_set(EVE, xl_pair(xl_atom("mudo"), xl_atom(server_secret_sha1)), xl_atom("eval"));
       // TODO unroot while house cleaning
-      xl_commit();
   }
   xl_over();
+  
+  _houseCleaning();
 
   // Initialize random number generator. It will be used later on for
   // the session identifier creation.
@@ -368,60 +425,10 @@ int main(void) {
          mg_get_option(ctx, "listening_ports"));
 
 
-  // TODO deep house cleaning at start-up
+  // start-up house cleaning
   while (1) {
       sleep(HOUSECLEANING_PERIOD);
-      
-      xl_begin();
-
-      time_t now = time(NULL);
-      dputs("House Cleaning ...");
-
-      Arrow sessionTag = xl_atom("session");
-      XLEnum e = xl_childrenOf(sessionTag);
-
-      Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
-      int sessionCount = 0;
-      while (next != EVE) {
-          Arrow session = next;
-          next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
-
-          if (xl_tailOf(session) != sessionTag)
-              continue; // Not a /session+* arrow
-          // session = xls_isRooted(EVE, session);
-          // if (session == EVE)
-          //      continue; // session is not rooted
-          sessionCount++;
-          Arrow expire = xls_get(session, xl_atom("expire"));
-          uint32_t var_size = 0;
-          time_t* expire_time = (expire != NIL ? (time_t *)xl_memOf(expire, &var_size) : NULL);
-
-          if (expire == NIL || var_size != sizeof(time_t)) {
-              LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
-              xls_close(session);
-              // restart loop as deep close may remove in-enum arrow
-              //xl_freeEnum(e);
-              //sessionTag =  xl_atom("session");
-              //e = xl_childrenOf(sessionTag);
-              //next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
-          } else if (*expire_time < now) {
-              dputs("session %O outdated.", session);
-              xls_close(session);
-              // restart loop as deep close may remove in-enum arrow
-              xl_freeEnum(e);
-              sessionTag =  xl_atom("session");
-              e = xl_childrenOf(sessionTag);
-              next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
-          }
-          if (expire_time) {
-              free(expire_time);
-          }
-      }
-      LOGPRINTF(LOG_WARN, "%d sessions", sessionCount);
-
-      xl_over();
-      xl_freeEnum(e);
-      dputs("House Cleaning done.");
+      _houseCleaning();
   }
   dputs("%s", "server stopped.");
 
