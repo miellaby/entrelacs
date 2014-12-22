@@ -9,6 +9,7 @@ _______
    * log.c / log.h : shameless minidlna source copy
    * other bites of codes from here and there
    * mongoose HTTP server : http://code.google.com/p/mongoose/
+   * linenoise minimal "readline" : https://github.com/antirez/linenoise
 
 Install & test:
 ______________
@@ -19,12 +20,13 @@ Additional configuration:
 ________________________
 - See options in servers.c
 
-Notable files :
+Exe files :
 ________________
-libentrelacs.a ; # static library for the entrelacs "core"
-libentrelacs.so ; # dynamic library
-entrelacsd ; # entrelacs HTTP server
-cli.sh ; # simple script to query the server (depends on curl cmd-line client)
-testshell ; # simple shell
+bin/libentrelacs.a ; # static library for the entrelacs "core"
+bin/libentrelacs.so ; # dynamic library
+bin/entrelacsd ; # entrelacs HTTP server
+repl/bin/entrelacs ; # simple REPL binary
+bin/cli.sh ; # simple script to query the server (depends on curl cmd-line client)
+tests/testshell ; # minimalist REPL
 site.xl ; # collection of URL to set up a demo site on top of an HTTP server
 
