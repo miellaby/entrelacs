@@ -301,31 +301,32 @@ int mem_commit() {
   if (!logSize) {
       // nothing to commit
       assert(reserveHead == 0);
-      return 0;
-  }
+  } else {
 
-  // sort memory log
-  qsort(log, logSize, sizeof(Address), _addressCmp);
-
-  // TODO: optimize by commiting all reserved cells first then all logged cells found in mem
-  for (i = 0; i < logSize; i++) {
-    a = log[i];
-    offset = a % memSize;
-    CellBody c;
-    if (mem_get(a, &c)) {
-      ERRORPRINTF("END mem_commit() failed mem_get");
-      return -1;
+    // sort memory log
+    qsort(log, logSize, sizeof(Address), _addressCmp);
+  
+    // TODO: optimize by commiting all reserved cells first then all logged cells found in mem
+    for (i = 0; i < logSize; i++) {
+      a = log[i];
+      offset = a % memSize;
+      CellBody c;
+      if (mem_get(a, &c)) {
+        ERRORPRINTF("END mem_commit() failed mem_get");
+        return -1;
+      }
+  
+      if (mem0_set(a, &c)) {
+        ERRORPRINTF("END mem_commit() failed mem0_set");
+        return -1;
+      }
+      
+      mem[offset].flags &= 0xFFFE; // reset changed flag for this offset (even if the changed cell is actually in reserve)
+      ONDEBUG(MEM_LOG('W', offset));
     }
-
-    if (mem0_set(a, &c)) {
-      ERRORPRINTF("END mem_commit() failed mem0_set");
-      return -1;
-    }
-    
-    mem[offset].flags &= 0xFFFE; // reset changed flag for this offset (even if the changed cell is actually in reserve)
-    ONDEBUG(MEM_LOG('W', offset));
   }
-
+  
+  // we call mem0_commit() even if no logSize because it yield/resync persistence file
   if (mem0_commit()) {
     ERRORPRINTF("END mem_commit() failed mem0_commit");
     return -1;
@@ -338,6 +339,7 @@ int mem_commit() {
       mem[i].stamp = 0;
     }
   }
+  
   TRACEPRINTF("END mem_commit() logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
           " reserveMovesBecauseGet=%d mainReplaces=%d notFound=%d mainFound=%d reserveFound=%d",
           logSize, mem_stats.getCount, mem_stats.setCount,
@@ -385,6 +387,8 @@ int mem_init() {
   }
 
   geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), 0);
+
+  lastCommitTime = time(NULL);
 
   return rc;
 }

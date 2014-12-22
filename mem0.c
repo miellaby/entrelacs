@@ -485,7 +485,7 @@ int mem0_commit() {
             return rc;
         }
     } else {
-        DEBUGPRINTF("Nothing to commit");
+        TRACEPRINTF("Nothing to commit");
     }
 
     // save file modification time before temporarly give the lock
@@ -493,7 +493,10 @@ int mem0_commit() {
     time_t last_mtime = 
      (stat(mem0_filePath, &st) == 0 ? st.st_mtime : 0);
  
-    flock(fileno(F), LOCK_UN); // Give a chance to pending processes
+    // flock(fileno(F), LOCK_UN); // Give a chance to pending processes
+    fclose(F);
+    F = fopen(mem0_filePath, "r+b");
+    assert(F);
     assert(!flock(fileno(F), LOCK_EX)); // Then get back the lock
     
     // Note if file has been modified by other processes
@@ -504,6 +507,6 @@ int mem0_commit() {
 }
 
 void mem0_destroy() {
-    funlockfile(F);
+    flock(fileno(F), LOCK_UN);
     fclose(F);
 }

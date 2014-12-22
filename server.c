@@ -332,6 +332,9 @@ int _houseCleaning(void) {
       
     Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
     int sessionCount = 0;
+    int expiredSessionCount = 0;
+    int activeSessionCount = 0;
+    
     while (next != EVE) {
           Arrow session = next;
           next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
@@ -351,6 +354,7 @@ int _houseCleaning(void) {
 
           if (expire == NIL || var_size != sizeof(time_t)) {
               LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
+              expiredSessionCount++;
               xls_close(session);
               xls_unset(EVE, session);
               // restart loop as deep close may remove in-enum arrow
@@ -360,6 +364,7 @@ int _houseCleaning(void) {
               //next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
           } else if (*expire_time < now) {
               dputs("session %O outdated.", session);
+              expiredSessionCount++;
               xls_close(session);
               xls_unset(EVE, session);
               // restart loop as deep close may remove in-enum arrow
@@ -367,12 +372,16 @@ int _houseCleaning(void) {
               // sessionTag =  xl_atom("session");
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+          } else {
+              activeSessionCount++;
           }
+          
           if (expire_time) {
               free(expire_time);
           }
       }
-    LOGPRINTF(LOG_WARN, "%d sessions", sessionCount);
+    LOGPRINTF(LOG_WARN, "sessions: active=%d expired=%d total=%d",
+        activeSessionCount, expiredSessionCount, sessionCount);
     xl_commit();
     xl_over();
     xl_freeEnum(e);
@@ -425,10 +434,20 @@ int main(void) {
          mg_get_option(ctx, "listening_ports"));
 
 
-  // start-up house cleaning
+  // house cleaning / yield loop
+  int sleepCount = 0;
   while (1) {
-      sleep(HOUSECLEANING_PERIOD);
-      _houseCleaning();
+      sleep(1);
+      
+      sleepCount++;
+      if (sleepCount == HOUSECLEANING_PERIOD) {
+        _houseCleaning();
+        sleepCount = 0;
+      } else {
+        // this idiom leads to mem_yield() which allows other process to lock the persistence file
+        xl_begin();
+        xl_over();
+      }
   }
   dputs("%s", "server stopped.");
 
