@@ -3,7 +3,13 @@ Current changes:
 
 
 Most recent previous changes:
- * web terminal (sexy demo)
+ * non-blocking concurent entrelacs process partial support
+   * both entrelacsd & entrelacs do xl_begin/xl_over every second
+   * xl_begin;xl_over => mem GC => mem0_commit => persistenc efile unlock then lock
+   * another pending process can acquire the exclusive lock (actually random)
+   * very messy, not proper life-cycle TODO revamp
+ * real REPL (CLI) client called "entrelacs" in repl subdir
+ * web terminal (sexy demo) arrow URL management revamped
  * xl_yield(arrow state) (in replacement of xl_over)
    * sync with all threads then GC
    * but in addition: preserve "state" arrow from GC (temporary root)
@@ -54,8 +60,9 @@ Future:
    * use in the demo
  * Web terminal
    * user login & persistent changes
-   * link layout (relatively to their ends)
    * parametrable "seed"
+   * better link layout (relatively to their ends)
+   * better memory management
  * map/reduce operators
    * do we put them in machine.c or not?
    * what if I moved all non trivial definition like if macro elsewhere?
@@ -69,36 +76,33 @@ Future:
    * for each filename in glob site/* do
         cat $filename | curl PUT $SITE/$filename --stdin
      done ; # assimilate demo assets
- * MessageBox
-   * new operator box
+ * Message bus
+   * new operator "box" (message box)
      a hook to a cond lock
-   * new operator observe param=box
+   * new operator "observe" param=box
      wait for the condition lock during 20s
      then/or
      unroot and return childrenOf box rooted
      and paused machine (see hereafter)
-   * new operator trigger
+   * new operator "trigger"
      get/create the box arrow if non existant
      root (box, output)
      trigger condition variable
-   * new operator pause
+   * new operator "pause"
      stop the machine and return as /machine/... (new litteral)
       * resume ... restore machine
       * abort ... free machine
 
 In study:
- * the very first child should be attached to the main arrow definition, as most non-rooted arrow are made to be attached to at least one child.
  * a session is actually a continuation
  * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
  * xls_set: create less arrows (but also less indexation)
      * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
- * when an operator is GC by forget() -if tail(a) == operator (space-level reserved keyword)-
+ * Allows GC tooling.
+    * when an operator is GC by forget() -if tail(a) == operator (space-level reserved keyword)-
                  then forget do call the operator with special *GC* atom
                      on *GC* argument, operator should test it's really a GC (global variable in_commit TODO)
                      and free anything
  * Web terminal
-   * infinite "map" of objects with spatial hashing
-      * clients sync with tiles every couple of seconds
    * timeline
-   * unused objects out of view may move out of screen after a while
    
