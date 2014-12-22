@@ -123,10 +123,27 @@ void completion(const char *buf, linenoiseCompletions *lc) {
 
 }
 
+void tree(Arrow parent) {
+    XLEnum e = xl_childrenOf(parent);
+            
+    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+    while (next != EVE) {
+        Arrow child = next;
+        next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+        tree(child);
+        if (!xl_isRooted(child)) {
+           continue;
+        }
+        fprintf(stderr, "%s", (xl_isRooted(child) ? "_ " : "  "));
+        fprintf(stderr, "%O\n", child);
+    }
+
+}
 int main(int argc, char **argv) {
     char *line;
     char *prgname = argv[0];
     Arrow cwa = NIL;
+    char prompt[255] ="*global*> ";
     
     /* Parse options, with --multiline we enable multi line editing. */
     while(argc > 1) {
@@ -165,41 +182,74 @@ int main(int argc, char **argv) {
      *
      * The typed string is returned as a malloc() allocated string by
      * linenoise, so the user needs to free() it. */
-    while((line = linenoise("xl> ")) != NULL) {
+    while((line = linenoise(prompt)) != NULL) {
         /* Do something with the string. */
         xl_begin();
         if (strcmp("pwd", line) == 0) {
+            linenoiseHistoryAdd(line);
+            linenoiseHistorySave(repl_historyPath);
             if (cwa == NIL)
-                fprintf(stderr, "*global context*\n");
+                fprintf(stderr, "*global*\n");
             else
                 fprintf(stderr, "%O\n", cwa);
             
         } else if (strncmp("cd ", line, 3) == 0) {
+            linenoiseHistoryAdd(line);
+            linenoiseHistorySave(repl_historyPath);
             char *arg = line + 3;
-            cwa = (arg[0] == '/' || cwa == NIL
-                   ? xl_uri(arg) : xl_pair(cwa, xl_uri(arg)));
+            cwa = (arg[0] == '.' && arg[1] == '\0'
+                   ? cwa
+                   : (arg[0] == '/' || cwa == NIL
+                      ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
+                      : xl_pair(cwa, xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg))));
 
         } else if (strcmp("ls", line) == 0 || strncmp("ls ", line, 3) == 0) {
+            linenoiseHistoryAdd(line);
+            linenoiseHistorySave(repl_historyPath);
             XLEnum *e;
             char *arg = line + (line[2] == '\0' ? 2 : 3);
-            e = xl_childrenOf(
-                *arg == '\0'
+            Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
+                ? cwa == NIL ? NIL : cwa
+                : (*arg == '/' || cwa == NIL
+                   ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
+                   : xl_pair(cwa, arg[0] == '.' && arg[1] == '/' ? xl_uri(arg + 2) : xl_uri(arg))); 
+            
+            if (parent == NIL) {
+                fprintf(stderr, "impossible: can't browse global context\n");
+            } else {
+                e = xl_childrenOf(parent);
+                        
+                Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+                while (next != EVE) {
+                    Arrow child = next;
+                    next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+                    fprintf(stderr, "%s", (xl_isRooted(child) ? "_ " : "  "));
+                    if (xl_tailOf(child) == cwa) {
+                        fprintf(stderr, "./%O\n", xl_headOf(child));
+                    } else if (xl_headOf(child) == cwa) {
+                        fprintf(stderr, "/%O+:\n", xl_tailOf(child));
+                    } else {
+                        fprintf(stderr, "%O\n", child);
+                    }
+                }
+            }
+        } else if (strcmp("find", line) == 0 || strncmp("find ", line, 5) == 0) {
+            linenoiseHistoryAdd(line);
+            linenoiseHistorySave(repl_historyPath);
+            char *arg = line + (line[4] == '\0' ? 4 : 5);
+            Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
                 ? cwa == NIL ? EVE : cwa
                 : (*arg == '/' || cwa == NIL
-                   ? xl_uri(arg)
-                   : xl_pair(cwa, xl_uri(arg))));
-                    
-            Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
-            while (next != EVE) {
-                Arrow child = next;
-                next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
-                fprintf(stderr, "%O\n", child);
-            }
+                   ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
+                   : xl_pair(cwa, xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg))); 
+            tree(parent);
         } else if (line[0] != '\0') {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
-            
-            Arrow p = xl_uri(line);
+            Arrow p = (*line == '/' || cwa == NIL
+               ? xl_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line)
+               : xl_pair(cwa, xl_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line))); 
+        
             if (p == NIL) {
                 fprintf(stderr, "Illegal input. Embedded URI may be wrong.\n");
             
@@ -214,6 +264,9 @@ int main(int argc, char **argv) {
         }
         xl_over();
         free(line);
+        char *tmpUriCwa = cwa == NIL ? strdup("*global*") : xl_uriOf(cwa, NULL);
+        sprintf(prompt, "%.252s> ", tmpUriCwa);
+        free(tmpUriCwa);
     }
 
     return 0;
