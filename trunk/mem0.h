@@ -85,7 +85,7 @@ extern char* mem0_journalFilePath;
  */
 extern char* mem0_blobDirPath;
 
-/** set by mem0_commit to notify that mem0 caches are out of sync with disk (concurrent disk access?)
+/** set by mem0_commit to notify mem cache it's out of sync with disk (concurrent process)
 */
 extern int mem_is_out_of_sync;
 

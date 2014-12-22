@@ -3185,7 +3185,7 @@ static void spaceGC() {
 
     spaceGCNeeded = 0;
     
-    if (mem_yield())
+    if (mem_yield() == 1) // commmit occured
         memCommitNeeded = 0;
 }
 

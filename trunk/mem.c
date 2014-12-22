@@ -6,6 +6,7 @@
 #define MEM_C
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 #define LOG_CURRENT LOG_MEM
 #include "log.h"
 #include "mem.h"
@@ -28,6 +29,7 @@ static struct s_mem {
 #define RESERVESIZE 1024
 static const Address reserveSize = RESERVESIZE ; ///< cache reserve size
 static uint32_t pokes = 0;
+static time_t lastCommitTime;
 
 /** The RAM cache reserve.
  Modified cells are moved into this reserve when their location in mem[] are need to load other cells
@@ -159,21 +161,41 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint32_t* stamp_p) {
   return 0;
 }
 
+/** log action on mem[offset]
+ */
 static void mem_log(int line, char operation, Address offset) {
-      LOGPRINTF(LOG_DEBUG, "%03d %c@%d: page=%d, address=%d, flags=[%c%c] stamp=%d %s",
-            line, operation, offset,
-            (int)mem[offset].page, (int)mem[offset].page * memSize + offset,
-            mem[offset].flags & MEM1_CHANGED ? 'C' : ' ',
-            mem[offset].flags & MEM1_EMPTY ? 'E' : ' ', mem[offset].stamp,
-            mem[offset].flags == MEM1_EMPTY ? "EMPTY!" : "");
+  LOGPRINTF(LOG_DEBUG, "%03d %c@%d: page=%d, address=%d, flags=[%c%c] stamp=%d %s",
+    line, operation, offset,
+    (int)mem[offset].page, (int)mem[offset].page * memSize + offset,
+    mem[offset].flags & MEM1_CHANGED ? 'C' : ' ',
+    mem[offset].flags & MEM1_EMPTY ? 'E' : ' ', mem[offset].stamp,
+    mem[offset].flags == MEM1_EMPTY ? "EMPTY!" : "");
       
 }
 
-static void mem_show(Address offset) {
-      offset = offset % memSize; // address is ok
-      mem_log(__LINE__, 'R', offset);
+/** debugging helper
+ * which logs mem metadata for Arrow Id a
+ */
+static void mem_show(Address a) {
+  Address offset = a % memSize;
+  uint32_t  page = a / MEMSIZE;
+
+  mem_log(__LINE__, 'R', offset);
+  
+  struct s_mem* m = &mem[offset];
+  if (memIsEmpty(m) || m->page != page) { // cache miss
+    // look at the reserve
+    for (int i = 0; i < reserveHead ; i++) {
+      if (reserve[i].a == a) { // reserve hit
+        LOGPRINTF(LOG_DEBUG, "%06x MOD IN RESERVE stamp=%d", a, reserve[i].stamp);
+      }
+    }
+  }
 }
 
+/** debugging helper
+ * which tells about the caching status of a
+ */
 static int mem_whereIs(Address a) {
   Address offset = a % MEMSIZE;
   uint32_t  page = a / MEMSIZE;
@@ -187,7 +209,7 @@ static int mem_whereIs(Address a) {
    
   for (i = 0; i < reserveHead ; i++) {
     if (reserve[i].a == a) { // reserve hit
-      INFOPRINTF("%06x IN RESERVE (SO MODIFIED) stamp=%d", a, reserve[i].stamp);
+      INFOPRINTF("%06x MOD IN RESERVE stamp=%d", a, reserve[i].stamp);
       return 2;
     }
   }
@@ -260,6 +282,8 @@ int mem_set(Address a, CellBody *pCellBody) {
     return 0;
 }
 
+/** cmp function for qsort in mem_commit
+ */
 static int _addressCmp(const void *pa, const void *pb) {
   Address a = *(Address *)pa;
   Address b = *(Address *)pb;
@@ -271,6 +295,8 @@ int mem_commit() {
   TRACEPRINTF("BEGIN mem_commit() logSize=%d", logSize);
   int i;
   Address a, offset;
+
+  lastCommitTime = time(NULL);
 
   if (!logSize) {
       // nothing to commit
@@ -322,12 +348,19 @@ int mem_commit() {
   reserveHead = 0;
 }
 
+/** yield
+ * may lead to intermediate commit
+ * @return 1 if effective commit, -1 on failure, 0 if nothing happens
+ */
 int mem_yield() {
-    if (reserveHead > reserveSize  / 4) {
+    time_t now = time(NULL);
+
+    double seconds = difftime(now, lastCommitTime);
+    if (seconds > 1.0 || reserveHead > reserveSize  / 4) {
         if (mem_commit())
           return -1;
-
-        return 1;
+        else
+          return 1;
     }
     return 0;
 }
