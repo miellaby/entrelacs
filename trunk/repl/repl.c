@@ -2,8 +2,10 @@
 #define _GNU_SOURCE
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
+#include <unistd.h> // sleep
 #include <assert.h>
 #include <string.h>
+#include <pthread.h>
 #include "linenoise.h"
 #include "log.h"
 
@@ -139,6 +141,17 @@ void tree(Arrow parent) {
     }
 
 }
+
+static void *do_yield(void *v) {
+    while (1) {
+        sleep(1);
+        // idiom which leads to mem0 yield
+        xl_begin();
+        xl_over();
+    }
+    return NULL;
+}
+
 int main(int argc, char **argv) {
     char *line;
     char *prgname = argv[0];
@@ -176,13 +189,22 @@ int main(int argc, char **argv) {
      * where entries are separated by newlines. */
     linenoiseHistoryLoad(repl_historyPath); /* Load the history at startup */
 
+    /* second thread for yield */
+    pthread_t yield_thread;
+    
+    /* create a second thread */
+    if (pthread_create(&yield_thread, NULL, do_yield, NULL)) {
+        fprintf(stderr, "Error creating thread\n");
+        return 1;
+    }
+
     /* Now this is the main loop of the typical linenoise-based application.
      * The call to linenoise() will block as long as the user types something
      * and presses enter.
      *
      * The typed string is returned as a malloc() allocated string by
      * linenoise, so the user needs to free() it. */
-    while((line = linenoise(prompt)) != NULL) {
+    while ((line = linenoise(prompt)) != NULL) {
         /* Do something with the string. */
         xl_begin();
         if (strcmp("pwd", line) == 0) {
