@@ -262,11 +262,11 @@ int main(int argc, char **argv) {
             }
 
         }
-        xl_over();
         free(line);
         char *tmpUriCwa = cwa == NIL ? strdup("*global*") : xl_uriOf(cwa, NULL);
         sprintf(prompt, "%.252s> ", tmpUriCwa);
         free(tmpUriCwa);
+        xl_over();
     }
 
     return 0;
