@@ -161,7 +161,7 @@ $.extend(PairView.prototype, View.prototype, {
         var dh = this.hv.d;
         var dtPos = dt.position();
         var dhPos = dh.position();
-        // console.log('setPairViewGeometry ' + Arrow.serialize(this.arrow) + ' ('
+        // console.log('setPairViewGeometry ' + this.arrow.serialize() + ' ('
         //        + (floating == this.hv ? "head floating" : floating ? "tail floting" : "all floating") + ') ' + w + ' ' + h);
         if (floating) {
             if (floating == this.tv) {

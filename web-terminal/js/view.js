@@ -96,7 +96,7 @@ function View(arrow, terminal, d) {
 
             self.terminal.dragStartX = event.originalEvent.screenX;
             self.terminal.dragStartY = event.originalEvent.screenY;
-            var data = (self.arrow ? Arrow.serialize(self.arrow) : self.d.children("input[type='text'],textarea").val());
+            var data = (self.arrow ? self.arrow.serialize() : self.d.children("input[type='text'],textarea").val());
             var bugInducingElement = self.d.children("input[type='text'],textarea");
             bugInducingElement.css('visibility', 'hidden');
             event.originalEvent.dataTransfer.setData('text/plain', data);
@@ -169,7 +169,7 @@ View.prototype = {
         }
         views.push(this);
         
-        console.log(Arrow.serialize(arrow) + " +1 = " + views.length + " views");
+        console.log(arrow.serialize() + " +1 = " + views.length + " views");
         
         // re-binding
         if (this.replaced && this.replaced != this.arrow) {
@@ -196,7 +196,7 @@ View.prototype = {
         var vs = arrow.get('views');
         if (!vs) return;
         vs.splice(vs.indexOf(this), 1);
-        console.log(Arrow.serialize(arrow) + " -1 = " + vs.length + " views");
+        console.log(arrow.serialize() + " -1 = " + vs.length + " views");
         this.arrow = null;
     },
     
@@ -425,10 +425,10 @@ View.prototype = {
             key = Arrow.pair(Arrow.atom("geometry"), a);
         }
         
-        // console.log("check " + Arrow.serialize(key));
+        // console.log("check " + key.serialize());
         var self = this;
         key.mapChildren(Arrow.FILTER_INCOMING | Arrow.FILTER_UNROOTED, function(c) {
-            // console.log(Arrow.serialize(c));
+            // console.log(c.serialize());
             c = c.getHead();
             var w = parseInt(c.getTail().getBody(), 10);
             var h = parseInt(c.getHead().getBody(), 10);
@@ -562,18 +562,24 @@ View.prototype = {
                 console.log("View got CGed before processPartners");
                 return;
             }
-            console.log(Arrow.serialize(source) + " partners = {");
+            console.log(source.serialize() + " partners = {");
             while (list !== Arrow.eve) {
                 var pair = list.getTail();
-                console.log(Arrow.serialize(pair) + ",");
-                var outgoing = (pair.getTail() == source); 
-                var partner = (outgoing ? pair.getHead() : pair.getTail());
+                if (!pair) break; // list ends with placeholder
+                
+                console.log(pair.serialize() + ",");
+                var partner = pair.getTail();
+                if (!partner) break; // the pair is a placeholder
+                var outgoing = (partner == source); 
+                if (outgoing) partner = pair.getHead();
+                if (!partner.getTail()) break; // the partner is a placeholder
+                
                 var a = self.terminal.findNearestArrowView(partner, p, 1000);
                 if (!a) {
-                    var c = self.terminal.getPointOnCircle(50);
+                    var c = self.terminal.getPointOnCircle(80);
                     a = self.terminal.show(partner,
-                            p.left + (outgoing ? 100 + c.x : -100 - c.x),
-                            p.top + c.y);
+                            p.left + (outgoing ? 250 + c.x : -250 - c.x),
+                            p.top + (outgoing ? c.y : -c.y));
                 }
                 var pairView = self.terminal.findNearestArrowView(pair, p, 1000);
                 if (!pairView || pairView.tv !== (outgoing ? self: a) || pairView.hv !== (outgoing ? a : self)) {
@@ -591,18 +597,15 @@ View.prototype = {
                     pairView.d.animate({'border-width': '5px', 'margin-left': '-=5px', 'margin-top': '-=5px'}, 0).animate({'border-width': 0, 'margin-top': '+=5px', 'margin-left': '+=5px'});
                 }
 
-                var next = list.getHead();
-                if (next)
-                    list = next;
-                else { // list not completly unfolded. end with a placeholder
-                    var promise = self.terminal.entrelacs.open(list);
-                    promise.done(function(unfolded) {
-                        processPartners(self, unfolded);
-                    });
-                    list = Arrow.eve;
-                }
+                list = list.getHead();
             }
             console.log("}");
+            if (list !== Arrow.eve) {
+                // list not completly unfolded. open the placeholder
+                var promise = self.terminal.entrelacs.open(list);
+                promise = promise.pipe(processPartners);
+                return promise;
+            }
         };
 
         self.terminal.moveLoadindBarOnView(self);
@@ -620,11 +623,12 @@ View.prototype = {
             processPartners(knownPartners);
             return $.when(knownPartners);
         };
+        // chain it so partners are not displayed before all network calls over TODO usefulness?
         self.terminal.entrelacs.chain = self.terminal.entrelacs.chain.pipe(futur, futur);
         
         // process remote partners
         promise = self.terminal.entrelacs.getPartners(self.arrow);
-        promise.done(processPartners);
+        promise = promise.pipe(processPartners);
         return promise;
     },
 

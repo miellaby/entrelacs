@@ -26,7 +26,6 @@ bin/libentrelacs.a ; # static library for the entrelacs "core"
 bin/libentrelacs.so ; # dynamic library
 bin/entrelacsd ; # entrelacs HTTP server
 repl/bin/entrelacs ; # simple REPL binary
-bin/cli.sh ; # simple script to query the server (depends on curl cmd-line client)
+bin/cli.sh ; # simple script to query the server (depends on curl CLI)
 tests/testshell ; # minimalist REPL
-site.xl ; # collection of URL to set up a demo site on top of an HTTP server
-
+web-terminal/fill-demo.sh ; # fill up the demo context via cli.sh call

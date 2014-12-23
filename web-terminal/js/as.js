@@ -372,7 +372,7 @@ $.extend(Arrow.prototype, {
      * one needs to replace it with the right arrow
      */
     replaceWith: function(a) {
-        console.log("replace " + Arrow.serialize(this) + " with " + Arrow.serialize(a));
+        console.log("replace " + this.serialize() + " with " + a.serialize());
         if (a.hc === undefined) {
             console.log("won't replace with GC-ed arrow");
             return;
@@ -424,8 +424,8 @@ $.extend(Arrow.prototype, {
         } else if (this.isAtomic()) {
             return encodeURIComponent(this.getBody());
         } else {
-            var tailUrl = Arrow.serialize(this.getTail());
-            var headUrl = Arrow.serialize(this.getHead());
+            var tailUrl = this.getTail().serialize();
+            var headUrl = this.getHead().serialize();
             return '/' + tailUrl + '+' + headUrl;
         }
     },
@@ -1013,7 +1013,7 @@ $.extend(Entrelacs.prototype, {
             
         } else if (a.isAtomic()) {
             if (a.getBody().length < 99) {
-                a.uri = Arrow.serialize(a);
+                a.uri = a.serialize();
                 return $.when(a.uri);
             } else {
                 // ' query /+a?iDepth=2 to get blob digests
@@ -1064,7 +1064,7 @@ $.extend(Entrelacs.prototype, {
      */
     root: function (a, secondTry) {
         var isAtomic = a.isAtomic();
-        var uri = Arrow.serialize(a);
+        var uri = a.serialize();
         var self = this;
         // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
         var operator = (isAtomic ? "root" : "linkTailWithHead");
@@ -1101,7 +1101,7 @@ $.extend(Entrelacs.prototype, {
                 return $.when(null);   
             }
             var isAtomic = a.isAtomic();
-            var uri = Arrow.serialize(a);
+            var uri = a.serialize();
             var operator = (isAtomic ? "unroot" : "unlinkTailAndHead");
             var req = self.serverUrl + '/' + operator + '/escape+' + uri;
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
@@ -1128,7 +1128,7 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         var futur = function () {
             if (a.hc === undefined) return $.when(null); // a is GC-ed
-            var url = Arrow.serialize(a);
+            var url = a.serialize();
             var req = self.serverUrl + '/isRooted/escape+' + url;
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
@@ -1166,7 +1166,7 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         var futur = function () {
             if (a.hc === undefined) return $.when(null); // a is GC-ed
-            var url = Arrow.serialize(a);
+            var url = a.serialize();
             var req = self.serverUrl + '/childrenOf/escape+' + url + '?iDepth=' + (iDepth ? iDepth : 10);
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
@@ -1202,7 +1202,7 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         var futur = function () {
             if (a.hc === undefined) return $.when(null); // a is GC-ed
-            var uri = Arrow.serialize(a);
+            var uri = a.serialize();
             var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
@@ -1216,7 +1216,7 @@ $.extend(Entrelacs.prototype, {
             self.checkCookie(jqXHR);
             var list = Arrow.decodeURI(arrowURL, self.serverUrl);
             var partners = list;
-            while (list !== Arrow.eve) {
+            while (list !== Arrow.eve && list.tail !== undefined /* not placeholder */) {
                 list.getTail().root();
                 list = list.getHead();
             }
@@ -1243,7 +1243,7 @@ $.extend(Entrelacs.prototype, {
         var self = this;
         var futur = function () {
             if (typeof a === 'object' && a.hc === undefined) return $.when(null); // a is GC-ed
-            var uri = (typeof a == "string") ? a : Arrow.serialize(a);
+            var uri = (typeof a == "string") ? a : a.serialize();
             var req = self.serverUrl + uri; // no escape this time
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
@@ -1283,24 +1283,28 @@ $.extend(Entrelacs.prototype, {
      */
     open: function (p, depth, secondTry) {
         var url;
-        if (p.server != this.serverUrl)
+        if (p.server && p.server != this.serverUrl)
             throw "bad placeholder";
-        else
-            url = p.url;
+        
+        url = p.serialize();
 
         depth = depth || 10;
         var self = this;
-        // query /+p instead of p to avoid atom being returned as binary
         var futur = function () {
-            var req = self.serverUrl + '/escape/+' + url + '?iDepth=' + depth;
-            return $.ajax({url: req, xhrFields: { withCredentials: true }});
+            var req = self.serverUrl + "/escape" + url;  // don't forget to escape
+            return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
         
         var promise = self.chain.pipe(futur, futur);
-        promise = promise.pipe(function (unfoldedUri, textStatus, jqXHR) {
+        promise = promise.pipe(function (unfoldedUriOrText, textStatus, jqXHR) {
             self.checkCookie(jqXHR);
             // don't forget one looks for the head
-            var unfolded = Arrow.decodeURI(unfoldedUri, self.serverUrl).getHead(); 
+            var unfolded;
+            if (jqXHR.getResponseHeader("content-type") == "application/octet-stream") {
+                unfolded = Arrow.atom(unfoldedUriOrText);
+            } else {
+                unfolded = Arrow.decodeURI(unfoldedUriOrText, self.serverUrl); 
+            }
             p.replaceWith(unfolded);
             return unfolded;
         });
