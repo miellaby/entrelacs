@@ -204,7 +204,7 @@ function Prompt(string, terminal, x, y, immediate) {
     // So we build up a secret and pair it with our uploaded file, then we get back our secret child!
     var secret = Math.random().toString().substring(2) + Date.now();
         
-    // One doesn't wan the blob to be evaluated ; so here is a prog
+    // One doesn't want the blob to be evaluated ; so we us this macro
     var prog = '/macro/x/arrow//escape+escape/' + secret + '/var+x';
     
     d.find('input[type="file"]').ajaxfileupload({
@@ -351,13 +351,13 @@ $.extend(Prompt.prototype, View.prototype, {
         var p = this.d.position();
 
         // peek a counting circle point
-        var c = this.terminal.getPointOnCircle(50);
+        var c = this.terminal.getPointOnCircle(80 / 2);
         
         // build a tail prompt
-        var t = new Prompt(v, this.terminal, p.left - 100 - c.x, p.top - 100 - c.y);
+        var t = new Prompt(v, this.terminal, p.left - 125 - c.x, p.top - 100 - c.y);
 
         // build a head prompt
-        var h = new Prompt("", this.terminal, p.left + 100 + c.x, p.top - 50 + c.y);
+        var h = new Prompt("", this.terminal, p.left + 125 + c.x, p.top - 50 + c.y);
 
         // pair head and tail as loose arrows
         var pairView = new PairView(null, this.terminal, t, h);

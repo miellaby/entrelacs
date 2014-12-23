@@ -1,7 +1,7 @@
 function BlobView(a, terminal, x, y) {
     var self = this;
     var server = terminal.entrelacs.serverUrl;
-    var uri = Arrow.serialize(a);
+    var uri = a.serialize();
     var d = $("<div class='blob'></div>");
     var isContentTyped = (a.getTail() === Arrow.atom('Content-Typed'));
     var type = isContentTyped ? a.getHead().getTail().getBody() : null;
