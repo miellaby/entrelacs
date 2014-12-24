@@ -70,8 +70,16 @@ function BlobView(a, terminal, x, y) {
             });
         } else {
             o = $("<a class='content' tabIndex=1></a>")
-                .attr('href', server + '/escape+' + uri).text(type)
+                .attr('href', server + '/escape+' + uri).text(type.split('/')[0])
                 .appendTo(d);
+            icon = type.split('/')[0]
+                .replace("audio", "microphone")
+                .replace("text", "page")
+                .replace("model", "page")
+                .replace("image", "photo")
+                .replace("application", "settings");
+                
+            o.prepend("<i class='fi-" + icon + "'></i><br/>");
             o.colorbox({
                 href: terminal.entrelacs.serverUrl + '/escape+' + uri,
                 photo: isImage,
