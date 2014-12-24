@@ -115,20 +115,7 @@ Terminal.prototype = {
     show: function(a, x, y, ctx, except) {
         var view = this.findNearestArrowView(a, {left: x, top: y}, 1000, except);
         if (view) return view;
-        
-        if (a.url !== undefined) { // placeholder
-            view = new PlaceholderView(a, this, x, y);
-        } else if (a.isAtomic()) {
-            view = new AtomView(a, this, x, y);
-        } else if (a.getTail() == Arrow.atom('Content-Typed')) {
-            view = new BlobView(a, this, x, y);
-        } else {
-            var tv = this.show(a.getTail(), x - 100 - this.defaultEntryWidth, y - 170, ctx);
-            var hv = this.show(a.getHead(), x + 100, y - 130, ctx);
-            view = new PairView(a, this, tv, hv, ctx);
-            view.restoreGeometry(null, ctx || view);
-        }
-
+        view = View.build(a, this, x, y);
         return view;
     },
 
