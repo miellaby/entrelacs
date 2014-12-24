@@ -311,8 +311,11 @@ animation-delay:0.45s;
     cursor: move;
 }
 
-.atom>span.content {
+.blob>a.content, .atom>span.content {
    text-align: center
+}
+.blob>a.content>i {
+   font-size: 3em;    
 }
 
 .prompt>input, .prompt>textarea {

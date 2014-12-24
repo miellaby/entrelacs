@@ -227,7 +227,7 @@ function Prompt(string, terminal, x, y, immediate) {
             var query = self.terminal.entrelacs.getChildren(Arrow.atom(secret));
             query.done(function(children) {
                 var child0 = children.getTail().getHead();  /* head of first outgoing arrow */
-                self.turnIntoBlobView(child0);
+                self.turnIntoView(child0);
                 self.confirmDescendants();
             });
         },
@@ -300,16 +300,17 @@ $.extend(Prompt.prototype, View.prototype, {
     isWikiFormated: function() {
         return this.d.children('.wiki-checkbox').text() === 'Wiki';
     },
-            
-    turnIntoView: function() {
-        var string = this.d.children('input[type="text"],textarea').val();
-        var p = this.d.position();
-        var arrow = Arrow.atom(string);
-        if (this.isWikiFormated()) {
-            arrow = Arrow.pair(Arrow.atom('Content-Typed'),
-                               Arrow.pair(Arrow.atom('text/x-creole'), arrow));
-        }
 
+    turnIntoView: function(arrow) {
+        if (arrow === undefined) {
+            var string = this.d.children('input[type="text"],textarea').val();
+            arrow = Arrow.atom(string);
+            if (this.isWikiFormated()) {
+                arrow = Arrow.pair(Arrow.atom('Content-Typed'),
+                                   Arrow.pair(Arrow.atom('text/x-creole'), arrow));
+            }
+        }
+        var p = this.d.position();
         var view = View.build(arrow, this.terminal, p.left, p.top);
         this.replaceWith(view);
         return view;
