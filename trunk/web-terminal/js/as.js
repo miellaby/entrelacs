@@ -174,14 +174,43 @@ $.extend(Arrow.prototype, {
      * Roots an arrow
      * @this {Arrow}
      */
-    root: function () {
+    root: function (notAChange) {
         if (this.hc === undefined) return; // GC-ed!
         if (this.rooted) return;
         if (this.isLoose()) {
             this.connect();
         }
         this.rooted = true;
-        Arrow.changelog.push(this);
+            Arrow.changelog.push(this);
+        Arrow.callListeners(this);
+        return this;
+    },
+
+
+    /**
+     * Set the root flag of an arrow without changelog
+     * @this {Arrow}
+     */
+    loadRootFlag: function (rootFlag) {
+        if (this.hc === undefined) return; // GC-ed!
+        if (this === Arrow.eve) return; // Not EVE
+
+        if (rootFlag === undefined || rootFlag) {
+            if (this.rooted) return;
+
+            if (this.isLoose()) {
+                this.connect();
+            }
+            this.rooted = true;
+        } else {
+            if (!this.rooted) return;
+
+            this.rooted = false;
+            if (this.isLoose()) {
+                this.disconnect();
+            }
+        }
+
         Arrow.callListeners(this);
         return this;
     },
@@ -407,6 +436,9 @@ $.extend(Arrow.prototype, {
             }
         }
         
+        if (this.isRooted()) // root flag of the original arrow is put on the new one
+            a.loadRootFlag();
+            
         this.unroot(); // ensure disconnection
         
         // (this) will be erased by next GC
@@ -1140,9 +1172,9 @@ $.extend(Entrelacs.prototype, {
                 if (a.url) { // placeholder
                     a.replaceWith(self.decodeURI(a, r));
                 }
-                a.root();
+                a.loadRootFlag();
             } else {
-                a.unroot();
+                a.loadRootFlag(false);
             }
         });
         
@@ -1214,13 +1246,8 @@ $.extend(Entrelacs.prototype, {
                 return Arrow.eve; // a is GC-ed
             
             self.checkCookie(jqXHR);
-            var list = Arrow.decodeURI(arrowURL, self.serverUrl);
-            var partners = list;
-            while (list !== Arrow.eve && list.tail !== undefined /* not placeholder */) {
-                list.getTail().root();
-                list = list.getHead();
-            }
-            return partners;
+            return Arrow.decodeURI(arrowURL, self.serverUrl);
+            // Note that all partners are rooted. You don't need to call isRooted
         });
         
        if (!secondTry) {

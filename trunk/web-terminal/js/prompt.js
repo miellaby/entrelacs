@@ -82,7 +82,7 @@ function Prompt(string, terminal, x, y, immediate) {
                 return false;
                 
             } else if (event.keyCode == 27 /* escape */) {
-                self.close();
+                self.closeOrRevert();
                 return false;
 
             } else if (event.keyCode == 9 /* tab */) {
@@ -301,33 +301,28 @@ $.extend(Prompt.prototype, View.prototype, {
         return this.d.children('.wiki-checkbox').text() === 'Wiki';
     },
             
-    turnIntoAtomView: function() {
+    turnIntoView: function() {
         var string = this.d.children('input[type="text"],textarea').val();
-        var arrow = Arrow.atom(string);
         var p = this.d.position();
-        var atomView;
-        if (this.replaced) {
-            console.log('prompt on replaced');
+        var arrow = Arrow.atom(string);
+        if (this.isWikiFormated()) {
+            arrow = Arrow.pair(Arrow.atom('Content-Typed'),
+                               Arrow.pair(Arrow.atom('text/x-creole'), arrow));
         }
 
-        if (this.isWikiFormated()) {
-            arrow = Arrow.pair(Arrow.atom('Content-Typed'), Arrow.pair(Arrow.atom('text/x-creole'), arrow));
-            atomView = new BlobView(arrow, this.terminal, p.left, p.top);
-            this.replaceWith(atomView);
-            //this.terminal.entrelacs.getUri(arrow);
-        } else {
-            atomView = new AtomView(arrow, this.terminal, p.left, p.top);
-            this.replaceWith(atomView);
-        }
-        return atomView;
+        var view = View.build(arrow, this.terminal, p.left, p.top);
+        this.replaceWith(view);
+        return view;
     },
 
-        
-    turnIntoBlobView: function(blob) {
-        var p = this.d.position();
-        var blobView = new BlobView(blob, this.terminal, p.left, p.top);
-        this.replaceWith(blobView);
-        return blobView;
+    closeOrRevert: function() {
+        if (this.replaced) {
+            var p = this.d.position();
+            var view = View.build(this.replaced, this.terminal, p.left, p.top);
+            this.replaceWith(view);
+        } else {
+            this.close();
+        }
     },
     
     closeIfLoose: function() {
@@ -379,7 +374,7 @@ $.extend(Prompt.prototype, View.prototype, {
 
     confirm: function() {
         // if (this.arrow) return this;
-        return this.turnIntoAtomView();
+        return this.turnIntoView();
     },
 
     confirmDescendants: function() {

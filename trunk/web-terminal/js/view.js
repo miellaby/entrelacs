@@ -565,7 +565,10 @@ View.prototype = {
             console.log(source.serialize() + " partners = {");
             while (list !== Arrow.eve) {
                 var pair = list.getTail();
+                
                 if (!pair) break; // list ends with placeholder
+                
+                pair.loadRootFlag(); // every partner is known as a rooted arrow
                 
                 console.log(pair.serialize() + ",");
                 var partner = pair.getTail();
@@ -649,4 +652,21 @@ View.prototype = {
     getTerminal: function() { return this.terminal; },
     getArrow: function() {return this.arrow; },
     getElement: function() { return this.d[0]; }
+};
+
+View.build = function(a, terminal, x, y) {
+    var view;
+    if (a.url !== undefined) { // placeholder
+        view = new PlaceholderView(a, terminal, x, y);
+    } else if (a.isAtomic()) {
+        view = new AtomView(a, terminal, x, y);
+    } else if (a.getTail() == Arrow.atom('Content-Typed')) {
+        view = new BlobView(a, terminal, x, y);
+    } else {
+        var tv = terminal.show(a.getTail(), x - 100 - terminal.defaultEntryWidth, y - 170, ctx);
+        var hv = terminal.show(a.getHead(), x + 100, y - 130, ctx);
+        view = new PairView(a, terminal, tv, hv, ctx);
+        view.restoreGeometry(null, ctx || view);
+    }
+    return view;
 };
