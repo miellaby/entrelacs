@@ -170,22 +170,7 @@ View.prototype = {
         views.push(this);
         
         console.log(arrow.serialize() + " +1 = " + views.length + " views");
-        
-        // re-binding
-        if (this.replaced && this.replaced != this.arrow) {
-            var replacedWasRooted = false;
-            if (this.replaced.hc !== undefined) {
-                replacedWasRooted = this.replaced.isRooted();
-                this.replaced.unroot();
-                this.cleanAllGeometryAfterUnroot(this.replaced);
-            }
-            delete this.replaced;
-            if (replacedWasRooted) {
-                this.arrow.root();
-                this.saveAllGeometryAfterRoot(this.arrow);
-                this.terminal.commit();
-            }
-        }
+
         
         this.d.find('.toolbar .rooted input').prop('checked', arrow.isRooted());
     },
@@ -476,21 +461,27 @@ View.prototype = {
         // descendants rewiring to newA
         newA.for = dedupInArray(newA.for.concat(this.for));
         newA.children = newA.children.concat(this.children);
+        
+        
         if (this.replaced) {
+            var replacedIsRooted = this.replaced.isRooted();
             if (newA.arrow) {
                 console.log('replacing');
-                if (this.replaced.hc !== undefined) {
+                if (this.replaced.hc !== undefined
+                    && replacedIsRooted) {
                     console.log('unroot replaced');
                     this.replaced.unroot();
                     this.cleanAllGeometryAfterUnroot(this.replaced);
                 }
                 delete this.replaced;
-                newA.arrow.root();
+                if (replacedIsRooted) {
+                    newA.arrow.root();
+                }
+                // this.terminal.commit(); not yet
             } else {
                 console.log('pass replaced');
                 newA.replaced = this.replaced;
             }
-           this.terminal.commit();
         }
         this.replaceInDescendants(newA);
         this.detach();
@@ -530,7 +521,7 @@ View.prototype = {
     },
 
     edit: function() {
-        if (this.arrow && this.arrow.isRooted()) {
+        if (this.arrow /* && this.arrow.isRooted() */) {
             this.replaced = this.arrow;
         }
         this.unbind();

@@ -318,8 +318,11 @@ $.extend(Prompt.prototype, View.prototype, {
     closeOrRevert: function() {
         if (this.replaced) {
             var p = this.d.position();
-            var view = View.build(this.replaced, this.terminal, p.left, p.top);
+            var view;
+            // view = this.terminal.findNearestArrowView(this.replaced, p, 1000);
+            if (!view) view = View.build(this.replaced, this.terminal, p.left, p.top);
             this.replaceWith(view);
+            this.confirmDescendants();
         } else {
             this.close();
         }
