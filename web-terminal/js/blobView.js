@@ -108,8 +108,9 @@ function BlobView(a, terminal, x, y) {
                 clearTimeout(dblClickTimeout);
                 dblClickTimeout = null;
             }
-            var prompt = self.edit();
-            if (prompt) prompt.focus();
+            self.edit().done(function(prompt) {
+                prompt.focus();
+            });
             return false;
         },
                 
@@ -141,7 +142,7 @@ $.extend(BlobView.prototype, View.prototype, {
         }
 
         var self = this;
-        promise.done(function(atom) {
+        promise = promise.pipe(function(atom) {
             var type = self.arrow.getHead().getTail().getBody();
             View.prototype.edit.call(self);
             var w = self.d.width(), h = self.d.height();
