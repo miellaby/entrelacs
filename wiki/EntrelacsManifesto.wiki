@@ -37,4 +37,3 @@ More specifically, the *manifesto* makes the following claims:
     <p>[ArrowsSpace Read more about the arrow space] in the current prototype...
  <li><strong>Computing environments on top of _arrows spaces_ will feature a whole new range of native abilities.</strong>
    <p>[EntrelacsCapabilities Read more about native abilities of "Entrelacs Systems"...]
-</ol>
