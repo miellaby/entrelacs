@@ -30,7 +30,7 @@
 #define SESSION_TTL 120
 #define HOUSECLEANING_PERIOD 6
 #else
-#define SESSION_TTL 800
+#define SESSION_TTL 3600
 #define HOUSECLEANING_PERIOD 60
 #endif
 
