@@ -1,1 +1,1 @@
-while true; do make D=PRODUCTION start ; echo ; echo CRASH ; echo ; echo ; done
+while true; do CFLAGS="-D PRODUCTION" make clean start ; echo ; echo CRASH ; sleep 5 ; echo ; echo ; done

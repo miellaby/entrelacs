@@ -174,9 +174,11 @@ Arrow xls_set(Arrow c, Arrow key, Arrow value) {
     Arrow slotContext = pairMaybe(c, key);
     if (slotContext != EVE) {
        xls_reset(slotContext);
+    } else {
+        slotContext = xl_pair(c, key);
     }
     
-    return xls_root(A(c, key), value);
+    return xls_root(slotContext, value);
 }
 
 /** traditional "unset-key".

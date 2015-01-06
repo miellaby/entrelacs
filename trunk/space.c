@@ -348,7 +348,7 @@ static void cell_getSmallPayload(Cell *cell, char* buffer) {
 * address
 * cell pointer
 */
-static void logCell(int line, char operation, Address address, Cell* cell) {
+static void logCell(int logLevel, int line, char operation, Address address, Cell* cell) {
     static const char* cats[] = {
           "EMPTY",
           "PAIR",
@@ -364,7 +364,7 @@ static void logCell(int line, char operation, Address address, Cell* cell) {
     unsigned peeble = (unsigned)cell->full.peeble;
     const char* cat = cats[type];
     if (type == CELLTYPE_EMPTY) {
-        LOGPRINTF(LOG_DEBUG, "%d %c %06x EMPTY (peeble=%02x)",
+        LOGPRINTF(logLevel, "%d %c %06x EMPTY (peeble=%02x)",
           line, operation, address, peeble);
         return;
 
@@ -373,7 +373,7 @@ static void logCell(int line, char operation, Address address, Cell* cell) {
       char flags[] = {
           (cell->arrow.RWWnCn & FLAGS_ROOTED ? 'R' : '.'),
           (cell->arrow.RWWnCn & FLAGS_WEAK ? 'W' : '.'),
-          (cell->arrow.RWWnCn & FLAGS_C0D ? 'O' : 'I'),
+          (cell->arrow.child0 ? (cell->arrow.RWWnCn & FLAGS_C0D ? 'O' : 'I') : '.'),
           '\0'
       };
       uint32_t hash = cell->arrow.hash;
@@ -383,7 +383,7 @@ static void logCell(int line, char operation, Address address, Cell* cell) {
       int dr = (int)cell->arrow.dr;
 
       if (type == CELLTYPE_PAIR) {
-        LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
+        LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
           line, operation, address, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
@@ -393,25 +393,25 @@ static void logCell(int line, char operation, Address address, Cell* cell) {
         int s = (int)cell->small.s;
         char buffer[11];
         cell_getSmallPayload(cell, buffer);
-        LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
+        LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
           line, operation, address, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+        LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
           line, operation, address, peeble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
       }
     } else if (type == CELLTYPE_SLICE) {
-      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s jump=%1x data=%.21s",
+      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s jump=%1x data=%.21s",
         line, operation, address, peeble, type, cat,
         (int)cell->slice.jump, cell->slice.data);
 
     } else if (type == CELLTYPE_LAST) {
-      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s size=%d data=%.*s",
+      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s size=%d data=%.*s",
         line, operation, address, peeble, type, cat,
         (int)cell->last.size,
         (int)cell->last.size,
@@ -433,7 +433,7 @@ static void logCell(int line, char operation, Address address, Cell* cell) {
           ']',
           '\0'
       };
-      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
+      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
         line, operation, address, peeble, type, cat,
         cell->children.C[0],
         cell->children.C[1],
@@ -443,22 +443,22 @@ static void logCell(int line, char operation, Address address, Cell* cell) {
         directions);
 
     } else if (type == CELLTYPE_REATTACHMENT) {
-      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x %s from=%x to=%x",
+      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s from=%x to=%x",
         line, operation, address, peeble, type, cat,
         (int)cell->reattachment.from, cell->reattachment.to);
 
     } else {
-      LOGPRINTF(LOG_DEBUG, "%d %c %06x peeble=%02x type=%1x ANOMALY",
+      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x ANOMALY",
         line, operation, address, peeble, type);
       assert(0 == 1);
     }
 }
-#define LOGCELL(operation, address, cell) logCell(__LINE__, operation, address, cell)
+#define LOGCELL(operation, address, cell) logCell(LOG_DEBUG, __LINE__, operation, address, cell)
 
 static void showCell(Address a) {
   Cell cell;
   mem_get(a, &cell.u_body);
-  LOGCELL('R', a, &cell);
+  logCell(LOG_INFO, __LINE__, ' ', a, &cell);
 }
 
 static void looseLogAdd(Address a) {
@@ -566,7 +566,7 @@ char* crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]) {
 
 /* Address shifting */
 #define SHIFT_LIMIT 20
-#define PROBE_LIMIT 20
+#define PROBE_LIMIT 40
 #define ADDRESS_SHIFT(ADDRESS, NEW, OFFSET) \
          (NEW = (((ADDRESS) + ((OFFSET)++)) % (SPACE_SIZE)))
 // FIXME ADDRESS_JUMP
@@ -1148,6 +1148,19 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     }
     // Miss
 
+    if (!safeguard) {
+      ERRORPRINTF("dubious singleton probing");
+      // replay for logging
+      safeguard = PROBE_LIMIT;
+      probeAddress = hashAddress;
+      hashProbe = hash % PRIM1; // probe offset
+      while (--safeguard) {
+        showCell(probeAddress);
+        ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
+      }
+    }
+    assert(safeguard);
+    
     if (ifExist) // one only want to test for singleton existence in the arrows space
         return EVE; // Eve means not found
 
@@ -1155,18 +1168,22 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     space_stats.pair++;
 
     if (firstFreeAddress == EVE) {
-        safeguard = PROBE_LIMIT;
+        // You don't want safeguard = PROBE_LIMIT; otherwise
+        // one may create arrows out of the probing limit
         while (--safeguard) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
         
             Cell probed;
             mem_get(probeAddress, &probed.u_body);
             ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-        
+            
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
                 break;
             }
+        }
+        if (!safeguard) {
+          ERRORPRINTF("can't find a free cell offset0=%d, offset=%d, mod=%d", (int)hash % PRIM1, (int)hashProbe, (int)(hashProbe % SPACE_SIZE));
         }
         assert(safeguard);
     }
