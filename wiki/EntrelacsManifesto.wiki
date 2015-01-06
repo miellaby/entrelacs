@@ -1,12 +1,7 @@
 #summary The Entrelacs manifesto
 #labels Entrelacs,manifesto
 
-= Introduction =
-The *Entrelacs manifesto* claims one *can* and one *should* invent a computer system based upon an alternate information paradigm.
-
-Anyone interested in this objective can freely adhere to this manifesto and relate his work to the Entrelacs umbrella project.
-
-===Preamble to the Entrelacs manifesto===
+===Preamble===
 
 Applied computer sciences help improving data structures.
 
@@ -14,25 +9,32 @@ However, no study has yet put into question the fundamental _paradigm_ which gov
 
 Consequently, *all* digital and non-digital systems up to now follow a single paradigm, derived from _Writing_. As a side effect, all these systems are more of less modeled after _graph theory_.
 
-Because the [BoxValueParadigm box/value paradigm], as we'll call it, is the only paradigm an human being is accustomed to, neither scientists nor engineers have though of an alternative.
+Because the [BoxValueParadigm box/value paradigm], as we'll call it here, is the only paradigm an human being is accustomed to, neither scientists nor engineers have deeply explore a true alternative.
+
+----
 
 =The Entrelacs manifesto=
-==We claim that developing computer systems after the _box/value paradigm_ is an [http://en.wikipedia.org/wiki/Abstraction_inversion abstraction inversion]^W^ which makes software engineering excessively difficult.==
 
-[BoxValueParadigm more ...]
+The *Entrelacs manifesto* claims one *can* and one *should* design a computer system based upon an alternate information paradigm.
 
-==We claim that one may correct this inversion by promoting the *immutable* *connected* *ordered* *pair* *singleton* -that one refers herein as *an arrow*- to *first* and *only* citizen class of the whole information system. All former concepts, like _vertex_ and _values_, should be seen as derivative constructs made out of _arrows_. This approach is called the *Entrelacs paradigm*.==
+Anyone interested in this objective can freely adhere and relate his work to this manifesto.
 
-[ArrowParadigm more ...]
+More specifically, the *manifesto* makes the following claims:
 
-==We claim that designing a computer system after this paradigm is feasible. We put the stress on the fact that one may simulate such a system with paper and pencil.==
-
-[PenAndPaperReferenceDesign more ...]
-
-==We believe that a working prototype can be designed out of existing hardware by developing an adequate software layer.==
-
-[ArrowsSpace more ...] 
-
-==We call for the immediate development of such an *Entrelacs system* because we believe it will lead the way to various new computer abilities.==
-
-[EntrelacsCapabilities more ...]
+<ol>
+ <li><strong>The current paradigm in use regarding information storage within computers is an _abstraction inversion_ <sup>[http://en.wikipedia.org/wiki/Abstraction_inversion wiki def]</sup></strong>
+     <p> [BoxValueParadigm Read more about the box/value paradigm ...]
+ <li><strong>Fixing this abstraction inversion leads to the _Entrelacs Paradigm_</strong>
+    <p> It consists in promoting *arrows* to be the *first* and *only* citizen class of the whole information system.
+    <p> Arrows are *recursively* defined as *singletons of immutable connected ordered pair of arrows*.
+    <p> In this paradigm, old concepts, like _vertex_ or _values_, are considered as various constructs made out of _arrows_.
+    <p> [ArrowParadigm Read more about the Entrelacs paradigm ...]
+ <li><strong>An information storage system designed after the _Entrelacs paradigm_ is feasible</strong>
+    <p>as demonstrated by a simple experiment with paper and pencil.
+    <p>[PenAndPaperReferenceDesign Read more about the "pen & paper" reference design ...]
+ <li><strong>Coding a <u>software implementation</u> of such a storage system is possible</strong>
+    <p>with reasonable performances on existing hardware plateforms. 
+    <p>[ArrowsSpace Read more about the arrow space] in the current prototype...
+ <li><strong>Computing environments on top of _arrows spaces_ will feature a whole new range of native abilities.</strong>
+   <p>[EntrelacsCapabilities Read more about native abilities of "Entrelacs Systems"...]
+</ol>
