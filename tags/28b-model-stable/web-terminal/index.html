@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Entrelacs Terminal 0.2</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="css/terminal.css">
+        <link rel="shortcut icon" href="./favicon.ico">
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundicons/3.0.0/foundation-icons.min.css">
+        <script src="js/vendor/LAB-debug.min.js"></script>
+        <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+    </head>
+    <body>
+        <div id='background'></div>
+        <!--[if lt IE 7]>
+            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+        <div id='area' class='area'>
+        </div>
+        <div class='wizard_box' style='display: none;'><div class='close'><a href='#'>&times;</a></div><div id='wizard_says'>Welcome new user!<p>Click bellow to start a quick tutorial</div></div>
+        <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script> -->
+        <!-- <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.0.min.js"><\/script>');</script> -->
+
+        <script>
+                $LAB.setGlobalDefaults({
+                    Debug: true
+                })
+                
+                $LAB.script('js/vendor/jquery-1.9.0.min.js')
+                    .wait(function() {
+                        $LAB
+                        .script("js/vendor/jquery.ajaxfileupload.js")
+                        .script("js/vendor/jquery.cookie-1.3.1.js")
+                        .script("js/vendor/jquery.colorbox-1.3.27.min.js")
+                        .wait(function() {
+                            $LAB
+                            .script("js/vendor/creole.js")
+                            .script("js/as.js")
+                            .script("js/view.js")
+                            .script("js/prompt.js")
+                            .script("js/terminal.js")
+                            .wait(function() {
+                                $LAB
+                                .script("js/atomView.js")
+                                .script("js/blobView.js")
+                                .script("js/placeholder.js")
+                                .script("js/pairView.js")
+                                .script("js/main.js");
+                           });
+                        });
+                    });
+                
+        </script>
+    </body>
+</html>

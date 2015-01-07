@@ -1,0 +1,39 @@
+== Browse existing content
+
+Arrows connected to //pub// are shown at startup.
+
+Click in the background to open a prompt and enter anything to get back connected information. Try it with //42//.
+
+Hide arrows  with ''x'' button. Show hidden children with //∊// button.  Repeat on subsequent children to //go meta//.
+
+== Add content
+
+Click background to open new prompts.
+
+Use the //Split// button (or //Ctrl+P//) to build pair structures.
+
+Type into prompts and validate to create //atoms//.
+
+Drag & drop existing arrows into prompts to reuse them in new structures.
+Or use //incoming// and //outgoing// buttons.
+
+Note direct rooting of atoms often leads to space loss.
+
+== Modify content
+
+Unroot arrows to remove them for good.
+
+Double-click to edit atoms. Changes will be propaged to visible descendants.
+
+== Advanced text editing
+
+Turn prompts into text areas with the //whale of text// button (.___.).
+Then choose between //raw// and //wiki// text format. Wiki syntax is
+[[http://wikicreole.org/wiki/Creole1.0|Creole 1.0]].
+
+//Ctrl+Enter// also enlarges prompts and submits text input.
+
+== File upload
+
+Use //[...]// button to upload a file into a prompt.
+
