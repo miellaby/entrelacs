@@ -1,20 +1,26 @@
 #summary More detailed description of the first ArrowsSpace prototype
 = This page needs house cleaning since the last migration to a new data model. =
 
-This page describes the first ArrowsSpace prototype. It takes place in the first [EntrelacsPrototypeArchitecture Entrelacs System prototype].
+This page describes the ArrowsSpace design as it takes place in the current [EntrelacsPrototypeArchitecture Entrelacs System prototype].
 
 == Architecture overview ==
 
-The ArrowsSpace software prototype consists in a thread-safe library (EntrelacsLibrary) which provides operators to compose, root, and browse arrow structures from a single persistence file in the hosting system.
+===A thread safe library===
 
-_2012 note: not yet thread-safe-_
+    The bottom software layer consists in a thread-safe C library (EntrelacsLibrary) which provides:
 
+  * operators to compose, root, and browse arrow structures in a single persistence file of the hosting system.
+  * a *very* basic functional language interpretor. It runs arrows based expressions. Its evaluation state is itself an arrow.
 
-An [EntrelacsServer HTTP/REST server] is also planed on top of this library so that local or remote clients may simultaneously access the same arrow space.
+===An HTTP server===
 
-Planned clients on top of this server:
-   * Entrelacs console.
-   * Entrelacs FUSE file system.
+    The [EntrelacsServer Entrelacs server] on top of this library allows clients to simultaneously and remotely access the arrows space via the HTTP protocol.
+
+===And various clients===
+
+  * the artsy Entrelacs web terminal may connect itself to the HTTP server.
+  * The Entrelacs FUSE file system directly accesses to the persistence  file by linking the AS library.
+  * The REPL client also directly accesses to the persistence file.
 
 == Complex objects support ==
 
@@ -25,7 +31,7 @@ The prototype also allows to handle several types of complex objects in addition
     A _tag_ is a relatively *short* binary string.
   * _blobs_
     A _blob_ is a very long binary object whose body is stored outside the persistence file. One only stores its unique cryptographic hashed signature into the arrows space in order to distinguish singletons.
-  * _tuples_
+  * _tuples_ note: postponed
     A tuple is an ordered set of _n_ arrows (_n_ >= 1).
 
 ===Reminder===
