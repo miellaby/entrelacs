@@ -1,7 +1,7 @@
 #summary The "Arrows Space" (AS) is the key component of an Entrelacs system.
 
 == introduction ==
-An _"Arrows Space"_ (AS) designates an abstract device to store arrows structures involved in the [ArrowParadigm Entrelacs Paradigm]. It's the key component of an [DesignIntroduction Entrelacs System].
+An _"Arrows Space"_ (AS) refers to an abstract device to store arrows structures involved in the [ArrowParadigm Entrelacs Paradigm]. It's the key component of an [DesignIntroduction Entrelacs System].
 
 Please note one may simulate an Arrows Space with [PenAndPaperReferenceDesign paper and pencil] .
 
