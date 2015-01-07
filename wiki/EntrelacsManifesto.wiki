@@ -7,7 +7,7 @@ Applied computer sciences help improving data structures.
 
 However, no study has yet put into question the fundamental _paradigm_ which governs how such data structures are mapped onto concrete storage space.
 
-Consequently, *all* digital and non-digital systems up to now follow a single paradigm, derived from _Writing_. As a side effect, all these systems are more of less modeled after _graph theory_.
+Consequently, *all* digital and non-digital systems up to now follow a single paradigm, derived from _Writing_. As a side effect, all these systems are more or less modeled after _graph theory_.
 
 Because the [BoxValueParadigm box/value paradigm], as we'll call it here, is the only paradigm an human being is accustomed to, neither scientists nor engineers have deeply explore a true alternative.
 
