@@ -60,19 +60,19 @@ So every time a new technology improves the box/value system, such as [http://en
 
         The issue is not so about room sparing. It's all about all these jobs that one can't ask for a computer without designing first a very complex and very resource-costly piece of software.
 
-        <u>Concrete example</u>: You can't ask for your computer where and how it makes use of a given PI number approximation, or some English word. Search engines -like those included in desktop environments nowadays- form a very partial solution to this problem.
+        <u>Concrete example</u>: You can't ask for your computer when and how it makes use of a given PI number approximation, or some English word it knows. Search engines included in modern desktop environments nowadays form a very incomplete solution to this problem.
 
- * * Compartmentalization*
+ * *Compartmentalization*
 
-        The box/value paradigm leads to dispatch information into separated and heterogeneous storage spaces.
+        The box/value paradigm leads to dispatch information into separate heterogeneous storage spaces.
 
-        A regular operating system gives you tools to browse the structure of boxes it is responsible for, typically its file systems. However the inner structure of these files by themselves will depend on the applications which manage them.
+        A regular operating system gives tools to browse the structure of the biggest boxes it is responsible for, typically file systems, but not the inner structure of these boxes, which depend on the applications which manage them.
 
-        So work data in volatile memory. Thus, neither a human or software agent can fully browse and operate the content of a computer. One can't neither build new information nor produce new behaviors by _cross-cutting_ the information contained in all these closed boxes.
+        Thus, neither a human or software agent can fully browse and operate the content of a computer. One can't neither build new information nor produce new behaviors by _cross-cutting_ information contained in all these closed boxes.
 
         <u>Concrete example</u>: A simple picture manager will manage user pictures in well-known folders. But it won't get access to pictures embedded in other applications, like those stored or archived by other picture managers or mail agents. Above all, no software today can simply access to RAM-based pictures currently displayed by opened applications, whatever the access rights given by its user.
 
- * *duality*
+ * *Duality*
 
         The box/value paradigm is fundamentally dual.
 
@@ -85,7 +85,7 @@ So every time a new technology improves the box/value system, such as [http://en
 
         <u>Concrete example</u>: programmers on one side, and end-users on the other side. Maybe fine for the software industry; but is it always fine to you?
 
- * No *plasticity*
+ * *Rigidity*
 
         As values and boxes are most of the time gathered into larger boxes, the box/value way has a negative impact on information plasticity.
 
@@ -95,7 +95,7 @@ So every time a new technology improves the box/value system, such as [http://en
 
         <u>Concrete example</u>: you can't modify your preferred application in any other aspect than those anticipated by its developers. *Access to source codes* won't even help much!
 
- * *opacity*
+ * *Opacity*
 
          With the box/value paradigm, one gives meaning to data by considering the boxes they belong to. For a given value at a given location, one must take into consideration its location relatively to its parent box, which is itself positioned in its grandparent box, and so on up to the underlying material.
 
@@ -103,47 +103,42 @@ So every time a new technology improves the box/value system, such as [http://en
 
          <u>Concrete example</u>: Software can't be studied and modified without original source code. Also, data buried in user files can't be browsed without the specially created programs which manages these data. Extracting information from _raw_ data out of any context is called data _forensics_ and is more considered as a kind of hacking.
 
- * *directed browsing*
+ * *Broken information retrieval*
 
          A box/value based information storage only guarantees that information may be browsed in one direction: from the highest boxes to the lowest values. It can't be simply browsed in the opposite direction. A program typically can't fetch the references up to a known box.
 
-        <u>Concrete example</u> In most file systems, there is no simple way to know which directories links to a given file. But What's worse is that many file references are regular strings -file names and paths- that are lost in applications and users data with no way to retrieve them.
+        <u>Concrete example</u> In most file systems, there is no simple way to know which directories links to a given file. But What's worse is how most file references in programs consist in regular strings -file paths- that are lost in code and data with no way to efficiently retrieve and change them.
 
  * *No meta*.
 
-        With the box/value paradigm, a value may be a reference to a box -though there is no obvious way to know it- but it can't simply refer to concepts like _"such a value in such a box"_, or _"such a box in such a box"_.
+        With the box/value paradigm, a box content is either a reference to a box -though there is generally no way to know it- or not. So one easily represents either the concept of "such a value" or "such a box".
 
-        These fully valid and useful pieces of information can't be stored as is and it's probably the biggest issue with a box/value based software stack.
+        But this way to store information  can't simply represent a concept like _"such a value in such a box"_, or _"such a box in such a box"_ while such concepts are valid and useful pieces of information that humans can easily understand and handle.
 
-        It makes existing computer based systems unable to handle its own knowledge at an higher _level of abstraction_, i.e. at a _meta level_.
+        That's why existing computer based systems are unable to handle its own knowledge at an higher _level of abstraction_, i.e. at a _meta level_. It might be the biggest issue of the box/value paradigm.
 
-        Sure, many popular applications claim they manage _meta-data_ on various things. But keep in mind that these applications only consider *one* level of "meta". They are notably incapable of managing meta-data attached to these meta-data.
+        Sure, many popular applications claim they manage _meta-data_ about various things. But keep in mind that these applications only consider *one* level of "meta". They are notably incapable of managing meta-data attached to these meta-data.
 
-        <u>Concrete example</u>: A regular file system won't let you store and retrieve the time when some access policies changed for a given file.
+        <u>Concrete example</u>: A regular file system doesn't give a simple way to store the time when file access policies change (meta-data about meta-data).
 
- * *No way to enrich information _from the outside_*.
+ * *Weak and breakable*.
 
-        A box/value based storage doesn't offer simple ways to link existing boxes with additional side values.
+        Most box/value based storages doesn't offer simple generalized ways to link existing boxes with each others.
 
-        Sure one may create a new box including existing references to the original content, but chances are these references will be quickly broken while information evolves as there's no way to know who refers to a given piece of data. In such conditions, no software can ensure satisfying data consistency. Plus all these side data will be ignored by original tools.
+        Sure one may create a box including a reference to another box, but this reference will be broken or outdated if the box moves within the storage space or if its content evolves. In such conditions, no software can ensure satisfying system level consistency.
 
-        <u>Concrete example</u> Most photo suites will attach information to your pictures by setting up a database indexed by original picture file names. But these precious and tenuous links are easily broken by renaming or moving original picture files. Whatever the operating system, it appears that a program can't get strong and reliable references to existing files so to attach information from the outside. When these files are moved, renamed, deleted or modified in place, outer data will be wrong and the application has almost no way to know it.
+        <u>Concrete example</u>Most photo suites attach information to pictures by setting up a database indexed by file paths. These tenuous links are broken by renaming or moving original picture files. In regular operating systems, program can't obtain strong and reliable references to existing files so to attach information on them from the outside. Once files are moved, renamed, deleted or modified in place, these bindings got wrong.
 
- * *No relativity*
+ * *Lack of relativity*
 
-         Within a box/value framework, a box reference may be stored as a value in several other boxes.
+         Within a box/value storage space, some boxes may store other boxes references as values. This architectural pattern leads to hierarchies of contexts embedded into each others -like folder trees-. In other words, it leads to store graphs of graphs, that is _meta-graphs_.
 
-         It means in some ways that the information contained in the referring boxes is defined relatively to the initial box.
+         This is the usual way to implement user profiles, accounts, workspaces, and such. That's also the typical solution to store _meta-data_ referring existing contents.
 
-         Repeating this architectural process brings to embedding contexts into each others -like folders in a file tree-. In other words, it leads to store graphs of graphs, that is _meta-graphs_.
-
-         This is how one usually implements user profiles, accounts, work spaces, and such. That's as well the typical schema when storing so-called 'meta-data' for user contents.
-
-         But in the same way that graph theory doesn't allow edges ends to be other edges, the box/value framework provides no way to represent a concept like "such a value in such a box".
+         But in the same way than graph theory doesn't allow edges ends to be other edges, the box/value framework provides no way to represent a concept like "such a value in such a box".
 
          So while data may be defined relatively to some context, the meaning of such a data considering such a context can't be stated and devised relatively to a higher level of abstraction.
 
-         At the very end, computer information turns out to be mostly _hardcoded_ as there is no way to store new interpretations of existing information.
-
+         At the very end, the computer behavior turns out to be mostly _hardcoded_ because there is no way to store different interpretations of existing pieces of informations.
 
 ArticleCompleteness: 70%
