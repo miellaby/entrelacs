@@ -3,7 +3,7 @@
 
 =Introduction=
 
-The way current computer systems are managing information is shaped by the old [BoxValueParadigm Box/Value paradigm] which consists in turning information into graphs of boxed data values.
+The way current computer systems manage information is shaped by the [BoxValueParadigm Box/Value paradigm] which consists in representing information as graphs of boxed data values.
 
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/versus.png'/>
 
@@ -14,9 +14,9 @@ The [http://code.google.com/p/entrelacs/ Entrelacs Manifesto] proposes to build 
  * an arrow is an oriented pair of ... arrows. That's all.
  * an arrow is considered in its "canonical" or "unique" form. Every definable arrow is mapped to at most one physical representation per system.
  * an arrow is considered "immutable". The physical representation of an arrow can't be modified once placed.
- * an arrow is "connected" with its ends. The system may browse these connections in both way to explore all the information attached to every arrow.
+ * an arrow is "connected" with its ends. The system may browse these connections in both ways so to explore all the information attached to every arrow.
  * one doesn't need anything else than arrows to represent information. The old "nodes vs. edges" duality from graph theory is rejected.
- * But raw data can still be handled as particular sorts of arrows, that is re-entrant constructs of arrows named _entrelacs_.
+ * But raw data can still be considered as some sorts of arrows, typically re-entrant self-defining arrow constructs named _entrelacs_.
 
 ==Arrow==
 <img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows.png' align=right>   
@@ -69,11 +69,11 @@ Each arrow is an oriented pair of arrows.
 
 An _entrelacs_ is a set of intricated arrows forming an unique discrete connected construct. It means that any arrow from the set is the descendant/ancestor of all the other arrows of the set.
 
-Theorem: (to be completed)
+Definition:
 
      A set of arrows E forms an entrelacs if and only if
-         * whatever A, B 2 arrows in E,
-         * A is a descendant B
+         * whatever 2 arrows A and B in E,
+         * A is a descendant of B
 
 One characterizes an entrelacs according to its topology, that is how many arrows it contains and how these arrows are connected together. One considers that *entrelacs which are isomorphic are identical*.
 
@@ -96,7 +96,7 @@ To conclude, _entrelacs_ are equivalent in all respects to *atoms* like those fo
 
 ===Assimilation process===
 
-All system inputs (network events, user actions, ...) must be _assimilated_ into arrows first before being processed by the system.
+All system inputs (network events, user actions, ...) must be _assimilated_ into arrows before being processed by the system.
 
 This "Assimilation" process also occurs when low-level processes produce new data, e.g. numbers obtained by mathematical operations.
 
@@ -106,9 +106,9 @@ Arrows uniqueness is enforced during assimilation by checking that no previous r
 
 From a theoretical perspective, the whole knowledge of a given system at given time might be defined as a single arrow _S_. _S_ definition would include all other known arrows. It would be the only movable "variable" of the computer system.
 
-But, for practicability, one should rather represent the system knowledge as a set of distinct arrows, namely the _rooted arrows_.
+But, for practicability, one represents the system top-level knowledge as a mutable set of arrows, namely the _rooted arrows_.
 
-A rooted arrow is an _assimilated_ arrow decorated with a "root" mark. It means that this arrow is considered "true" in the top-level context of the considered system.
+A rooted arrow is decorated with a "root" flag. It means that this arrow is considered "true" in the top-level context of the considered system.
 
 <p align='middle'><img src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/rooted1.png'/><br/><u>some rooted arrow.</u><br/>(check mark notation)</p>
 
@@ -131,7 +131,7 @@ More generally, an arrow based system may be extended to take into consideration
 For instance, when assimilating the "hello world" character string, an arrow based system must ensure that:
  * there is no more than one copy of the string in the whole storage space, 
  * the string can't be modified in place,
- * one may browse all the arrows connected to this string, like the programs which make use of "Hello world".
+ * one may browse all the arrows connected to this string, like all the programs which cite "Hello world".
 
 ==Orthogonal persistence==
 
@@ -148,8 +148,8 @@ Arrows are somewhat similar to [http://en.wikipedia.org/wiki/Cons cons cells]^W^
 All in all, the Entrelacs manifesto proposal simply consists in performing system-wide _hash consing_, combined with transparent persistence and indexation.
 
 The only invention of this paradigm might be that one considers non reducible systems of equations as materials to "bootstrap" the information system. For example the equation
-_x = x x_ defines "Orobouros" while the simultaneous equations _x = y . y & y = x . x & x != y _ defines an arrow out of the Yin-Yang structure.
+_x = x x_ defines "Orobouros" while the equations system { _x = y . y & y = x . x & x != y _ } defines "Yin-Yang".
 
-It's like "lambda calculus" without free variables as one may use lambda abstractions as constants and alpha-equivalence to check constant equality.
+It's like the grammar of "lambda calculus" without free variables as one may use lambda abstractions as constants and alpha-equivalence to check constant equality.
 
-This approach is motivated by the desire to definitively merge relations and related elements in a single and same set. It leads to design a system where information is homogeneous and "scale-invariant" on the "meta" complexity scale.
+This approach is motivated by the desire to merge relationships and nodes into a single concept. It leads to design a system where information is homogeneous and "scale-invariant" on the "meta" complexity scale.
