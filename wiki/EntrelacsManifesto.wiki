@@ -34,6 +34,6 @@ More specifically, the *manifesto* makes the following claims:
     <p>[PenAndPaperReferenceDesign Read more about the "pen & paper" reference design ...]
  <li><strong>Coding a <u>software implementation</u> of such a storage system is possible</strong>
     <p>with reasonable performances on existing hardware plateforms. 
-    <p>[ArrowsSpace Read more about the arrow space] in the current prototype...
+    <p>[ArrowsSpace Read more about arrow spaces] in the current prototype...
  <li><strong>Computing environments on top of _arrows spaces_ will feature a whole new range of native abilities.</strong>
    <p>[EntrelacsCapabilities Read more about native abilities of "Entrelacs Systems"...]
