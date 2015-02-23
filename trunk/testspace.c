@@ -350,8 +350,10 @@ int space_unitTest();
 int main(int argc, char* argv[]) {
     log_init(NULL, "space=debug");
     xl_init();
+    xl_begin();
     space_unitTest();
     basic();
     stress();
+    xl_over();
     return 0;
 }

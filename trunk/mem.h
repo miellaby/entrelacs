@@ -7,10 +7,25 @@
 
 #include "mem0.h"
 
+/**
+ * last commit time
+ */
+extern time_t mem_lastCommitted;
+
 /** "mem" initialization
  @return 1 if very first start, <0 if error, 0 otherwise
  */
 int  mem_init();
+
+/** opening mem
+ * mem r/w op must occured between open/close
+ * @return 0 on success
+ */
+int mem_open();
+
+/** closing mem
+ */
+int mem_close();
 
 /** set data into memory cell
  @param Cell Address

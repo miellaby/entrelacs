@@ -145,9 +145,6 @@ void tree(Arrow parent) {
 static void *do_yield(void *v) {
     while (1) {
         sleep(1);
-        // idiom which leads to mem0 yield
-        xl_begin();
-        xl_over();
     }
     return NULL;
 }
@@ -174,8 +171,8 @@ int main(int argc, char **argv) {
         }
     }
     
-    //log_init(NULL, "server,session,machine=debug");
-    log_init(NULL, "session=warn");
+    log_init(NULL, "server,session,machine=debug");
+    //log_init(NULL, "session=warn");
 
     xl_init();
 
@@ -193,10 +190,10 @@ int main(int argc, char **argv) {
     pthread_t yield_thread;
     
     /* create a second thread */
-    if (pthread_create(&yield_thread, NULL, do_yield, NULL)) {
-        fprintf(stderr, "Error creating thread\n");
-        return 1;
-    }
+    //if (pthread_create(&yield_thread, NULL, do_yield, NULL)) {
+    //    fprintf(stderr, "Error creating thread\n");
+    //    return 1;
+    //}
 
     /* Now this is the main loop of the typical linenoise-based application.
      * The call to linenoise() will block as long as the user types something

@@ -29,7 +29,8 @@ static struct s_mem {
 #define RESERVESIZE 1024
 static const Address reserveSize = RESERVESIZE ; ///< cache reserve size
 static uint32_t pokes = 0;
-static time_t lastCommitTime;
+time_t lastCommitTime = 0;
+time_t mem_lastCommitted = 0;
 
 /** The RAM cache reserve.
  Modified cells are moved into this reserve when their location in mem[] are need to load other cells
@@ -106,6 +107,8 @@ int mem_get_advanced(Address a, CellBody* pCellBody, uint32_t* stamp_p) {
   uint32_t  page = a / MEMSIZE;
   mem_stats.getCount++;
   struct s_mem* m = &mem[offset];
+
+  assert(mem0_isOpened());
   
   if (!memIsEmpty(m) && m->page == page) {
     // cache hit
@@ -219,6 +222,44 @@ static int mem_whereIs(Address a) {
 
 #define MEM_LOG(operation, offset) mem_log(__LINE__, operation, offset)
 
+/** Open the memory for I/O
+ * if mem_lastCommited is different than mem0_lastModified, it means
+ * that a concurrent system did change the persistence file,
+ * the cache is out of sync and need to be reset
+ * 
+*/
+int mem_open() {
+  if (mem0_isOpened()) {
+    DEBUGPRINTF("mem already open");
+    return 0;
+  }
+  
+  if (mem0_open())
+    return -1;
+    
+  if (mem_lastCommitted != 0 && mem_lastCommitted != mem0_lastModified) {
+    // Reset cache because out of sync
+    for (int i = 0; i < memSize; i++) {
+      mem[i].flags = MEM1_EMPTY;
+      mem[i].page = 0;
+      mem[i].stamp = 0;
+    }
+  }
+  mem_lastCommitted = mem0_lastModified;
+  
+  return 0;
+}
+
+/** Close the memory */
+int mem_close() {
+  if (!mem0_isOpened()) {
+    DEBUGPRINTF("mem already closed.");
+    return 0;
+  }
+  
+  return mem0_close();
+}
+
 /** Get a cell */
 int mem_get(Address a, CellBody *pCellBody) {
     return mem_get_advanced(a, pCellBody, NULL);
@@ -232,7 +273,9 @@ int mem_set(Address a, CellBody *pCellBody) {
     mem_stats.setCount++;
     struct s_mem* m = &mem[offset];
     ONDEBUG(MEM_LOG('R', offset));
-    
+  
+    assert(mem0_isOpened());
+
     if (!memIsEmpty(m) && m->page != page)  { // Uhh that's not fun
         for (int i = reserveHead - 1; i >=0 ; i--) { // Look at the reserve
             if (reserve[i].a == a) {
@@ -296,6 +339,8 @@ int mem_commit() {
   int i;
   Address a, offset;
 
+  assert(mem0_isOpened());
+
   lastCommitTime = time(NULL);
 
   if (!logSize) {
@@ -326,19 +371,15 @@ int mem_commit() {
     }
   }
   
-  // we call mem0_commit() even if no logSize because it yield/resync persistence file
-  if (mem0_commit()) {
-    ERRORPRINTF("END mem_commit() failed mem0_commit");
-    return -1;
-  }
-
-  if (mem_is_out_of_sync) { // Reset cache because out of sync
-    for (i = 0; i < memSize; i++) {
-      mem[i].flags = MEM1_EMPTY;
-      mem[i].page = 0;
-      mem[i].stamp = 0;
+  if (logSize) {
+    if  (mem0_commit()) {
+      ERRORPRINTF("END mem_commit() failed mem0_commit");
+      return -1;
     }
   }
+  
+  /* allows to detect concurrent access to data */
+  mem_lastCommitted = mem0_lastModified;
   
   TRACEPRINTF("END mem_commit() logSize=%d getCount=%d setCount=%d reserveMovesBecauseSet=%d"
           " reserveMovesBecauseGet=%d mainReplaces=%d notFound=%d mainFound=%d reserveFound=%d",
@@ -351,18 +392,17 @@ int mem_commit() {
 }
 
 /** yield
- * may lead to intermediate commit
+ * may lead to intermediate commit and mem0 release
  * @return 1 if effective commit, -1 on failure, 0 if nothing happens
  */
 int mem_yield() {
     time_t now = time(NULL);
-
+    
     double seconds = difftime(now, lastCommitTime);
     if (seconds > 1.0 || reserveHead > reserveSize  / 4) {
-        if (mem_commit())
+        if (mem_commit()) {
           return -1;
-        else
-          return 1;
+        }
     }
     return 0;
 }

@@ -444,14 +444,11 @@ int main(void) {
         _houseCleaning();
         sleepCount = 0;
       } else {
-        // this idiom leads to mem_yield() which allows other process to lock the persistence file
-        xl_begin();
-        xl_over();
+        // // this idiom leads to mem_yield() which allows other process to lock the persistence file
+        // xl_begin();
+        // xl_over();
       }
   }
   dputs("%s", "server stopped.");
-
-  xl_over();
-
   return EXIT_SUCCESS;
 }
