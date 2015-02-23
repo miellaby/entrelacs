@@ -1,6 +1,8 @@
 Current changes:
- * Web terminal
-
+ * better concurrent entrelacs process
+   mem_open mem_close takes/releases a file lock
+   xl_over/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread
+    graphic https://docs.google.com/presentation/d/1xRwA0RyQ73zqLdLzNCEo1-rzPEYdUVSUH2dcIe4dGGs/edit?usp=sharing
 
 Most recent previous changes:
  * non-blocking concurent entrelacs process partial support

@@ -79,9 +79,9 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
 static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
 static int apiActivity = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
-static int spaceGCNeeded = 0; // 0->1 when a thread is wait for GC, 1->0 when GC done
-static int memCommitNeeded = 0; // 0->1 when a thread is wait for commit, 1->0 when commit done
-
+static int spaceGCDone = 1; // 1->0 when a thread starts waiting in xl_commit()/xl_over(), 0->1 when all threads synced and GC is done
+static int memCommitDone = 1; // 1->0 when a thread starts waiting in xl_commit(), 0->1 when all threads synced and mem_commit(); occurs only if !memCommitDone
+static int memCloseDone = 1; // 1->0 when a xl_over thread starts waiting, 0->1 when all threads synced and a xl_commit() thread does commit (without actually mem_close)
 
 #define ACTIVITY_BEGIN() (!apiActivity++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
 #define ACTIVITY_OVER() (apiActivity ? (--apiActivity ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0)
@@ -3157,6 +3157,7 @@ static void forget(Arrow a) {
 void xl_begin() {
     LOCK();
     ACTIVITY_BEGIN();
+    mem_open();
     LOCK_END();
 }
 
@@ -3200,46 +3201,55 @@ static void spaceGC() {
 
     zeroalloc((char**) &looseLog, &looseLogMax, &looseLogSize);
 
-    spaceGCNeeded = 0;
+    spaceGCDone = 1; // space GC occured
     
-    if (mem_yield() == 1) // commmit occured
-        memCommitNeeded = 0;
+    if (mem_yield() == 1) // also mem commmit occured
+        memCommitDone = 1;
 }
 
 void xl_over() {
-    spaceGCNeeded = 1;
-
     LOCK();
+    spaceGCDone = 0; //< record the need to GC stuff before thread syncing
+    memCloseDone = 0; //< record the need to close mem before thread syncing
     ACTIVITY_OVER();
     do {
         WAIT_DORMANCY();
     } while (apiActivity > 0); // spurious wakeup check
     
-    if (spaceGCNeeded) {
+    if (!spaceGCDone) { // no other thread has GC yet
         spaceGC();
     }
+    
+    if (!memCloseDone && memCommitDone) { // only if not done yet and no commit pending
+      WARNPRINTF("xl_over closes mem");
+      mem_close();
+      memCloseDone = 1;
+   }
+    
     LOCK_END();
 }
 
 void xl_commit() {
     TRACEPRINTF("xl_commit (looseLogSize = %d)", looseLogSize);
-    spaceGCNeeded = 1;
-    memCommitNeeded = 1;
     
     LOCK();
+    spaceGCDone = 0; //< record the need to GC stuff before thread syncing
+    memCommitDone = 0; //< record the need to commit stuff before threads syncing
     ACTIVITY_OVER();
     do {
         WAIT_DORMANCY();
     } while (apiActivity > 0); // spurious wakeup check
     
-    if (spaceGCNeeded) {
+    if (!spaceGCDone) {
         spaceGC();
     }
     
-    if (memCommitNeeded) {
+    if (!memCommitDone) { // if no thread has commited yet
         mem_commit();
-        memCommitNeeded = 0;
+        memCommitDone = 1;
+        memCloseDone = 1; // < prevents xl_over() threads to close mem because there is at least one commit thread (this one)  
     }
+
     ACTIVITY_BEGIN();
     LOCK_END();
     
@@ -3247,6 +3257,7 @@ void xl_commit() {
 
 /** xl_yield */
 void xl_yield(Arrow a) {
+    return; // FIXME je désactive yield tant que je n'ai pas trouvé une façon correcte de préserver des flèches manipulées en dehors de xl_run() 
     Arrow stateArrow = EVE;
     TRACEPRINTF("xl_yield (looseLogSize = %d)", looseLogSize);
     if (a != EVE) {
@@ -3305,12 +3316,18 @@ int xl_init() {
        return rc;
     }
 
+
     // register a printf extension for arrow (glibc only!)
     register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
     
     if (rc) { // very first start
         // Eve
 
+        rc = mem_open();
+        if (rc < 0) { // problem
+           return rc;
+        }
+        
         Cell EveCell;
         EveCell.pair.tail = EVE;
         EveCell.pair.head = EVE;
@@ -3322,7 +3339,9 @@ int xl_init() {
         mem_set(EVE, &EveCell.u_body);
         ONDEBUG((LOGCELL('W', EVE, &EveCell)));
         mem_commit();
+        mem_close();
     }
+    
     
     geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof(Arrow), 0);
     return rc;

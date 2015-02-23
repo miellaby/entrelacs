@@ -1,5 +1,18 @@
 /** @file mem0.h
- Persistent and journalized memory device.
+ Persistent and slightly journalized memory device.
+ - initialize mem0 with mem0_init
+   Uncomplete journal is removed
+   Terminated journal is recovered (copied into mem0 then deleted)
+ - open mem0 with mem0_open
+ - read data from cells with mem0_get calls
+ - write data into a serialized journal file with mem0_set calls
+   mem0_set calls
+   /!\ once a write operation is performed, one can't read data til the next commit
+ - commit the journal with mem0_commit
+      * the journal file is terminated (terminator),
+      * then data is read back and copied into the persistence file
+      * then the journal is deleted
+ - mem0_save/load/deleteData handles blob
  */
 
 #ifndef MEM0_H
@@ -8,22 +21,50 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-/** Cell. A 24 bytes long bucket
-  */
+/**
+ * persisence file last modification time
+ * updated after commit() or open()
+ */
+extern time_t mem0_lastModified;
+
+/**
+ * Cell. A 24 bytes long bucket
+ */
 typedef struct s_cellBody {
     char raw[24];
 } CellBody;
 
-/** Cell address.
-*/
+/**
+ * Cell address.
+ */
 typedef uint32_t Address;
 
-/** mem0 initialization.
-    @return 1 if very first start, <0 if error, 0 otherwise
+/**
+ * mem0 initialization.
+ * @return 1 if very first start, <0 if error, 0 otherwise
  */
 int mem0_init();
 
-/** mem0 release.
+/**
+ * open mem0
+ * return 0 if OK
+ */
+int mem0_open();
+
+/**
+ * is mem0 openened?
+ * return 1 if opened
+ */
+int mem0_isOpened();
+
+/**
+ * close mem0
+ * return 0 if OK
+ */
+int mem0_close();
+
+/**
+ * mem0 release.
  */
 void mem0_destroy();
 
@@ -107,7 +148,9 @@ int mem0_set(Address, CellBody*);
 int mem0_get(Address, CellBody*);
 
 /** commit changes.
-  write changes recorded in the journal file to the persistence file then remove the journal.
+  - read back the journal file content,
+  - copy content into the persistence file,
+  - remove the journal.
   nothing is done if no current journal.
   Persistence file lock is temporarily released so check mem_is_out_of_sync!
   @return 0 if success.
@@ -134,10 +177,5 @@ char*  mem0_loadData(char* h, size_t* sizeP);
  @param unique cryptographic hash code.
  */
 void   mem0_deleteData(char* h);
-
-
-/** release mem0
-*/
-void mem0_destroy();
 
 #endif
