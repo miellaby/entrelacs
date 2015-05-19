@@ -1,4 +1,4 @@
-<img width='194' align='right' height='150' src='http://entrelacs.googlecode.com/svn/trunk/doc/pictures/arrows-logo-2.png/'>
+<img width='194' align='right' height='150' src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/arrows-logo-2.png'>
 
 <h1>project</h1>
 <b>The Entrelacs project</b> consists in prototyping an <i>Entrelacs System</i> as defined by the <a href='EntrelacsManifesto.md'>Entrelacs Manifesto</a>.<br>
