@@ -6,9 +6,9 @@ But how do we map data structures onto a physical support in first place?
 
 For example, let's consider a set of statistics organized in a [tree](http://en.wikipedia.org/wiki/Tree_(data_structure))<sup>W</sup>. How are we going to put this structure onto a computer RAM and drives, or even a piece of paper?
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/box_paradigm.png' align='right' />
-
 ## The box/value framework ##
+
+<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/box_paradigm.png' align='right' />
 
 The usual practice consists in dividing the storage space into boxes so to put values into. Boxes are often nested into each others, so that a given box and its value can be comprehended as a gathering of smaller boxes. Also one generally use some values to identify and locate existing boxes in the storage space. They are _pointers_, _indices_, _names_, or any other parts of box identifiers.
 
@@ -18,9 +18,9 @@ Within a computer, values are binary representation of natural numbers. Every pi
 
 By following this paradigm, we are typically going to map our tree into boxes, every box containing one tree node data and some numbers referring to child node boxes.
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Writing.png' align='right' />
-
 ## box/value paradigm = Writing ##
+
+<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Writing.png' align='right' />
 
 But why doing so? Why programmers and scientists have so rarely looked for alternatives?
 
@@ -35,6 +35,7 @@ See, textual units correspond to physical representation of concepts. And as inf
 All in all, _Writing_ is the typical implementation of the box/value paradigm. This process is so deeply rooted in our mind that it forms a mental lock making side-thinking excessively difficult.
 
 ## box/value paradigm = graph theory ##
+
 > <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Graphe.png' align='right' />
 
 The box/value paradigm is slightly related to [graph theory](http://en.wikipedia.org/wiki/Glossary_of_graph_theory)<sup>W</sup>.
