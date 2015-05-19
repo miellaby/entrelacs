@@ -1,5 +1,5 @@
 Entrelacs system first prototype.
-See http://code.google.com/p/entrelacs/
+Wiki starting point: https://github.com/miellaby/entrelacs/blob/wiki/ProjectHome.md
 
 Code released under GPLv3 http://www.gnu.org/licenses/gpl.html
 
@@ -10,6 +10,10 @@ _______
    * other bites of codes from here and there
    * mongoose HTTP server : http://code.google.com/p/mongoose/
    * linenoise minimal "readline" : https://github.com/antirez/linenoise
+
+Wiki
+____
+https://github.com/miellaby/entrelacs/blob/wiki/ProjectHome.md
 
 Install & test:
 ______________
