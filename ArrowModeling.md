@@ -56,7 +56,7 @@ Neuron oriented model could be the most efficient knowledge representation strat
 
 Tagsonomies work in the same way as neuronal networks.  They have the same strength and weakness.
 
-| ![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/TagAndBundle.png]https://github.com/miellaby/entrelacs/blob/master/doc/pictures/TagAndBundle.png)   | It's easy to implement a full featured tagsonomy with arrows |
+| ![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/TagAndBundle.png](https://github.com/miellaby/entrelacs/blob/master/doc/pictures/TagAndBundle.png)   | It's easy to implement a full featured tagsonomy with arrows |
 |:------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------|
 
 ## Meta tagsonomy / unambiguous neuronal model ##
