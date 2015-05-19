@@ -6,7 +6,7 @@ But how do we map data structures onto a physical support in first place?
 
 For example, let's consider a set of statistics organized in a [tree](http://en.wikipedia.org/wiki/Tree_(data_structure))<sup>W</sup>. How are we going to put this structure onto a computer RAM and drives, or even a piece of paper?
 
-<img src='http://entrelacs.googlecode.com/svn-history/r489/trunk/doc/pictures/box_paradigm.png' align='right' />
+<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/box_paradigm.png' align='right' />
 
 ## The box/value framework ##
 
@@ -18,7 +18,7 @@ Within a computer, values are binary representation of natural numbers. Every pi
 
 By following this paradigm, we are typically going to map our tree into boxes, every box containing one tree node data and some numbers referring to child node boxes.
 
-<img src='http://entrelacs.googlecode.com/svn-history/r489/trunk/doc/pictures/Writing.png' align='right' />
+<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Writing.png' align='right' />
 
 ## box/value paradigm = Writing ##
 
@@ -35,7 +35,7 @@ See, textual units correspond to physical representation of concepts. And as inf
 All in all, _Writing_ is the typical implementation of the box/value paradigm. This process is so deeply rooted in our mind that it forms a mental lock making side-thinking excessively difficult.
 
 ## box/value paradigm = graph theory ##
-> <img src='http://entrelacs.googlecode.com/svn-history/r489/trunk/doc/pictures/Graphe.png' align='right' />
+> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Graphe.png' align='right' />
 
 The box/value paradigm is slightly related to [graph theory](http://en.wikipedia.org/wiki/Glossary_of_graph_theory)<sup>W</sup>.
 
