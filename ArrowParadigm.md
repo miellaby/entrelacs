@@ -10,7 +10,7 @@ The [Entrelacs Manifesto](http://code.google.com/p/entrelacs/) proposes to build
   * no more than one building block to _tell_ everything: the **arrow**
   * an arrow is an oriented pair of ... arrows. That's all.
   * an arrow is considered in its "canonical" or "unique" form. Every definable arrow is mapped to at most one physical representation per system.
-  * an arrow is considered "immutable". The physical representation of an arrow can't be modified once placed.
+  * an arrow is considered "immutable". The physical representation of an arrow can't be modified once stored.
   * an arrow is "connected" with its ends. The system may browse these connections in both ways so to explore all the information attached to every arrow.
   * one doesn't need anything else than arrows to represent information. The old "nodes vs. edges" duality from graph theory is rejected.
   * But raw data can still be considered as some sorts of arrows, typically re-entrant self-defining arrow constructs named _entrelacs_.
