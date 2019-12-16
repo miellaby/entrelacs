@@ -91,7 +91,7 @@ To conclude, <i>entrelacs</i> are equivalent in all respects to <b>atoms</b> lik
 <br>
 <h2>Practical considerations</h2>
 
-<h3>Assimilation process</h3>
+<h3>Assimilation process <i>= Hashing</h3>
 
 All system inputs (network events, user actions, ...) must be <i>assimilated</i> into arrows before being processed by the system.<br>
 <br>
