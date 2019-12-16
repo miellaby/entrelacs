@@ -146,7 +146,7 @@ All in all, the Entrelacs manifesto proposal simply consists in performing <i>ha
 <br>
 For the sake of purity, this proposal adds that non irreducible reentrant systems of arrow definitions -in other words, unresolvable equations- may actually act as atoms to "bootstrap" an information system.
 
-For example the equation <i>x = x x</i> defines "Orobouros" while the equations system { <i>x = y . y & y = x . x & x != y</i> } defines "Yin-Yang". Both of these defintions, despite being based on free variables, might been used as atoms to define more complex arrows, like the regular arrow from "Orobouros" to "Yin-Yang".
+For example the equation { <i>x = x . x</i> ] defines "Orobouros" while the equations system { <i>x = y . y & y = x . x & x != y</i> } defines "Yin-Yang". Both of these defintions, despite being based on free variables, might been used as atoms to define more complex arrows, like the regular arrow from "Orobouros" to "Yin-Yang".
 
 <h3>Lambda Calculus</h3
 The Arrows paradigm may also been seen as the systematic hashing of alpha-equivalent "lambda calculus" terms so to map them onto storage. For this purpose, Alpha-equivalence of reentrant structures is used as an equivalence relation so to identify entrelacs. These reentrant lambda expressions are turned into constants so to build up dictionnaries and more complex knowledge structures.<br>
