@@ -79,7 +79,7 @@ One characterizes an entrelacs according to its topology, that is how many arrow
 <table><thead><th> Examples: </th><th> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/eve.png' /> </th><th> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/composed1.png' /> </th></thead><tbody>
 <tr><td>  </td><td> <a href='http://en.wikipedia.org/wiki/Orobouros'>Orobouros</a><sup>W</sup> which has no ancestor but itself </td><td><p align='center'> 2 entrelacs linked by a regular arrow</p> </td></tr></tbody></table>
 
-<h3>Entrelacs-Atoms Correspondence</h3>
+<h3>Entrelacs-Atoms Equivalence Relation</h3>
 
 Entrelacs act as atomic pieces of information.<br>
 <ul><li>They got finished boundaries<br>
