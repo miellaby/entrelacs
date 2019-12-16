@@ -79,7 +79,7 @@ One characterizes an entrelacs according to its topology, that is how many arrow
 <table><thead><th> Examples: </th><th> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/eve.png' /> </th><th> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/composed1.png' /> </th></thead><tbody>
 <tr><td>  </td><td> <a href='http://en.wikipedia.org/wiki/Orobouros'>Orobouros</a><sup>W</sup> which has no ancestor but itself </td><td><p align='center'> 2 entrelacs linked by a regular arrow</p> </td></tr></tbody></table>
 
-<h3>Entrelacs-Atoms Equivalence Relation</h3>
+<h3>Entrelacs-Atoms Bijection (<i>mapping</i>)</h3>
 
 Entrelacs act as atomic pieces of information.<br>
 <ul><li>They got finished boundaries<br>
@@ -87,7 +87,7 @@ Entrelacs act as atomic pieces of information.<br>
 </li><li>But one can <b>enumerate</b> them<br>
 </li><li>They are no reason to discern its inner component. For example, Yin and Yang are not discernible from each other (what's true for one is true for the other). One may see such an entrelacs as a unique arrow.</li></ul>
 
-To conclude, <i>entrelacs</i> are equivalent in all respects to <b>atoms</b> like those found in <a href='http://en.wikipedia.org/wiki/S-expression'>S-expression</a><sup>W</sup>.<br>
+To conclude, <i>entrelacs</i> are assimiable in all respects to <b>atoms</b> like those found in <a href='http://en.wikipedia.org/wiki/S-expression'>S-expression</a><sup>W</sup>.<br>
 <br>
 <h2>Practical considerations</h2>
 
@@ -119,7 +119,7 @@ From a theoretical perspective, <i>arrows</i> are the only building blocks neede
 <br>
 However, a realist system should handle raw data -like binary strings- as well.<br>
 <br>
-Thanks to the <a href='AtomEntrelacEquivalency.md'>Entrelacs-Atoms Correspondence</a>, this doesn't deny the initial paradigm as <i>data</i> eventually correspond to arrows.<br>
+Thanks to the <a href='AtomEntrelacEquivalency.md'>Entrelacs-Atoms One-To-One Correspondence</a>, this doesn't deny the initial paradigm as <i>data</i> eventually correspond to arrows.<br>
 <br>
 <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/bin1.png' align='right' />
 
@@ -132,21 +132,25 @@ For instance, when assimilating the "hello world" character string, an arrow bas
 
 <h2>Orthogonal persistence</h2>
 
-A practical arrow-based system should ensure the <a href='http://en.wikipedia.org/wiki/Orthogonal_persistence'>orthogonal persistence</a><sup>W</sup> of arrows. It means that neither programs nor users are concerned by information persistence. The management of RAM, disks, caches, pages, and all the related garbage collection mechanisms should be totally transparent.<br>
+A practical arrow-based system should ensure the <a href='http://en.wikipedia.org/wiki/Orthogonal_persistence'>orthogonal persistence</a><sup>W</sup> of arrows. It means that neither programs nor users are concerned by information persistence. The management of RAM or disks including caching, pagingn and garbage collection should be totally transparent.<br>
 <br>
 <h2>Knowledge representation with arrows</h2>
 
-To get useful information structures with arrows, one may adapt many classical meta-models or even invent new ones. See ArrowModeling for further readings.<br>
+To build useful information structures with arrows, classical meta-models may be adapted, especially trees and lists. However new meta-models may be explored. See ArrowModeling for further readings.<br>
 <br>
-<h2>Similarity with existing concepts</h2>
+<h2>Credits where it's due</h2>
 
-Arrows are somewhat similar to <a href='http://en.wikipedia.org/wiki/Cons'>cons cells</a><sup>W</sup>, especially "hons" obtained by <a href='http://en.wikipedia.org/wiki/Hash_consing'>"hash consing"</a><sup>W</sup>. A definition of "hons" is given by the documentation of  <a href='http://www.cs.utexas.edu/~moore/acl2/current/HONS.html'>the ACL2 system</a>.<br>
+Arrows are similar to <a href='http://en.wikipedia.org/wiki/Cons'>cons cells</a><sup>W</sup>, especially "hons" obtained by <a href='http://en.wikipedia.org/wiki/Hash_consing'>"hash consing"</a><sup>W</sup>. A definition of "hons" is given by the documentation of  <a href='http://www.cs.utexas.edu/~moore/acl2/current/HONS.html'>the ACL2 system</a>.<br>
 <br>
-All in all, the Entrelacs manifesto proposal simply consists in performing system-wide <i>hash consing</i>, combined with transparent persistence and indexation.<br>
+All in all, the Entrelacs manifesto proposal simply consists in performing <i>hash consing</i> at the operating system level, combined with <i>orthogonal persistence</i> and systematic connectivy indexes building.<br>
 <br>
-The only invention of this paradigm might be that one considers non reducible systems of equations as materials to "bootstrap" the information system. For example the equation<br>
-<i>x = x x</i> defines "Orobouros" while the equations system { <i>x = y . y & y = x . x & x != y</i> } defines "Yin-Yang".<br>
+For the sake of purity, this proposal adds that non irreducible reentrant systems of arrow definitions -in other words, unresolvable equations- may actually act as atoms to "bootstrap" an information system.
+
+For example the equation <i>x = x x</i> defines "Orobouros" while the equations system { <i>x = y . y & y = x . x & x != y</i> } defines "Yin-Yang". Both of these defintions, despite being based on free variables, might been used as atoms to define more complex arrows, like the regular arrow from "Orobouros" to "Yin-Yang".
+
+<h3>Lambda Calculus</h3
+The Arrows paradigm may also been seen as the systematic hashing of alpha-equivalent "lambda calculus" terms so to map them onto storage. For this purpose, Alpha-equivalence of reentrant structures is used as an equivalence relation so to identify entrelacs. These reentrant lambda expressions are turned into constants so to build up dictionnaries and more complex knowledge structures.<br>
 <br>
-It's like the grammar of "lambda calculus" without free variables as one may use lambda abstractions as constants and alpha-equivalence to check constant equality.<br>
+- Orobouros (λx.(x x))
 <br>
 This approach is motivated by the desire to merge relationships and nodes into a single concept. It leads to design a system where information is homogeneous and "scale-invariant" on the "meta" complexity scale.
