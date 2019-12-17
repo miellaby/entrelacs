@@ -139,18 +139,27 @@ A practical arrow-based system should ensure the <a href='http://en.wikipedia.or
 To build useful information structures with arrows, classical meta-models may be adapted, especially trees and lists. However new meta-models may be explored. See ArrowModeling for further readings.<br>
 <br>
 <h2>Credits where it's due</h2>
-
+<h3>Arrows as Hons</h3>
 Arrows are similar to <a href='http://en.wikipedia.org/wiki/Cons'>cons cells</a><sup>W</sup>, especially "hons" obtained by <a href='http://en.wikipedia.org/wiki/Hash_consing'>"hash consing"</a><sup>W</sup>. A definition of "hons" is given by the documentation of  <a href='http://www.cs.utexas.edu/~moore/acl2/current/HONS.html'>the ACL2 system</a>.<br>
 <br>
 All in all, the Entrelacs manifesto proposal simply consists in performing <i>hash consing</i> at the operating system level, combined with <i>orthogonal persistence</i> and systematic connectivy indexes building.<br>
 <br>
-For the sake of purity, this proposal adds that non irreducible reentrant systems of arrow definitions -in other words, unresolvable equations- may actually act as atoms to "bootstrap" an information system.
+<h3>Arrows as equations in Abstract Algebra</h3>
 
-For example the equation { <i>x = x . x</i> ] defines "Orobouros" while the equations system { <i>x = y . y & y = x . x & x != y</i> } defines "Yin-Yang". Both of these defintions, despite being based on free variables, might been used as atoms to define more complex arrows, like the regular arrow from "Orobouros" to "Yin-Yang".
+Arrows definitions might been seen as systems of equations defined within a non-associative non-commutative non-unital but unipotent <i>magma</i>.  Alpha-equivalent classes of self-defined equation systems are called entrelacs and are used as atoms so to "bootstrap" a knowledge representation system.
 
-<h3>Lambda Calculus</h3
-The Arrows paradigm may also been seen as the systematic hashing of alpha-equivalent "lambda calculus" terms so to map them onto storage. For this purpose, Alpha-equivalence of reentrant structures is used as an equivalence relation so to identify entrelacs. These reentrant lambda expressions are turned into constants so to build up dictionnaries and more complex knowledge structures.<br>
+For example, let's say the equation { <i>x = x.x</i> } defines "Orobouros" and the equations system { <i>x = y.y ; y = x.x</i> } defines "Yin-Yang". Despite these equation systems have no meaning yet,  they may still be used to define more complex arrows, like the compound arrow from "Orobouros" to "Yin-Yang". In other words, they may act as atoms so to build up dictionnaries and represent any form of knowledge.
+
+<h3>A store of lambda Calculus expressions with no free variable</h3>
+
+The Arrows paradigm may also been seen as the systematic hashing and storage of untyped "lambda calculus" terms excempt of free variables. The paradigm doesn't define how compution takes place if any. But alpha-equivalence is used as an equivalence relation so to identify recognizable lambda expressions -that is entrelacs- and use them as constants so to build more complex structures of knowledge.<br>
+<ul>
+ <li> Orobouros : (λx.(x x)) </li>
+ <li> Yin-Yang : λx.λy.(λx.(y y) λy.(x x)) </li>
+ <li> (Orobouros → Yin-Yang) : (λz.(z z) λx.λy.(λx.(y y) λy.(x x))) </li>
+ </ul>
 <br>
-- Orobouros (λx.(x x))
-<br>
-This approach is motivated by the desire to merge relationships and nodes into a single concept. It leads to design a system where information is homogeneous and "scale-invariant" on the "meta" complexity scale.
+So classes of alpha-equivalent expressions without free terms are stored as building block to build up more complex expressions, and no actual dictionnary entry is needed. It aims to make information homogeneous and "scale-invariant" on a <i>meta-scale</i>.
+
+<h2>Notation</h2>
+A way to avoid the use of parentheses when writing atom-based arrows is to use prefix notation, so that ((a → ( b → c )) → d) is written "→ → a → b c d". Postfix notation produces "a b c → → d →". Furthermore, by using the slash character as a prefix and the dot character as an atom seperator, one gets serialized strings which look likes <i>generalized pathes</i> ; ((a→(b→c))→d) becomes "//a/b.c.d" (prefix notation).  "/some/path/to/file.extension" corresponds to (some→(path→(to→(file→extension))).
