@@ -162,4 +162,8 @@ The Arrows paradigm may also been seen as the systematic hashing and storage of 
 So classes of alpha-equivalent expressions without free terms are stored as building block to build up more complex expressions, and no actual dictionnary entry is needed. It aims to make information homogeneous and "scale-invariant" on a <i>meta-scale</i>.
 
 <h2>Notation</h2>
-A way to avoid the use of parentheses when writing atom-based arrows is to use prefix notation, so that ((a → ( b → c )) → d) is written "→ → a → b c d". Postfix notation produces "a b c → → d →". Furthermore, by using the slash character as a prefix and the dot character as an atom seperator, one gets serialized strings which look likes <i>generalized pathes</i> ; ((a→(b→c))→d) becomes "//a/b.c.d" (prefix notation).  "/some/path/to/file.extension" corresponds to (some→(path→(to→(file→extension))).
+A way to avoid the use of parentheses when writing atom-based arrows is to use prefix notation, so that ((a → ( b → c )) → d) is written "→ → a → b c d". Postfix notation produces "a b c → → d →".<p>
+Furthermore, by using the slash character as a prefix and the dot character as an atom seperator, one gets serialized strings which look likes <i>generalized pathes</i>.<p>
+ 
+ (a→(b→c))→d) becomes "//a/b.c.d" (prefix notation).<p>
+ "/some/path/to/file.extension" corresponds to (some→(path→(to→(file→extension))).
