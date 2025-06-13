@@ -1,10 +1,13 @@
+# Project
 
-<h1>project</h1>
-<img width='194' align='right' height='150' src='pictures/arrows-logo-2.png'>
-<b>The Entrelacs project</b> consists in prototyping an <i>Entrelacs System</i> as defined by the <a href='EntrelacsManifesto.md'>Entrelacs Manifesto</a>.<br>
-<br>
-<h1>demo</h1>
-When the alpha server is up, you may try its <a href='http://entrelacs.googlecode.com/svn/trunk/web-terminal/index.html#pub'>web terminal</a>.<br>
-<br>
-<h1>FAQ</h1>
-<a href='FAQ.md'>FAQ</a>
+![Arrows Logo](pictures/arrows-logo-2.png)
+
+**The Entrelacs project** consists in prototyping an *Entrelacs System* as defined by the [Entrelacs Manifesto](EntrelacsManifesto.md).
+
+# Demo
+
+When the alpha server is up, you may try its [web terminal](web-terminal/index.html#pub).
+
+# FAQ
+
+[FAQ](FAQ.md)
