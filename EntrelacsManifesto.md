@@ -18,7 +18,7 @@ Anyone interested in this objective can freely adhere and relate their work to t
 
 More specifically, the **manifesto** makes the following claims:
 
-1. **The only paradigm in use so far to store information within computers the [box/value paradigm](BoxValueParadigm.md)...and it's a fundamental _[abstraction inversion](http://en.wikipedia.org/wiki/Abstraction_inversion)_**  
+1. **The only paradigm in use so far to store information within computers is the [box/value paradigm](BoxValueParadigm.md). Unfortunately, it's a fundamental _[abstraction inversion](http://en.wikipedia.org/wiki/Abstraction_inversion)_**  
 
 2. **The _Entrelacs Paradigm_ is the fixed abstraction for information digitalization**  
    It consists in promoting **arrows** as the **first** and **only** citizen class of the whole information system.  
