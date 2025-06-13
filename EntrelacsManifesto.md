@@ -1,34 +1,34 @@
 ### Preamble ###
 
-Applied computer sciences help improving data structures.
+Despite devising data structures, Computer Sciences have not yet put into question the fundamental _paradigm_ which governs how such data structures are mapped onto concrete
+storage spaces.
 
-However, no study has yet put into question the fundamental _paradigm_ which governs how such data structures are mapped onto concrete storage space.
-
-Consequently, **all** digital and non-digital systems up to now follow a single paradigm, derived from _Writing_. As a side effect, all these systems are more or less modeled after _graph theory_.
-
-Because the [box/value paradigm](BoxValueParadigm.md), as we'll call it here, is the only paradigm an human being is accustomed to, neither scientists nor engineers have deeply explore a true alternative.
+**All** digital and analogical systems ever designed represent knowledge in the same way,
+ a way derived from _Writing_, as we humans are accustomed to.
 
 ---
 
 # The Entrelacs manifesto #
 
-The **Entrelacs manifesto** claims one **can** and one **should** design a computer system based upon an alternate information paradigm.
+The **Entrelacs manifesto** claims one **can** and one **should** develops computing systems
+based on a new information paradigm called the _Entrelacs Paradigm_.
 
 Anyone interested in this objective can freely adhere and relate their work to this manifesto.
 
-More specifically, the **manifesto** makes the following claims:
+More specifically, this manifesto makes the following claims:
 
 1. **The only paradigm in use so far to store information within computers is the [box/value paradigm](BoxValueParadigm.md). Unfortunately, it's a fundamental _[abstraction inversion](http://en.wikipedia.org/wiki/Abstraction_inversion)_**  
 
-2. **The _Entrelacs Paradigm_ is the fixed abstraction for information digitalization**  
-   It consists in promoting **arrows** as the **first** and **only** citizen class of the whole information system.  
-   Arrows are **recursively** defined as **singletons of immutable connected ordered pair of arrows**.  
-   In this paradigm, all data structures are reimagined as constructs made out of _arrows_, up to elementary information units like _vertex_ and _values_.  
+2. **The _Entrelacs Paradigm_ is a better abstraction for information representation**  
+   It consists in promoting **arrows** as the **first** and **only** citizen class of an information system.  
+   An arrow is **recursively** defined as an **abstract-made-concrete immutable content-indexed singleton of a pair of arrows**.
+   In this paradigm, all data structures are reimagined as _arrows_ constructs, up to fundamental information units like _vertex_ and _values_.
    [Read more about the Entrelacs paradigm ...](ArrowParadigm.md)
 
 3. **It's possible to design an entirely new knowledge system designed after the _Entrelacs paradigm_**  
    as demonstrated by a simple ["pen & paper" experiment](PenAndPaperReferenceDesign.md).
 
-4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge store, known as an [_Arrow Space_](ArrowsSpace.md)** on top of existing hardware platforms.
+4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge store, known as an _[Arrow Space](ArrowsSpace.md)_** on top of existing hardware platforms.
 
-5. **Future Computing Environments that will leverage _Arrow Spaces_ will develop a whole new range of [native abilities](EntrelacsCapabilities.md).**
+5. **It's necessary to develop new Computing Environments on top of _Arrow Spaces_ as they
+will demonstrate a whole new range of [native abilities](EntrelacsCapabilities.md).**
