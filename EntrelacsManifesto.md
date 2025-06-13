@@ -1,10 +1,9 @@
 ### Preamble ###
 
-Despite devising data structures, Computer Sciences have not yet put into question the fundamental _paradigm_ which governs how such data structures are mapped onto concrete
+Despite devising data structures, Computer Sciences have not yet put into question the fundamental _paradigm_ which governs how data structures are mapped onto concrete
 storage spaces.
 
-**All** digital and analogical systems ever designed represent knowledge in the same way,
- a way derived from _Writing_, as we humans are accustomed to.
+Consequently, **all** digital and analogical systems ever designed represent knowledge in the same way, a way derived from _Writing_, as we humans are accustomed to.
 
 ---
 
@@ -17,7 +16,7 @@ Anyone interested in this objective can freely adhere and relate their work to t
 
 More specifically, this manifesto makes the following claims:
 
-1. **The only paradigm in use so far to store information within computers is the [box/value paradigm](BoxValueParadigm.md). Unfortunately, it's a fundamental _[abstraction inversion](http://en.wikipedia.org/wiki/Abstraction_inversion)_**  
+1. **The only paradigm in use so far to store information within computers is the [box/value paradigm](BoxValueParadigm.md). Unfortunately, it's a fundamental _[abstraction inversion](http://en.wikipedia.org/wiki/Abstraction_inversion)_** which hinders computer abilities.
 
 2. **The _Entrelacs Paradigm_ is a better abstraction for information representation**  
    It consists in promoting **arrows** as the **first** and **only** citizen class of an information system.  
@@ -30,5 +29,4 @@ More specifically, this manifesto makes the following claims:
 
 4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge store, known as an _[Arrow Space](ArrowsSpace.md)_** on top of existing hardware platforms.
 
-5. **It's necessary to develop new Computing Environments on top of _Arrow Spaces_ as they
-will demonstrate a whole new range of [native abilities](EntrelacsCapabilities.md).**
+5. **It's necessary to develop a new form of Computing Environment based on an _Arrow Space_, namely an _Entrelac System_,** which will demonstrate a whole new range of **[native abilities](EntrelacsCapabilities.md).**

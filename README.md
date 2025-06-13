@@ -2,8 +2,8 @@
 
 ![Arrows Logo](pictures/arrows-logo-2.png)
 
-**The Entrelacs project** consists in prototyping an *Entrelacs System*. Visit the [pages](https://miellaby.github.io/entrelacs/) for more information.
+**The Entrelacs project** consists in prototyping the very first *Entrelacs System*. Visit the project [pages](https://miellaby.github.io/entrelacs/ProjectHome) for more information.
 
 # Demo
 
-When the alpha server is up, you may try its [web terminal](https://miellaby.github.io/entrelacs/web-terminal/index.html#pub).
+When the demo server is up, you may try its [web terminal](https://miellaby.github.io/entrelacs/web-terminal/index.html#pub).
