@@ -1,5 +1,6 @@
 Entrelacs system first prototype.
-Wiki starting point: https://github.com/miellaby/entrelacs/blob/wiki/ProjectHome.md
+
+Visit <https://miellaby.github.io/entrelacs/> for more information.
 
 Code released under GPLv3 http://www.gnu.org/licenses/gpl.html
 
