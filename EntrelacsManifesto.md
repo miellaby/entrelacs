@@ -21,12 +21,12 @@ More specifically, this manifesto makes the following claims:
 2. **The _Entrelacs Paradigm_ is a better abstraction for information representation**  
    It consists in promoting **arrows** as the **first** and **only** citizen class of an information system.  
    An arrow is **recursively** defined as an **abstract-made-concrete immutable content-indexed singleton of a pair of arrows**.
-   In this paradigm, all data structures are reimagined as _arrows_ constructs, up to fundamental information units like _vertex_ and _values_.
+   In this paradigm, all data structures are reimagined as _arrows_, up to fundamental information units like _vertex_ and _values_.
    [Read more about the Entrelacs paradigm ...](ArrowParadigm.md)
 
 3. **It's possible to design an entirely new knowledge system designed after the _Entrelacs paradigm_**  
    as demonstrated by a simple ["pen & paper" experiment](PenAndPaperReferenceDesign.md).
 
-4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge store, known as an _[Arrow Space](ArrowsSpace.md)_** on top of existing hardware platforms.
+4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge system, known as an _[Arrow Space](ArrowsSpace.md)_** on top of existing hardware platforms.
 
 5. **It's necessary to develop a new form of Computing Environment based on an _Arrow Space_, namely an _Entrelac System_,** which will demonstrate a whole new range of **[native abilities](EntrelacsCapabilities.md).**
