@@ -2,7 +2,7 @@
 
 The way current computer systems manage information is shaped by the [Box/Value paradigm](BoxValueParadigm.md) which consists in representing information as graphs of boxed data values.
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/versus.png' />
+<img src='pictures/versus.png' />
 
 The [Entrelacs Manifesto](http://code.google.com/p/entrelacs/) proposes to build up a brand new computing stack based upon a radically different paradigm introduced hereafter: the _**Arrow paradigm**_.
 
@@ -16,7 +16,7 @@ The [Entrelacs Manifesto](http://code.google.com/p/entrelacs/) proposes to build
   * But raw data can still be considered as some sorts of arrows, typically re-entrant self-defining arrow constructs named _entrelacs_.
 
 ## Arrow ##
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/arrows.png' align='right'>
+<img src='pictures/arrows.png' align='right'>
 
 <blockquote><h3>a pair</h3>
 An <i>arrow</i> is basically a pair of arrows. <b>Arrow ends are not nodes but other arrows</b>. <a href='http://en.wikipedia.org/wiki/Graph_theory'>Graph theory</a><sup>W</sup> doesn't cover arrow made constructs.</blockquote>
@@ -48,7 +48,7 @@ Syn. canonical, normed, hashed.</blockquote>
 
 <h2>Wordlist</h2>
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/arrow1.png' align='right' />
+<img src='pictures/arrow1.png' align='right' />
 
 Each arrow is an oriented pair of arrows.<br>
 <ul><li>The first arrow is the <i>tail</i>.<br>
@@ -76,7 +76,7 @@ One characterizes an entrelacs according to its topology, that is how many arrow
 <br>
 <br>
 <br>
-<table><thead><th> Examples: </th><th> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/eve.png' /> </th><th> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/composed1.png' /> </th></thead><tbody>
+<table><thead><th> Examples: </th><th> <img src='pictures/eve.png' /> </th><th> <img src='pictures/composed1.png' /> </th></thead><tbody>
 <tr><td>  </td><td> <a href='http://en.wikipedia.org/wiki/Orobouros'>Orobouros</a><sup>W</sup> which has no ancestor but itself </td><td><p align='center'> 2 entrelacs linked by a regular arrow</p> </td></tr></tbody></table>
 
 <h3>Entrelacs-Atoms Bijection (<i>mapping</i>)</h3>
@@ -107,7 +107,7 @@ But, for practicability, one represents the system top-level knowledge as a muta
 <br>
 A rooted arrow is decorated with a "root" flag. It means that this arrow is considered "true" in the top-level context of the considered system.<br>
 <br>
-<p align='middle'><img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/rooted1.png' /><br /><u>some rooted arrow.</u><br />(check mark notation)</p>
+<p align='middle'><img src='pictures/rooted1.png' /><br /><u>some rooted arrow.</u><br />(check mark notation)</p>
 
 Arrow uniqueness induces that an arrows may be often simultaneously rooted and an ancestor of rooted arrows.<br>
 <br>
@@ -121,7 +121,7 @@ However, a realist system should handle raw data -like binary strings- as well.<
 <br>
 Thanks to the <a href='AtomEntrelacEquivalency.md'>Entrelacs-Atoms One-To-One Correspondence</a>, this doesn't deny the initial paradigm as <i>data</i> eventually correspond to arrows.<br>
 <br>
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/bin1.png' align='right' />
+<img src='pictures/bin1.png' align='right' />
 
 More generally, an arrow based system may be extended to take into consideration advanced building blocks like <i>tuples</i> or <i>bags</i> <b>as long as</b> these complex objects are handled exactly in the same way as their equivalent arrow constructs, especially in terms of uniqueness, immutability, and connectivity.<br>
 <br>

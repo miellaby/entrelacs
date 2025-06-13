@@ -2,7 +2,7 @@ Please find herein an overview of an [Entrelacs System](EntrelacsSystem.md) arch
 
 <h4>Arrows space</h4>
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/mem0.png' align='right'>
+<img src='pictures/mem0.png' align='right'>
 
 A major component of such a system is the <a href='ArrowsSpace.md'>Arrows Space</a>.<br>
 <br>

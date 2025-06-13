@@ -7,7 +7,7 @@ Maybe one day, an AS will be designed as a dedicated piece of hardware. If so, i
 
 But for the moment, we introduce the AS as a a piece of software leveraging on traditional volatile and mass memory hardware.
 
-<p align='middle'><img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/mem0.png' /><br />AS artistic view.<br>Arrows are basically stored as pairs of pointers<br>
+<p align='middle'><img src='pictures/mem0.png' /><br />AS artistic view.<br>Arrows are basically stored as pairs of pointers<br>
 <br>
 <h2>AS requirements summary</h2>
 One requires from an AS<br>

@@ -28,13 +28,13 @@ The entity used as a context depends on the paradigm in use. Here is an overview
 ## Object Oriented ##
 The context is the object that one knows information about. One roots arrows between the object arrow and from-property-to-value arrows.
 
-| ![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/OO.png](https://github.com/miellaby/entrelacs/blob/master/doc/pictures/OO.png) | Context = Object |
+| ![pictures/OO.png](pictures/OO.png) | Context = Object |
 |:--------------------------------------------------------------------------------------------------------------------------------|:-----------------|
 
 ## Functional Oriented ##
 The context is a function that gathers all known statements about the value of this function when applied to various objects. One consequently roots arrows between a function  arrow and from-object-to-value arrows.
 
-| ![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/FnO.png]https://github.com/miellaby/entrelacs/blob/master/doc/pictures/FnO.png) | Context = Function |
+| ![pictures/FnO.png]pictures/FnO.png) | Context = Function |
 |:----------------------------------------------------------------------------------------------------------------------------------|:-------------------|
 
 ## Neuronal network ##
@@ -43,20 +43,20 @@ One may still choose to not contextualize statements. It leads to rooting differ
 
 Retrieving stored information consists in propagating activation states from several input arrows. The most activated output arrow forms the network's response.
 
-| ![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/NeuralO.png](https://github.com/miellaby/entrelacs/blob/master/doc/pictures/NeuralO.png)   | Neuron model |
+| ![pictures/NeuralO.png](pictures/NeuralO.png)   | Neuron model |
 |:--------------------------------------------------------------------------------------------------------------------------------------------|:-------------|
 
 ### Warning ###
 
 Neuron oriented model could be the most efficient knowledge representation strategy in terms of storage usage. But the resulting network can quickly become ambiguous when non-orthogonal statements are mixed together.
 
-![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Confusion.png](https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Confusion.png)
+![pictures/Confusion.png](pictures/Confusion.png)
 
 ## Tagsonomy ##
 
 Tagsonomies work in the same way as neuronal networks.  They have the same strength and weakness.
 
-| ![https://github.com/miellaby/entrelacs/blob/master/doc/pictures/TagAndBundle.png](https://github.com/miellaby/entrelacs/blob/master/doc/pictures/TagAndBundle.png)   | It's easy to implement a full featured tagsonomy with arrows |
+| ![pictures/TagAndBundle.png](pictures/TagAndBundle.png)   | It's easy to implement a full featured tagsonomy with arrows |
 |:------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------------------|
 
 ## Meta tagsonomy / unambiguous neuronal model ##

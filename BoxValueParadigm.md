@@ -8,7 +8,7 @@ For example, let's consider a set of statistics organized in a [tree](http://en.
 
 ## The box/value framework ##
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/box_paradigm.png' align='right' />
+<img src='pictures/box_paradigm.png' align='right' />
 
 The usual practice consists in dividing the storage space into boxes so to put values into. Boxes are often nested into each others, so that a given box and its value can be comprehended as a gathering of smaller boxes. Also one generally use some values to identify and locate existing boxes in the storage space. They are _pointers_, _indices_, _names_, or any other parts of box identifiers.
 
@@ -20,7 +20,7 @@ By following this paradigm, we are typically going to map our tree into boxes, e
 
 ## box/value paradigm = Writing ##
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Writing.png' align='right' />
+<img src='pictures/Writing.png' align='right' />
 
 But why doing so? Why programmers and scientists have so rarely looked for alternatives?
 
@@ -36,7 +36,7 @@ All in all, _Writing_ is the typical implementation of the box/value paradigm. T
 
 ## box/value paradigm = graph theory ##
 
-> <img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/Graphe.png' align='right' />
+> <img src='pictures/Graphe.png' align='right' />
 
 The box/value paradigm is slightly related to [graph theory](http://en.wikipedia.org/wiki/Glossary_of_graph_theory)<sup>W</sup>.
 

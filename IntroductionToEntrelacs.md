@@ -1,11 +1,11 @@
 ### stupid, stupid computers! ###
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/car.png' align='left' />
+<img src='pictures/car.png' align='left' />
 
 Have you ever found software technologies disappointing? I consider on my own they are what mechanical engineering would have been if nobody had ever invented the wheel.
 
 What's wrong? Mainly the way computers are used to store information: the _value in a box_ principle.
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/box.png' align='right' />
+<img src='pictures/box.png' align='right' />
 
 The  _value in a box_ principle is  what human beings are accustomed to, because it's a straightforward adaptation of this ancient technology named "writing", which also consists in putting signs to expected locations on some adequate support. That's why this principle is deeply buried in people's mind, forming a mental lock which prevents programmers and theoreticians imagining something else.
 
@@ -17,7 +17,7 @@ The EntrelacsSystem proposes to get ride of this weak "value in a box" way of th
 
 ### arrow, what is it? ###
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/arrows1.png' align='right' />
+<img src='pictures/arrows1.png' align='right' />
 In short, an arrow is... a pair of arrows.
 
 Coders may think of it as a structure of 2 pointers linking such structures (C), or as a _con_ of cons (Lisp), or as a record in a twice reentrant relation table (SQL), or as an URI returning a pair of URI (web), etc.
@@ -26,7 +26,7 @@ The arrow twice recursive definition is self-sufficient. One says the underlying
 
 That's what makes arrow structures different. Usual models don't fit them. For example, one might consider arrows from language theory point of view and describe them as a formal grammar without terminal symbols. And so?
 
-<img src='https://github.com/miellaby/entrelacs/blob/master/doc/pictures/eve.png' align='right' />
+<img src='pictures/eve.png' align='right' />
 
 ### how can one get rid of vertices? ###
 
