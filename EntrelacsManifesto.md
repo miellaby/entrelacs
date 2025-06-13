@@ -18,23 +18,17 @@ Anyone interested in this objective can freely adhere and relate their work to t
 
 More specifically, the **manifesto** makes the following claims:
 
-1. **The current paradigm in use regarding information storage within computers is an _abstraction inversion_**  
-   [wiki def](http://en.wikipedia.org/wiki/Abstraction_inversion)  
-   [Read more about the box/value paradigm ...](BoxValueParadigm.md)
+1. **The only paradigm in use so far to store information within computers the [box/value paradigm](BoxValueParadigm.md)...and it's a fundamental _[abstraction inversion](http://en.wikipedia.org/wiki/Abstraction_inversion)_**  
 
-2. **Fixing this abstraction inversion leads to the _Entrelacs Paradigm_**  
-   It consists in promoting **arrows** to be the **first** and **only** citizen class of the whole information system.  
+2. **The _Entrelacs Paradigm_ is the fixed abstraction for information digitalization**  
+   It consists in promoting **arrows** as the **first** and **only** citizen class of the whole information system.  
    Arrows are **recursively** defined as **singletons of immutable connected ordered pair of arrows**.  
-   In this paradigm, old concepts, like _vertex_ or _values_, are considered as various constructs made out of _arrows_.  
+   In this paradigm, all data structures are reimagined as constructs made out of _arrows_, up to elementary information units like _vertex_ and _values_.  
    [Read more about the Entrelacs paradigm ...](ArrowParadigm.md)
 
-3. **An information storage system designed after the _Entrelacs paradigm_ is feasible**  
-   as demonstrated by a simple experiment with paper and pencil.  
-   [Read more about the "pen & paper" reference design ...](PenAndPaperReferenceDesign.md)
+3. **It's possible to design an entirely new knowledge system designed after the _Entrelacs paradigm_**  
+   as demonstrated by a simple ["pen & paper" experiment](PenAndPaperReferenceDesign.md).
 
-4. **Coding a _software implementation_ of such a storage system is possible**  
-   with reasonable performances on existing hardware platforms.  
-   [Read more about arrow spaces ...](ArrowsSpace.md)
+4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge store, known as an [_Arrow Space_](ArrowsSpace.md)** on top of existing hardware platforms.
 
-5. **Computing environments on top of _arrow spaces_ will feature a whole new range of native abilities.**  
-   [Read more about native abilities of "Entrelacs Systems"...](EntrelacsCapabilities.md)
+5. **Future Computing Environments that will leverage _Arrow Spaces_ will develop a whole new range of [native abilities](EntrelacsCapabilities.md).**
