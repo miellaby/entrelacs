@@ -4,9 +4,9 @@ Visit <https://miellaby.github.io/entrelacs/> for more information.
 
 Code released under GPLv3 <http://www.gnu.org/licenses/gpl.html>
 
-Wiki
-____
-<https://github.com/miellaby/entrelacs/blob/wiki/ProjectHome.md>
+Project Pages:
+_____________
+<https://miellaby.github.io/entrelacs/>
 
 Install & test:
 ______________
@@ -17,8 +17,8 @@ Additional configuration:
 ________________________
 - See options in servers.c
 
-Exe files :
-________________
+Binary files:
+____________
 bin/libentrelacs.a ; # static library for the entrelacs "core"
 bin/libentrelacs.so ; # dynamic library
 bin/entrelacsd ; # entrelacs HTTP server
