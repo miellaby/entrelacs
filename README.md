@@ -1,8 +1,8 @@
-# Project
+# The Entrelacs Project
 
 ![Arrows Logo](pictures/arrows-logo-2.png)
 
-**The Entrelacs project** consists in prototyping an *Entrelacs System* as defined by the [Entrelacs Manifesto](EntrelacsManifesto.md).
+**The Entrelacs Project** consists in prototyping the very first *Entrelacs System* as defined by the [Entrelacs Manifesto](EntrelacsManifesto.md).
 
 ## Project Repository
 
