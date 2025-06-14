@@ -1,19 +1,23 @@
-# Introduction #
+# The Entrelacs Abstract Machine
+
+## Introduction
 
 The second major component of an Entrelacs System beside the ArrowsSpace is the _Entrelacs Abstract Machine_. It's a software machine which evals programs directly stored as arrows constructs.
 
 Programs are defined according to the [Entrelacs Language](EntrelacsLanguage.md) (EL). This language is designed so that there is no difference between, source code, CST (Concrete Syntax Tree), and AST (Abstract Syntax Tree). The objective is to simplify meta-programming and persistent reflexivity.
 
 The machine state itself consists in an arrow construct which may be read and modified by the running program. A programs may consequently handle all the underlying machine state components like:
-  * environments,
-  * continuations,
-  * closures,
-  * evaluated expression
-  * etc.
+
+* environments,
+* continuations,
+* closures,
+* evaluated expression
+* etc.
 
 It obviously implies that **the machine state itself takes part of the language definition**.
 
-## Sources and credits ##
+## Sources and credits
+
 The _Entrelacs Machine_ described hereafter is largely inspired by the
 ["\_CaEK\_" abstract machine of Flanagan et al. (1993)](http://users.info.unicaen.fr/~karczma/TEACH/Doc/compi_cont.pdf).
 
@@ -23,24 +27,26 @@ In short, it's a very basic (not typed) functional language. The only thing to k
 
 Textual source code is reserved for communication purpose. The current prototype should be able to assimilate arrow in the form of s-expression or URI (see [EntrelacsServer](EntrelacsServer.md) API).
 
-## Extensions to the very strict A(CS)_language ##_
+## Extensions to the very strict A(CS) _language_
 
 The EL language brings few modifications to the _A(CS)_ language. Most of these experiments are not documented here. See source code.
 
 These extensions include:
-  * Arrow casting and escaping. Any arrow may be seen as a variable symbol, or an expression, or a literal.
-  * ~~Experimental: The possibility to eval expressions which are not in A-normal form.~~
-  * Unbound variables are left as is. Evaluating "hello" returns "hello" if not a bound variable.
-  * Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound.
-  * System continuations
-  * the "@M" keyword is bound to the current machine state
-  * a run keyword allows to replace the current machine state. TODO.
 
-## Restrictions ##
+* Arrow casting and escaping. Any arrow may be seen as a variable symbol, or an expression, or a literal.
+* ~~Experimental: The possibility to eval expressions which are not in A-normal form.~~
+* Unbound variables are left as is. Evaluating "hello" returns "hello" if not a bound variable.
+* Application on something other than a closure is left as is. ("hello" "world") returns ("hello" "world") if "hello" is not bound to a closure and "world" not bound.
+* System continuations
+* the "@M" keyword is bound to the current machine state
+* a run keyword allows to replace the current machine state. TODO.
+
+## Restrictions
 
 Functions are one-variable only.
 
-# The Language #
+# The Language
+
 ```
 x ::= any entrelacs arrow (Eve, tags, blobs)
 a ::= x | (a a) // any arrow
@@ -71,9 +77,9 @@ p ::= e
 
 Missing: operators and system continuations.
 
-# The Machine #
+# The Machine
 
-## Trivial expressions ##
+## Trivial expressions
 
 ```
 <arrow> ::= any arrow
@@ -84,7 +90,8 @@ Missing: operators and system continuations.
 <trivial> ::= <entrelacs> | <lambda-expression> | <escape> | <var>
 ```
 
-## Programs ##
+## Programs
+
 ```
 <binding> ::= ("let" ((<variable> <trivial>) <serious>))
 <application-binding> ::= ("let" ((<variable> <application>) <serious>))
@@ -95,7 +102,7 @@ Missing: operators and system continuations.
 <program> ::= <expression>
 ```
 
-## Environment and closure ##
+## Environment and closure
 
 ```
 <variable> ::= <arrow>
@@ -107,7 +114,7 @@ Missing: operators and system continuations.
 <closure> ::= ((<variable> <expression>) <environment>)
 ```
 
-## The Continuation chain, aka stack ##
+## The Continuation chain, aka stack
 
 ```
 <frame> ::= (<variable> (<expression> <environment>))
@@ -121,27 +128,28 @@ Missing: operators and system continuations.
     | (<frame> <continuation-chain>)
 ```
 
-
-## The Machine State ##
+## The Machine State
 
 ```
 <machine-state> := (<program> (<environment> <continuation-chain>))
 ```
 
-## System functions and variables ##
+## System functions and variables
+
 Uncompleted list
-  * head
-  * tail
-  * childrenOf
-  * root
-  * unroot
-  * isRooted
-  * run : replace the current machine state with the provided one.
-  * "@M" : pseudo variable; return current machine state
 
-## Machine dynamics ##
+* head
+* tail
+* childrenOf
+* root
+* unroot
+* isRooted
+* run : replace the current machine state with the provided one.
+* "@M" : pseudo variable; return current machine state
 
-### _resolve_ function ###
+## Machine dynamics
+
+### _resolve_ function
 
 ```
   Arrow resolve(Arrow trivial, Arrow environment)
@@ -164,7 +172,8 @@ let resolveVariableIfBound(x, e) =
      | (tail head) -> resolveVariable(x, head) /* recursion */
 ```
 
-### _isTrivial_ function ###
+### _isTrivial_ function
+
 Pseudo-C algo:
 ```
    Boolean isTrivial(Arrow expression) = {
@@ -176,7 +185,7 @@ Pseudo-C algo:
    }
 ```
 
-### _eval_ function ###
+### _eval_ function
 
 Pseudo-C algo:
 ```
@@ -193,7 +202,7 @@ Arrow eval(program) {
 
 ```
 
-### _transition_ function ###
+### _transition_ function
 
 Pseudo-C algo:
 ```
@@ -296,30 +305,32 @@ Arrow transition(Arrow M) {
 }
 ```
 
-### Differences with actual code ###
+### Differences with actual code
 
 Last update: 02/2012
 
 The actual machine also features
-  * (eval p)
-    * It stacks an "eval" continuation so that:
-    * the machine evaluates the "eval parameter" as en EL expression.
-    * the machine then evaluates the result as an EL program.
-    * p=(eval s)
-      * ==> M=(s (e (eval k)))
-    * p=(let ((x (eval ss) s))
-      * ==> M=(ss (e (eval ((x (s e)) k))))
-    * p=(s (eval ss))
-      * ==> M=(ss (e (eval ((p ((s (var p)) e)) k))))
-  * ~~Few language extensions are rewritten with "eval"~~ bad idea
-  * Direct load of binding
-    * (let ((Eve binding) exp)) means that  _binding_ is directly put into environment (as a var->value arrow)
-    * p=(load (s0 s1)) <==> p=(let ((Eve s0) s1)))
-  * ~~p == (let ((x (v0 v1)) s)) ==> pp = (let ((p v0) (let ((x ((var p) v1)) s))))~~ no
-  * a lambdax construct.
-    * defines special closure : C == ("lambdax" CC) with CC a regular closure
-    * special closure where application argument is not evaluated.
-    * Allows to make constructs like "let", "if".
 
-## A normalization ##
+* (eval p)
+  * It stacks an "eval" continuation so that:
+  * the machine evaluates the "eval parameter" as en EL expression.
+  * the machine then evaluates the result as an EL program.
+  * p=(eval s)
+    * ==> M=(s (e (eval k)))
+  * p=(let ((x (eval ss) s))
+    * ==> M=(ss (e (eval ((x (s e)) k))))
+  * p=(s (eval ss))
+    * ==> M=(ss (e (eval ((p ((s (var p)) e)) k))))
+* ~~Few language extensions are rewritten with "eval"~~ bad idea
+* Direct load of binding
+  * (let ((Eve binding) exp)) means that  _binding_ is directly put into environment (as a var->value arrow)
+  * p=(load (s0 s1)) <==> p=(let ((Eve s0) s1)))
+* ~~p == (let ((x (v0 v1)) s)) ==> pp = (let ((p v0) (let ((x ((var p) v1)) s))))~~ no
+* a lambdax construct.
+  * defines special closure : C == ("lambdax" CC) with CC a regular closure
+  * special closure where application argument is not evaluated.
+  * Allows to make constructs like "let", "if".
+
+## A normalization
+
 An higher functional language might be interpreted by performing A-normalization and various optimization of code to obtain the corresponding optimized A-normal form to be evaluated by the Abstract Machine above.
