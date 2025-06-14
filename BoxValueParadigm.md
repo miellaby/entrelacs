@@ -10,12 +10,16 @@ Adopting such a paradigm invovles selecting a **meta data structure** to store d
 
 ## The only Data Paradigm ever used
 
-![Box/Value Paradigm Illustration](pictures/box_paradigm.png) So far, abstract data structures are typically stored by dividing storage space into **boxes** that hold **values**. A value in a box is often a serie of smaller boxes, resulting in nested structures. When the content of a box is not a further subdivision of space, its value may actually point another box elsewhere. Such values are commonly referred to as _pointers_, _indices_, _keys_, etc.
+![Box/Value Paradigm Illustration](pictures/box_paradigm.png)
+
+So far, abstract data structures are typically stored by dividing storage space into **boxes** that hold **values**. A value in a box is often a serie of smaller boxes, resulting in nested structures. When the content of a box is not a further subdivision of space, its value may actually point another box elsewhere. Such values are commonly referred to as _pointers_, _indices_, _keys_, etc.
 
 This approach defines the _Box/Value Paradigm_, which uses a single _meta-data structure_ to represent all forms of digital information, such as graph vertices and edges, database tables and records, program objects and pointers, and files and folders. All information is serialized as nested boxes of binary values and identifiers.
 
 ## The Box/Value Paradigm is inherited from Writing
-![Writing Illustration](pictures/Writing.png) Why do we continue to represent information this way, and why don't programmers question it?
+![Writing Illustration](pictures/Writing.png)
+
+Why do we continue to represent information this way, and why don't programmers question it?
 
 This may be because _Speech_ and _Writing_ shape how we think.
 
@@ -27,7 +31,8 @@ In essence, _Writing_ serves as the reference design for the Box/Value Paradigm,
 
 ## The Graph Theory: The Mathematical Model of the Box/Value Paradigm
 
-> ![Graph Illustration](pictures/Graphe.png)
+![Graph Illustration](pictures/Graphe.png)
+
 The Box/Value paradigm is also the foundation of [Graph Theory](http://en.wikipedia.org/wiki/Glossary_of_graph_theory)<sup>W</sup>
 
 In a graph, there are two types of elements: _vertices_ and _edges_. A vertex cannot be an edge, and an edge cannot be a vertex. Similarly, in the Box/Value Paradigm, boxes act as _vertices_ and values act as _edges_. A value can point to a box, much like an edge points to a vertex, but it cannot represent the concept of "a specific value within a specific box," just as an edge cannot act as the vertex of another edge.
