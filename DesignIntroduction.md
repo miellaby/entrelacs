@@ -1,21 +1,31 @@
+# Entrelacs System Architecture
+
 Please find herein an overview of an [Entrelacs System](EntrelacsSystem.md) architecture.
 
-<h4>Arrow Space</h4>
+## Arrow Space
 
-<img src='pictures/mem0.png' align='right'>
+![Arrow Space](pictures/mem0.png)
 
-A major component of such a system is the <a href='ArrowsSpace.md'>Arrow Space</a>.<br>
-<br>
-It's simply a device to store arrows.<br>
-<br>
-<h4>Primary machine and language</h4>
-The system also provides a default evaluation machine, namely the <a href='EntrelacsAbstractMachine.md'>Entrelacs abstract machine</a>, which evaluates programs made in the <a href='EntrelacsLanguage.md'>Entrelacs Language</a>. Naturally, both programs and machine states are made out of arrows.<br>
-<br>
-<h4>System boundaries</h4>
+A major component of such a system is the [Arrow Space](ArrowsSpace.md).
 
-The currently developed prototype stands as a <a href='EntrelacsServer.md'>software server</a> on top of a GNU/Linux hosting system.<br>
-<br>
-This server publishes A COMET/REST API for networked interaction. A C API is also planed to allow native code execution within the system. See the EntrelacsPrototypeArchitecture for details.<br>
-<br>
-<h3>Other questions?</h3>
-See the <a href='FAQ.md'>FAQ</a>.
+It's simply a device to store arrows.
+
+## Primary Machine and Language
+
+The system also provides a default evaluation machine, namely the [Entrelacs Abstract Machine](EntrelacsAbstractMachine.md), that evaluates programs made in the [Entrelacs Language](EntrelacsLanguage.md).
+
+Naturally, both programs and machine states are made out of arrows.
+
+## System Boundaries
+
+The currently developed prototype stands as a [software server](EntrelacsServer.md) on top of a GNU/Linux hosting system.
+
+This server publishes a REST/HTTP API.
+
+It is also planned to allow injecting and executing native code within the system, leveraging an internal C-like API.
+
+See the [Entrelacs Prototype Architecture](EntrelacsPrototypeArchitecture.md) for details.
+
+## Other Questions?
+
+Read the [FAQ](FAQ.md).
