@@ -27,6 +27,6 @@ More specifically, this manifesto makes the following claims:
 3. **It's possible to design an entirely new knowledge system based on the _Entrelacs Paradigm_,**  
    as demonstrated by a simple ["pen & paper" experiment](PenAndPaperReferenceDesign.md).
 
-4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge system, known as an _[Arrow Space](ArrowsSpace.md)_,** on top of existing hardware platforms.
+4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge system, known as an _[Arrows Space](ArrowsSpace.md)_,** on top of existing hardware platforms.
 
-5. **It's necessary to develop a new form of Computing Environment based on an _Arrow Space_, namely an _Entrelac System_,** which will demonstrate a whole new range of **[native abilities](EntrelacsCapabilities.md).**
+5. **It's necessary to develop a new form of Computing Environment based on an _Arrows Space_, namely an _Entrelac System_,** which will demonstrate a whole new range of **[native abilities](EntrelacsCapabilities.md).**

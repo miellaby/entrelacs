@@ -100,4 +100,4 @@ As a whole, the AS is a single persistent memory device merging all the memory l
 
 ## Anticipated Prototype
 
-All the strategies introduced above are applied to the currently designed [Arrow Space prototype](ArrowsSpacePrototype.md). See this page for more details.
+All the strategies introduced above are applied to the currently designed [Arrows Space Prototype](ArrowsSpacePrototype.md). See this page for more details.
