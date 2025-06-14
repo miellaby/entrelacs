@@ -17,31 +17,31 @@ For now, we introduce the AS as a piece of software leveraging traditional hardw
 An AS must meet the following requirements:
 
 - **Orthogonal persistence**  
-  > The AS must leverage all persistent and volatile physical memory levels and flatten them into a single homogeneous space.  
-  Neither developer nor end users should need to worry about whether data resides in RAM or on disk; the AS abstracts this complexity.
+  - The AS must leverage all persistent and volatile physical memory levels and flatten them into a single homogeneous space.  
+  - Neither developer nor end users should need to worry about whether data resides in RAM or on disk; the AS abstracts this complexity.
 
 - **De-duplication**  
-  > The AS must ensure that each abstract arrow is stored at most once in the whole storage space.  
-  If one stores the same arrow at two different times, the AS recognizes this and avoids duplication.
+  - The AS must ensure that each abstract arrow is stored at most once in the whole storage space.
+  - If one stores the same arrow at two different times, the AS recognizes this and avoids duplication.
 
 - **Full connectivity**  
-  > The AS must store enough connectivity data to allow efficient retrieval of the ends and the _children_ of any arrow.  
-  When queried for a abstract arrow, the AS must quickly return its corresponding representation within the system, as well as any arrows derived from it.
+  - The AS must store enough connectivity data to allow efficient retrieval of the ends and the _children_ of any arrow.
+  - When queried for a abstract arrow, the AS must quickly return its corresponding representation within the system, as well as any arrows derived from it.
 
 - **Garbage collection relative to a _root_ referential**  
   - The AS must manage the _root_ boolean property of every stored arrow. The set of _rooted_ arrows forms a unique absolute referential.  
-  - The AS must preserve rooted arrows and their ancestors from deletion, while arrows that are neither rooted nor ancestors of a rooted arrow must be transparently removed from the storage.  
-  If an arrow becomes unreachable from any roots, it should be quickly deleted to free up space.
+  - The AS must preserve rooted arrows and their ancestors from deletion, while arrows that are neither rooted nor ancestors of a rooted arrow must be transparently removed from the storage.
+  - If an arrow becomes unreachable from any roots, it should be quickly deleted to free up space.
 
 - **Binary strings and other complex objects native support**  
   - The AS may allow raw data (binary strings) native storage.  
   - The AS should allow tuples (ordered sets of arrows) native storage.  
-  - Such objects must be treated like their equivalent arrow-made constructs in terms of uniqueness, immutability, and connectivity.  
-  _Example:_ A picture may be stored in the AS and the AS will process it like an arrow, ensuring it is unique and immutable.
+  - Such objects must be treated like their equivalent arrow-made constructs in terms of uniqueness, immutability, and connectivity.
+  _Example:_ A picture may be stored in the AS like an arrow would, by ensuring its uniqueness and immutability.
 
 ## API Overview
 
-The `ArrowSpaceInterface` provides a high-level abstraction for interacting with the AS. It allows developers to:
+The [ArrowSpaceInterface](ArrowSpaceInterface.md) provides a high-level abstraction for interacting with the AS. It allows developers to:
 
 - Create and store arrows.
 - Retrieve arrows by their identifiers.
@@ -100,4 +100,4 @@ As a whole, the AS is a single persistent memory device merging all the memory l
 
 ## Anticipated Prototype
 
-All the strategies introduced above are applied to the currently designed [AS prototype](ArrowsSpacePrototype.md). See this page for more details.
+All the strategies introduced above are applied to the currently designed [Arrow Space prototype](ArrowsSpacePrototype.md). See this page for more details.
