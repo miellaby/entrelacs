@@ -1,9 +1,13 @@
-# Code #
-```
-class Arrow { // proxy design pattern, stuff that matters is in the AS. Deleting such an object does not delete the "real" arrow.
+# Code
+
+This is pseudo-code to illustrate which operators an [Arrow Space](ArrowsSpace.md) might provide as a software service. This is only a thought experiment, not actual code.
+
+```c++
+
+class Arrow { // Proxy. Not the "real" arrow.
 
    private:
-      Arrow(); // no way, use AS factory methods
+      Arrow();
       FullyDefinedArrow ref; // private reference to the real arrow
       
    public:
@@ -77,7 +81,7 @@ class AS { // Arrow Space
     void       root(Arrow, Boolean); // setter
     Boolean isRooted(Arrow); // getter
 
-    // unbuilding
+    // destructuring
     Arrow tail(Arrow); // or return the arrow itself if atomistish
     Arrow head(Arrow); // or return the arrow itself if atomistish
     BinaryString getRawDataOf(Arrow); // or return NULL for a non-atomistish arrow

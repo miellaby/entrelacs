@@ -1,10 +1,10 @@
 Please find herein an overview of an [Entrelacs System](EntrelacsSystem.md) architecture.
 
-<h4>Arrows space</h4>
+<h4>Arrow Space</h4>
 
 <img src='pictures/mem0.png' align='right'>
 
-A major component of such a system is the <a href='ArrowsSpace.md'>Arrows Space</a>.<br>
+A major component of such a system is the <a href='ArrowsSpace.md'>Arrow Space</a>.<br>
 <br>
 It's simply a device to store arrows.<br>
 <br>

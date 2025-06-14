@@ -1,10 +1,10 @@
-# Arrows Space
+# Arrow Space
 
 ## Introduction
 
-An _"Arrows Space"_ (AS) is a store for arrows structures involved in the [Entrelacs Paradigm](ArrowParadigm.md). It's the key component of an [Entrelacs System](DesignIntroduction.md).
+An _"Arrow Space"_ (AS) is a store for arrows structures involved in the [Entrelacs Paradigm](ArrowParadigm.md). It's the key component of an [Entrelacs System](DesignIntroduction.md).
 
-Please note one may simulate an Arrows Space with [pen and paper](PenAndPaperReferenceDesign.md).
+Please note one may simulate an Arrow Space with [pen and paper](PenAndPaperReferenceDesign.md).
 
 One day, we may invent a new piece of hardware working as an AS. If so, it won't necessarily consist of a bank of data buckets like all other data storage so far.
 
@@ -52,7 +52,7 @@ The [ArrowSpaceInterface](ArrowSpaceInterface.md) provides a high-level abstract
 
 ### Prevent Duplicates During Arrows Assimilation
 
-The _Arrows Space_ is populated by converting data into arrows. This conversion process is called _assimilation_. It occurs:
+The _Arrow Space_ is populated by converting data into arrows. This conversion process is called _assimilation_. It occurs:
 
 - When data—like user inputs—come from the outside.
 - When some internal computation produces new arrows.
@@ -100,4 +100,4 @@ As a whole, the AS is a single persistent memory device merging all the memory l
 
 ## Anticipated Prototype
 
-All the strategies introduced above are applied to the currently designed [Arrows Space Prototype](ArrowsSpacePrototype.md). See this page for more details.
+All the strategies introduced above are applied to the currently designed [Arrow Space Prototype](ArrowsSpacePrototype.md). See this page for more details.
