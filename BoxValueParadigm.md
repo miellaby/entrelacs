@@ -1,142 +1,140 @@
-## Introduction to the problem ##
+# The Box/Value Paradigm
 
-A large part of computer sciences consists in studying  [data structures](http://en.wikipedia.org/wiki/Data_structure)<sup>W</sup>.
+## What's a Data Paradigm?
 
-But how do we map data structures onto a physical support in first place?
+A large part of computer sciences consists in studying [Data Structures](http://en.wikipedia.org/wiki/Data_structure)^(W).
 
-For example, let's consider a set of statistics organized in a [tree](http://en.wikipedia.org/wiki/Tree_(data_structure))<sup>W</sup>. How are we going to put this structure onto a computer RAM and drives, or even a piece of paper?
+But how do we map _data structures_ onto a physical support in first place?
 
-## The box/value framework ##
+For example, let's consider a set of stats data organized as a [tree](http://en.wikipedia.org/wiki/Tree_(data_structure))^(W). How are we going to put such a tree onto computer volatile and persistent storage spaces, or even onto a single piece of paper?
 
-<img src='pictures/box_paradigm.png' align='right' />
+Answering this question forms a _Data Paradigm_.
+The answer consists in a _meta_ data structure.
 
-The usual practice consists in dividing the storage space into boxes so to put values into. Boxes are often nested into each others, so that a given box and its value can be comprehended as a gathering of smaller boxes. Also one generally use some values to identify and locate existing boxes in the storage space. They are _pointers_, _indices_, _names_, or any other parts of box identifiers.
+## The only Data Paradigm ever used so far
 
-One will call this habit the _box/value framework_, or the _box/value paradigm_. We could have named it the _box/value meta-structure_ as well, because it deals with the canonical structure used to represent every other structure components: graph vertices and edges, table records and indices, etc.
+![Box/Value Paradigm Illustration](pictures/box_paradigm.png)
 
-Within a computer, values are binary representation of natural numbers. Every piece of information can eventually be mapped to some natural numbers. The box/value paradigm puts the stress on these values, that one usually calls **data**.
+So far, one stores an abstract data structure by dividing a storage space into boxes where to put values into. A value in a box is more than often a serie of smaller boxes, so that boxes are nested into each others. When a box content is not an additional subdivision of space, it may be an identifier used to locate another box somewhere else. These values are named _pointers_, _indices_, _keys_, ... and are often combined with each others to make bigger identifiers.
 
-By following this paradigm, we are typically going to map our tree into boxes, every box containing one tree node data and some numbers referring to child node boxes.
+This approach forms the _Box/Value Paradigm_. It leverages a single _meta data structure_ to represent all forms of digitized information: graph vertices and edges, base tables and records, program objects and pointers, folders and files, etc.
 
-## box/value paradigm = Writing ##
+The Box/Value paradigm transforms every piece of information into serialized nested boxes of binary objects. These lasting unstructured values -which are nothing else that natural numbers- are eventually what we users usually calls **data**.
 
-<img src='pictures/Writing.png' align='right' />
+## The Box/Value Paradigm is inherited from Writing
 
-But why doing so? Why programmers and scientists have so rarely looked for alternatives?
+![Writing Illustration](pictures/Writing.png)
 
-One may presume it's due to how _Speech_ and _Writing_ have forged our mind.
+But why are we doing so? Why programmers don't question this way of reprenting information.
 
-_Writing_ is all about building up a hierarchy of nested boxes -sentences, words...- starting from signs, like letters or ideograms.
+One may presume this is due to how _Speech_ and _Writing_ bind our thoughts.
 
-See, textual units correspond to physical representation of concepts. And as information is serialized into sentences, word repetition is the norm.
+_Writing_ is all about putting information into a hierarchy of nested boxes, like sentences containings words, up to elementary signs, like letters and ideograms.
 
-> Luckily, some constructs reduce redundancy by pointing other parts of a speech and referring to previously introduced concepts; They act like _pointers_ and _indices_ of computer data structures.
+As a concept is represented by a serie of textual components, storing many pieces of information about the same concept implies repeting the same serie many times.
 
-All in all, _Writing_ is the typical implementation of the box/value paradigm. This process is so deeply rooted in our mind that it forms a mental lock making side-thinking excessively difficult.
+Fortunately, we also use textual elements like pronouns to reduce redundancy by refering other concepts in a speech; They act like _pointers_ and _indices_ in computers. But all in all, _Writing_ is inherently a very redundant way to store information. It turns a single abstract concept like the number 42 into many physical representations.
 
-## box/value paradigm = graph theory ##
+_Writing_ is actually the reference design of the Box/Value Paradigm. This is why it is so deeply rooted in our mind.
 
-> <img src='pictures/Graphe.png' align='right' />
+## The Mathematical Model of the Box/Value Paradigm: the Graph Theory
 
-The box/value paradigm is slightly related to [graph theory](http://en.wikipedia.org/wiki/Glossary_of_graph_theory)<sup>W</sup>.
+> ![Graph Illustration](pictures/Graphe.png)
 
-A _graph_ consists in two types of elements, namely _vertices_ and _edges_. So does the box/value paradigm: boxes are _vertices_ and values act as _edges_ linking these boxes to each others.
+The Box/Value paradigm also shapes [Graph Theory](http://en.wikipedia.org/wiki/Glossary_of_graph_theory)^(W).
 
-To say it clearly: **as long as an information model relays on a _graph_, it's the implementation of the _box/value_ paradigm.**
+A _graph_ is composed of two types of elements, namely _vertices_ and _edges_. An edge can't be a vertex. A vertex can't be an edge. And so works the Box/Value Paradigm: Values and Boxes are actually two distinct concepts. A given value in a given box may point another box, like an edge pointing a vertex, but it can't point the concept of _a given value in a given box_, in the same way than an edge can't be the vertex of another edge.
 
-So every time a new technology improves the box/value system, such as [triple stores](http://en.wikipedia.org/wiki/Triple_store), one must keep in mind that there's no paradigm shift. These technical improvements eventually don't solve most of the issues introduced herein.
+When a technology like [triple stores](http://en.wikipedia.org/wiki/Triple_store) improves the default Box/Value representation process by replacing nested bounded boxes with editable and indexed graphes, it may fix a few flaws of the Box/Value Paradigm, but it doesn't change the underlying paradigm. So, most of the issues introduced herein can't be fixed by a graph-based information model, whatever its complexity.
 
-## Issues with the box/value paradigm ##
+To say it clearly: **as long as an information model relays on a _graph_ structure or its variants, it's still a manifestation of the _Box/Value_ paradigm.**
 
-  * **Redundancy**
+## Issues with the box/value paradigm
 
-> The box/value paradigm leads to map the same atomic concept again on many places. And recursively, any gathering of concepts will also tend to be repeated ad nauseam.
+### Redundancy
 
-> For example, if our data tree contains several references to the natural number 2, this number will be repeated as is in as many boxes. Tree branches based on the same couple of natural numbers will also be repeated again and again.
+> The box/value paradigm tends to project the same abtract concept to many representations located on many places. Basic relations between concepts are repeated in turn, and so are more complex structures, even if they all correspond to the same piece of information.
+>
+> For example, if our data tree contains several occurences to the natural number 2, this number will be repeated as it is in many boxes. Identical sub-trees made with the same set of natural numbers will likely be repeated as the tree grows despite  being a single mathematical entity.
+>
+> Our normative way of thing make us believe that such a redundancy is unavoidable. And yet it's actually not the case. Speech is time based and can't loop or cross-cut itself. But nothing forces us to copy several representations of the same concept onto a physical space. Duplicating representations of atomic or composite abstract concepts is a design flaw which complexifies information leveraging.
+>
+> The issue is not so about room sparing. It's all about all the additional useless work one has to do to manage all these potential representations of the same concept to be able to reason about it. Deduping information is the burden of all advanced computer programs, and it's always a very complex and very resource-costly piece of software.
+>
+> **Impact** You can't ask for your computer when and how it makes use of a given PI number approximation, or some English word it knows. Local Search engines are a very partial solution to this problem.
 
-> Our habits make us think that such a redundancy is necessary. Actually, it's not. Quite the contrary, dispatching many representations of the same concept among the storage space prevents software to exhibit a lot of useful behaviors.
+### Useless Compartmentalization
 
-> The issue is not so about room sparing. It's all about all these jobs that one can't ask for a computer without designing first a very complex and very resource-costly piece of software.
+> A regular operating system allows the end user to browse the first levels of the structure of nested boxes, like files and folders, network connections, and running applications and processes. However, the overal sytem is blind to the inner structure of smaller boxes, which depend on the application which manages them.
+>
+> Thus, neither a human user nor a software agent can fully browse and operate the whole information in a given computer. A given program can only _cross-cut_ pieces of information stored into the boxes it is aware of.
+>
+> And so, the Box/Value paradigm eriges arbitrary frontiers within the information space, preventing the creation of new information and useful behaviors
+>
+> **Impact** A media manager will have access to user files in a couple of well-known folders but will be blind to media existing in other applications, like those attachments managed by messaging agents. No software can even access to the pictures currently displayed by running applications. Screenshoting is a very partial solution to this problem.
 
-> <u>Concrete example</u>: You can't ask for your computer when and how it makes use of a given PI number approximation, or some English word it knows. Search engines included in modern desktop environments nowadays form a very incomplete solution to this problem.
+### Useless Duality
 
-  * **Compartmentalization**
+> The box/value paradigm is based upon a fundamental duality of information. There are _Boxes_ on one side, and _values_ on the other side.
+>
+> This duality contaminates every aspect of the computer world. It shapes the relationship between computers and their users. It eventualy curbs the usefulness of computers.
+>
+> **Impact**: application developpers on one side, end-users on the other side. Maybe fine for the industry; but is it always fine to you?
 
-> The box/value paradigm leads to dispatch information into separate heterogeneous storage spaces.
-
-> A regular operating system gives tools to browse the structure of the biggest boxes it is responsible for, typically file systems, but not the inner structure of these boxes, which depend on the applications which manage them.
-
-> Thus, neither a human or software agent can fully browse and operate the content of a computer. One can't neither build new information nor produce new behaviors by _cross-cutting_ information contained in all these closed boxes.
-
-> <u>Concrete example</u>: A simple picture manager will manage user pictures in well-known folders. But it won't get access to pictures embedded in other applications, like those stored or archived by other picture managers or mail agents. Above all, no software today can simply access to RAM-based pictures currently displayed by opened applications, whatever the access rights given by its user.
-
-  * **Duality**
-
-> The box/value paradigm is fundamentally dual.
-
-> _Boxes_ + _vertices_  on one side, _values_ + _edges_ on the other side.
-
-
-> This fundamental duality propagates itself everywhere (see also the data / meta-data paragraph hereafter). It eventually shapes the relationships between computers and their users, by oddly separating programmers from regular users.
-
-> This separation is so common that it happens to feel natural and necessary. And yet, its first effect is to severally curb computers abilities.
-
-> <u>Concrete example</u>: programmers on one side, and end-users on the other side. Maybe fine for the software industry; but is it always fine to you?
-
-  * **Rigidity**
+### Rigidity
 
 > As values and boxes are most of the time gathered into larger boxes, the box/value way has a negative impact on information plasticity.
-
+>
 > Bringing changes to information continuously obliges to enlarge existing boxes, and shift data to get room. It leads programs to be excessively complex due to costly [serialization and deserialization](http://en.wikipedia.org/wiki/Serialization)<sup>W</sup> processes which aim to get back a bit of this lost plasticity.
-
+>
 > Despite these huge and costly efforts in software development, most information that resides in a computer -the programs themselves in first place- can't be modified by "John Doe" user to better fit his needs.
+>
+> **Impact**: you can't modify your preferred application in any other aspect than those anticipated by its developers. **Open Source** doesn't help much, even with good coding skills.
 
-> <u>Concrete example</u>: you can't modify your preferred application in any other aspect than those anticipated by its developers. **Access to source codes** won't even help much!
-
-  * **Opacity**
+### Opacity
 
 > With the box/value paradigm, one gives meaning to data by considering the boxes they belong to. For a given value at a given location, one must take into consideration its location relatively to its parent box, which is itself positioned in its grandparent box, and so on up to the underlying material.
-
+>
 > As said before, boxes boundaries are generally indistinguishable from the outside. So in most cases, one can't even characterize the upper box containing a given value at a random place. This opacity prevents to recover the hierarchy of contexts needed to find the meaning to a found value.
+>
+> **Impact** Software can't be studied and modified without original source code. Also, data buried in user files can't be browsed without the specially created programs which manages these data. Extracting information from _raw_ data out of any context is called data _forensics_ and is more considered as a kind of hacking.
 
-> <u>Concrete example</u>: Software can't be studied and modified without original source code. Also, data buried in user files can't be browsed without the specially created programs which manages these data. Extracting information from _raw_ data out of any context is called data _forensics_ and is more considered as a kind of hacking.
-
-  * **Broken information retrieval**
+### Broken information retrieval
 
 > A box/value based information storage only guarantees that information may be browsed in one direction: from the highest boxes to the lowest values. It can't be simply browsed in the opposite direction. A program typically can't fetch the references up to a known box.
+>
+> **Impact** In most file systems, there is no simple way to know which directories links to a given file. But What's worse is how most file references in programs consist in regular strings -file paths- that are lost in code and data with no way to efficiently retrieve and change them.
 
-> <u>Concrete example</u> In most file systems, there is no simple way to know which directories links to a given file. But What's worse is how most file references in programs consist in regular strings -file paths- that are lost in code and data with no way to efficiently retrieve and change them.
-
-  * **No meta**.
+### No Meta Linking
 
 > With the box/value paradigm, a box content is either a reference to a box -though there is generally no way to know it- or not. So one easily represents either the concept of "such a value" or "such a box".
-
+>
 > But this way to store information  can't simply represent a concept like _"such a value in such a box"_, or _"such a box in such a box"_ while such concepts are valid and useful pieces of information that humans can easily understand and handle.
-
+>
 > That's why existing computer based systems are unable to handle its own knowledge at an higher _level of abstraction_, i.e. at a _meta level_. It might be the biggest issue of the box/value paradigm.
-
+>
 > Sure, many popular applications claim they manage _meta-data_ about various things. But keep in mind that these applications only consider **one** level of "meta". They are notably incapable of managing meta-data attached to these meta-data.
+>
+> **Impact** Regular systems don't provide simple ways to store meta-data about meta-data, like the time when access policies changed for a given file.
 
-> <u>Concrete example</u>: A regular file system doesn't give a simple way to store the time when file access policies change (meta-data about meta-data).
+## Weak and Fragile
 
-  * **Weak and breakable**.
-
-> Most box/value based storages doesn't offer simple generalized ways to link existing boxes with each others.
-
+> Most box/value based storages doesn't provide simple generalized ways to link existing boxes with each others.
+>
 > Sure one may create a box including a reference to another box, but this reference will be broken or outdated if the box moves within the storage space or if its content evolves. In such conditions, no software can ensure satisfying system level consistency.
+>
+> **Impact** Media Managers attach information to media by indexing their database by file pathes. These tenuous links are easily broken by renaming or moving original files. In regular systems, program can't obtain strong and reliable references to existing files so to attach information on them from the outside. Once files are moved, renamed, deleted or modified in place, these bindings got wrong.
 
-> <u>Concrete example</u>Most photo suites attach information to pictures by setting up a database indexed by file paths. These tenuous links are broken by renaming or moving original picture files. In regular operating systems, program can't obtain strong and reliable references to existing files so to attach information on them from the outside. Once files are moved, renamed, deleted or modified in place, these bindings got wrong.
-
-  * **Lack of relativity**
+## Absolutism
 
 > Within a box/value storage space, some boxes may store other boxes references as values. This architectural pattern leads to hierarchies of contexts embedded into each others -like folder trees-. In other words, it leads to store graphs of graphs, that is _meta-graphs_.
-
+>
 > This is the usual way to implement user profiles, accounts, workspaces, and such. That's also the typical solution to store _meta-data_ referring existing contents.
-
+>
 > But in the same way than graph theory doesn't allow edges ends to be other edges, the box/value framework provides no way to represent a concept like "such a value in such a box".
-
+>
 > So while data may be defined relatively to some context, the meaning of such a data considering such a context can't be stated and devised relatively to a higher level of abstraction.
-
+>
 > At the very end, the computer behavior turns out to be mostly _hardcoded_ because there is no way to store different interpretations of existing pieces of informations.
 
 ArticleCompleteness: 70%
