@@ -1,6 +1,11 @@
-# intensional definition
+# Arrow Modeling
 
-A straightforward way to store knowledge with arrows consists in intensionally defining a function from referrer to referee with links like:
+This page explores how to represent knowledge in an [Arrow Space](ArrowSpace.md)
+according to the [Arrow Paradygm](ArrowParadygm.md).
+
+## Intensional Definition
+
+A straightforward way to store knowledge with arrows consists in intensionally defining a mapping from referrer to referee with relations like:
 
 ```
   (color,red)
@@ -8,9 +13,11 @@ A straightforward way to store knowledge with arrows consists in intensionally d
   (height,3m)
 ```
 
-# contextualizing
+## contextualizing
 
-Directly rooting statements would mix unrelated information in the same top-level context. It's better rooting arrows which refers such statement arrows by a context entity.
+Directly rooting statements would mix unrelated information in the same top-level context.
+
+It's better rooting arrows which refers such statement arrows by a context entity.
 
 For example:
 
@@ -26,23 +33,23 @@ Those contextualizing arrows can be contextualized in including contexts as well
 
 The entity used as a context depends on the paradigm in use. Here is an overview of the possible choices for a context.
 
-# Overview
+## Overview
 
-## Object Oriented
+### Object Oriented
 
 The context is the object that one knows information about. One roots arrows between the object arrow and from-property-to-value arrows.
 
 | ![pictures/OO.png](pictures/OO.png) | Context = Object |
 |:--------------------------------------------------------------------------------------------------------------------------------|:-----------------|
 
-## Functional Oriented
+### Functional Oriented
 
 The context is a function that gathers all known statements about the value of this function when applied to various objects. One consequently roots arrows between a function  arrow and from-object-to-value arrows.
 
 | ![pictures/FnO.png](pictures/FnO.png) | Context = Function |
 |:----------------------------------------------------------------------------------------------------------------------------------|:-------------------|
 
-## Neuronal Network
+### Neuronal Network
 
 One may still choose to not contextualize statements. It leads to rooting different kinds of statement in the same top-level context: property->value, objet->value and value->value relationships.
 
@@ -51,7 +58,7 @@ Retrieving stored information consists in propagating activation states from sev
 | ![pictures/NeuralO.png](pictures/NeuralO.png)   | Neuron model |
 |:--------------------------------------------------------------------------------------------------------------------------------------------|:-------------|
 
-### Warning
+#### Warning
 
 Neuron oriented model could be the most efficient knowledge representation strategy in terms of storage usage. But the resulting network can quickly become ambiguous when non-orthogonal statements are mixed together.
 
