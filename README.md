@@ -4,6 +4,8 @@
 
 **The Entrelacs Project** consists in prototyping the very first *Entrelacs System* as defined by the [Entrelacs Manifesto](EntrelacsManifesto.md).
 
+Read the [Introduction to the Entrelacs Project](IntroductionToEntrelacs.md) to know more.
+
 ## Project Repository
 
 <https://github.com/miellaby/entrelacs>

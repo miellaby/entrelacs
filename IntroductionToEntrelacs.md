@@ -1,4 +1,4 @@
-# An other introduction to the Entrelacs Project
+# An introduction to the Entrelacs Project
 
 ## The _square wheel_ of NTI
 
@@ -12,7 +12,7 @@ The _square wheel_ of software is the [Box/Value Paradigm](BoxValueParadigm), a 
 
 All technologies so far use the same method to store information. They put data to some locations on some physical support, and use part of these data as identifiers to link these locations together: file systems, data bases, programming languages, data structures, office documents, ... even modern structured data files like XML or RDF, they all follow the same approach.
 
-This approach unfortunately dispatches the same piece of information in a myriad of duplicates, and it is also unable to properly represent meta-information. One knows how to put a value in a box, but the relation "this value within that box" can't be stored neither as a box nor as a value.
+This approach unfortunately dispatches the same piece of information in a myriad of duplicates, and is also unable to properly represent meta-information. One knows how to put a value in a box, but the relation "this value within that box" can't be stored neither as a box nor as a value.
 
 These limitations prevent computers to abstract and reason on their acquired knowledge beyhond surface level. They makes computers dumber than they should.
 
