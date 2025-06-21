@@ -188,9 +188,48 @@ So classes of alpha-equivalent expressions without free terms are stored as buil
 
 ### Notation
 
-A way to avoid the use of parentheses when writing atom-based arrows is to use prefix notation, so that `((a → ( b → c )) → d)` is written `→ → a → b c d`. Postfix notation produces `a b c → → d →`.
+A way to avoid the use of parentheses when writing atom-based arrows is to use prefix notation, so that `((a → ( b → c )) → d)` is written `→ → a → b c d`.
 
-Furthermore, by using the slash character as a prefix and the dot character as an atom separator, one gets serialized strings which look like _generalized paths_.
+By using the slash character instead of → and the dot character as a separator between atoms, one gets a serialized string of a text-based arrow definition.
 
-* `(a→(b→c))→d)` becomes `//a/b.c.d` (prefix notation).
-* `/some/path/to/file.extension` corresponds to `(some→(path→(to→(file→extension)))`.
+* `hello` is the UTF-8 1-byte binary string "hello"
+* `/a.b` is `(a → b)` the arrow linking "a" to "b"
+* `/c/a.b` is `(c → (a → b))` the arrow linking "c" to the arrow a→b
+* `//a.b.c` is `((a → b) →  c)` the arrow linking the arrow a→b with "c"
+* `/a/b.c` is `(a → (b →  c))` the arrow linking "a" to the arrow linking b→c
+* `/a//b.c.d` is `(a → ((b → c) → d))`
+* `//a/b.c.d` is `((a → (b → c)) → d)`
+* etc.
+
+The notation might be enhanced to tolerate missing and extra separators.
+
+* uncomplete: An uncomplete slash expression (missing dot) falls back to the last parsed arrow so far.
+* extra: Unexpected dot-separed atoms or additional slash expressions forms a right leaning tree structure with the last parsed arrow/atom.
+* tail: Extra empty slashes replaces the last parsed arrow _a_ with the arrow from _a_ to Ouroboros (∞). If no arrow, it's Ouroboros itself.
+* empty: the empty string is a valid atom which is not Ouroboros.
+
+**Some equivalencies**
+
+* '.' = '/.' = ('' → '') (extra)
+* '..' = '//..' (extra)
+* '/' = ∞ (tail)
+* '//' = ∞ (tail)
+* '/a' = 'a' (uncomplete)
+* 'a/' = (a → ∞) (tail)
+* '.a' = '/.a' (extra)
+* 'a.' = '/a.' (extra)
+* 'a.b' is '/a.b' (extra)
+* 'a.b.c' is equivalent to '//a.b.c' (extra)
+* 'a/b.c' is equivalent to '/a/b.c' (extra)
+* '/a.b/c.d' is equivalent to '//a.b/c.d' (extra)
+* 'a/b' is equivalent to '/a.b' (extra but uncomplete)
+* 'a/b/c' is equivalent to '/a/b.c' (extra then uncomplete)
+
+By itself, this textual representation is roughly compatible with _file pathes_.
+
+* `/some/path/to/file.txt.gz` being reinterpreted as `(some → (path → (to → ((file → txt) → gz)))`
+
+To distinguish a root path from a relative path, starts with /.
+
+* '/a.b' is a relative path
+* '/./a.b' id an absolute path
