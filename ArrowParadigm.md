@@ -113,23 +113,28 @@ Arrows' uniqueness is enforced during assimilation by checking that no previous 
 
 ### Rooting
 
-From a theoretical perspective, the whole knowledge of a given system at a given time might be defined as a single arrow _S_. _S_'s definition would include all other known arrows. It would be the only movable "variable" of the computer system.
+In cybernetic, a computer displays a behavior function that can modify itself through introspection (observation of its own state/behavior) and intercession (modification of its own mechanisms or state).
 
-But, for practicability, one represents the system's top-level knowledge as a mutable set of arrows, namely the _rooted arrows_.
+Within an [Entrelacs System](EntrelacsSystem.md), the whole knowledge might be defined as a single arrow _S_ that would typically represent the system's _behavior function_.
 
-A rooted arrow is decorated with a "root" flag. It means that this arrow is considered "true" in the top-level context of the considered system.
+_S_ would be the only variable to change over time from an arrow to another. _S_ would be a super complex arrow based on all the arrows the system knows of at a given time.
 
+But, for practicability, one will rather consider the system's knowledge at any time as a subset of all mathematically definable arrows, namely the _rooted arrows_.
+
+A rooted arrow is an arrow which is considered "true" in the top-level context of the considered system.
+
+On a [drawing](PenAndPaperReferenDesign.md), rooted arrows might be identified with a _root mark_.
 ![rooted1](pictures/rooted1.png)  
 _some rooted arrow._  
-(check mark notation)
+(check out the mark notation)
 
 Arrow uniqueness induces that an arrow may often be simultaneously rooted and an ancestor of rooted arrows.
 
-Thus, a system-level garbage collector must reclaim storage space by removing physical representations of arrows which are neither a _rooted_ arrow nor an _ancestor_ of any other rooted arrow.
+Thus, a system-level _garbage collector_ may periodically reclaim storage space by removing arrows which are neither a _rooted arrow_ nor some _ancestor_ of a rooted arrow.
 
 ### Handling of complex objects
 
-From a theoretical perspective, _arrows_ are the only building blocks needed to represent information.
+From a theoretical perspective, _arrows_ are the only fundational building blocks needed to represent information.
 
 However, a realistic system should handle raw data - like binary strings - as well.
 

@@ -1,19 +1,21 @@
-The ArrowsCache is caching cells from the arrows bank into RAM. It's a major part of the ArrowsSpace.
+# Arrow Cache
+The _Arrow Cache_ is in charge of caching cells from the underlying persistent memory (_disk_) into RAM. It's a major part of the [Arrow Space](ArrowsSpace.md)
 
-The ArrowsCache consists in an array of cell-containers (also called level 1 cells).
+The disk is subdivided into cells, called _level 0 cells_ where each cell may store an arrow or connectivity data. The ArrowsCache consists in an array of cells, also called _level 1 cells_.
 
-Each level 1 cell stores:
-  * the whole content of a corresponding level 0 cell,
-  * the level 0 cell address,
+Each level 1 cell is able to store:
+  * a level 0 cell,
+  * the address of this level 0 cell,
   * a modified state bit
 
-On cache miss, the system must copy a level 0 cell into a level 1 cell. The level 1 address simply corresponds to the level 0 address modulo the cache size.
+On cache miss, the system copy the targeted level 0 cell into a level 1 cell. The level 1 address simply corresponds to the level 0 address modulo the cache size.
 
-If the level 1 cell already contains a **modified** cell, then one faces a problematic conflict. That's why a second very short array of cells is defined. This second array stores every modified cell which has to be replaced by an other cell in the main array. This second array is managed according to the OpenAdressing strategy.
+If the level 1 cell already contains a **modified** cell, then one moves this cell in a a way shorter  array of edited cells. This second array is itself an hash table handling collisions through [Open Addressing](OpenAdressing.md).
 
-Furthermore, all changes in level 1 cell contents are logged with rollback data (i.e. cell contents before modification).
+Also not that all unsaved changes are also logged in a write-ahead log (WAL) in the manner of data-base engines.
 
-On commit:
+On a regular basis, changes are committed to disk:
+
   * Firstly, the change log is recorded to disk.
-  * Then, all these changes are applied into disk.
-  * Finally, the change log is cleared from disk. The second RAM array and the modified bits of the first RAM array are cleared as well.
+  * Then, all the changes are applied in the array of persistent cells.
+  * Finally, the change log is cleared from disk. The volatile array is updated to clear _modified_ bits.
