@@ -35,6 +35,7 @@ The syntax is extended with additional rules to parse uncomplete expressions.
   * `/a/b.c.d` is `a → ((b → c) → d)`
 
 * _extra pair_ : An additional slash also completes the last slash expression by linking it to the following expression.
+  * `` = the empty string (empty rule)
   * `a/b.c` is `a → (b → c)`
   * `/a.b/c.d` is `(a → b) → (c → d)`
   * `/a/b.c/d.e` is `a → ((b → c) → (d → e))`
@@ -47,55 +48,40 @@ The syntax is extended with additional rules to parse uncomplete expressions.
   * `/` is `0`
   * `/a/` is `a → 0`
   * `/a.b/` is `(a → b) → 0`
-  * `/a/b/` is `a → (b → 0))`
+  * `/a.b//` is `((a → b) → 0) → 0`
+  * `/a/b/` is `a → (b → 0)`
 
 * _uncomplete_: A slash expression with only one parent arrow is an arrow from the arrow to the empty string.
+  * `/a` is `a → ''`
   * `//a.b` is `(a → b) → ''`
-  * `/a/b/c/d` is `a → (b → (c → (d → )))`
+  * `/a.b/c` is `(a → b) → (c → '')`
+  * `/a/b/c` is `a → (b → (c → ''))`
+  * `/a/b/c/d` is `a → (b → (c → (d → '')))`
   * `/a/b.c/d` is `a → ((b → c) → (d → ''))`
-  * `//` is `0 → ''` (the second / is empty, it's the tail of the first / which has no head)
-  * `/a//` is `a → (0 → .)`
- 
-### Examples
+  * `/a.b//c.d` is `(a → b) → ((c → d) → '')`
 
-* `/a/b/c` is `a → (b → (c → ''))`
-* `/a.b//` is `((a → b) → 0) → 0`
-* `/a.b/c` is `(a → b) → (c → '')`
-* `/a.b//c.d` is `(a → b) → ((c → d) → '')`
+### Combined Examples
 
-
-### Examples
-
-* `''` = the empty string (empty rule)
-* `'.'` = `'/.'` = `('' → '')` (empty rule + extra dot rule + empty rule)
-* `'..'` = `('' → ('' → ''))` (empty + extra dot + empty + extra)
-* `'//a'` = `((a → '') → '')` (uncomplete rule twice)
-* `'///'` = `((0 → '') → ''` (zero rule + uncomplete rule twice)
-* `'/a'` = `'/a.'` = `(a → '')` (uncomplete rule)
-* `'a/'` = `(a → 0)`  (extra empty pair)
-* `'/a/'`= `(a → 0)` (extra empty pair)
-* `'.a'` = `('' → a)` (empty + extra dot rule)
-* `'a.'` = `(a → '')` (extra dot + empty)
-* `'a..'` = `((a → '') → '')` (extra dot + empty + extra dot + empty)
-* `'/a./'` = `'/a..'` = `((a → '') → 0)` (zero extra pair)
-* `'a.b'` = `(a → b)` (extra)
-* `'./a.b'` = `('' → (a → b))` (empty + extra)
+* `.` = `/.` = `('' → '')` (empty rule + extra dot rule + empty rule)
+* `..` = `'' → ('' → '')` (empty + extra dot + empty + extra)
+* `//a` = `(a → '') → ''` (uncomplete rule twice)
+* `//` is `0 → ''` (the second / is empty, it's the tail of the first / which has no head)
+* `///` = `(0 → '') → ''` (zero rule + uncomplete rule twice)
+* `a/` = `a → 0`  (extra empty pair)
+* `/a/`= `a → 0` (extra empty pair)
+* `/a//` = `a → (0 → .)`
+* `.a` = `'' → a` (empty + extra dot rule)
+* `a.` = `a → ''` (extra dot + empty)
+* `a..` = `(a → '') → ''` (extra dot + empty + extra dot + empty)
+* `/a./` = `(a → '') → 0` (zero extra pair)
+* `'./a.b'` = `'' → (a → b)` (empty + extra atom)
 * `'a.b/'` = `(a → b) → 0` (extra zero pair)
-* `'a.b.c'` = `'//a.b.c'` = `((a → b) → c)` (extra + extra)
-* `'a.b/c'` = `'//a.b/c.'` (extra + extra + uncomplete)
-* `'a/b.c'` = `'/a/b.c'` (extra)
-* `'a./b.c'` = `'//a./b.c'` (extra)
-* `'/a.b/c.d'` = `'//a.b/c.d'` (extra)
-* `'/a'` = `(a → '')` (uncomplete rule)
-* `'a/b'` = `'/a/b'` = `'/a/b.'` = `(a → (b → ''))` (extra + uncomplete)
-* `'a/b/c'` = `'/a/b/c'` `'/a/b/c.'` = `(a → (b → (c → '')))` (extra + extra + uncomplete)
-* `'a/b/c/'` = `'/a/b/c/'` `'/a/b/c.'` = `(a → (b → (c → '')))` (extra + extra + uncomplete)
-
-Note how:
-
-    - trailing "/" are ignored,
-    - extra leading "/" create a left-leaning structure involving empty string atoms, 
-    - additional dots create right-leaning tree-structures
+* `'a.b.c'` = `(a → b) → c` (extra + extra atom)
+* `'a.b/c'` = `'//a.b/c.'` (extra + extra uncomplete pair)
+* `'a/b.c'` = `'/a/b.c'` (extra pair)
+* `'a./b.c'` = `'//a./b.c'` (extra pair)
+* `'a/b'` = `'/a/b'` = `'/a/b.'` = `a → (b → '')` (extra + uncomplete)
+* `'a/b/c/'` = `'/a/b/c/'` = `a → (b → (c → 0))` (extra + extra + uncomplete)
 
 ### File pathes as a subset of textual arrows
 
@@ -105,11 +91,4 @@ The textual representation of arrows is roughly compatible with file or URI _pat
 * `/some/path/to/` = `(some → (path → (to → 0))`
 * `/some/path/to/file.txt.gz` = `(some → (path → (to → ((file → txt) → gz)))`
 
-But please note:
-
-* `file.txt` and `/file.txt` are the same arrow.
-* `file.txt`, `./file.txt` and `.file.txt` are 3 distinct arrows,
-* `/file.txt` and `//file.txt` are distinct,
-* `file.txt` and `file.txt/` are distinct.
-
-Additional conventions are needed to distinguish absolute pathes, relative pathes, directory pathes, file pathes.
+Please note `file.txt` and `/file.txt` are the same arrow. Additional conventions may be needed to distinguish absolute paths and relative pathes
