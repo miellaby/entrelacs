@@ -2,9 +2,14 @@
 
 ## Canonical string representation
 
-One uses a Polish notation to write down an arrow by flattening nested pair definitions without using parentheses. So the arrow `((a → ( b → c )) → d)` is written as `→ → a → b c d`.
+One may use a Polish notation to flatten down the nested pairs of an arrow definition so to remove parenthesis.
+For example, the arrow `((a → ( b → c )) → d)` is flattened as `→ → a → b c d`.
 
-By using slash as → and dot as the atom separator, one serializes the arrow definition as a string of regular characters.
+By using slash (/) as → and dot (.) as the atom separator, one may serialize the arrow definition
+into a string. Atoms may also contain %-encoded byte such as the reserved "/"
+and "." characters.
+
+### A few examples
 
 * `hello` is the UTF-8 encoded 5 bytes length binary string "hello"
 * `/a.b` is `a → b`, that is the arrow from "a" to "b" ("a" is the _queue_, b is the _head_)
@@ -15,40 +20,34 @@ By using slash as → and dot as the atom separator, one serializes the arrow de
 * `//a/b.c.d` is `(a → (b → c)) → d`
 * and so on.
 
-## Tolerant parser
+## Extended syntax with ambiguity tolerance
 
-The syntax is extended with additional rules to parse uncomplete expressions.
-
-### Rules
-
-* %-expression: %-encoded byte may be included in atom definition, such as the "/" and "." characters.
+Ambiguous expressions are parsed by following the rules bellow.
 
 * _empty_: The empty string is a valid atom (empty atom).
   * `/a.` is `a → ''`
   * `/.a` is `'' → a`
   * `/.` is `'' → ''`
 
-* _extra dot_: Additional dot-introduced atom completes the current slash expression by linking it to the following atom, so to form a left leaning tree.
-  * `/a.b` is `a → b`
-  * `/a.b.c` is `(a → b) → c`
-  * `/a.b.c.d` is `((a → b) → c) → d`
-  * `/a/b.c.d` is `a → ((b → c) → d)`
-
-* _extra pair_ : An additional slash also completes the last slash expression by linking it to the following expression.
+* _extra dot_: Additional dot-introduced atoms complete the current slash expression by linking it with the following atoms
+  * `/a/b.c` is a canonical string corresponding to `a → (b → c)`
+  * `/a/b.c.d` is an ambiguous string with an additional atom. It is parsed as: `a → ((b → c) → d)`
+  * `/a/b.c.d.e` is parsed as: `a → (((b → c) → d) → e)`, hote how the rule tends to form a left-leaning tree of atoms.
+  
+* _extra pair_ : additional slash expressions also complete the current slash expression by linking it with the following expression.
   * `` = the empty string (empty rule)
-  * `a/b.c` is `a → (b → c)`
   * `/a.b/c.d` is `(a → b) → (c → d)`
   * `/a/b.c/d.e` is `a → ((b → c) → (d → e))`
   * `/a.b/c.d/e.f` is `((a → b) → (c → d)) → (e → f)`
   * `/a/b/c.d` is `a → (b → (c → d))`
-  * `/a.b.c/d.e` is `((a → b) → c) → (d → e)`
-  * `/a.b.c/d.e/f.g` is `((a → b) → c) → ((d → e) → (f → g))`
-
+  * _extra dot and extra_pair_ rules combined examples
+    * `/a.b.c/d.e` is `((a → b) → c) → (d → e)`
+    * `/a.b.c/d.e/f.g` is `((a → b) → c) → ((d → e) → (f → g))`
+  
 * _zero_: An empty slash with no atom is defined as Ouroboros (noted 0 herafter).
   * `/` is `0`
   * `/a/` is `a → 0`
   * `/a.b/` is `(a → b) → 0`
-  * `/a.b//` is `((a → b) → 0) → 0`
   * `/a/b/` is `a → (b → 0)`
 
 * _uncomplete_: A slash expression with only one parent arrow is an arrow from the arrow to the empty string.
@@ -69,6 +68,7 @@ The syntax is extended with additional rules to parse uncomplete expressions.
 * `///` = `(0 → '') → ''` (zero rule + uncomplete rule twice)
 * `a/` = `a → 0`  (extra empty pair)
 * `/a/`= `a → 0` (extra empty pair)
+* `/a.b//` = `(a → b) → (0 → '')` (extra pair, zero, uncomplete pair)
 * `/a//` = `a → (0 → .)`
 * `.a` = `'' → a` (empty + extra dot rule)
 * `a.` = `a → ''` (extra dot + empty)
