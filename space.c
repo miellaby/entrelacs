@@ -5,6 +5,8 @@
 // WORK IN PROGRESS
 // nouvelle représentation sur 24 octets (22 effectif)
 // nouvel atom : small
+//
+// Weak rooting
 // nouvelle propriété faible: rootage faible, "weak" flag
 // - n'empêche pas l'oubli (le GC) de ses bouts
 // - est supprimée avec ses bouts
@@ -36,6 +38,7 @@
 #include <pthread.h>
 #include "entrelacs/entrelacs.h"
 #include "mem0.h"
+#include "geoalloc.h"
 #include "mem.h"
 #include "sha1.h"
 #define LOG_CURRENT LOG_SPACE
@@ -78,14 +81,14 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
 static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
-static int apiActivity = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
+static int sessionCount = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
 static int spaceGCDone = 1; // 1->0 when a thread starts waiting in xl_commit()/xl_over(), 0->1 when all threads synced and GC is done
 static int memCommitDone = 1; // 1->0 when a thread starts waiting in xl_commit(), 0->1 when all threads synced and mem_commit(); occurs only if !memCommitDone
 static int memCloseDone = 1; // 1->0 when a xl_over thread starts waiting, 0->1 when all threads synced and a xl_commit() thread does commit (without actually mem_close)
 
-#define ACTIVITY_BEGIN() (!apiActivity++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
-#define ACTIVITY_OVER() (apiActivity ? (--apiActivity ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0)
-#define WAIT_DORMANCY() (apiActivity > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0)
+#define SESSION_BEGIN() (!sessionCount++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
+#define SESSION_END() (sessionCount ? (--sessionCount ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0)
+#define WAIT_DORMANCY() (sessionCount > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0)
 
 /*
  * Size limit from where data is stored as "blob" or "tag" or "small"
@@ -118,7 +121,7 @@ const Arrow Eve = EVE;
  *   +---------------------------------------+---+---+
  *                       22                    1   1
  *
- *      P: "Peeble" count aka "More" counter (8 bits)
+ *       P: "Pebble" count aka "More" counter (8 bits)
  *       T: Cell type ID (8 bits)
  *    Data: Data (22 bytes)
  *
@@ -134,7 +137,7 @@ typedef union u_cell {
   struct u_full {
 
     char data[22];
-    unsigned char peeble;
+    unsigned char pebble;
     unsigned char type;
   } full;
 
@@ -242,7 +245,7 @@ typedef union u_cell {
     unsigned char dr;
   } small;
      
-  /* T = 3: tag or 4: blob footprint.
+  /* T = 3: tag or T = 4: blob footprint.
   *   +--------+------------+----+-----------+----------+----+----+
   *   |  hash  |   slice0   | J0 | RWC0dWnCn |  Child0  | cr | dr |
   *   +--------+------------+----+-----------+----------+----+----+
@@ -261,7 +264,7 @@ typedef union u_cell {
 
 #define MAX_JUMP0 0xFFu
 
-  /*   T = 5: slice of binary string (tag/blob)
+  /*   T = 5: intermediary binary string segment. Tag or footprint.
   *   +-----------------------------------------+---+
   *   |                   data                  | J |
   *   +-----------------------------------------+---+
@@ -274,7 +277,7 @@ typedef union u_cell {
 
 #define MAX_JUMP 0xFFu
 
-  /*   T = 6: last slice of binary string
+  /*   T = 6: last binary string segment.
   *   +-----------------------------------------+---+
   *   |                   data                  | s |
   *   +-----------------------------------------+---+
@@ -286,7 +289,7 @@ typedef union u_cell {
     unsigned char size;
   } last;
 
-  /*   T = 7: sequence reattachment
+  /*   T = 7: reattachment sequence.
    *   +--------+--------+--------------+
    *   |  from  |   to   |  ...         |
    *   +--------+--------+--------------+
@@ -298,15 +301,15 @@ typedef union u_cell {
     char junk[14];
   } reattachment;
 
-  /*   T = 8: children cell
-   *   +------+------+------+------+------+---+
-   *   |  C4  |  C3  |  C2  |  C1  |  C0  |td |
-   *   +------+------+------+------+------+---+
-   *       4     4      4      4       4    2
+  /*   T = 8: children segment.
+   *   +------+------+------+------+------+---+---+
+   *   |  C4  |  C3  |  C2  |  C1  |  C0  | t | d |
+   *   +------+------+------+------+------+---+---+
+   *       4     4      4      4       4    1   1
    *   Ci : Child or list terminator
    *        (list terminator = parent address with flag)
-   *   td: terminators (1 byte) . directions (1 byte, 1 outgoing)
-   *       5 significative bits per byte
+   *   t: terminators (1 byte with 5 terminator bits).
+   *   d: directions (1 byte with 5 flags: 0 incoming/1 outgoing)
    *   
    */
   struct s_children {
@@ -361,11 +364,11 @@ static void logCell(int logLevel, int line, char operation, Address address, Cel
           "CHILDREN"
       };
     unsigned type = (unsigned)cell->full.type;
-    unsigned peeble = (unsigned)cell->full.peeble;
+    unsigned pebble = (unsigned)cell->full.pebble;
     const char* cat = cats[type];
     if (type == CELLTYPE_EMPTY) {
-        LOGPRINTF(logLevel, "%d %c %06x EMPTY (peeble=%02x)",
-          line, operation, address, peeble);
+        LOGPRINTF(logLevel, "%d %c %06x EMPTY (pebble=%02x)",
+          line, operation, address, pebble);
         return;
 
     }
@@ -383,8 +386,8 @@ static void logCell(int logLevel, int line, char operation, Address address, Cel
       int dr = (int)cell->arrow.dr;
 
       if (type == CELLTYPE_PAIR) {
-        LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
-          line, operation, address, peeble, type,
+        LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
+          line, operation, address, pebble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
           cell->pair.head);
@@ -393,26 +396,26 @@ static void logCell(int logLevel, int line, char operation, Address address, Cel
         int s = (int)cell->small.s;
         char buffer[11];
         cell_getSmallPayload(cell, buffer);
-        LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
-          line, operation, address, peeble, type,
+        LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
+          line, operation, address, pebble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
-          line, operation, address, peeble, type,
+        LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+          line, operation, address, pebble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
       }
     } else if (type == CELLTYPE_SLICE) {
-      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s jump=%1x data=%.21s",
-        line, operation, address, peeble, type, cat,
+      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s jump=%1x data=%.21s",
+        line, operation, address, pebble, type, cat,
         (int)cell->slice.jump, cell->slice.data);
 
     } else if (type == CELLTYPE_LAST) {
-      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s size=%d data=%.*s",
-        line, operation, address, peeble, type, cat,
+      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s size=%d data=%.*s",
+        line, operation, address, pebble, type, cat,
         (int)cell->last.size,
         (int)cell->last.size,
         cell->last.data);
@@ -433,8 +436,8 @@ static void logCell(int logLevel, int line, char operation, Address address, Cel
           ']',
           '\0'
       };
-      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
-        line, operation, address, peeble, type, cat,
+      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
+        line, operation, address, pebble, type, cat,
         cell->children.C[0],
         cell->children.C[1],
         cell->children.C[2],
@@ -443,13 +446,13 @@ static void logCell(int logLevel, int line, char operation, Address address, Cel
         directions);
 
     } else if (type == CELLTYPE_REATTACHMENT) {
-      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x %s from=%x to=%x",
-        line, operation, address, peeble, type, cat,
+      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s from=%x to=%x",
+        line, operation, address, pebble, type, cat,
         (int)cell->reattachment.from, cell->reattachment.to);
 
     } else {
-      LOGPRINTF(logLevel, "%d %c %06x peeble=%02x type=%1x ANOMALY",
-        line, operation, address, peeble, type);
+      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x ANOMALY",
+        line, operation, address, pebble, type);
       assert(0 == 1);
     }
 }
@@ -717,7 +720,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         } // if candidate
         // Not the singleton
 
-        if (!probed.full.peeble) { // nothing further
+        if (!probed.full.pebble) { // nothing further
             break; // Miss
         }
 
@@ -908,7 +911,7 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
     mem_set(current, &currentCell.u_body);
     ONDEBUG((LOGCELL('W', current, &currentCell)));
 
-    // Now incremeting "peeble" counters in the probing path up to the new singleton
+    // Now incremeting "pebble" counters in the probing path up to the new singleton
     // important to reinitialize probing variables  
     probeAddress = /* hash % PRIM0 */ hashAddress;
     hashProbe = hash % PRIM1;
@@ -918,8 +921,8 @@ Arrow payload(int cellType, int length, char* str, uint64_t payloadHash, int ifE
         Cell probed;
         mem_get(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-        if (probed.full.peeble != PEEBLE_MAX)
-          probed.full.peeble++;
+        if (probed.full.pebble != PEEBLE_MAX)
+          probed.full.pebble++;
         
         mem_set(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &probed)));
@@ -1028,7 +1031,7 @@ static Arrow small(int length, char* str, int ifExist) {
         }
         // Not the singleton
 
-        if (probed.full.peeble == 0) {
+        if (probed.full.pebble == 0) {
             break; // Probing over. It's a miss.
         }
 
@@ -1084,8 +1087,8 @@ static Arrow small(int length, char* str, int ifExist) {
         Cell probed;
         mem_get(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-        if (probed.full.peeble != PEEBLE_MAX)
-          probed.full.peeble++;
+        if (probed.full.pebble != PEEBLE_MAX)
+          probed.full.pebble++;
         
         mem_set(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &probed)));
@@ -1140,7 +1143,7 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
         }
         // Not the singleton
 
-        if (probed.full.peeble == 0) {
+        if (probed.full.pebble == 0) {
             break; // Probing over. It's a miss.
         }
 
@@ -1207,7 +1210,7 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     mem_set(newArrow, &newCell.u_body);
     ONDEBUG((LOGCELL('W', newArrow, &newCell)));
 
-    /* Now incremeting "peeble" counters in the probing path up to the new singleton
+    /* Now incremeting "pebble" counters in the probing path up to the new singleton
      */
     probeAddress = hashAddress;
     hashProbe = hash % PRIM1; // reset hashProbe to default
@@ -1216,8 +1219,8 @@ static Arrow A(Arrow tail, Arrow head, int ifExist) {
     while (probeAddress != newArrow) {
         mem_get(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-        if (probed.full.peeble != PEEBLE_MAX)
-          probed.full.peeble++;
+        if (probed.full.pebble != PEEBLE_MAX)
+          probed.full.pebble++;
         
         mem_set(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &probed)));
@@ -1813,7 +1816,7 @@ Arrow digestMaybe(char *digest) {
             }
         }
 
-        if (probed.full.peeble == 0) {
+        if (probed.full.pebble == 0) {
           break; // Probing over
         }
 
@@ -2503,7 +2506,7 @@ static void disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
                   // mark as is
                   memset(nextCell.full.data, 0, sizeof(nextCell.full.data));
                   nextCell.full.type = CELLTYPE_EMPTY;
-                  // but don't delete peeble!
+                  // but don't delete pebble!
               } 
               mem_set(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('W', next, &nextCell)));
@@ -3136,7 +3139,7 @@ static void forget(Arrow a) {
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
 
-    /* Now decremeting "peeble" counters in the probing path
+    /* Now decremeting "pebble" counters in the probing path
      * up to the forgotten singleton
      */
     Address probeAddress = hashAddress;
@@ -3144,8 +3147,8 @@ static void forget(Arrow a) {
     while (probeAddress != a) {
         mem_get(probeAddress, &cell.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &cell)));
-        if (cell.full.peeble)
-          cell.full.peeble--;
+        if (cell.full.pebble)
+          cell.full.pebble--;
 
         mem_set(probeAddress, &cell.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &cell)));
@@ -3156,7 +3159,7 @@ static void forget(Arrow a) {
 
 void xl_begin() {
     LOCK();
-    ACTIVITY_BEGIN();
+    SESSION_BEGIN();
     mem_open();
     LOCK_END();
 }
@@ -3211,17 +3214,17 @@ void xl_over() {
     LOCK();
     spaceGCDone = 0; //< record the need to GC stuff before thread syncing
     memCloseDone = 0; //< record the need to close mem before thread syncing
-    ACTIVITY_OVER();
+    SESSION_END();
     do {
         WAIT_DORMANCY();
-    } while (apiActivity > 0); // spurious wakeup check
+    } while (sessionCount > 0); // spurious wakeup check
     
     if (!spaceGCDone) { // no other thread has GC yet
         spaceGC();
     }
     
     if (!memCloseDone && memCommitDone) { // only if not done yet and no commit pending
-      WARNPRINTF("xl_over closes mem");
+      INFOPRINTF("xl_over closes mem");
       mem_close();
       memCloseDone = 1;
    }
@@ -3235,10 +3238,10 @@ void xl_commit() {
     LOCK();
     spaceGCDone = 0; //< record the need to GC stuff before thread syncing
     memCommitDone = 0; //< record the need to commit stuff before threads syncing
-    ACTIVITY_OVER();
+    SESSION_END();
     do {
         WAIT_DORMANCY();
-    } while (apiActivity > 0); // spurious wakeup check
+    } while (sessionCount > 0); // spurious wakeup check
     
     if (!spaceGCDone) {
         spaceGC();
@@ -3250,7 +3253,7 @@ void xl_commit() {
         memCloseDone = 1; // < prevents xl_over() threads to close mem because there is at least one commit thread (this one)  
     }
 
-    ACTIVITY_BEGIN();
+    SESSION_BEGIN();
     LOCK_END();
     
 }

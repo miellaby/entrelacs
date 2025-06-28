@@ -12,7 +12,7 @@
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
-#include "mem.h" // geoalloc
+#include "geoalloc.h" 
 
 #define test_title(T) fprintf(stderr, T "\n")
 

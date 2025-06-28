@@ -6,10 +6,12 @@
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
-#include "mem.h" // geoalloc
+#include "geoalloc.h" 
 
-#define test_title(T) fprintf(stderr, T "\n")
-
+char* test_title;
+#define test_title(T) fprintf(stderr, "%s BEGIN\n", (test_title = T))
+#define test_ok()  fprintf(stderr, "%s: OK\n", test_title)
+#define test_done() fprintf(stderr, "ALL TESTS FROM " __FILE__ " : OK\n")
 static struct s_buffer {
     int size;
     int max;
@@ -66,17 +68,20 @@ int basic() {
 
     DEFATOM(more_bigger_string_11111111111111111111);
     DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
-    
+    test_ok();
+     
 
     // check regular pairs
     test_title("check regular pairs");
     assert(typeOf(_hello_world) == XL_PAIR);
     assert(tail(_hello_world) == hello);
     assert(head(_hello_world) == world);
-
+    test_ok();
+ 
     test_title("Test Adam special case");
     assert(A(EVE, EVE) != EVE);
-
+    test_ok();
+ 
     // Check atoms
     test_title("check atoms");
     assert(typeOf(hello) == XL_ATOM && typeOf(world) == XL_ATOM
@@ -98,6 +103,7 @@ int basic() {
     char *s4 = str(small12345);
     assert(!strcmp("small12345", s4));
     free(s4);
+    test_ok();
     
     // check rooting
     test_title("check rooting");
@@ -106,7 +112,8 @@ int basic() {
 
     assert(isRooted(_hello_world));
     assert(isRooted(more_bigger_string_11111111111111111111));
-
+    test_ok();
+ 
     { // check very big string (blob)
         test_title("check very big string (blob)");
 
@@ -116,17 +123,20 @@ int basic() {
         assert(0 == strcmp(bigStrBack, bigStr));
         assert(xl_isAtom(bigAtom));
         free(bigStrBack);
+        test_ok();
         
         { //  digest computation
             test_title("check digest computation");
             char* digest = digestOf(bigAtom, NULL);
             assert(digest);
             fprintf(stderr, "digest: %s\n", digest);
+            test_ok();
         
             { // check digest
             test_title("check digest-based arrow retrieval");
             Arrow byDigest = digestMaybe(digest);
             assert(byDigest == bigAtom);
+            test_ok();
             }
 
             free(digest);
@@ -141,11 +151,13 @@ int basic() {
     commit();
     assert(typeOf(loose) == XL_UNDEF);
     assert(typeOf(_hello_loose) == XL_UNDEF);
+    test_ok();
 
     // check rooting persistency
     test_title("check rooting persistency");
     assert(isRooted(_hello_world));
-
+    test_ok();
+ 
     // check deduplication
     test_title("check deduplication");
     Arrow original = _hello_world;
@@ -158,14 +170,16 @@ int basic() {
         DEFA(hello, world);
         assert(original == _hello_world);
     }
-
+    test_ok();
+ 
     // check uri assimilation
     test_title("check URI assimilation");
     {
         Arrow uri = uri("/hello+world");
         assert(uri == _hello_world);
     }
-
+    test_ok();
+ 
     // check natom/atom equivalency
     test_title("check natom/atom equivalency");
     {
@@ -174,7 +188,8 @@ int basic() {
         DEFA(helloB, worldB);
         assert(original == _helloB_worldB);
     }
-
+    test_ok();
+ 
     // check natom dedup
     test_title("check natom dedup");
     Arrow fooB = atom("headOf");
@@ -187,7 +202,8 @@ int basic() {
         DEFA(fooB, barB);
         assert(originalB == _fooB_barB);
     }
-
+    test_ok();
+ 
     // check pair connection
     test_title("pair connection");
     DEFATOM(dude);
@@ -195,26 +211,30 @@ int basic() {
     root(_hello_dude);
 
     childrenOfCB(hello, printArrow, Eve());
-
+    test_ok();
+ 
     // check unrooting
     test_title("check unrooting");
     unroot(_hello_world);
     assert(!isRooted(_hello_world));
-
+    test_ok();
+ 
     // check GC after unrooting
     test_title("check GC after unrooting");
     commit();
     assert(XL_UNDEF == typeOf(_hello_world));
     assert(XL_UNDEF == typeOf(world));
     assert(XL_ATOM == typeOf(hello));
-
+    test_ok();
+ 
     // check pair disconnection
     test_title("check pair disconnection");
     childrenOfCB(hello, printArrow, Eve());
-
+    test_ok();
+ 
     unroot(_hello_dude);
     commit();
-
+    fprintf(stderr, "test done.\n");
     return 0;
 }
 
@@ -250,7 +270,8 @@ int stress() {
             }
         }
     }
-
+    test_ok();
+ 
     // rooting stress (also preserve this material from GC for further tests)
     test_title("rooting stress");
     {
@@ -263,7 +284,8 @@ int stress() {
         }
         commit();
     }
-
+    test_ok();
+ 
     DEFATOM(connectMe);
 
     // connection stress
@@ -281,7 +303,8 @@ int stress() {
         }
         childrenOfCB(connectMe, printArrow, Eve());
     }
-
+    test_ok();
+ 
     // disconnection stress
     test_title("disconnection stress");
     {
@@ -295,7 +318,8 @@ int stress() {
         }
         childrenOfCB(connectMe, printArrow, Eve());
     }
-
+    test_ok();
+ 
     // connecting stress (big depth)
     test_title("connecting stress (big depth)");
     {
@@ -319,7 +343,8 @@ int stress() {
         assert(typeOf(loose) == XL_ATOM);
         printArrow(big, Eve());
     }
-
+    test_ok();
+ 
     // disconnecting stress (big depth)
     test_title("disconnecting stress (big depth)");
     {
@@ -340,7 +365,8 @@ int stress() {
 
         commit();
     }
-
+    test_ok();
+ 
 
     return 0;
 }
@@ -355,5 +381,6 @@ int main(int argc, char* argv[]) {
     basic();
     stress();
     xl_over();
+    test_done();
     return 0;
 }

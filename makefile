@@ -18,12 +18,12 @@
 # 
 # make help # this help
 
-.PHONY: help server clean all clean.% test% run.% tests run start
+.PHONY: help server clean all clean.% test.% run.% tests run start
 CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
-OBJECTS = log.o mem0.o mem.o sha1.o space.o machine.o session.o
+OBJECTS = log.o mem0.o geoalloc.o mem.o mem_log.o sha1.o space.o machine.o session.o
 OBJECTS_entrelacsd = mongoose.o server.o
 
 TESTS = space uri script machine shell
@@ -47,6 +47,7 @@ $(TESTS:%=clean.test%):
 	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
 
 test.%: $(BINDIR)/test%
+	-true
 
 tests: all $(TESTS:%=test.%)
 
