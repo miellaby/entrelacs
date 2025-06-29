@@ -1,39 +1,54 @@
-# Introduction #
+# Open Addressing and related techniques
 
-As explained herein,
-  * the OpenAddressing strategy is a way to manage both hash collisions and data chains dispatching among the ArrowsSpace.
-  * This strategy is improved by two additions:
-    * Double Hashing
-    * Coalesced Hashing
+The [Arrow Space](ArrowsSpace.md) is implemented ag a giant _Content-Indexed Hash table_ featuring:
 
-# Collisions #
+- _Open Addressing_ for solving conflicts.
+- _Double Hashing_ when probing so to reduce data clutering.
+- _Coalesced Hashing_ to store multi-slots binary strings.
 
-When storing an arrow into the ArrowsSpace, one first computes an hash code noted _h_.
+# Content-Indexed Hash Table
 
-_h_ returns the storage cell which is supposed to receive the arrow definition. However, this cell might be already used by an other arrow.
+In an content-indexed hash-table, there is no _key_ or _identifier_: the whole value is used as a key. This is the obvious solution to store _arrows_ which are mathematical constructs mapped one-to-one onto the storage.
 
-In such a case, one makes use of the "open addressing" way to deal with collisions. It consists in putting conflicting arrows among neighbor cells.
+# Solving Collisions with Open Adressing
 
-This set of neighbor cells is called an "open block" herein. They are not necessary nearby. There may be a big offset between two successive locations within an "open block".
+When assimilating an arrow, one computes an hash code _h_ of its definition.
 
-As a matter of fact, this offset is not necessarily constant. It may be computed by an hash function as well so to be different in most cases. This improvement prevents resonance phenomena which could lead to repeated collisions. It is called DoubleHashing.
+_h_ gives the default location where an arrow is supposed to be in the storage space.
 
-# Data chains #
+However, this default location might have already been taken to store another arrow. This is called a _hash conflict_ or a _collision_.
 
-When storing a big amount of data into the ArrowsSpace, one makes use of the OpenAddressing and DoubleHashing methods to dispatch data among many cells as well.
+In such a case, one makes use of the _Open Addressing_ technique. It consists in putting conflicting arrows among neighbor slots.
 
-# Induced constraints #
+This set of related slots is called an _open block_ herein. They are not necessary nearby as there may be a big offset between two consecutive slots.
 
-The whole "open block" needs to be scanned (_probed_) when one looks for an arrow copy at a given open address.
+# Solving Data Clutering with Double Hashing
 
-When one removes an arrow from the space, one must put a stuffing value into freed cells. This stuffing value prevents the open block to be split in several pieces and existing arrows to be missed when searching latter.
+Using the same constant offset for probing slots may cause unrelated _open blocks_ to merge as their probing sequences resonate to each other.
 
-# CoalescedHashing #
+It may lead to very long and slow probing sequences.
 
-The stuffing values method can't be used when one removes all cells used by a big data chain like Tags and Blogs. It would lead to quickly fill up the whole space with stuffing values.
+However the offset used to probe locations is allowed to change depending on the probed data. So it may typically be computed by another hash function. This technique is called _Double Hashing_.
 
-That's why the ArrowsSpace operates the CoalescedHashing method within the DoubleHashing method.
+# Slot chaining with Coalesced Hashing
 
-The idea consists in linking cells used by the same data chain within an open block. Those links allow real cells freeing in the open block without losing the continuity of still used cells.
+Some data don't fit in a single slot. One extends the _Open Addressing_ and _Double Hashing_ techniques to ventilate data segments accross the whole storage.
 
-Rather that storing a fully qualified address within the storage space, one only reserves few bits on this purpose. These bits form an offset factor to be multiplied to the actual offset factor when fetching the open block content.
+One also uses the _Coalesced Hashing_ technique, which consists in linking together the slots used to store related segments.
+
+# Advanced Tricks
+
+## Hop-o'-My-Thumb's "Seven-League" boots
+
+The _Coalesced Hashing_ link is not saved as a full slot address. It is rather stored in the form of a short offset multiplier which allows to _jump_ over unwanted data.
+
+## Hop-o'-My-Thumb’s white pebbles
+
+_Coalesced Hashing_ is not used to link slots of the same probing sequence. To avoid open blocks breaking on content removal, one introduces a _pebble counter_ which counts how many probing pathes go through a given slot at a given time.
+
+## And more ...
+
+This [presentation](https://docs.google.com/presentation/d/e/2PACX-1vT46cf0X81h-x0aSHmoIM8pL6dJdWdPwXO_Xc2pJGPBr9XOVSBijsOiCTnCSYd-dFGUbvpYVUEq2T5g/pub?start=false&loop=false&delayms=3000) introduces the Hop-o'-My-Thumb tricks in a pleasant way.
+
+A few other tricks related with _Open Addressing_ have been employed to fit even more information in the same storage. See the [prototype page](ArrowsSpacePrototype.md) for more information.
+
