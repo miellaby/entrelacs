@@ -7,7 +7,7 @@
 #include <time.h>
 
 #define __LOG_C__
-#include "log.h"
+#include "log/log.h"
 
 static FILE *log_fp = NULL;
 #ifndef PRODUCTION

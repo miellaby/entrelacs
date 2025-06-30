@@ -5,7 +5,7 @@
 #ifndef MEM_H
 #define MEM_H
 
-#include "mem0.h"
+#include "mem/mem0.h"
 
 /**
  * last commit time

@@ -1,4 +1,3 @@
-#include "log.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -9,10 +8,11 @@
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
+#include "log/log.h"
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
-#include "geoalloc.h" 
+#include "mem/geoalloc.h" 
 
 #define test_title(T) fprintf(stderr, T "\n")
 

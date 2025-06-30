@@ -17,11 +17,11 @@
 #include <stdarg.h>
 #include <pthread.h>
 #define LOG_CURRENT LOG_SERVER
-#include "log.h"
-#include "server.h"
+#include "log/log.h"
+#include "server/server.h"
 #include "entrelacs/entrelacs.h"
-#include "session.h"
-#include "mongoose.h"
+#include "machine/session.h"
+#include "server/mongoose.h"
 #include <string.h>
 #include <sys/stat.h> 
 #include <sys/mman.h> /* mmap() is defined in this header */

@@ -1,7 +1,7 @@
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
 #include <assert.h>
-#include "log.h"
+#include "log/log.h"
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   DEFATOM(childrenOf);
   DEFATOM(unroot);
   
-  fd = fopen("testrc", "r");
+  fd = fopen("test/testrc", "r");
   assert(fd);
 
   while (fgets(buffer, 1024, fd)) {

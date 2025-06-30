@@ -1,2 +1,9 @@
 {
+    "makefile.configureOnOpen": true,
+    "files.associations": {
+        "entrelacs.h": "c",
+        "session.h": "c",
+        "sha1.h": "c",
+        "log.h": "c"
+    }
 }

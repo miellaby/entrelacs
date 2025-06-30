@@ -1,11 +1,11 @@
 #include "entrelacs/entrelacsm.h"
-#include "mem.h" // for geoalloc
+#include "mem/mem.h" // for geoalloc
 #include <stdlib.h> // free & co
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
-#include "session.h"
-#include "log.h"
+#include "machine/session.h"
+#include "log/log.h"
 
 static Arrow print(Arrow arrow, Arrow context) {
   char* url = xls_urlOf(EVE, arrow, -1);

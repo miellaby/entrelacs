@@ -19,10 +19,11 @@
 # make help # this help
 
 .PHONY: help server clean all clean.% test.% run.% tests run start
-CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format
+CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format -I$(CURDIR) -I$(CURDIR)/sha1  -Wall -Wextra
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
+VPATH := log:sha1:mem:space:machine:server:test
 OBJECTS = log.o mem0.o geoalloc.o mem.o mem_log.o sha1.o space.o machine.o session.o
 OBJECTS_entrelacsd = mongoose.o server.o
 

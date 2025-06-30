@@ -5,8 +5,8 @@
 #include "mem_log.h"
 #include <stdlib.h>
 #define LOG_CURRENT LOG_MEM
-#include "log.h"
-#include "_mem.h"
+#include "log/log.h"
+#include "mem/_mem.h"
 
 /** log action on mem[offset]
  */

@@ -1,9 +1,9 @@
 #include <stdio.h> // fopen & co
 #include <stdlib.h> // free
 #include <assert.h>
-#include "log.h"
+#include "log/log.h"
 #include "entrelacs/entrelacs.h"
-#include "session.h"
+#include "machine/session.h"
 
 int main(int argc, char **argv) {
     FILE* fd;

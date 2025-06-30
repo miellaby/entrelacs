@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
-#include "session.h"
+#include "machine/session.h"
 #define LOG_CURRENT LOG_MACHINE
-#include "log.h"
+#include "log/log.h"
 #include "sha1.h"
 
 static struct s_machine_stats {

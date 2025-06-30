@@ -37,12 +37,12 @@
 #include <ctype.h>
 #include <pthread.h>
 #include "entrelacs/entrelacs.h"
-#include "mem0.h"
-#include "geoalloc.h"
-#include "mem.h"
+#include "mem/mem0.h"
+#include "mem/geoalloc.h"
+#include "mem/mem.h"
 #include "sha1.h"
 #define LOG_CURRENT LOG_SPACE
-#include "log.h"
+#include "log/log.h"
 
 /** Memory corruption trigger */
 #define MAX_CHILDCELLPROBE 32

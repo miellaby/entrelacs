@@ -2,11 +2,11 @@
 #include <stdio.h>  // sprintf & co
 #include <assert.h>
 #include <string.h>
-#include "log.h"
+#include "log/log.h"
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
-#include "geoalloc.h" 
+#include "mem/geoalloc.h" 
 
 char* test_title;
 #define test_title(T) fprintf(stderr, "%s BEGIN\n", (test_title = T))

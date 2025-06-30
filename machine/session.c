@@ -7,8 +7,8 @@
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
 #define LOG_CURRENT LOG_SESSION
-#include "log.h"
-#include "session.h"
+#include "log/log.h"
+#include "machine/session.h"
 
 
 Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {

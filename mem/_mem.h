@@ -3,7 +3,7 @@
  Internal header
  */
 #include <stdlib.h>
-#include "mem.h"
+#include "mem/mem.h"
 
 // --------------------------------------
 // Main RAM Cache

@@ -1,8 +1,8 @@
 #define MEM0_C
 #define LOG_CURRENT LOG_MEM0
 #define _GNU_SOURCE
-#include "mem0.h"
-#include "log.h"
+#include "mem/mem0.h"
+#include "log/log.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

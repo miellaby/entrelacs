@@ -12,11 +12,11 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <time.h>
-#include "_mem.h"
-#include "geoalloc.h"
-#include "mem_log.h"
+#include "mem/_mem.h"
+#include "mem/geoalloc.h"
+#include "mem/mem_log.h"
 #define LOG_CURRENT LOG_MEM
-#include "log.h"
+#include "log/log.h"
 
 // --------------------------------------
 // Main RAM Direct-Mapped Cache

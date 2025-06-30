@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "geoalloc.h"
+#include "mem/geoalloc.h"
 
 /** set-up or reset a tuple
  * {allocated memory, allocated size, significative  size}

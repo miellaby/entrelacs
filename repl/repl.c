@@ -7,10 +7,10 @@
 #include <string.h>
 #include <pthread.h>
 #include "linenoise.h"
-#include "log.h"
+#include "log/log.h"
 
 #include "entrelacs/entrelacs.h"
-#include "session.h"
+#include "machine/session.h"
 
 // TODO merge config with mem0.h
 #define PERSISTENCE_ENV "ENTRELACS"
