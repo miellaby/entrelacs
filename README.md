@@ -2,7 +2,7 @@
 
 The Entrelacs Project consists in prototyping the very first _Entrelacs System_ as defined by the _Entrelacs Manifesto_.
 
-![Logo](docs/arrows-logo-2.png)
+![Logo](doc/arrows-logo-2.png)
 
 ## Documentation
 
