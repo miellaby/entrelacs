@@ -9,7 +9,7 @@ Source code:
 
 ## Mass storage
 
-The _Arrow Space_ prototype aims to map __abstract arrows__ into a single _persistence file_ of the host system during a process called __assimilation__. This file is operated as a giant hybrid double-hashed-and-coalesced open-addressing hashtable.
+The _Arrow Space_ prototype aims to map __abstract arrows__ into a single _persistence file_ of the host system during a process called __assimilation__. This file is operated as a __giant hybrid double-hashed-and-coalesced open-addressing hashtable__.
 
 The persistence file is divided into individual _slots_ also known as _cells_ and identified by _cell addresses_.
 
@@ -72,7 +72,7 @@ _note_ one distinguishes outgoing from incoming back-references. Does it actuall
 
 ## Binary strings storage
 
-Binary strings, ranging from 12 up to 99 bytes in length, are stored directly into cells. This includes Blob signatures as well.
+Binary strings, ranging from 12 up to 99 bytes in length, are stored directly into cells. This includes Blob footprints as well.
 
 To facilitate deduplication, binary strings are prefixed with a checksum. This checksum alone doesn't guarantee identification so the entire string needs to be compared when resolving an atom.
 
@@ -90,7 +90,7 @@ However, a _jumper_ is not a fully qualified address but an offset multiplier, m
 
 ## Reattachment cells
 
-A _jumper_ as introduced above is a short-sized data. Its maximal value is low. The probability of many repeated **consecutive** hash-collisions is supposed to be even lower, as explained latter.
+A _jumper_ as introduced above is a short-sized data. Its maximal value is low. The probability of many repeated __consecutive__ hash-collisions is supposed to be even lower, as explained latter.
 
 If the number of shifts up to the next cell overflows the _jumper_ definition range, one puts a special _reattachment point_ into the next cell. This allows to unambiguously finds latter the location where the chain resumes when retrieving back the list.
 
@@ -100,7 +100,7 @@ For each arrow, one stores in the main space:
 
 * the arrow definition, that is
   * two arrow adresses for a pair
-  * a checksum and a binary string for a tag or a blob cryptographic signature.
+  * a checksum and a binary string for a tag or a blob cryptographic footprint.
 * its root flag (one mutable bit)
 * back-references from the arrow ends to the arrow
 * etc.
@@ -131,10 +131,10 @@ When storing a new arrow and upon a location conflict, One could decide to look 
 
 A better way to probe for a free cell or an existing key is to shift from the default location by a variable offset computed by a second hash function. This reduces the risk of aligning occupied cells together in the same probing sequence. This additional strategy is called _double hashing_.
 
-When putting an arrow into the storage space, one computes a big hash code _h_ as described above, then one truncates the hash code modulo 2 twin _prim numbers_ _p1_ and _p2_.
+When putting an arrow into the storage space, one computes a big hash code _h_ as described above, then one truncates the hash code modulo 2 twin _prim numbers_ _P0_ and _P1_.
 
-* H % p1 is the open address,
-* H % p2 is the probing offset.
+* H % P0 is the open address,
+* H % P1 is the probing offset.
 
 _2012 note: the actual prototype also features triangular grow of the offset as probing goes._
 
@@ -150,24 +150,29 @@ A better approach consists in separating data slices by an offset which differs 
 
 _OUTDATED DOCUMENTATION. See [actual code](https://github.com/miellaby/entrelacs/blob/master/space.)._
 
+Address are 4 byte length. So are hash codes.
+
+_P0_ and _P1_ are twin prim numbers just above 2^32 (address space size).
+
+The actual memory size is P0. It's the greatest prime under 2^32.
+
 Here are the hash functions currently used by the prototype.
 
-P1 and P2 are twin prim numbers just above 2 ^ 32 (address space size).
+* pair hash: `h(a) = P1 + (tail << 20) + (head << 4) + tail + head` (64 bits)
+* blob hash: `checksum(SHA-2(blob))` (the SHA footprint is stored as a tag)
+* tag/footprint hash: `h(tag) = checksum(tag)` 64 bits checksum à la <http://www.cse.yorku.ca/~oz/hash.html>
+* small hash: `((size << 24) + ((buffer[1] ^ buffer[5] ^ buffer[9]) << 16) + ((buffer[2] ^ buffer[6] ^ buffer[10]) << 8) + buffer[3] ^ buffer[7] ^ buffer[11])` with buffer right-padded with `size` filling bytes
+  * the small hash is only 32 bits long
+  * it is designed so that one may extract the 3 last bytes of a 11 bytes sized atom.
 
-The actual memory size is P1. It's the greatest prime under 2^32.
+With the 64bits hash result, one deduces the following values.
 
-Here are the arrow hash functions.
+* arrow hash: `h & 0xFFFFFFFFU` (h truncated to 32bits)
+* open address: `h % P0`
+* probing offset: `h % P1` (if 0 => 1)
+* string chaining offset: `invert_bytes(arrow hash) ^ data[0..3] ^ data[4..7]`
+* children offset: `invert_bytes(arrow hash)`  (or string chaining offset for strings)
 
-* pair hash: `h(a) =  f(tail(a), head(a)) = ((head(a) << 32) ^ tail(a))`
-* blob footprint: `SHA-2(blob)`
-* tag/footpring hash: `h(tag) = checksum à la <http://www.cse.yorku.ca/~oz/hash.html>
-
-With the arrow hash, one deduces the following values.
-
-* open address: `h % P1`
-* probing offset: `h % P2`
-* string chaining offset: `(0 - h) % P1`
-* children offset: `(0 - h) % P1`
 
 ## Cell Structure
 
@@ -205,7 +210,7 @@ The _cell content byte_ identifies the type of content in a cell:
 * 1: PAIR: a regular arrow
 * 2: SMALL ATOM: a _small_ atom (size < 11)
 * 3: TAG: A small binary string first segment
-* 4: BLOB FOOTPRINT: A tag corresponding to a _blob_ footprint
+* 4: BLOB FOOTPRINT: A tag-like binary string being a _blob_ footprint
 * 5: INTERMEDIARY SLICE: An intermediary segment of a string
 * 6: LAST SLICE: Last segment
 * 7: REATTACHMENT SLICE: Reattachement for peeble overflow
@@ -268,7 +273,7 @@ The _cell content byte_ identifies the type of content in a cell:
   *     1    3               8      
   *   |<---hash-->|
   *
-```
+```text
 * _size_ (s) : data size, 11 bytes or less.
 * _hash3_ = `(data 1st word ^ 2d word ^ 3d word) & 0xFFFFFFu`
 * _size_ and _hash3_ forms a 4-bytes hash to filter false candidate when probing
@@ -357,7 +362,8 @@ _note_: In the actual code, the GC is never delayed. It is performed between eve
 Additional back-references should also be stored for quick retrieval of rooted structured arrows. For example, they may be used to quickly fetch contextualised arrows like `(C0 ->  (C1 -> (... -> (Cn -> * ))))` (all the arrows in the nested hierarchy of context `{C0:{C1:...{Cn:{*}}...}}`).
 
 A proposal is to index every arrow by its flatten definition, or by some parts of its flatten definition like:
-  * the first-half of its flatten definition and the second-half
-  * all odd-indiced atoms, and all even-indiced atoms,
-  * the last atom, and the last but one atom.
-  * etc.
+
+* the first-half of its flatten definition and the second-half
+* all odd-indiced atoms, and all even-indiced atoms,
+* the last atom, and the last but one atom.
+* etc.
