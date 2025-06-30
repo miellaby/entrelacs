@@ -81,14 +81,14 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
 static pthread_cond_t apiNowActive;    // Signaled once a thread has finished commit
-static int sessionCount = 0; // Activity counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
+static int transactionCount = 0; // Active Transaction counter; Incremented/Decremented by xl_begin/xl_over. Decremented when waiting for commit. Incremented again after.
 static int spaceGCDone = 1; // 1->0 when a thread starts waiting in xl_commit()/xl_over(), 0->1 when all threads synced and GC is done
 static int memCommitDone = 1; // 1->0 when a thread starts waiting in xl_commit(), 0->1 when all threads synced and mem_commit(); occurs only if !memCommitDone
 static int memCloseDone = 1; // 1->0 when a xl_over thread starts waiting, 0->1 when all threads synced and a xl_commit() thread does commit (without actually mem_close)
 
-#define SESSION_BEGIN() (!sessionCount++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
-#define SESSION_END() (sessionCount ? (--sessionCount ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0)
-#define WAIT_DORMANCY() (sessionCount > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0)
+#define ENTER_TRANSACTION() (!transactionCount++ ? (void)pthread_cond_signal(&apiNowActive) : (void)0)
+#define LEAVE_TRANSACTION() (transactionCount ? (--transactionCount ? (void)0 : (void)pthread_cond_signal(&apiNowDormant)) : (void)0)
+#define WAIT_DORMANCY() (transactionCount > 0 ? (void)pthread_cond_wait(&apiNowDormant, &apiMutex) : (void)0)
 
 /*
  * Size limit from where data is stored as "blob" or "tag" or "small"
@@ -3159,7 +3159,7 @@ static void forget(Arrow a) {
 
 void xl_begin() {
     LOCK();
-    SESSION_BEGIN();
+    ENTER_TRANSACTION();
     mem_open();
     LOCK_END();
 }
@@ -3214,10 +3214,10 @@ void xl_over() {
     LOCK();
     spaceGCDone = 0; //< record the need to GC stuff before thread syncing
     memCloseDone = 0; //< record the need to close mem before thread syncing
-    SESSION_END();
+    LEAVE_TRANSACTION();
     do {
         WAIT_DORMANCY();
-    } while (sessionCount > 0); // spurious wakeup check
+    } while (transactionCount > 0); // spurious wakeup check
     
     if (!spaceGCDone) { // no other thread has GC yet
         spaceGC();
@@ -3238,10 +3238,10 @@ void xl_commit() {
     LOCK();
     spaceGCDone = 0; //< record the need to GC stuff before thread syncing
     memCommitDone = 0; //< record the need to commit stuff before threads syncing
-    SESSION_END();
+    LEAVE_TRANSACTION();
     do {
         WAIT_DORMANCY();
-    } while (sessionCount > 0); // spurious wakeup check
+    } while (transactionCount > 0); // spurious wakeup check
     
     if (!spaceGCDone) {
         spaceGC();
@@ -3253,7 +3253,7 @@ void xl_commit() {
         memCloseDone = 1; // < prevents xl_over() threads to close mem because there is at least one commit thread (this one)  
     }
 
-    SESSION_BEGIN();
+    ENTER_TRANSACTION();
     LOCK_END();
     
 }
