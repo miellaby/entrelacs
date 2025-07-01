@@ -46,7 +46,7 @@ char *mem0_dirname(char *path) {
     return d;                // special "/" case
   char *p = strrchr(d, '/'); // find last '/' char
   if (p == d)                // special case: "/something" in root
-    p[1] == '\0';
+    p[1] = '\0';
   else if (p) // /so/me/thing cases
     *p = '\0';
   else {
@@ -105,6 +105,7 @@ char *mem0_path(char **target, char *prePath, char *postPath) {
     free(translatedPrePath);
   if (translatedPostPath)
     free(translatedPostPath);
+  return *target;
 }
 
 // =============
@@ -319,7 +320,7 @@ int mem0_recoverFromJournal() {
     CellBody cell;
     size_t addressRead = fread(&address, sizeof(Address), 1, journalHandler);
     if (addressRead != 1) {
-      if (ferror) {
+      if (ferror(journalHandler)) {
         perror("mem0_recoverFromJournal fread address");
       }
       LOGPRINTF(LOG_FATAL, "Can't read Address from journal");

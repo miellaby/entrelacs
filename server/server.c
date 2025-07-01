@@ -63,7 +63,7 @@ static const char *HTTP_500 = "HTTP/1.0 500 Server Error\r\n\r\n";
 
 static Arrow assimilateUploadedData(struct mg_connection *conn) {
   const char* contentLengthHeader;
-  char postData[16 * 1024], path[999], fileName[1024], mimeType[100],
+  char postData[16 * 1024], fileName[1024], mimeType[100],
        buf[BUFSIZ], *eop, *s, *p;
   FILE *stream;
   int64_t contentLength, written;
@@ -118,7 +118,7 @@ static Arrow assimilateUploadedData(struct mg_connection *conn) {
 
   stream = tmpfile();
   
-  if (stream < 0) {
+  if (stream == NULL) {
     LOGPRINTF(LOG_ERROR, "Cannot create tmp file");
     return EVE;
   } else {
@@ -386,6 +386,7 @@ int _houseCleaning(void) {
     xl_over();
     xl_freeEnum(e);
     dputs("House Cleaning done.");
+    return 0;
 }
 
 int main(void) {

@@ -4,6 +4,11 @@
         "entrelacs.h": "c",
         "session.h": "c",
         "sha1.h": "c",
-        "log.h": "c"
+        "log.h": "c",
+        "cell.h": "c",
+        "geoalloc.h": "c",
+        "ctype.h": "c",
+        "stats.h": "c",
+        "mem.h": "c"
     }
 }

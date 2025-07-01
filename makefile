@@ -19,12 +19,13 @@
 # make help # this help
 
 .PHONY: help server clean all clean.% test.% run.% tests run start
-CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format -I$(CURDIR) -I$(CURDIR)/sha1  -Wall -Wextra
+CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
 VPATH := log:sha1:mem:space:machine:server:test
-OBJECTS = log.o mem0.o geoalloc.o mem.o mem_log.o sha1.o space.o machine.o session.o
+OBJECTS = log.o mem0.o geoalloc.o mem.o mem_log.o sha1.o \
+  hash.o cell.o assimilate.o serial.o space.o machine.o session.o
 OBJECTS_entrelacsd = mongoose.o server.o
 
 TESTS = space uri script machine shell
@@ -70,7 +71,7 @@ $(BINDIR)/libentrelacs.so: $(BINOBJECTS)
 $(BINDIR)/entrelacsd: $(BINOBJECTS_entrelacsd) $(BINDIR)/session.o $(BINDIR)/libentrelacs.a
 	$(CC) -B dynamic -pthread -o $(@) $^ -ldl
 
-$(BINDIR)/*.o: *.h
+$(BINDIR)/%.o: %.h
 
 $(BINDIR)/%.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@

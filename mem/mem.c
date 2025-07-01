@@ -315,6 +315,8 @@ int mem_commit() {
   zeroalloc((char **)&log, &logMax, &logSize);
   mem_stats = mem_stats_zero;
   reserveHead = 0;
+
+  return 0;
 }
 
 /** yield
@@ -361,4 +363,5 @@ int mem_init() {
 int mem_destroy() {
   free(log);
   mem0_destroy();
+  return 0;
 }

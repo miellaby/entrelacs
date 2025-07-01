@@ -280,11 +280,11 @@ Arrow xls_close(Arrow s) {
     return s;
 }
 
-static Arrow _fromUrl(Arrow context, unsigned char* url, char** urlEnd, int locateOnly) {
+static Arrow _fromUrl(Arrow context, unsigned char* url, unsigned char** urlEnd, int locateOnly) {
     DEBUGPRINTF("BEGIN _fromUrl(%06x, '%s')", context, url);
     Arrow a = EVE;
 
-    char c = url[0];
+    unsigned char c = url[0];
     if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
         a = EVE;
         *urlEnd = url;
@@ -380,7 +380,7 @@ static char* skeepSpacesAndOnePlus(char* urlEnd) {
 
 static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
     DEBUGPRINTF("BEGIN fromUrl(%06x, '%s', %d)", context, url, locateOnly);
-    char c, *nextUrl;
+    char *nextUrl;
     Arrow a = _fromUrl(context, url, &nextUrl, locateOnly);
     if (!nextUrl) return a; // NIL or EVE
 
