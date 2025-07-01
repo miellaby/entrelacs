@@ -245,6 +245,7 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
 uint32_t cell_getHash(Address a);
 void cell_show(Address a);
 void cell_showChildren(Address a);
+int  cell_isLoose(Address a);
 
 #define LOGCELL(operation, address, cell) cell_log(LOG_DEBUG, __LINE__, operation, address, cell)
 /* Address shifting */

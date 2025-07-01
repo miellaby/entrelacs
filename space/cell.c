@@ -410,3 +410,25 @@ uint32_t cell_getHash(Address a) {
         return cell.arrow.hash; // hash
     }
 }
+
+/** check if an arrow is loose */
+int cell_isLoose(Address a) {
+  if (a == EVE) return EVE;
+
+  Cell cell;
+  mem_get(a, &cell.u_body);
+  ONDEBUG((LOGCELL('R', a, &cell)));
+  
+  if (cell.full.type == CELLTYPE_EMPTY
+      || cell.full.type > CELLTYPE_ARROWLIMIT)
+    return 0;
+
+  if (cell.arrow.RWWnCn & FLAGS_ROOTED)
+    return 0;
+
+  if (cell.arrow.RWWnCn & FLAGS_CHILDRENMASK)
+    return 0;
+
+  return 1;
+}
+

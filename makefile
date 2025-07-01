@@ -25,7 +25,7 @@ BINDIR = bin
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
 VPATH := log:sha1:mem:space:machine:server:test
 OBJECTS = log.o mem0.o geoalloc.o mem.o mem_log.o sha1.o \
-  hash.o cell.o assimilate.o serial.o space.o machine.o session.o
+  hash.o cell.o assimilate.o serial.o weaver.o space.o machine.o session.o
 OBJECTS_entrelacsd = mongoose.o server.o
 
 TESTS = space uri script machine shell
