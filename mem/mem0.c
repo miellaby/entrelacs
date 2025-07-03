@@ -530,7 +530,7 @@ void mem0_deleteData(char *h) {
   }
 }
 
-char *mem0_loadData(char *h, size_t *sizeP) {
+uint8_t *mem0_loadData(char *h, size_t *sizeP) {
   *sizeP = 0;
 
   size_t size;
@@ -573,7 +573,8 @@ char *mem0_loadData(char *h, size_t *sizeP) {
     return NULL;
   }
 
-  char *buffer = (char *)malloc(sizeof(char) * (1 + size));
+  // malloc +1 for null-terminator
+  uint8_t *buffer = (uint8_t *)malloc(sizeof(uint8_t) * (1 + size));
   if (!buffer) {
     LOGPRINTF(LOG_FATAL, "Can't allocate buffer");
     fclose(fd);

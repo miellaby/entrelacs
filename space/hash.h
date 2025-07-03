@@ -15,7 +15,7 @@ uint64_t hash_pair(uint64_t h_tail, uint64_t h_head);
 /// @param[in] str 
 /// @param[out] length 
 /// @return hash code
-uint64_t hash_string(uint8_t *str, uint32_t* length);
+uint64_t hash_string(char *str, uint32_t* length);
 
 /// @brief hash a binary string
 /// @param[in] buffer 

@@ -204,9 +204,8 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
   if (ins == load) { //load expression #e#
      // p == (load (s0 s1))
      dputs("p == (load (s0 s1))");
-     Arrow s = head(p);
-     Arrow s0 = tail(s);
-     Arrow s1 = head(s);
+     Arrow s0 = tail(param);
+     Arrow s1 = head(param);
 
      // (load (s0 s1)) <==> (let ((Eve s0) s1))) : direct environment loading
      // rewriting program as pp = (let ((Eve s0) s1))
@@ -219,7 +218,6 @@ static Arrow transition(Arrow C, Arrow M) { // M = (p, (e, k))
      // p == (eval s)
      dputs("p == (eval s)");
      Arrow s = head(p);
-
      chainSize++;
      M = A(s, A(e, A(evalOp, A(e, k)))); // stack an eval continuation
      return M;
@@ -788,8 +786,9 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     if (!secret_s)
         return xl_reduceMachine(CM, EVE);
 
-    unsigned char h[20], secret_sha1[41];
-    sha1(secret_s, strlen(secret_s), h);
+    uint8_t h[20];
+    char secret_sha1[41];
+    sha1((uint8_t *)secret_s, strlen(secret_s), h);
     for (int i = 0; i < 20; i++) {
            sprintf(secret_sha1 + i * 2, "%02x", h[i]);
     }
@@ -815,7 +814,7 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
    Arrow arrow = xl_argInMachine(CM);
    uint32_t digestSize;
    char* digest = xl_digestOf(arrow, &digestSize);
-   return xl_reduceMachine(CM, atomn(digestSize, digest));
+   return xl_reduceMachine(CM, atomn(digestSize, (uint8_t *)digest));
 }
 
 static void machine_init(Arrow CM) {

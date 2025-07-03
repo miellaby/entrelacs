@@ -171,7 +171,7 @@ void   mem0_saveData(char *h, size_t size, uint8_t * data);
  @param sizeP size_t pointer. Pointed value set to data size.
  @return pointer to heap allocated binary data (must be freed by caller).
  */
-char*  mem0_loadData(char* h, size_t* sizeP);
+uint8_t*  mem0_loadData(char* h, size_t* sizeP);
 
 /** remove a data file created by mem0_loadData.
  @param unique cryptographic hash code.

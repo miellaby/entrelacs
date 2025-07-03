@@ -201,9 +201,9 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
             
               // set/reset flags
               nextCell.children.directions =
-                nextCell.children.directions
+                (nextCell.children.directions
                 & ((1 << j) ^ 0xFFFF)
-                & ((1 << (8 + j)) ^ 0xFFFF)
+                & ((1 << (8 + j)) ^ 0xFFFF))
                 | (outgoing ? (1 << j) : 0);
               mem_set(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('W', next, &nextCell)));
@@ -225,8 +225,8 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     // fill up the free slot (terminator OR child)
     nextCell.children.C[j] = child;
     nextCell.children.directions =
-      nextCell.children.directions
-      & ((0x101 << j) ^ 0xFFFF)
+      (nextCell.children.directions
+      & ((0x101 << j) ^ 0xFFFF))
       | ((child != a && outgoing) ? (1 << j) : 0) // outgoing flag
       | (child == a ? (0x100 << j) : 0); // terminator flag if one puts the terminator
     mem_set(next, &nextCell.u_body);
@@ -265,21 +265,21 @@ void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     assert(parent.full.type != CELLTYPE_EMPTY && parent.full.type <= CELLTYPE_ARROWLIMIT);
 
     // get counters
-    int childrenCount = (int)(parent.arrow.RWWnCn & FLAGS_CHILDRENMASK);
-    int weakChildrenCount = (int)((parent.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
+    uint16_t childrenCount = (uint16_t)(parent.arrow.RWWnCn & FLAGS_CHILDRENMASK);
+    uint16_t weakChildrenCount = (uint16_t)((parent.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
 
     // update child counters
     if (weakness) {
-      if (weakChildrenCount < MAX_WEAKREFCOUNT) {
+      if (weakChildrenCount < MAX_WEAKREFCOUNT && weakChildrenCount > 0) {
         weakChildrenCount--;
       }
     } else {
-      if (childrenCount < MAX_REFCOUNT) {
+      if (childrenCount < MAX_REFCOUNT && childrenCount > 0) {
         childrenCount--;
       }
     }
-    parent.arrow.RWWnCn = parent.arrow.RWWnCn
-       & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu) 
+    parent.arrow.RWWnCn = (parent.arrow.RWWnCn
+       & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu)) 
        | (weakChildrenCount << 15) | childrenCount;
 
     // check "loose" status evolution after child counters update
@@ -303,7 +303,7 @@ void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
     // child0 simple case
     if (parent.arrow.child0 == child) {
       int child0direction = parent.arrow.RWWnCn & FLAGS_C0D;
-      if (child0direction && outgoing || !(child0direction || outgoing)) {
+      if ((child0direction && outgoing) || !(child0direction || outgoing)) {
         parent.arrow.child0 = 0;
         parent.arrow.RWWnCn &= (FLAGS_C0D ^ 0xFFFFFFFFu);
         child = 0; // OK
@@ -329,16 +329,16 @@ void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
     // If one child, one removes the list terminator
     int removeTerminatorNow = 
-            !weakness
+            (!weakness
               && weakChildrenCount == 0
               && (childrenCount == 0
-                  || childrenCount == 1
-                     && parent.arrow.child0 != 0)
-            || weakness
+                  || ((childrenCount == 1
+                     && parent.arrow.child0 != 0))))
+            || (weakness
               && weakChildrenCount == 0
               && (childrenCount == 0
-                 || childrenCount == 1
-                    && parent.arrow.child0 != 0);
+                 || (childrenCount == 1
+                    && parent.arrow.child0 != 0)));
 
     while(1) { // child probing loop
 
@@ -356,10 +356,10 @@ void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
         while (j < 5) { // slot scanning
             Arrow inSlot = nextCell.children.C[j];
             if (inSlot == child
-                && (   child == a && (nextCell.children.directions & (1 << (j + 8)))
-                    || child != a && 
-                      (    outgoing && (nextCell.children.directions & (1 << j))
-                       || !outgoing && !(nextCell.children.directions & (1 << j))))
+                && (   (child == a && (nextCell.children.directions & (1 << (j + 8))))
+                    || (child != a && 
+                      (    (outgoing && (nextCell.children.directions & (1 << j)))
+                       || (!outgoing && !(nextCell.children.directions & (1 << j))))))
                ) { // back-ref or terminator found
               
               // unload slot

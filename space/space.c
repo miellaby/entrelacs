@@ -55,6 +55,7 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 #define LOCK_OUT(X) (pthread_mutex_unlock(&apiMutex), (Arrow)X)
 #define LOCK_OUT64(X) (pthread_mutex_unlock(&apiMutex), (uint64_t))
 #define LOCK_OUTSTR(X) (pthread_mutex_unlock(&apiMutex), (char*)X)
+#define LOCK_OUTRAW(X) (pthread_mutex_unlock(&apiMutex), (uint8_t*)X)
 
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
@@ -98,34 +99,32 @@ Arrow xl_pairMaybe(Arrow tail, Arrow head) {
 }
 
 Arrow xl_atom(char* str) {
-    uint32_t size;
-    uint64_t hash = hash_string(str, &size);
+    uint32_t size = strlen(str);
     LOCK();
     Arrow a =
       (size == 0 ? // EVE has a zero payload
         EVE : (size < TAG_MINSIZE
-            ? assimilate_small(size, str, 0)
+            ? assimilate_small(size, (uint8_t *)str, 0)
             : (size >= BLOB_MINSIZE
-              ? assimilate_blob(size, str, 0)
-              : assimilate_tag(size, str, 0, hash))));
+              ? assimilate_blob(size, (uint8_t *)str, 0)
+              : assimilate_tag(size, (uint8_t *)str, 0))));
     return LOCK_OUT(a);
 }
 
 Arrow xl_atomMaybe(char* str) {
-    uint32_t size;
-    uint64_t hash = hash_string(str, &size);
+    uint32_t size = strlen(str);
     LOCK();
     Arrow a =
       (size == 0 ? EVE // EVE 0 payload
       : (size < TAG_MINSIZE
-        ? assimilate_small(size, str, 1)
+        ? assimilate_small(size, (uint8_t *)str, 1)
         : (size >= BLOB_MINSIZE
-          ? assimilate_blob(size, str, 1)
-          : assimilate_tag(size, str, 1, hash))));
+          ? assimilate_blob(size, (uint8_t *)str, 1)
+          : assimilate_tag(size, (uint8_t *)str, 1))));
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomn(uint32_t size, char* mem) {
+Arrow xl_atomn(uint32_t size, uint8_t* mem) {
     Arrow a;
     LOCK();
     if (size == 0)
@@ -135,12 +134,12 @@ Arrow xl_atomn(uint32_t size, char* mem) {
     } else if (size >= BLOB_MINSIZE) {
         a = assimilate_blob(size, mem, 0);
     } else {
-        a = assimilate_tag(size, mem, 0, /*hash*/ 0);
+        a = assimilate_tag(size, mem, 0);
     }
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomnMaybe(uint32_t size, char* mem) {
+Arrow xl_atomnMaybe(uint32_t size, uint8_t* mem) {
     Arrow a;
     LOCK();
     if (size == 0)
@@ -150,7 +149,7 @@ Arrow xl_atomnMaybe(uint32_t size, char* mem) {
     } else if (size >= BLOB_MINSIZE)
         a = assimilate_blob(size, mem, 1);
     else {
-        a = assimilate_tag(size, mem, 1, /*hash*/ 0);
+        a = assimilate_tag(size, mem, 1);
     }
     return LOCK_OUT(a);
 }
@@ -169,7 +168,7 @@ Arrow xl_tailOf(Arrow a) {
 
 /** return the content behind an atom
 */
-char* xl_memOf(Arrow a, uint32_t* lengthP) {
+uint8_t* xl_memOf(Arrow a, uint32_t* lengthP) {
     if (a == EVE) { // Eve has an empty payload
         return cell_getPayload(EVE, NULL, lengthP);
     }
@@ -184,37 +183,38 @@ char* xl_memOf(Arrow a, uint32_t* lengthP) {
 
     if (cell.full.type < CELLTYPE_SMALL
         || cell.full.type > CELLTYPE_BLOB) { // Not an atom (empty cell, pair, ...)
-        return LOCK_OUTSTR(NULL);
+        return LOCK_OUTRAW(NULL);
     }
 
     
     uint32_t payloadLength;
-    char* payload = cell_getPayload(a, &cell, &payloadLength);
+    uint8_t* payload = cell_getPayload(a, &cell, &payloadLength);
     if (payload == NULL) { // Error
-        return LOCK_OUTSTR(NULL);
+        return LOCK_OUTRAW(NULL);
     }
 
     if (cell.full.type == CELLTYPE_BLOB) {
         // The payload is a BLOB footprint
+        char *footprint = (char*) payload;
         size_t blobLength;
-        char* blobData = mem0_loadData(payload, &blobLength);
+        uint8_t* blobData = mem0_loadData(footprint, &blobLength);
         if (blobLength > UINT32_MAX)
           blobLength = UINT32_MAX;
         *lengthP = blobLength;
         free(payload); // one doesn't return the payload, free...
         // *lengthP = ... set by mem0_loadData call
-        return LOCK_OUTSTR(blobData);
+        return LOCK_OUTRAW(blobData);
     }
 
     // else: Tag or small case
     *lengthP = payloadLength;
-    return LOCK_OUTSTR(payload);
+    return LOCK_OUTRAW(payload);
 }
 
 char* xl_strOf(Arrow a) {
     uint32_t lengthP;
-    char* p = xl_memOf(a, &lengthP);
-    return p;
+    uint8_t* p = xl_memOf(a, &lengthP);
+    return (char *)p;
 }
 
 
@@ -282,9 +282,10 @@ Arrow xl_anonymous() {
     char anonymous[CRYPTO_SIZE + 1];
     Arrow a = NIL;
     do {
+        // FIXME actual randomness
         char random[80];
         snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
-        hash_crypto(80, random,  anonymous); // Access to unitialized data is wanted
+        hash_crypto(sizeof(random), (uint8_t *)random,  anonymous); // Access to unitialized data is wanted
         a = xl_atomMaybe(anonymous);
         assert(a != NIL);
     } while (a);
@@ -292,6 +293,7 @@ Arrow xl_anonymous() {
 }
 
 static Arrow unrootChild(Arrow child, Arrow context) {
+    (void) context;
     xl_unroot(child);
     return EVE;
 }
@@ -848,25 +850,6 @@ void xl_begin() {
     LOCK_END();
 }
 
-/** type an arrow as a "state" arrow.
- *  TODO: is it necessary?
- */
-Arrow xl_state(Arrow a) {
-    static Arrow systemStateBadge = EVE;
-    if (systemStateBadge == EVE) { // to avoid locking in most cases
-            LOCK();
-            if (systemStateBadge == EVE) {
-                systemStateBadge = xl_atom("XLsTAT3");
-                xl_root(systemStateBadge);
-
-                // prevent previous session saved states to survive the reboot.
-                xl_childrenOfCB(systemStateBadge, unrootChild, EVE);
-            }
-            LOCK_END();
-    }
-    return xl_pair(systemStateBadge, a);
-}
-
 void xl_over() {
     LOCK();
     spaceGCDone = 0; //< record the need to GC stuff before thread syncing
@@ -923,18 +906,8 @@ void xl_commit() {
 
 /** xl_yield */
 void xl_yield(Arrow a) {
-    return; // FIXME je désactive yield tant que je n'ai pas trouvé une façon correcte de préserver des flèches manipulées en dehors de xl_run() 
-    Arrow stateArrow = EVE;
-    TRACEPRINTF("xl_yield (looseLogSize = %d)", looseLogSize);
-    if (a != EVE) {
-        stateArrow = xl_state(a);
-        xl_root(stateArrow);
-    }
-    xl_over();
-    xl_begin();
-    if (stateArrow != EVE) {
-        xl_unroot(stateArrow);
-    }
+    (void) a;
+    return; // FIXME je désactive yield tant que je n'ai pas trouvé une façon correcte de préserver des flèches manipulées en dehors de xl_run()
 }
 
 /** printf extension for arrow (%O specifier) */
@@ -955,6 +928,7 @@ static int printf_arrow_extension(FILE *stream,
 /** printf extension "arginfo" */
 static int printf_arrow_arginfo_size(const struct printf_info *info, size_t n,
         int *argtypes, int *size) {
+    (void) info; (void) size;
     /* We always take exactly one argument and this is a pointer to the
        structure.. */
     if (n > 0)

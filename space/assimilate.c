@@ -203,10 +203,9 @@ Arrow probe_digest(char *digest) {
  * Will create the singleton if missing except if $ifExist is set.
  * $str might be a blob signature or a tag content.
  */
-Arrow assimilate_string(int cellType, int length, uint8_t *str, uint64_t payloadHash, int ifExist) {
+Arrow assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
     Address hashAddress, hashProbe, hChain;
     uint32_t l;
-    uint32_t hash;
     Address probeAddress, firstFreeAddress, next;
     Cell probed, sliceCell;
 
@@ -219,7 +218,7 @@ Arrow assimilate_string(int cellType, int length, uint8_t *str, uint64_t payload
         return EVE;
     }
 
-    hash = payloadHash & 0xFFFFFFFFU;
+    uint64_t hash = hash_raw(str, length);
     hashAddress = hash % PRIM0;
     hashProbe = hash % PRIM1;
     if (!hashProbe) hashProbe = 1; // offset can't be 0
@@ -491,9 +490,8 @@ Arrow assimilate_string(int cellType, int length, uint8_t *str, uint64_t payload
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist, uint64_t hash) {
-    if (!hash) hash = hash_raw(data, size);
-    return assimilate_string(CELLTYPE_TAG, size, data, hash, ifExist);
+Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
+    return assimilate_string(CELLTYPE_TAG, size, data, ifExist);
 }
 
 /** retrieve a blob arrow defined by 'size' bytes pointed by 'data',
@@ -503,8 +501,6 @@ Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist, uint64_t hash) {
 Arrow assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
     char signature[CRYPTO_SIZE + 1];
     hash_crypto(size, data, signature);
-    uint32_t signature_size;
-    uint64_t hash = hash_string((uint8_t *)signature, &signature_size);
 
     // A BLOB consists in:
     // - A signature, stored as a specialy typed tag in the arrows space.
@@ -512,7 +508,7 @@ Arrow assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
     mem0_saveData(signature, (size_t)size, data);
     // TODO: remove data when cell at h is recycled.
 
-    return assimilate_string(CELLTYPE_BLOB, signature_size, (uint8_t *)signature, hash, ifExist);
+    return assimilate_string(CELLTYPE_BLOB, CRYPTO_SIZE, (uint8_t *)signature, ifExist);
 }
   
 /** assimilate small

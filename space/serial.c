@@ -363,8 +363,7 @@ Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExi
                 if (atomLength < TAG_MINSIZE) {
                     a = assimilate_small(atomLength, atomStr, ifExist);
                 } else if (atomLength < BLOB_MINSIZE) {
-                    uint64_t hash = hash_string(atomStr, &size);
-                    a = assimilate_string(CELLTYPE_TAG, atomLength, atomStr, hash, ifExist);
+                    a = assimilate_string(CELLTYPE_TAG, atomLength, atomStr, ifExist);
                 } else {
                     a = assimilate_blob(atomLength, atomStr, ifExist);
                 }

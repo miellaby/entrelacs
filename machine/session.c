@@ -280,12 +280,12 @@ Arrow xls_close(Arrow s) {
     return s;
 }
 
-static Arrow _fromUrl(Arrow context, unsigned char* url, unsigned char** urlEnd, int locateOnly) {
+static Arrow _fromUrl(Arrow context, char* url, char** urlEnd, int locateOnly) {
     DEBUGPRINTF("BEGIN _fromUrl(%06x, '%s')", context, url);
     Arrow a = EVE;
 
-    unsigned char c = url[0];
-    if (c <= 32) { // Any control-caracters/white-spaces are considered as URI break
+    char c = url[0];
+    if (c >= 0 && c <= 32) { // Any control-caracters/white-spaces are considered as URI break
         a = EVE;
         *urlEnd = url;
     } else switch (c) {

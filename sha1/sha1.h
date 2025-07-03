@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-void sha1( const unsigned char *input, int ilen, unsigned char output[20] );
+void sha1(const unsigned char *input, int ilen, unsigned char output[20]);
 
 /**
  * \brief          Output = SHA-1( file contents )

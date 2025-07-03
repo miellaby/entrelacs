@@ -49,7 +49,7 @@ static Arrow fdatom(int fd) {
   char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
   assert (data != (void*) -1);
   
-  a = xl_atomn(size, data);
+  a = xl_atomn(size, (uint8_t*)data);
   munmap(data, size);
  }
 
@@ -206,7 +206,7 @@ static void *event_handler(enum mg_event event,
 
         dputs("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
-        xls_set(session, xl_atom("expire"), xl_atomn(sizeof(time_t), (char *)&now));
+        xls_set(session, xl_atom("expire"), xl_atomn(sizeof(time_t), (uint8_t*)&now));
 
         Arrow input = xls_url(session, request_info->uri);
         dputs("input %s assimilated as %O", request_info->uri, input);
@@ -282,13 +282,14 @@ static void *event_handler(enum mg_event event,
 //            }
         }
         uint32_t content_length;
-        char* content = NULL;
+        uint8_t* content = NULL;
         if (i_depth != 0) {
             content = xl_memOf(output, &content_length);
         }
         if (!content) {
-            content = xls_urlOf(session, output, i_depth);
-            content_length = strlen(content);
+            char *url = xls_urlOf(session, output, i_depth);
+            content = (uint8_t *) url;
+            content_length = strlen(url);
         }
         const char* origin =  mg_get_header(conn, "Origin");
         mg_printf(conn, "HTTP/1.1 200 OK\r\nCache: no-cache\r\n"

@@ -15,13 +15,13 @@ Address probe_digest(char *digest);
  * Will create the singleton if missing except if $ifExist is set.
  * $str might be a blob signature or a tag content.
  */
-Arrow assimilate_string(int cellType, int length, uint8_t* str, uint64_t payloadHash, int ifExist);
+Arrow assimilate_string(int cellType, int length, uint8_t *payload, int ifExist);
 
 /** assimilate a tag binary string defined by 'size' bytes pointed by 'data',
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist, uint64_t hash);
+Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist);
 
 
 /** retrieve a blob binary string defined by 'size' bytes pointed by 'data',

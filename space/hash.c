@@ -17,12 +17,12 @@ uint64_t hash_pair(uint64_t h_tail, uint64_t h_head) {
 }
 
 /* hash a null-terminated string such as a tag atom content. Also return its size */
-uint64_t hash_string(uint8_t *str, uint32_t *length) {  // simple string hash
+uint64_t hash_string(char *str, uint32_t *length) {  // simple string hash
     uint64_t hash = 5381;
-    uint8_t *s = str;
+    char *s = str;
     uint8_t c;
     uint32_t l = 0;
-    while ((c = *s++)) {  // for all bytes up to the null terminator
+    while ((c = (uint8_t)(*s++))) {  // for all bytes up to the null terminator
         // 5 bits shift only because ASCII varies within 5 bits
         hash = ((hash << 5) + hash) + c;
         l++;

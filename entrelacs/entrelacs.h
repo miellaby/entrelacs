@@ -37,7 +37,7 @@ void xl_destroy(); ///< release hardware locks and such.
 Arrow xl_Eve(); ///< returns Eve.
 Arrow xl_pair(Arrow, Arrow); ///< assimilate a pair of arrows.
 Arrow xl_atom(char*); ///< assimilate a C string
-Arrow xl_atomn(uint32_t size, char*); ///< assimilate raw data
+Arrow xl_atomn(uint32_t size, uint8_t*); ///< assimilate raw data
 Arrow xl_uri(char*); ///< assimilate an URI, returning an arrow (NIL if URI is wrong)
 Arrow xl_urin(uint32_t size, char*); ///< assimilate a piece of URI, returning an arrow (NIL if URI is wrong)
 
@@ -54,7 +54,7 @@ Arrow xl_hook(void* hook); ///< assimilate a C pointer and return an arrow.
  */
 Arrow xl_pairMaybe(Arrow, Arrow); ///< return a pair of arrows if system-known, Eve otherwise.
 Arrow xl_atomMaybe(char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
-Arrow xl_atomnMaybe(uint32_t size, char*); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
+Arrow xl_atomnMaybe(uint32_t size, uint8_t*); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
 Arrow xl_uriMaybe(char*); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
 Arrow xl_urinMaybe(uint32_t size, char*); ///< return the previously assimilated arrow corresponding to a piece of URI, NIL if wrong URI, EVE if arrow not assimilated.
 Arrow xl_digestMaybe(char*); ///< return a stored arrow corresponding to a digest, NIL if no match.
@@ -71,7 +71,7 @@ XLType xl_typeOf(Arrow); ///< return arrow type. // TODO: could it be a SMALL ar
 Arrow xl_headOf(Arrow); ///< return arrow head.
 Arrow xl_tailOf(Arrow); ///< return arrow tail.
 char* xl_strOf(Arrow);  ///< retrieve an atomic arrow as a C string. @return pointer to freed.
-char* xl_memOf(Arrow, uint32_t* size_p); /// retrieve an atomic arrow as a piece of binary data. @return pointer to freed.
+uint8_t* xl_memOf(Arrow, uint32_t* size_p); /// retrieve an atomic arrow as a piece of binary data. @return pointer to freed.
 char* xl_uriOf(Arrow, uint32_t* size_p); ///< Retrieve an arrow definition in URI notation. @return pointer to freed.
 uint32_t xl_checksumOf(Arrow); ///< return the arrow checksum.
 char* xl_digestOf(Arrow, uint32_t* size_p); ///< Retrieve an arrow digest. @return pointer to freed.
