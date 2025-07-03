@@ -67,7 +67,7 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     int childrenCount = (int)(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
     int weakChildrenCount = (int)((cell.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
     int loose = (childrenCount == 0 && !(cell.arrow.RWWnCn & FLAGS_ROOTED));
-    int unconnected = loose & weakChildrenCount == 0; // a loose arrow without even weak children
+    int unconnected = loose & (weakChildrenCount == 0); // a loose arrow without even weak children
     if (loose && !childWeakness) {  // parent is not loose anymore
         // (try to) remove 'a' from the loose log if strong child
         weaver_removeLoose(a);
@@ -84,21 +84,21 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     // detects there's no terminator at the children list end
     int noTerminatorYet = (weakChildrenCount == 0
                            && (childrenCount == 0
-                            || childrenCount == 1 && cell.arrow.child0));
+                            || (childrenCount == 1 && cell.arrow.child0)));
 
     // Update children counters in parent cell    
     if (childWeakness) {
-      if (weakChildrenCount < MAX_WEAKREFCOUNT) {
+      if (weakChildrenCount < (int) MAX_WEAKREFCOUNT) {
           weakChildrenCount++;
       }
     } else {
-      if (childrenCount < MAX_REFCOUNT) {
+      if (childrenCount < (int) MAX_REFCOUNT) {
         childrenCount++;
       }
     }
 
-    cell.arrow.RWWnCn = cell.arrow.RWWnCn
-       & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu) 
+    cell.arrow.RWWnCn = (cell.arrow.RWWnCn
+       & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu))
        | (weakChildrenCount << 15)
        | childrenCount;
 
@@ -180,8 +180,8 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
           
               // set/reset flags
               nextCell.children.directions =
-                nextCell.children.directions
-                & ((0x101 << j) ^ 0xFFFF)
+                (nextCell.children.directions
+                & ((0x101 << j) ^ 0xFFFF))
                 | (outgoing ? (1 << j) : 0);
               mem_set(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('W', next, &nextCell)));

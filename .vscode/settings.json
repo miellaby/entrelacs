@@ -1,5 +1,15 @@
 {
     "makefile.configureOnOpen": true,
+    "makefile.compileCommandsPath": ".vscode/compile_commands.json",
+    "makefile.configurations": [
+        {
+            "name": "MyConfiguration",
+            "problemMatchers": [
+                "$gcc"
+            ],
+            "makeArgs": []
+        },
+    ],
     "files.associations": {
         "entrelacs.h": "c",
         "session.h": "c",

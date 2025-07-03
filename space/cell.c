@@ -34,7 +34,7 @@ Address cell_getHead(Address a) {
         return cell.pair.head;
 }
 
-void cell_getSmallPayload(Cell *cell, char* buffer) {
+void cell_getSmallPayload(Cell *cell, uint8_t* buffer) {
     int bigSmall = cell->small.s > 8;
     memcpy(buffer, cell->small.data, bigSmall ? 8 : cell->small.s);
     if (bigSmall) {
@@ -111,15 +111,15 @@ Address cell_jumpToNext(Cell* cell, Address address, Address offset) {
 }
 
 /** return the payload of an arrow (blob/tag/small), NULL on error */
-char* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
+uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
     // the result
-   char* payload = NULL;
+   uint8_t* payload = NULL;
    uint32_t size = 0;
 
    if (a == EVE) { // Eve has an empty payload, length = 0
        
        // allocate and return an empty string
-       payload = (char*) malloc(1);
+       payload = (uint8_t*) malloc(1);
        if (!payload) { // allocation failed
            return NULL;
        }
@@ -252,7 +252,7 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
 
       } else if (type == CELLTYPE_SMALL) {
         int s = (int)cell->small.s;
-        char buffer[11];
+        uint8_t buffer[11];
         cell_getSmallPayload(cell, buffer);
         LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
           line, operation, address, pebble, type,

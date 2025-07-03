@@ -247,13 +247,13 @@ int mem0_openPreviousJournal() {
   }
   // journal terminator is in the form:
   // Address=0,CellBody=0,Address=0,CellBody=0
-  for (int i = 0; i < sizeof(check); i++) {
+  for (size_t i = 0; i < sizeof(check); i++) {
     if (check[i]) { // if one byte is not 0, then it's a truncated journal
       LOGPRINTF(LOG_WARN, "Journal is not properly terminated");
       goto corrupted;
     }
   }
-valid:
+
   DEBUGPRINTF("Previous journal is validated");
   return 0;
 
@@ -402,7 +402,7 @@ int mem0_init() {
   if (size == -1) {
     perror("mem0_init ftell");
   }
-  if (size != sizeof(CellBody) * SPACE_SIZE) {
+  if ((size_t) size != sizeof(CellBody) * SPACE_SIZE) {
     LOGPRINTF(LOG_FATAL, "mem0 wrong size. storage full?");
     return -1;
   }
@@ -477,7 +477,7 @@ int mem0_set(Address address, CellBody *pCellBody) {
   return mem0_addToJournal(address, pCellBody);
 }
 
-void mem0_saveData(char *h, size_t size, char *data) {
+void mem0_saveData(char *h, size_t size, uint8_t *data) {
   TRACEPRINTF("saving %ld bytes as '%s' hash", size, h);
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size)
@@ -563,7 +563,7 @@ char *mem0_loadData(char *h, size_t *sizeP) {
   }
 
   size = ftell(fd);
-  if (size == -1) {
+  if (size == (size_t)-1) {
     perror("mem0_loadData ftell");
   }
   rewind(fd);

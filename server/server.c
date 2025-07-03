@@ -130,7 +130,7 @@ static Arrow assimilateUploadedData(struct mg_connection *conn) {
     written = n;
     while (written < contentLength &&
            (n = mg_read(conn, buf, contentLength - written > (int64_t) sizeof(buf) ?
-                        sizeof(buf) : contentLength - written)) > 0) {
+                        sizeof(buf) : (size_t)(contentLength - written))) > 0) {
       (void) fwrite(buf, 1, n, stream);
       written += n;
     }

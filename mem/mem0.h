@@ -164,7 +164,7 @@ int  mem0_commit();
  @param data size.
  @param pointer to binary data.
  */
-void   mem0_saveData(char *h, size_t size, char* data);
+void   mem0_saveData(char *h, size_t size, uint8_t * data);
 
 /** read back a data file created by mem0_loadData.
  @param h unique cryptographic hash code.

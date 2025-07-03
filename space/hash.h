@@ -15,13 +15,13 @@ uint64_t hash_pair(uint64_t h_tail, uint64_t h_head);
 /// @param[in] str 
 /// @param[out] length 
 /// @return hash code
-uint64_t hash_string(char *str, uint32_t* length);
+uint64_t hash_string(uint8_t *str, uint32_t* length);
 
 /// @brief hash a binary string
 /// @param[in] buffer 
 /// @param[in] length 
 /// @return hash code
-uint64_t hash_raw(char *buffer, uint32_t length);
+uint64_t hash_raw(uint8_t *buffer, uint32_t length);
 
 /// @brief return hChain for an arrow in a cell 
 /// @param cell 
@@ -38,5 +38,5 @@ uint32_t hash_children(Cell* cell);
 /// @param[in] data blob content
 /// @param[out] output hexadecimal crypto hash
 /// @return output
-char* hash_crypto(uint32_t size, char* data, char output[CRYPTO_SIZE + 1]);
+char* hash_crypto(uint32_t size, uint8_t* data, char output[CRYPTO_SIZE + 1]);
 

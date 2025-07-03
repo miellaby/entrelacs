@@ -16,6 +16,6 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l);
 
 char* serial_toURI(Address a, uint32_t *l);
 
-Arrow serial_parseUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, int ifExist);
+Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist);
 
 Arrow serial_parseURIs(uint32_t size, char *uri, int ifExist);

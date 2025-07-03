@@ -32,7 +32,7 @@ void mem_show(Address a) {
   struct s_mem* m = &mem[offset];
   if (memIsEmpty(m) || m->page != page) { // cache miss
     // look at the reserve
-    for (int i = 0; i < reserveHead ; i++) {
+    for (size_t i = 0; i < reserveHead ; i++) {
       if (reserve[i].a == a) { // reserve hit
         LOGPRINTF(LOG_DEBUG, "%06x MOD IN RESERVE stamp=%d", a, reserve[i].stamp);
       }
@@ -47,7 +47,7 @@ int mem_whereIs(Address a) {
   Address offset = a % MEMSIZE;
   uint32_t  page = a / MEMSIZE;
   struct s_mem* m = &mem[offset];
-  int i;
+  size_t i;
   if (!memIsEmpty(m) && m->page == page) { // cache hit
     INFOPRINTF("%06x LOADED %s stamp=%d", a,
                 m->flags & MEM1_CHANGED ? "MODIFIED" : "", m->stamp);

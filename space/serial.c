@@ -16,18 +16,18 @@
 
 /// URL-encode input buffer into destination buffer.
 /// 0-terminate the destination buffer.
-static void percent_encode(const char *src, uint32_t src_len, char *dst, uint32_t* dst_len_p) {
+static void percent_encode(uint8_t *src, uint32_t src_len, char *dst, uint32_t* dst_len_p) {
     static const char *dont_escape = "_-,;~()";
     static const char *hex = "0123456789abcdef";
     uint32_t i, j;
     for (i = j = 0; i < src_len; i++, src++, dst++, j++) {
-        if (*src && (isalnum(*(const unsigned char *) src) ||
-                strchr(dont_escape, * (const unsigned char *) src) != NULL)) {
+        if (*src && (isalnum(*src) ||
+                strchr(dont_escape, *src) != NULL)) {
             *dst = *src;
         } else {
             dst[0] = '%';
-            dst[1] = hex[(* (const unsigned char *) src) >> 4];
-            dst[2] = hex[(* (const unsigned char *) src) & 0xf];
+            dst[1] = hex[(*src) >> 4];
+            dst[2] = hex[(*src) & 0xf];
             dst += 2;
             j += 2;
         }
@@ -40,7 +40,7 @@ static void percent_encode(const char *src, uint32_t src_len, char *dst, uint32_
 
 /// URL-decode input buffer into destination buffer.
 /// 0-terminate the destination buffer.
-static void percent_decode(const char *src, uint32_t src_len, char *dst, uint32_t* dst_len_p) {
+static void percent_decode(const char *src, uint32_t src_len, uint8_t *dst, uint32_t* dst_len_p) {
     uint32_t i, j;
     int a, b;
 
@@ -113,7 +113,7 @@ char* serial_toURI(Address a, uint32_t *l) { // TODO: could be rewritten with ge
 
             // get atom content
             uint32_t memLength, encodedDataLength;
-            char* mem = cell_getPayload(a, &cell, &memLength);
+            uint8_t* mem = cell_getPayload(a, &cell, &memLength);
             char *uri = malloc(3 * memLength + 1); // memory allocation for encoded content
             if (!uri) { // allocation failed
                free(mem);
@@ -176,7 +176,7 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
 
     hash = cellp->arrow.hash;
     if (a == EVE) {
-      hash_crypto(0, "", hashStr);
+      hash_crypto(0, (uint8_t *)"", hashStr);
     } else {
       switch (cellp->full.type) {
         case CELLTYPE_PAIR:
@@ -186,7 +186,7 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
             if (uri == NULL) {
               return NULL;
             }
-            hash_crypto(uriLength, uri, hashStr);
+            hash_crypto(uriLength, (uint8_t *)uri, hashStr);
             free(uri);
             break;
         }
@@ -194,7 +194,7 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
         {
             uint32_t hashLength;
             free(hashStr);
-            hashStr = cell_getPayload(a, cellp, &hashLength);
+            hashStr = (char *)cell_getPayload(a, cellp, &hashLength);
             if (hashStr == NULL)
               return NULL;
             break;
@@ -203,10 +203,10 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
         case CELLTYPE_TAG:
         {
             uint32_t dataSize;
-            char* data = cell_getPayload(a, cellp, &dataSize);
+            uint8_t *data = cell_getPayload(a, cellp, &dataSize);
             if (data == NULL)
               return NULL;
-            hash_crypto(dataSize, data, hashStr);
+            hash_crypto(dataSize, data, hashStr); // FIXME why not percent-encoded string?
             free(data);
             break;
         }
@@ -255,7 +255,7 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
 }
 
 
-Arrow serial_parseUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, int ifExist) {
+Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist) {
     TRACEPRINTF("BEGIN serial_parseUri(%s)", uri);
     Arrow a = NIL;
     uint32_t uriLength = NAN;
@@ -358,7 +358,7 @@ Arrow serial_parseUri(uint32_t size, unsigned char* uri, uint32_t* uriLength_p, 
                     uriLength++;
                 assert(uriLength);
 
-                char *atomStr = malloc(uriLength + 1);
+                uint8_t *atomStr = malloc(uriLength + 1);
                 percent_decode(uri, uriLength, atomStr, &atomLength);
                 if (atomLength < TAG_MINSIZE) {
                     a = assimilate_small(atomLength, atomStr, ifExist);

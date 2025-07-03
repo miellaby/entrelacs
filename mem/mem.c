@@ -256,7 +256,7 @@ static int _addressCmp(const void *pa, const void *pb) {
 //// commit modified cells
 int mem_commit() {
   TRACEPRINTF("BEGIN mem_commit() logSize=%d", logSize);
-  int i;
+  size_t i;
   Address a, offset;
 
   assert(mem0_isOpened());

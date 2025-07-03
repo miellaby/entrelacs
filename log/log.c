@@ -21,6 +21,7 @@ int log_verbose()
 {
     for (int i=0; i<LOG_FACILITY_COUNT; i++)
         log_level[i] = LOG_DEBUG;
+    return 0;
 }
 
 int log_init(const char *filename, const char *debug_str)
@@ -40,7 +41,7 @@ int log_init(const char *filename, const char *debug_str)
             rhs++;
 
             p = strchr(rhs, ',');
-            n = p ? p - rhs : strlen(rhs);
+            n = p ? p - rhs : (int)strlen(rhs);
             for (level=0; level_name[level]; level++) {
                 if (!(strncasecmp(level_name[level], rhs, n)))
                     break;
@@ -54,7 +55,7 @@ int log_init(const char *filename, const char *debug_str)
             do {
                 if (*lhs==',') lhs++;
                 p = strpbrk(lhs, ",=");
-                n = p ? p - lhs : strlen(lhs);
+                n = p ? p - lhs : (int)strlen(lhs);
                 for (facility=0; facility_name[facility]; facility++) {
                     if (!(strncasecmp(facility_name[facility], lhs, n)))
                         break;

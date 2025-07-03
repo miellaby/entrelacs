@@ -150,7 +150,6 @@ Arrow probe_digest(char *digest) {
     uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress;
-    Cell cell;
 
     // read the hash at the digest beginning
     assert(digest[0] == '$' && digest[1] == 'H');
@@ -204,7 +203,7 @@ Arrow probe_digest(char *digest) {
  * Will create the singleton if missing except if $ifExist is set.
  * $str might be a blob signature or a tag content.
  */
-Arrow assimilate_string(int cellType, int length, char* str, uint64_t payloadHash, int ifExist) {
+Arrow assimilate_string(int cellType, int length, uint8_t *str, uint64_t payloadHash, int ifExist) {
     Address hashAddress, hashProbe, hChain;
     uint32_t l;
     uint32_t hash;
@@ -212,7 +211,7 @@ Arrow assimilate_string(int cellType, int length, char* str, uint64_t payloadHas
     Cell probed, sliceCell;
 
     unsigned i, safeguard, jump;
-    char c, *p;
+    uint8_t c, *p;
 
     space_stats.atom++;
 
@@ -492,7 +491,7 @@ Arrow assimilate_string(int cellType, int length, char* str, uint64_t payloadHas
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_tag(uint32_t size, char* data, int ifExist, uint64_t hash) {
+Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist, uint64_t hash) {
     if (!hash) hash = hash_raw(data, size);
     return assimilate_string(CELLTYPE_TAG, size, data, hash, ifExist);
 }
@@ -501,11 +500,11 @@ Arrow assimilate_tag(uint32_t size, char* data, int ifExist, uint64_t hash) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_blob(uint32_t size, char* data, int ifExist) {
+Arrow assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
     char signature[CRYPTO_SIZE + 1];
     hash_crypto(size, data, signature);
     uint32_t signature_size;
-    uint64_t hash = hash_string(signature, &signature_size);
+    uint64_t hash = hash_string((uint8_t *)signature, &signature_size);
 
     // A BLOB consists in:
     // - A signature, stored as a specialy typed tag in the arrows space.
@@ -513,21 +512,21 @@ Arrow assimilate_blob(uint32_t size, char* data, int ifExist) {
     mem0_saveData(signature, (size_t)size, data);
     // TODO: remove data when cell at h is recycled.
 
-    return assimilate_string(CELLTYPE_BLOB, signature_size, signature, hash, ifExist);
+    return assimilate_string(CELLTYPE_BLOB, signature_size, (uint8_t *)signature, hash, ifExist);
 }
   
 /** assimilate small
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_small(int length, char* str, int ifExist) {
+Arrow assimilate_small(int length, uint8_t* str, int ifExist) {
     DEBUGPRINTF("small(%02x %.*s %1x) begin", length, length, str, ifExist);
 
     uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress, firstFreeAddress;
     uint32_t uint_buffer[3];
-    char* buffer = (char *)uint_buffer;
+    uint8_t* buffer = (uint8_t *)uint_buffer;
 
     if (length == 0 || length > 11)
         return NIL;
@@ -535,17 +534,17 @@ Arrow assimilate_small(int length, char* str, int ifExist) {
     
     memcpy(buffer + 4, str, (length > 8 ? 8 : length));
     if (length < 8) {
-        memset(buffer + 4 + length, (char)length, 8 - length);
+        memset(buffer + 4 + length, (uint8_t)length, 8 - length);
     }
     if (length > 8) {
         // trust me
         memcpy(buffer, str + 7, length - 7);
-        *buffer = (char)length;
+        *buffer = (uint8_t)length;
         if (length < 11) {
            memset(buffer + length - 7, (char)length, 11 - length);
         }
     } else {
-      memset(buffer, (char)length, 4);
+      memset(buffer, (uint8_t)length, 4);
     }
     
     /*| s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
