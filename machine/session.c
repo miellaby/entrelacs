@@ -344,6 +344,7 @@ static Arrow _fromUrl(Arrow context, char* url, char** urlEnd, int locateOnly) {
                     }
                     break;
                 }
+                __attribute__ ((fallthrough));
             }
             default:
             { // TAG, BLOB
