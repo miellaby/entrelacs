@@ -128,10 +128,10 @@ void completion(const char *buf, linenoiseCompletions *lc) {
 void tree(Arrow parent) {
     XLEnum e = xl_childrenOf(parent);
             
-    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
-    while (next != EVE) {
+    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+    while (next != XL_EVE) {
         Arrow child = next;
-        next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+        next = xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
         tree(child);
         if (!xl_isRooted(child)) {
            continue;
@@ -238,10 +238,10 @@ int main(int argc, char **argv) {
             } else {
                 e = xl_childrenOf(parent);
                         
-                Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
-                while (next != EVE) {
+                Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+                while (next != XL_EVE) {
                     Arrow child = next;
-                    next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
+                    next = xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
                     fprintf(stderr, "%s", (xl_isRooted(child) ? "_ " : "  "));
                     if (xl_tailOf(child) == cwa) {
                         fprintf(stderr, "./%O\n", xl_headOf(child));
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
             linenoiseHistorySave(repl_historyPath);
             char *arg = line + (line[4] == '\0' ? 4 : 5);
             Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
-                ? cwa == NIL ? EVE : cwa
+                ? cwa == NIL ? XL_EVE : cwa
                 : (*arg == '/' || cwa == NIL
                    ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
                    : xl_pair(cwa, xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg))); 
@@ -272,11 +272,11 @@ int main(int argc, char **argv) {
             if (p == NIL) {
                 fprintf(stderr, "Illegal input. Embedded URI may be wrong.\n");
             
-            } else if (p == EVE) {
+            } else if (p == XL_EVE) {
                 fprintf(stderr, "EVE\n");
                 
             } else {
-                Arrow r = xl_eval(EVE, p, EVE);
+                Arrow r = xl_eval(XL_EVE, p, XL_EVE);
                 fprintf(stderr, "%O\n", r);
             }
 

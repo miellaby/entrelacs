@@ -651,8 +651,8 @@ Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     } else if (xl_enumNext(e)) {
         child = xl_enumGet(e);
     } else {
-        xl_freeEnum(e);            // FIXME : only on forget
-        xl_unroot(hookParameter);  // should made it unreadable
+        xl_enumFree(e); // FIXME : only on forget
+        xl_unroot(hookParameter); // should made it unreadable
         child = EVE;
     }
     return xl_reduceMachine(CM, child);
@@ -670,7 +670,7 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
         Arrow child = xl_enumGet(e);
         list = A(child, list);
     }
-    xl_freeEnum(e);
+    xl_enumFree(e);
     return xl_reduceMachine(CM, list);
 }
 

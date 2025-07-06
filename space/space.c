@@ -406,7 +406,7 @@ enum e_xlType xl_typeOf(Arrow a) {
 *
 */
 void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
-    TRACEPRINTF("xl_childrenOf a=%06x", a);
+    TRACEPRINTF("xl_childrenOfCB a=%06x", a);
 
     if (a == EVE) {
         return; // Eve connectivity not traced
@@ -664,7 +664,7 @@ Arrow xl_enumGet(XLEnum e) {
     return iteratorp->current;
 }
 
-void xl_freeEnum(XLEnum e) {
+void xl_enumFree(XLEnum e) {
     free(e);
 }
 
@@ -699,21 +699,6 @@ XLEnum xl_childrenOf(Arrow a) {
     iteratorp->iSlot = 0; // position of child back-ref in cell : 0..5
     iteratorp->currentCell = cell; // user to detect change
     return iteratorp;
-}
-
-Arrow xl_childOf(Arrow a) {
-    XLEnum e = xl_childrenOf(a);
-    if (!e) return EVE;
-    int n = 0;
-    Arrow chosen = EVE;
-    while (xl_enumNext(e)) {
-        Arrow child = xl_enumGet(e);
-        n++;
-        if (n == 1 || rand() % n == 1) {
-            chosen = child;
-        }
-    }
-    return chosen;
 }
 
 /** root an arrow */

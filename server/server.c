@@ -19,7 +19,7 @@
 #define LOG_CURRENT LOG_SERVER
 #include "log/log.h"
 #include "server/server.h"
-#include "entrelacs/entrelacs.h"
+#include "entrelacs/entrelacsm.h"
 #include "machine/session.h"
 #include "server/mongoose.h"
 #include <string.h>
@@ -359,7 +359,7 @@ int _houseCleaning(void) {
               xls_close(session);
               xls_unset(EVE, session);
               // restart loop as deep close may remove in-enum arrow
-              //xl_freeEnum(e);
+              //xl_enumFree(e);
               //sessionTag =  xl_atom("session");
               //e = xl_childrenOf(sessionTag);
               //next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
@@ -369,7 +369,7 @@ int _houseCleaning(void) {
               xls_close(session);
               xls_unset(EVE, session);
               // restart loop as deep close may remove in-enum arrow
-              xl_freeEnum(e);
+              xl_enumFree(e);
               // sessionTag =  xl_atom("session");
               e = xl_childrenOf(sessionTag);
               next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
@@ -385,7 +385,7 @@ int _houseCleaning(void) {
         activeSessionCount, expiredSessionCount, sessionCount);
     xl_commit();
     xl_over();
-    xl_freeEnum(e);
+    xl_enumFree(e);
     dputs("House Cleaning done.");
     return 0;
 }

@@ -136,7 +136,7 @@ void xls_reset(Arrow c) {
         }
     }
 
-    xl_freeEnum(childrenEnum);
+    xl_enumFree(childrenEnum);
 }
 
 /** traditional edge storage
@@ -203,16 +203,16 @@ static Arrow get(Arrow c, Arrow key) {
     Arrow keyContext = pairMaybe(c, key);
     if (keyContext != EVE) {
 
-        XLEnum enumChildren = xl_childrenOf(keyContext);
-        while (xl_enumNext(enumChildren)) {
-            Arrow keyValue = xl_enumGet(enumChildren);
+        XLEnum childrenEnum = xl_childrenOf(keyContext);
+        while (xl_enumNext(childrenEnum)) {
+            Arrow keyValue = xl_enumGet(childrenEnum);
             if (tailOf(keyValue) != keyContext) continue; // incoming arrows are ignored
             if (isRooted(keyValue)) {
                 value = headOf(keyValue);
                 break;
             }
         }
-        xl_freeEnum(enumChildren);
+        xl_enumFree(childrenEnum);
     }
 
     if (value != NIL)
@@ -240,9 +240,9 @@ Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
     Arrow contextPair = xl_pairMaybe(c, a);
     if (contextPair == EVE) return list;
     
-    XLEnum enumChildren = xl_childrenOf(contextPair);
-    while (xl_enumNext(enumChildren)) {
-        Arrow pair = xl_enumGet(enumChildren);
+    XLEnum childrenEnum = xl_childrenOf(contextPair);
+    while (xl_enumNext(childrenEnum)) {
+        Arrow pair = xl_enumGet(childrenEnum);
         int outgoing = (xl_headOf(pair) != contextPair);
         Arrow other = (outgoing ? xl_headOf(pair) : xl_tailOf(pair));
         if (xl_isRooted(pair) && xl_tailOf(other) == c) {
@@ -250,7 +250,7 @@ Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
             list = xl_pair(outgoing ? xl_pair(a, value) : xl_pair(value, a), list);
         }
     }
-    xl_freeEnum(enumChildren);
+    xl_enumFree(childrenEnum);
 
     if (tailOf(c) == c)
         return list;

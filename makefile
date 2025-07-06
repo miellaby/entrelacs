@@ -19,7 +19,8 @@
 # make help # this help
 
 .PHONY: help server clean all clean.% test.% run.% tests run start
-CPPFLAGS += -std=c99 -pthread -fPIC -Wno-format -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
+CPPFLAGS +=
+CFLAGS += -std=c99 -pthread -fPIC -I. -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
@@ -95,7 +96,7 @@ gdb:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
-	CFLAGS="-DDEBUG -g -o0" make clean all	
+	CFLAGS+="-DDEBUG -g -o0" make clean all	
 	ENTRELACS=$(PERSISTENCE_FILE) gdb $(BINDIR)/entrelacsd
 	#od -t x1z -w8 $(PERSISTENCE_FILE)
 
@@ -103,6 +104,6 @@ valgrind:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
-	CFLAGS="-DDEBUG -g -o0" make clean all	
+	CFLAGS+="-DDEBUG -g -o0" make clean all	
 	ENTRELACS=$(PERSISTENCE_FILE) valgrind --leak-check=full $(BINDIR)/entrelacsd
 	# od -t x1z -w8 $(PERSISTENCE_FILE)

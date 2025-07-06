@@ -31,7 +31,7 @@ extern time_t mem0_lastModified;
  * Cell. A 24 bytes long bucket
  */
 typedef struct s_cellBody {
-    char raw[24];
+    uint8_t raw[24];
 } CellBody;
 
 /**

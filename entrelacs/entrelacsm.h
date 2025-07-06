@@ -1,6 +1,17 @@
 /* File:   entrelacsm.h
  * Handy macro to entrelacs C API
  */
+#ifndef _ENTRELACSM_H
+#define _ENTRELACSM_H
+
+#include "entrelacs/entrelacs.h"
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+#define NIL XL_NIL
+#define EVE XL_EVE
 
 #define Eve()       xl_Eve()
 #define pair(T, H)  xl_pair(T, H)
@@ -57,3 +68,10 @@
 #define continuation(H, C) xl_continuation(H, C)
 #define run(R,  M) xl_run(R,  M)
 #define eval(R, P) xl_eval(R, P)
+
+
+#ifdef	__cplusplus
+}
+#endif
+
+#endif // entrelacsm.h

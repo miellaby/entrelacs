@@ -223,6 +223,9 @@ typedef union u_cell {
 #define EVE (0)
 #define EVE_HASH (0x8421A593U) 
 
+/// Other reserved value
+#define NIL (0xFFFFFFFFU)
+
 /*
  * Size limit from where data is stored as "blob" or "tag" or "small"
  * 1-11: SMALL
