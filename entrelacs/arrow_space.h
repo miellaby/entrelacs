@@ -48,11 +48,11 @@ void xl_destroy(); ///< release system resources and locks
 // Assimilation
 // ------------
 Arrow xl_Eve(); ///< returns Eve.
-Arrow xl_pair(Arrow, Arrow); ///< assimilate a pair of arrows
-Arrow xl_atom(char*); ///< assimilate a C string
-Arrow xl_atomn(uint32_t size, uint8_t*); ///< assimilate raw data
-Arrow xl_uri(char*); ///< assimilate an URI. @return an arrow or NIL if bad URI
-Arrow xl_urin(uint32_t size, char*); ///< assimilate a piece of URI. @return an arrow or NIL if bad URI
+Arrow xl_pair(Arrow tail, Arrow head); ///< assimilate a pair of arrows
+Arrow xl_atom(char* str); ///< assimilate a C string
+Arrow xl_atomn(uint32_t size, uint8_t* raw); ///< assimilate raw data
+Arrow xl_uri(char* uri); ///< assimilate an URI. @return an arrow or NIL if bad URI
+Arrow xl_urin(uint32_t size, char* uri_part); ///< assimilate a part of URI. @return an arrow or NIL if bad URI
 
 // Compound arrow assimilation
 // ---------------------------
@@ -66,12 +66,12 @@ Arrow xl_hook(void* hook); ///< assimilate a C pointer and return an arrow.
 
 // Arrow testing without assimilation
 // -----------
-Arrow xl_pairMaybe(Arrow, Arrow); ///< return a pair of arrows if system-known, Eve otherwise.
+Arrow xl_pairMaybe(Arrow tail, Arrow head); ///< return a pair of arrows if system-known, Eve otherwise.
 Arrow xl_atomMaybe(char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
-Arrow xl_atomnMaybe(uint32_t size, uint8_t*); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
-Arrow xl_uriMaybe(char*); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
-Arrow xl_urinMaybe(uint32_t size, char*); ///< return the previously assimilated arrow corresponding to a piece of URI, NIL if wrong URI, EVE if arrow not assimilated.
-Arrow xl_digestMaybe(char*); ///< return a stored arrow corresponding to a digest, NIL if no match.
+Arrow xl_atomnMaybe(uint32_t size, uint8_t* raw); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
+Arrow xl_uriMaybe(char* uri); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
+Arrow xl_urinMaybe(uint32_t size, char* uri_part); ///< return the previously assimilated arrow corresponding to a part of URI, NIL if wrong URI, EVE if arrow not assimilated.
+Arrow xl_digestMaybe(char* digest); ///< return a stored arrow corresponding to a digest, NIL if no match.
 
 // Arrow deconstruction
 // --------------------
