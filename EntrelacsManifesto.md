@@ -1,9 +1,8 @@
 ### Preamble
 
-Despite devising data structures, Computer Science has not yet questioned the fundamental _paradigm_ that governs how data structures are mapped onto concrete
-storage spaces.
+Despite devising data structures, Computer Sciences don't question the _paradigm_ that governs how these data structures are mapped onto concrete storage spaces.
 
-Consequently, **all** digital and analog systems ever designed represent knowledge in the same way—a way derived from _Writing_, as we humans are accustomed to.
+Consequently, information systems still represent knowledge in a way derived from _Writing_, as we humans are accustomed to.
 
 ---
 
@@ -29,4 +28,4 @@ More specifically, this manifesto makes the following claims:
 
 4. **It's possible to code a reasonably efficient _software implementation_ of such a knowledge system, known as an _[Arrow Space](ArrowsSpace.md)_,** on top of existing hardware platforms.
 
-5. **It's necessary to develop a new form of Computing Environment based on an _Arrow Space_, namely an _Entrelac System_,** which will demonstrate a whole new range of **[native abilities](EntrelacsCapabilities.md).**
+5. **It's necessary to develop a new form of Computing Environment based on an _Arrow Space_, namely an [Entrelac System](EntrelacsSystem.md)** which will demonstrate a whole new range of **[native abilities](EntrelacsCapabilities.md).**

@@ -2,6 +2,8 @@
 
 Please find herein an overview of an [Entrelacs System](EntrelacsSystem.md) architecture.
 
+This blueprint is being used in the development of [Entrelacs System Prototype](EntrelacsPrototypeArchitecture.md) at <https://github.com/miellaby/entrelacs>.
+
 ## Arrow Space
 
 ![Arrow Space](pictures/mem0.png)
