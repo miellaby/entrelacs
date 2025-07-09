@@ -11,8 +11,12 @@ Visit [the project wiki](https://miellaby.github.io/entrelacs/)
 ## Build & Test
 
 ```sh
-make tests ; # compile and tests everything (type Ctrl+D when in the shell)
+make all ; # compile binaries and test
+make run ; # compile and test everything (type Ctrl+D when in the shell)
 make help ; # see other build commands
+
+cd repl; make; ./bin/entrelacs
+
 ```
 
 ## Binary Files

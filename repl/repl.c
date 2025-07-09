@@ -9,7 +9,7 @@
 #include "linenoise.h"
 #include "log/log.h"
 
-#include "entrelacs/entrelacs.h"
+#include "entrelacs/entrelacsm.h"
 #include "machine/session.h"
 
 // TODO merge config with mem0.h
