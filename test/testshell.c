@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "log/log.h"
 
-#include "entrelacs/entrelacs.h"
+#include "entrelacs/entrelacsm.h"
 #include "machine/session.h"
 int main(int argc, char **argv) {
   char buffer[1024];

@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "log/log.h"
+#define LOG_CURRENT LOG_SPACE
 #include "space/cell.h"
 #include "space/hash.h"
 #include "mem/geoalloc.h"

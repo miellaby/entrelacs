@@ -1,5 +1,6 @@
 #include "space/hash.h"
 #include "log/log.h"
+#define LOG_CURRENT LOG_SPACE
 #include "sha1/sha1.h"
 #include <stdio.h>
 
@@ -12,7 +13,7 @@ uint32_t right_rotate(uint32_t value, int shift) {
 }
 
 /* hash a regular arrow (based on its both ends hash codes) */
-uint64_t hash_pair(uint64_t h_tail, uint64_t h_head) {
+uint32_t hash_pair(uint32_t h_tail, uint32_t h_head) {
     return left_rotate(h_tail, 19) ^ right_rotate(h_head, 5);
 }
 
@@ -57,7 +58,7 @@ uint64_t hash_raw(uint8_t *buffer, uint32_t length) {  // simple string hash
 /* hash function to get hashChain from a tag or blob containing cell */
 uint32_t hash_chain(Cell *cell) {
     // This hash mixes the cell content
-    uint32_t inverted = cell->arrow.hash >> 16 & cell->arrow.hash << 16;
+    uint32_t inverted = left_rotate(cell->arrow.hash, 16);
     if (cell->full.type == CELLTYPE_BLOB || cell->full.type == CELLTYPE_TAG)
         inverted = inverted ^ cell->uint.data[1] ^ cell->uint.data[2];
     return inverted;

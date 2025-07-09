@@ -244,13 +244,13 @@ Address cell_jumpToFirst(Cell* cell, Address address, Address offset);
 Address cell_jumpToNext(Cell* cell, Address address, Address offset);
 uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP);
 void cell_getSmallPayload(Cell *cell, uint8_t* buffer);
-void cell_log(int logLevel, int line, char operation, Address address, Cell* cell);
+void cell_log(int logLevel, char* file, int line, char operation, Address address, Cell* cell);
 uint32_t cell_getHash(Address a);
 void cell_show(Address a);
 void cell_showChildren(Address a);
 int  cell_isLoose(Address a);
 
-#define LOGCELL(operation, address, cell) cell_log(LOG_DEBUG, __LINE__, operation, address, cell)
+#define LOGCELL(operation, address, cell) cell_log(LOG_DEBUG, __FILE__, __LINE__, operation, address, cell)
 /* Address shifting */
 #define SHIFT_LIMIT 20
 #define PROBE_LIMIT 40

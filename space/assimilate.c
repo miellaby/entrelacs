@@ -6,6 +6,7 @@
 
 #include "serial.h"
 #include "log/log.h"
+#define LOG_CURRENT LOG_SPACE
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
 #include "space/hash.h"
@@ -156,7 +157,7 @@ Arrow probe_digest(char *digest) {
     int i = 2; // jump over '$H' string
     hash = HEXTOI(digest[i]);
     while (++i < 10) { // read 8 hexa digit
-        hash = (hash << 4) | (uint64_t)HEXTOI(digest[i]);
+        hash = (hash << 4) | (uint32_t)HEXTOI(digest[i]);
     }
     
     hashAddress = hash % PRIM0; // base address
@@ -218,7 +219,7 @@ Arrow assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
         return EVE;
     }
 
-    uint64_t hash = hash_raw(str, length);
+    uint32_t hash = (uint32_t) hash_raw(str, length);
     hashAddress = hash % PRIM0;
     hashProbe = hash % PRIM1;
     if (!hashProbe) hashProbe = 1; // offset can't be 0
@@ -501,13 +502,13 @@ Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
 Arrow assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
     char signature[CRYPTO_SIZE + 1];
     hash_crypto(size, data, signature);
+    assert(strlen(signature) == CRYPTO_SIZE);
 
     // A BLOB consists in:
     // - A signature, stored as a specialy typed tag in the arrows space.
     // - data stored separatly in some traditional filer outside the arrows space.
     mem0_saveData(signature, (size_t)size, data);
     // TODO: remove data when cell at h is recycled.
-
     return assimilate_string(CELLTYPE_BLOB, CRYPTO_SIZE, (uint8_t *)signature, ifExist);
 }
   

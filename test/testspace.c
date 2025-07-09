@@ -13,8 +13,8 @@ char* test_title;
 #define test_ok()  fprintf(stderr, "%s: OK\n", test_title)
 #define test_done() fprintf(stderr, "ALL TESTS FROM " __FILE__ " : OK\n")
 static struct s_buffer {
-    int size;
-    int max;
+    uint32_t size;
+    uint32_t max;
     char* buffer;
 } buffer = {0, 0, NULL};
 
@@ -374,7 +374,7 @@ int stress() {
 int space_unitTest();
 
 int main(int argc, char* argv[]) {
-    log_init(NULL, "space=debug");
+    log_init(NULL, "space=debug,mem=debug,cell=debug");
     xl_init();
     xl_begin();
     space_unitTest();

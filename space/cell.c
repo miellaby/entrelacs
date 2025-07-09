@@ -3,6 +3,7 @@
 #include "space/cell.h"
 #include "space/hash.h"
 #include "log/log.h"
+#define LOG_CURRENT LOG_SPACE
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
 
@@ -209,7 +210,9 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
 * address
 * cell pointer
 */
-void cell_log(int logLevel, int line, char operation, Address address, Cell* cell) {
+#define CELLLOGPRINTF(file, ine, level, fmt, arg...) log_msg(level, LOG_CURRENT,  file, line, fmt, ##arg)
+
+void cell_log(int logLevel, char* file, int line, char operation, Address address, Cell* cell) {
     static const char* cats[] = {
           "EMPTY",
           "PAIR",
@@ -225,8 +228,8 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
     unsigned pebble = (unsigned)cell->full.pebble;
     const char* cat = cats[type];
     if (type == CELLTYPE_EMPTY) {
-        LOGPRINTF(logLevel, "%d %c %06x EMPTY (pebble=%02x)",
-          line, operation, address, pebble);
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x EMPTY (pebble=%02x)",
+          operation, address, pebble);
         return;
 
     }
@@ -244,8 +247,8 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
       int dr = (int)cell->arrow.dr;
 
       if (type == CELLTYPE_PAIR) {
-        LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
-          line, operation, address, pebble, type,
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
+          operation, address, pebble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
           cell->pair.head);
@@ -254,26 +257,26 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
         int s = (int)cell->small.s;
         uint8_t buffer[11];
         cell_getSmallPayload(cell, buffer);
-        LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
-          line, operation, address, pebble, type,
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
+          operation, address, pebble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
-          line, operation, address, pebble, type,
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+          operation, address, pebble, type,
           hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
       }
     } else if (type == CELLTYPE_SLICE) {
-      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s jump=%1x data=%.21s",
-        line, operation, address, pebble, type, cat,
+      CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x %s jump=%1x data=%.21s",
+        operation, address, pebble, type, cat,
         (int)cell->slice.jump, cell->slice.data);
 
     } else if (type == CELLTYPE_LAST) {
-      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s size=%d data=%.*s",
-        line, operation, address, pebble, type, cat,
+      CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x %s size=%d data=%.*s",
+        operation, address, pebble, type, cat,
         (int)cell->last.size,
         (int)cell->last.size,
         cell->last.data);
@@ -294,8 +297,8 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
           ']',
           '\0'
       };
-      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
-        line, operation, address, pebble, type, cat,
+      CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x %s C[]={%x %x %x %x %x} D=%s",
+        operation, address, pebble, type, cat,
         cell->children.C[0],
         cell->children.C[1],
         cell->children.C[2],
@@ -304,13 +307,13 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
         directions);
 
     } else if (type == CELLTYPE_REATTACHMENT) {
-      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x %s from=%x to=%x",
-        line, operation, address, pebble, type, cat,
+      CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x %s from=%x to=%x",
+        operation, address, pebble, type, cat,
         (int)cell->reattachment.from, cell->reattachment.to);
 
     } else {
-      LOGPRINTF(logLevel, "%d %c %06x pebble=%02x type=%1x ANOMALY",
-        line, operation, address, pebble, type);
+      CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x ANOMALY",
+        operation, address, pebble, type);
       assert(0 == 1);
     }
 }
@@ -318,7 +321,7 @@ void cell_log(int logLevel, int line, char operation, Address address, Cell* cel
 void cell_show(Address a) {
     Cell cell;
     mem_get(a, &cell.u_body);
-    cell_log(LOG_INFO, __LINE__, ' ', a, &cell);
+    cell_log(LOG_INFO, __FILE__, __LINE__, ' ', a, &cell);
 }
 
 /** debug: show children sequence

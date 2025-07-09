@@ -30,8 +30,8 @@
 #include "mem/geoalloc.h"
 #include "mem/mem.h"
 #include "sha1.h"
-#define LOG_CURRENT LOG_SPACE
 #include "log/log.h"
+#define LOG_CURRENT LOG_SPACE
 #include "space/cell.h"
 #include "space/stats.h"
 #include "space/hash.h"

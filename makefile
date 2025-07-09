@@ -31,6 +31,8 @@ OBJECTS_entrelacsd = mongoose.o server.o
 
 TESTS = space uri script machine shell
 
+UTESTS = hash
+
 PERSISTENCE_FILE=/tmp/entrelacs_test.dat
 
 
@@ -43,22 +45,32 @@ all: $(BINTARGETS)
 help:
 	@head -30 makefile | grep '^#' | sed -e '/# .*/ s/# \(.*\)/\1/'
 
-clean: $(TESTS:%=clean.test%)
+clean: $(UTESTS:%=clean.utest%) $(TESTS:%=clean.test%)
 	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd)
 
 $(TESTS:%=clean.test%):
 	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
 
+$(UTESTS:%=clean.utest%):
+	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
+
+utest.%: $(BINDIR)/utest% 
+	-true
+
 test.%: $(BINDIR)/test%
 	-true
 
-tests: all $(TESTS:%=test.%)
+tests: all $(UTESTS:%=utest.%) $(TESTS:%=test.%)
 
 server: $(BINDIR)/entrelacsd
 
 draft: $(BINDIR)/testdraft.o $(BINDIR)/testdraft run.draft
 
 shell: $(BINDIR)/testshell
+
+$(BINDIR)/utesthash: $(BINDIR)/log.o $(BINDIR)/sha1.o
+$(BINDIR)/utest%: $(BINDIR)/utest_%.o $(BINDIR)/%.o $(UTEST_%_OBJS)
+	$(CC) $(LDFLAGS) $^ -o $(@) -lpthread
 
 $(BINDIR)/test%: $(BINDIR)/test%.o $(BINDIR)/libentrelacs.a
 	$(CC) $(LDFLAGS) $^ -o $(@) -lpthread
@@ -77,14 +89,20 @@ $(BINDIR)/%.o: %.h
 $(BINDIR)/%.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
+$(BINDIR)/%.o: test/%.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
 prompt: run.shell
 
-run: $(TESTS:%=run.%)
+run: $(UTESTS:%=urun.%) $(TESTS:%=run.%)
 
 run.%: $(BINDIR)/test%
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
+
+urun.%: $(BINDIR)/utest%
+	./$<
 
 start: server
 	-pkill entrelacsd

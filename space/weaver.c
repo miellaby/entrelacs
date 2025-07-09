@@ -6,6 +6,7 @@
 #include "space/cell.h"
 #include "space/hash.h"
 #include "log/log.h"
+#define LOG_CURRENT LOG_SPACE
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
 #include "entrelacs/entrelacs.h"

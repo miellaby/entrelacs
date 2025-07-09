@@ -9,7 +9,7 @@
 /// @param h_tail 
 /// @param h_head 
 /// @return hash code
-uint64_t hash_pair(uint64_t h_tail, uint64_t h_head);
+uint32_t hash_pair(uint32_t h_tail, uint32_t h_head);
 
 /// @brief hash a string and compute its length
 /// @param[in] str 

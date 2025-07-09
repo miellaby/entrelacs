@@ -424,7 +424,7 @@ int mem0_init() {
 }
 
 int mem0_get(Address address, CellBody *pCellBody) {
-  DEBUGPRINTF("mem0_get@%012x", address);
+  DEBUGPRINTF("mem0_get@%08x", address);
   assert(F);                    // mem0 open
   assert(!journalHandler);      // get when flushing
   assert(address < SPACE_SIZE); // range
@@ -438,7 +438,7 @@ int mem0_get(Address address, CellBody *pCellBody) {
     if (ferror(F)) {
       perror("mem0_get fread");
     }
-    LOGPRINTF(LOG_FATAL, "Can't read from mem0 @%012x", address);
+    LOGPRINTF(LOG_FATAL, "Can't read from mem0 @%08x", address);
     return -1;
   }
 
@@ -446,7 +446,7 @@ int mem0_get(Address address, CellBody *pCellBody) {
 }
 
 int _mem0_set(Address address, CellBody *pCellBody) {
-  DEBUGPRINTF("mem0_set@%012x", address);
+  DEBUGPRINTF("mem0_set@%08x", address);
   assert(F);                    // mem0 open
   assert(address < SPACE_SIZE); // range
 
