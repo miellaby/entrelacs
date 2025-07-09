@@ -57,10 +57,10 @@ int mem_commit();
  */
 int mem_yield();
 
-/** get a counter of write operation
- @return Pokes
+/** get a counter incremented at each commit
+ @return revision numver
  */
-uint32_t mem_pokes();
+uint32_t mem_revision();
 
 /** setup or reinitialize a geometrically growing RAM area
  */

@@ -23,6 +23,7 @@
         "entrelacsm.h": "c",
         "mem0.h": "c",
         "hash.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "assert.h": "c"
     }
 }

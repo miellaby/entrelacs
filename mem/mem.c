@@ -9,46 +9,51 @@
  * FIXME: add a flag in the main cache to tell there is conflicting content for this cell.
  */
 #define MEM_C
-#include <assert.h>
-#include <stdlib.h>
-#include <time.h>
 #include "mem/_mem.h"
 #include "mem/geoalloc.h"
 #include "mem/mem_log.h"
 #define LOG_CURRENT LOG_MEM
 #include "log/log.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <time.h>
 
 // --------------------------------------
 // Main RAM Direct-Mapped Cache
 // --------------------------------------
 
-struct s_mem mem[MEMSIZE];
+/// Main Direct-Mapped Mem0-Cache
+Mem1 mem[MEMSIZE];
 
 // --------------------------------------
 // RAM Cache "Reserve"
-// Where modified cells go on cache conflict.
-// TODO replace it by cuckoo hashing or smarter alternative
 // --------------------------------------
 
+/// reserve where changed cells go on conflict.
+/// TODO replace it by cuckoo hashing or smarter alternative
 struct s_reserve reserve[RESERVESIZE];
 
 Address reserveHead = 0; ///< cache reserve stack head
 
-static uint32_t pokes = 0; /// this counter helps identifies write operations.
-
 // --------------------------------------
-// RAM Cache Change Log
-// It logs all changes made. It grows geometrically via geoalloc
+/// Change Log
 // --------------------------------------
 
-static Address *log = NULL;  ///< dynamically allocated change log
+/// Change log. dynamically allocated via geoalloc
+static Address *log = NULL;
 static uint32_t logMax = 0;  ///< heap allocated log size
 static uint32_t logSize = 0; ///< significative log size
 
 // --------------------------------------
-// RAM Cache Stats for debugging purpose
+/// Commit Tracking
 // --------------------------------------
 
+/// revision number incremented by commit
+static uint32_t revision = 1;
+
+// --------------------------------------
+// Stats for debugging purpose
+// --------------------------------------
 time_t lastCommitTime = 0;
 time_t mem_lastCommitted = 0;
 
@@ -72,11 +77,11 @@ int mem_get_advanced(Address a, CellBody *pCellBody, uint32_t *stamp_p) {
   Address offset = a % MEMSIZE;
   uint32_t page = a / MEMSIZE;
   mem_stats.getCount++;
-  struct s_mem *m = &mem[offset];
+  Mem1 *m = &mem[offset];
 
   assert(mem0_isOpened());
 
-  if (!memIsEmpty(m) && m->page == page) {
+  if (!mem1_isEmpty(m) && m->page == page) {
     // cache hit
     DEBUGPRINTF("mem_get cache hit");
     if (stamp_p != NULL)
@@ -86,22 +91,26 @@ int mem_get_advanced(Address a, CellBody *pCellBody, uint32_t *stamp_p) {
     return 0;
   }
 
-  for (i = 0; i < reserveHead; i++) {
-    if (reserve[i].a == a) {
-      // reserve hit
-      DEBUGPRINTF("mem_get reserve hit");
-      if (stamp_p != NULL)
-        *stamp_p = reserve[i].stamp;
-      mem_stats.reserveFound++;
-      *pCellBody = reserve[i].c;
-      return 0;
+  if (mem1_hasReserve(m)) {
+    for (i = 0; i < reserveHead; i++) {
+      if (reserve[i].a == a) {
+        // reserve hit
+        DEBUGPRINTF("mem_get reserve hit");
+        if (stamp_p != NULL)
+          *stamp_p = reserve[i].stamp;
+        mem_stats.reserveFound++;
+        *pCellBody = reserve[i].c;
+        return 0;
+      }
     }
   }
 
-  if (memIsChanged(m)) {
+  int reserve_move = mem1_hasReserve(m);
+  if (mem1_isChanged(m)) {
+    reserve_move = 1;
     // FIXME: we're obliged to cache a cell read in place of modified cell
     // because mem_write doesn't work otherwise.
-    // if (stamp_p != NULL) *stamp_p = pokes;
+    // if (stamp_p != NULL) *stamp_p = revision;
     // return mem0_get(a);
 
     // When replacing a modified cell, move it to reserve
@@ -126,11 +135,12 @@ int mem_get_advanced(Address a, CellBody *pCellBody, uint32_t *stamp_p) {
     mem_stats.reserveMovesBecauseGet++;
   }
 
+  // load mem slot with mem0
   mem[offset].page = page;
-  mem[offset].flags = 0;
-  mem[offset].stamp = pokes;
+  mem[offset].flags = reserve_move ? MEM1_RESERVE : 0;
+  mem[offset].stamp = revision;
   if (stamp_p != NULL)
-    *stamp_p = pokes;
+    *stamp_p = revision;
   mem_stats.notFound++;
   mem0_get(a, &mem[offset].c);
   *pCellBody = mem[offset].c;
@@ -186,27 +196,40 @@ int mem_set(Address a, CellBody *pCellBody) {
   Address offset = a % MEMSIZE;
   uint32_t page = a / MEMSIZE;
   mem_stats.setCount++;
-  struct s_mem *m = &mem[offset];
+  Mem1 *m = &mem[offset];
   ONDEBUG(MEM_LOG('R', offset));
-
   assert(mem0_isOpened());
 
-  if (!memIsEmpty(m) && m->page != page) {       // Uhh that's not fun
-    for (int i = reserveHead - 1; i >= 0; i--) { // Look at the reserve
-      if (reserve[i].a == a) {
-        DEBUGPRINTF("mem cell found in reserve");
-        // one changes data in the reserve cell
-        reserve[i].c = *pCellBody;
-        reserve[i].stamp = ++pokes;
-        mem_stats.reserveFound++;
+  int reserve_move = mem1_hasReserve(m);
+  if (mem1_isEmpty(m)) { // miss
+    // mem0 load useless since one overwrites it
+    // Log change
+    geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
+    log[logSize - 1] = a;
+  } else if (m->page == page) { // hit!
+    if (!mem1_isChanged(m)) { // Log first change
+      geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
+      log[logSize - 1] = a;
+    }
+  } else { // collision
+    if (mem1_hasReserve(m)) {
+      // search the reserve
+      for (int i = reserveHead - 1; i >= 0; i--) {
+        if (reserve[i].a == a) {
+          DEBUGPRINTF("mem cell found in reserve");
+          // changes the cell in the reserve
+          reserve[i].c = *pCellBody;
+          reserve[i].stamp = revision + 1;
+          mem_stats.reserveFound++;
 
-        return 0; // no need to log it (it's already done)
+          return 0; // no need to log it (it's already done)
+        }
       }
     }
-
-    // no copy in the reserve, one puts the modified cell in mem0
-    if (memIsChanged(
-            m)) { // one replaces a modificied cell that one moves to reserve
+    // no copy in the reserve
+    if (mem1_isChanged(m)) { // hash conflict with the modified cell
+      // move modified cell to reserve
+      reserve_move = 1;
       Address moved = m->page * MEMSIZE + offset;
       DEBUGPRINTF("mem_set moved %06x to reserve", moved);
       if (reserveHead >= RESERVESIZE) {
@@ -222,7 +245,6 @@ int mem_set(Address a, CellBody *pCellBody) {
                   mem_stats.reserveFound);
         return -1;
       }
-
       reserve[reserveHead].a = moved;
       reserve[reserveHead].stamp = m->stamp;
       reserve[reserveHead].c = m->c;
@@ -230,16 +252,12 @@ int mem_set(Address a, CellBody *pCellBody) {
       mem_stats.reserveMovesBecauseSet++;
     } else {
       mem_stats.mainReplaces++;
-      // No need to load the cell from mem0 since one overwrites it
+      // mem0 load useless since one overwrites it
     }
-  } else if (!memIsEmpty(m) && !memIsChanged(m)) { // Log change
-    geoalloc((char **)&log, &logMax, &logSize, sizeof(Address), logSize + 1);
-    log[logSize - 1] = a;
-  }
-
-  m->flags = MEM1_CHANGED;
+  } // collision
+  m->flags = MEM1_CHANGED | (reserve_move ? MEM1_RESERVE : 0);
   m->page = page;
-  m->stamp = ++pokes;
+  m->stamp = revision + 1;
   m->c = *pCellBody;
   ONDEBUG(MEM_LOG('W', offset));
   DEBUGPRINTF("mem_set end, logSize=%d", logSize);
@@ -261,6 +279,7 @@ int mem_commit() {
 
   assert(mem0_isOpened());
 
+  revision++;
   lastCommitTime = time(NULL);
 
   if (!logSize) {
@@ -288,13 +307,11 @@ int mem_commit() {
       }
 
       mem[offset].flags &=
-          0xFFFE; // reset changed flag for this offset (even if the changed
-                  // cell is actually in reserve)
+          0xFFFC; // reset hasReserve and changed flag for this offset (even if
+                  // the changed cell is actually in reserve)
       ONDEBUG(MEM_LOG('W', offset));
     }
-  }
 
-  if (logSize) {
     if (mem0_commit()) {
       ERRORPRINTF("END mem_commit() failed mem0_commit");
       return -1;
@@ -314,6 +331,8 @@ int mem_commit() {
               mem_stats.notFound, mem_stats.mainFound, mem_stats.reserveFound);
   zeroalloc((char **)&log, &logMax, &logSize);
   mem_stats = mem_stats_zero;
+
+  // Reset Reserve
   reserveHead = 0;
 
   return 0;
@@ -335,7 +354,7 @@ int mem_yield() {
   return 0;
 }
 
-uint32_t mem_pokes() { return pokes; }
+uint32_t mem_revision() { return revision; }
 
 /** init
   @return 1 if very first start, <0 if error, 0 otherwise

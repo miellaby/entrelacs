@@ -135,6 +135,7 @@ int basic() {
             { // check digest
             test_title("check digest-based arrow retrieval");
             Arrow byDigest = digestMaybe(digest);
+                
             assert(byDigest == bigAtom);
             test_ok();
             }
