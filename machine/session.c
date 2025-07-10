@@ -9,115 +9,528 @@
 #define LOG_CURRENT LOG_SESSION
 #include "log/log.h"
 #include "machine/session.h"
+#include "space/serial.h"
 
-
-Arrow xls_session(Arrow s, Arrow agent, Arrow uuid) {
+Arrow xs_open(char* agent) {
    /* $session =  /$s/session/$agent+$uuid */
-   Arrow session = xls_root(s, A(atom("session"), A(agent, uuid)));
+   Arrow uuid = xl_anonymous();
+   Arrow session = xs_root(Eve, A(atom("session"), A(atom(agent), uuid)));
 
    return session;
 }
 
-Arrow xls_sessionMaybe(Arrow s, Arrow agent, Arrow uuid) {
-   Arrow agentUuidMaybe = pairMaybe(agent, uuid);
-   if (!agentUuidMaybe)
-       return EVE;
+static ArrowValue eveValue = { 0 };
+static Arrow eve = &eveValue;
 
-   Arrow sessionMaybe = pairMaybe(atom("session"), agentUuidMaybe);
-   if (!sessionMaybe)
-       return EVE;
+Arrow xs_eve() {
+    return eve;
+}
 
-   Arrow rootedSession = xls_isRooted(s, sessionMaybe);
+static Arrow xs_arrow(Address id) {
+    // TODO je pense qu'on peut faire des Arrow avec id non-résolues (type == UNDEF?)
+    if (!id || id == XL_EVE) {
+        return eve;
+    }
+    Arrow a = malloc(sizeof(ArrowValue));
+    memset(a, 0, sizeof(ArrowValue));
+    a->hash = xs_getHash(id);
+    a->id = id;
+    if (xl_isAtom(id)) {
+        a->def.atom.raw = xl_memOf(id, &a->def.atom.size);
+        a->type = XS_ATOM;
+    } else {
+        a->def.pair.tail = xs_arrow(xl_tailOf(id));
+        a->def.pair.head = xs_arrow(xl_headOf(id));
+        a->type = XS_PAIR;
+    }       
+}
+
+Arrow xs_pair(Arrow tail, Arrow head) {
+    Arrow a = malloc(sizeof(ArrowValue));
+    memset(a, 0, sizeof(ArrowValue));
+    a->def.pair.head = head;
+    a->def.pair.tail = tail;
+    a->type = XS_PAIR;
+}
+
+Arrow xs_atom(char* s) {
+    size_t size = strlen(s);
+    Arrow a = malloc(sizeof(ArrowValue));
+    memset(a, 0, sizeof(ArrowValue));
+    a->def.atom.size = size + 1;
+    a->def.atom.raw = (uint8_t*) malloc(a->def.atom.size);
+    assert(a->def.atom.raw);
+    memcpy(a->def.atom.raw, s, a->def.atom.size);
+    a->type = XS_ATOM;
+}
+
+Arrow xs_atomn(size_t size, uint8_t* s) {
+    Arrow a = malloc(sizeof(ArrowValue));
+    memset(a, 0, sizeof(ArrowValue));
+    a->def.atom.size = size;
+    a->def.atom.raw = (uint8_t*) malloc(a->def.atom.size);
+    assert(a->def.atom.raw);
+    memcpy(a->def.atom.raw, s, a->def.atom.size);
+    a->type = XS_ATOM;
+}
+
+ArrowType xs_getType(Arrow a) {
+    return a ? a->type : XS_EVE;
+}
+
+uint32_t xs_getHash(Arrow a) {
+    if (!a->hash) {
+        if (a->type == XS_ATOM) {
+            a->hash = hash_raw(a->def.atom.raw, a->def.atom.size);
+        } else if (a->type == XS_PAIR) {
+            uint32_t hash_tail = xs_getHash(a->def.pair.tail);
+            uint32_t hash_head = xs_getHash(a->def.pair.head);
+            a->hash = hash_pair(hash_tail, hash_head);
+        } else {
+            a->hash = hash_eve();
+        }
+    }
+    return a->hash;
+}
+
+Arrow xs_getTail(Arrow a) {
+    if (!a || a->type != XS_PAIR) {
+        return eve;
+    }
+    return a->def.pair.tail;
+}
+
+Arrow xs_getHead(Arrow a) {
+    if (!a || a->type != XS_PAIR) {
+        return eve;
+    }
+    return a->def.pair.tail;
+}
+
+Arrow xs_getId(Arrow a) {
+    return a ? a->id : XL_EVE;
+}
+
+Arrow xs_resolve(Arrow a) {
+    if (!a) {
+        return eve;
+    }
+    if (a == eve || a->id != 0) {
+        return a;
+    }
+
+    uint32_t hash = xs_getHash(a);
+    if (a->type == XS_PAIR) {
+        // FIXME essayer de tester immédiatement un candidat par le hash
+        // il faut inventer xl_probeByHash(type, hash, callback) qui renvoie toutes les paires avec un hash
+        Arrow tail = xs_resolve(a->def.pair.tail);
+        Arrow head = xs_resolve(a->def.pair.head);
+        if ((a->def.pair.tail == eve || tail->id)
+            && (a->def.pair.head == eve || head->id)) {
+            a->id = xl_pairMaybe(tail->id, head->id);
+        }
+    } else {
+        a->id = xl_atomnMaybe(a->def.atom.size, a->def.atom.raw);
+    }
+    return a;
+}
+
+Arrow xs_assimilate(Arrow a) {
+    if (!a) {
+        return eve;
+    }
+    if (a == eve || a->id != 0) {
+        return a;
+    }
+    uint32_t hash = xs_getHash(a);
+    // FIXME essayer de trouver un candidat par le hash
+    
+    if (a->type == XS_PAIR) {
+        Arrow tail = xs_assimilate(a->def.pair.tail);
+        Arrow head = xs_assimilate(a->def.pair.head);
+        if ((a->def.pair.tail == eve || tail->id)
+            && (a->def.pair.head == eve || head->id)) {
+            a->id = xl_pair(tail->id, head->id);
+        }
+    } else {
+        a->id = xl_atomn(a->def.atom.size, a->def.atom.raw);
+    }
+    return a;
+}
+
+int xs_isEve(Arrow* a) {
+    return a && a == eve; // eve est automatiquement assimilée
+}
+
+int xs_isAtom(Arrow* a) {
+    return a && xs_getType(a) == XS_ATOM;
+}
+
+int xs_isPair(Arrow* a) {
+    return a && xs_getType(a) == XS_PAIR;
+}
+
+int xs_isKnown(Arrow a) {
+    if (!a) {
+        return 0;
+    } else if (a == eve) {
+        return 1;
+    } else {
+        return xs_resolve(a)->id != XL_EVE;
+    }
+}
+
+Arrow xs_isRooted(Arrow session, Arrow a) {
+    Arrow sa = (session == eve ? a : xs_pair(session, a));
+    Arrow resolved = xs_resolve(sa);
+    return resolved->id != XL_EVE ? xl_isRooted(resolved->id) : eve;
+}
+
+Arrow xs_equal(Arrow a, Arrow b) {
+    if (!a || !b) {
+        return eve;
+    } else if (a == eve) {
+        return eve;
+    } else if (a == b) {
+        return a;
+    } else if (a->id && b->id) {
+        return a->id == b->id ? a : eve;
+    } else if (a->type != b->type) {
+        return eve;
+    } else if (a->id) {
+        return xs_resolve(b)->id == a->id ? a : eve;
+    } else if (b->id) {
+        return xs_resolve(a)->id == b->id ? a : eve;
+    } else if (a->type == XS_ATOM) {
+        if (a->def.atom.size != b->def.atom.size) {
+            return eve;  
+        } else if (a->def.atom.raw == b->def.atom.raw) {
+            return a;
+        } else {
+            return memcmp(a->def.atom.raw, b->def.atom.raw, a->def.atom.size) == 0 ? a : eve;
+        }
+    } else if (a->type == XS_PAIR) {
+        Arrow tail_a = xs_getTail(a);
+        Arrow head_a = xs_getHead(a);
+        Arrow tail_b = xs_getTail(b);
+        Arrow head_b = xs_getHead(b);
+        int same_tail = (tail_a == eve ? tail_b == eve : xs_equal(tail_a, tail_b) != eve);
+        int same_head = (head_a == eve ? head_b == eve : xs_equal(head_a, head_b) != eve); 
+        return same_tail && same_head ? a : eve;
+    } else {
+        return eve;
+    }
+}
+
+// TODO should be non-deterministic
+Arrow xs_atom_session() {
+    static ArrowValue arrow = {
+        .hash = 0,
+        .id = 0,
+        .def = {
+            .atom = {
+                .raw = "session",
+                .size = 7
+            }
+        },
+        .type = XS_ATOM
+    };
+    return &arrow;
+}
+
+char* xs_session_getId(Arrow session) {
+    if (xs_getTail(session) != xs_atom_session()) {
+        return NULL;
+    } else {
+        Arrow uuid = xs_getHead(xs_getHead(session));
+        if (xs_isAtom(uuid)) {
+            return xs_getStr(uuid);
+        } else {
+            return NULL;
+        }
+    }
+}
+
+Arrow xs_getSession(char* agent, char* uuid) {
+    
+   Arrow agentUuidMaybe = pairMaybe(atomMaybe(agent), atomMaybe(uuid));
+
+   Arrow sessionMaybe = pairMaybe(xs_atom_session(), agentUuidMaybe);
+
+   Arrow rootedSession = xs_isRooted(eve, sessionMaybe);
    if (!rootedSession)
-       return EVE;
+       return eve;
 
    return rootedSession;
 }
 
-/* TODO: FIXME: We could parameter a maximal depth of deep rooting (meta-level)
-   when reached, we could break the recursion and root directly to context
-   e.g. deepRoot(/s0+s1+s2+s3, a, depth=1) <=> root(/s0+s1+s2/s3+a) s0/s1/s2
-   NO. IT DOESN'T WORK UNLESS ONE SETS UP COUNTERS OR TTL
-   */
-Arrow deepRoot(Arrow c, Arrow e) {
-    Arrow parent = tailOf(c);
-    if (parent != c) {
-        return deepRoot(parent, A(headOf(c), e));
-    } else if (c != EVE) {
-        return root(A(c, e));
-    } else {
-        return root(e);
+char *xs_getStr(Arrow a) {
+    if (!a || a->type != XS_ATOM) {
+        return NULL;
     }
+    char* str = malloc(a->def.atom.size + 1);
+    assert(str);
+    memcpy(str, a->def.atom.raw, a->def.atom.size);
+    str[a->def.atom.size] = '\0';
+    return str;
 }
 
-/* root in a context */
-Arrow xls_root(Arrow c, Arrow e) {
-    INFOPRINTF("xls_root(%O,%O)", c, e);
-    if (c == EVE) {
-        root(e);
-        return A(EVE, e);
-    } else {
-        deepRoot(c, e);
-        return root(A(c, e));
+char *xs_getMem(Arrow a, size_t *size) {
+    if (!a || a->type != XS_ATOM) {
+        return NULL;
     }
+    if (size) {
+        *size = a->def.atom.size;
+    }
+    char* raw = malloc(a->def.atom.size + 1);
+    assert(raw);
+    memcpy(raw, a->def.atom.raw, a->def.atom.size);
+    return raw;
 }
 
-#if 0
-// not used
-Arrow deepIsRooted(Arrow c, Arrow e) {
-    Arrow parent = tailOf(c);
-    if (parent != c) {
-        return deepIsRooted(parent, A(headOf(c),e));
-    } else if (c != EVE) {
-        return isRooted(A(c, e));
-    } else {
-        return isRooted(e);
+
+// get an URI path corresponding to an arrow
+char* xs_toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
+    if (a == eve) { // Eve is identified by an empty path
+        // allocate and return an empty string
+        char *s = (char*) malloc(1);
+        assert(s);
+        s[0] = '\0';
+        if (l) *l = 0; // if asked, return length = 0
+        return s;
     }
+
+    switch (a->type) {
+        case XS_ATOM: {
+            size_t size = a->def.atom.size;
+            char* raw = a->def.atom.raw;
+            if (size >= BLOB_MINSIZE) {
+                xs_assimilate(a);
+                return xl_digestOf(a->id, l);
+            } else {
+                char *uri = malloc(3 * size + 1); // memory allocation for encoded content
+                assert(uri);
+                size_t uri_size;
+                percent_encode(raw, size, uri, &uri_size);
+                uri = realloc(uri, 1 + uri_size);
+                if (l) *l = uri_size; // return length if asked
+                return uri;
+            }
+        }
+        case XS_PAIR:
+        { // concat tail and head identifiers into /tail+head style URI
+            uint32_t l1, l2;
+            char *tailUri = xs_toURI(xs_getTail(a), &l1);
+            if (tailUri == NULL) return NULL;
+
+            char *headUri = xs_toURI(xs_getHead(a), &l2);
+            if (headUri == NULL) {
+                free(tailUri);
+                return NULL;
+            }
+
+            // allocate to save result
+            char *uri = malloc(2 + l1 + l2 + 1);
+            assert(uri);
+            // concat identiers
+            sprintf(uri, "/%s+%s", tailUri, headUri); // TODO no printf
+            free(tailUri);
+            free(headUri);
+            if (l) *l = 2 + l1 + l2; // return length if asked
+            return uri;
+        }
+        default:
+            assert(0);
+    } // switch
 }
-#endif
 
-Arrow xls_isRooted(Arrow c, Arrow e) {
-    if (c == EVE)
-        return isRooted(e) ? A(c, e) : EVE;
-        
-    Arrow m = pairMaybe(c, e);
-    if (m == EVE || !isRooted(m))
-        return EVE;
-
-    return m;
+char* xs_getUri(Arrow a) {
+    uint32_t hash = xs_toURI(a, NULL);
 }
 
-void deepUnroot(Arrow c, Arrow e) {
-    Arrow parent = tailOf(c);
-
-    if (parent != c) {
-        deepUnroot(parent, A(headOf(c), e));
-    } else if (c != EVE) {
-        unroot(A(c, e));
-    } else {
-        unroot(e);
+static Arrow xs_urin(uint32_t size, char *uri, char *uri_size_p) {
+    TRACEPRINTF("BEGIN serial_parseUri(%s)", uri);
+    if (size == 0) {
+        if (uri_size_p) {
+            *uri_size_p = 0;
+        }
+        return eve;
     }
+
+    Arrow a = NULL;
+    uint32_t uri_size = NIL;
+
+    char c = uri[0];
+    
+    if (c <= 32 || !size) { // Any control-caracters/white-spaces are considered as URI break
+        a = eve;
+        uri_size = 0;
+    } else switch (c) {
+        case '+': // Eve
+            a = eve;
+            uri_size = 0;
+            break;
+        case '$': {
+            if (size != NIL && size < DIGEST_SIZE) {
+                TRACEPRINTF("xl_urin - not long enough for a digest: %d", size);
+                break;
+            }
+                
+            if (uri[1] != 'H') { // Only digest are allowed in URI
+                break;
+            }
+
+            uri_size = 2;
+            while ((size == NIL || uri_size < size) 
+                    && (c = uri[uri_size]) > 32 && c != '+' && c != '/')
+                uri_size++;
+                
+            if (uri_size != DIGEST_SIZE) {
+                TRACEPRINTF("xl_urin - wrong digest size %d", DIGEST_SIZE);
+                break;
+            }
+            Address id = xl_digestMaybe(uri);
+            if (id == NIL) {
+                TRACEPRINTF("xl_urin - wrong digest %s", DIGEST_SIZE);
+                return NIL;
+            }
+            a = xs_arrow(id);
+            break;
+        }
+        case '/':
+        { // Pair
+            uint32_t tailUriSize, headUriSize;
+            Address tail, head;
+            
+            if (size != NAN) size--;
+            
+            tail = xs_urin(size, uri + 1, &tailUriSize);
+            if (tail ==  NIL) { // Issue
+                return NIL;
+            }
+            
+            char tailUriEnd = uri[1 + tailUriSize];
+            if (tailUriEnd == '\0' || tailUriSize == size /* no more char */) {
+                a = tail;
+                uri_size = 1 + tailUriSize;
+                break;
+            }
+
+            char* headUriStart;
+            if (tailUriEnd == '+') {
+                if (size != NIL)
+                    size -= tailUriSize + 1;
+                headUriStart = uri + 1 + tailUriSize + 1;
+            } else {
+                if (size != NIL)
+                    size -= tailUriSize;
+                headUriStart = uri + 1 + tailUriSize;
+            }
+            
+            head = xs_urin(size, headUriStart, &headUriSize);
+            if (head == NIL) { // issue
+                return NIL;
+            }
+
+            a = xs_pair(tail, head);
+            uri_size = 1 + tailUriSize + (tailUriEnd == '+' /* 1/0 */) + headUriSize;
+            break;
+        }
+        default:
+        { // ATOM
+            uint32_t atomLength;
+
+            // compute atom URI length 
+            uri_size = 0;
+            while ((size == NAN || uri_size < size)
+                    && (c = uri[uri_size]) > 32 && c != '+' && c != '/')
+                uri_size++;
+            assert(uri_size);
+
+            uint8_t *atomStr = malloc(uri_size + 1);
+            percent_decode(uri, uri_size, atomStr, &atomLength);
+            a = xs_atomn(atomLength, atomStr);
+            free(atomStr);
+        }
+    }
+
+    if (uri_size_p) *uri_size_p = uri_size;
+    return a;
 }
 
-Arrow xls_unroot(Arrow c, Arrow e) {
-    Arrow u;
-    DEBUGPRINTF("xls_unroot(%O,%O)", c, e);
-    if (c == EVE) {
-        u = A(EVE, e);
-        unroot(u);
-        unroot(e);
+Arrow xs_uri(char* uri) {
+    return !uri ? eve : xs_urin(strlen(uri), uri, 0);   
+}
+
+ JEN SUIS LA
+// Grand refactoring en cours sur les flèches "temporaires"/"transient"
+// xl_... : flèche mappée dans le Arrow Space (ref = adresse)
+// xs_... : flèche de travail transient/temporaire (ref = struct *)
+//  assimilisation paresseuse
+// machine/session/server/repl en xs_...
+// d'après https://github.com/miellaby/entrelacs/blob/wiki/ArrowSpaceInterface.md
+// à relire: finalement resolve/assimilate ne renvoie pas un singleton mais édite le .id
+// à corriger: aucun free!!! compteur de référence?... ca va être trop pénible
+// TODO
+// - pool vidée à chaque commit donc pas besoin de free
+// - session = objet avec attribut pool
+// - pool vidée à chaque commit donc pas besoin de free
+// - xs_commit
+// - xs_close/over
+// - xs_root/unroot avec une hiérarchie de contexte
+//   (pour l'instant rooter 2 flèches cf. deepRoot dans branche main)
+// - xs_isRooted avec une hiérarchie de contexte
+// - xs_childrenOf avec une hiérarchie de contexte 
+// - le contexte par défaut est la session, on peut en sortir
+// - xs_enter rentrer dans un contexte
+//   pourrait générer une clé pour sortir (à fournir dans xs_departure)
+// - xs_departure accéder au niveau meta/supérieur
+// - il existe un clé système, pour sortir de la session et devenir root
+// 
+// bien finir les flèches temporaires
+// ensuite seulement refondre la mémoire d'après
+//  https://docs.google.com/document/d/1h8U5LhEVQQN57zU0p97AMdx9LhVloxsMB97i0eB0e24/edit
+// et implémenter les nouveaux algos xs_root/childrenOf/...
+// ================================================
+
+
+
+
+/// root in a session
+Arrow xs_root(Arrow context, Arrow e) {
+    INFOPRINTF("xs_root(%O,%O)", context, e);
+    Arrow s;
+    if (context == eve) {
+        s = xs_resolve(e);
     } else {
-        deepUnroot(c, e);
-        u = unroot(A(c, e));
+        s = xs_resolve(xs_pair(context, e));
     }
-    // DEBUGPRINTF("xls_unroot(%O,%O) done.", c, e);
-    return u;
+    if (s->id) {
+        return xl_unroot(s->id);
+    }
+    return s;
+}
+
+/// unroot in a context
+Arrow xs_unroot(Arrow context, Arrow e) {
+    INFOPRINTF("xs_unroot(%O,%O)", context, e);
+    Arrow s;
+    e = xs_resolve(e);
+    if (context == eve) {
+        s = e;
+    } else {
+        s = xs_resolve(xs_pair(context, e));
+    }
+    if (s->id) {
+        xl_unroot(s->id);
+    }
+    return e;
 }
 
 /** reset a context
   Recursivly unroot any rooted arrow under a given context
  */
-void xls_reset(Arrow c) {
+void xs_reset(Arrow c) {
     if (c == EVE) return;
 
     XLEnum childrenEnum = xl_childrenOf(c);
@@ -127,71 +540,48 @@ void xls_reset(Arrow c) {
         next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : EVE);
 
         if (tailOf(child) == c) { // Only outgoing arrow
-            xls_reset(child);
+            xs_reset(child);
             if (xl_isRooted(child) != EVE) {
-                xls_unroot(c, headOf(child));
+                xs_unroot(c, headOf(child));
             }
         } else {
-            TRACEPRINTF("xls_reset left %O", child);
+            TRACEPRINTF("xs_reset left %O", child);
         }
     }
 
     xl_enumFree(childrenEnum);
 }
 
-/** traditional edge storage
- *  root /$c+$destination in /$c+$source context path
- */
-Arrow xls_link(Arrow c, Arrow source, Arrow destination) {
-    INFOPRINTF("xls_link(%O,%O,%O)", c, source, destination);
-    Arrow p = xl_pair(source, destination);
- // TODO is not the best way to do it? should not set/unset merges with this?
-    xl_root(A(A(c, source), A(c, destination)));
-    return xls_root(c, p);
-}
-
-/** traditional edge removal
- *  unroot /$c+$destination from /$c+$source context path
- */
-Arrow xls_unlink(Arrow c, Arrow source, Arrow destination) {
-    INFOPRINTF("xls_unlink(%O,%O,%O)", c, source, destination);
-    Arrow p = xl_pair(source, destination);
- // TODO is not the best way to do it? should not set/unset merges with this?
-    xl_unroot(A(A(c, source), A(c, destination)));
-    return xls_unroot(c, p);
-}
-
-
 /** traditional "set-key-value".
 
      1) unroot any arrow from $c+$key context path
      2) root $value in /$c+$key context path
 */
-Arrow xls_set(Arrow c, Arrow key, Arrow value) {
-    INFOPRINTF("xls_set(%O,%O,%O)", c, key, value);
+Arrow xs_set(Arrow c, Arrow key, Arrow value) {
+    INFOPRINTF("xs_set(%O,%O,%O)", c, key, value);
 
     // unset
     Arrow slotContext = pairMaybe(c, key);
     if (slotContext != EVE) {
-       xls_reset(slotContext);
+       xs_reset(slotContext);
     } else {
         slotContext = xl_pair(c, key);
     }
     
-    return xls_root(slotContext, value);
+    return xs_root(slotContext, value);
 }
 
 /** traditional "unset-key".
 
     reset $c+$key context path
 */
-void xls_unset(Arrow c, Arrow key) {
-    INFOPRINTF("xls_unset(%O,%O)", c, key);
+void xs_unset(Arrow c, Arrow key) {
+    INFOPRINTF("xs_unset(%O,%O)", c, key);
     
     Arrow slotContext = pairMaybe(c, key);
     if (slotContext == EVE) return;
 
-    xls_reset(slotContext);
+    xs_reset(slotContext);
 }
 
 /** traditional "get-key".
@@ -224,18 +614,17 @@ static Arrow get(Arrow c, Arrow key) {
     return get(tailOf(c), key);
 }
 
-Arrow xls_get(Arrow c, Arrow key) {
-    TRACEPRINTF("BEGIN xls_get(%O,%O)", c, key);
+Arrow xs_get(Arrow c, Arrow key) {
+    TRACEPRINTF("BEGIN xs_get(%O,%O)", c, key);
     Arrow value = get(c, key);
-    TRACEPRINTF("END xls_get(%O,%O) = %O", c, key, value);
+    TRACEPRINTF("END xs_get(%O,%O) = %O", c, key, value);
     return value;
 }
 
 
 /** returns a list of all children of $a rooted within context path $c
-    via link/unlink functions
- */
-Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
+ */ FIXME utiliser le haché
+Arrow xs_childrenOf(Arrow c, Arrow a, Arrow list) {
     Arrow value = NIL;
     Arrow contextPair = xl_pairMaybe(c, a);
     if (contextPair == EVE) return list;
@@ -243,43 +632,44 @@ Arrow partnersOf(Arrow c, Arrow a, Arrow list) {
     XLEnum childrenEnum = xl_childrenOf(contextPair);
     while (xl_enumNext(childrenEnum)) {
         Arrow pair = xl_enumGet(childrenEnum);
-        int outgoing = (xl_headOf(pair) != contextPair);
-        Arrow other = (outgoing ? xl_headOf(pair) : xl_tailOf(pair));
-        if (xl_isRooted(pair) && xl_tailOf(other) == c) {
-            value = headOf(other);
-            list = xl_pair(outgoing ? xl_pair(a, value) : xl_pair(value, a), list);
+        int outgoing = (xl_getHead(pair) != contextPair);
+        Arrow other = (outgoing ? xs_getHead(pair) : xl_tailOf(pair));
+        if (xs_isRooted(c, pair) && xs_getTail(other) == c) {
+            value = xs_getHead(other);
+            list = xs_pair(outgoing ? xs_pair(a, value) : xs_pair(value, a), list);
         }
     }
     xl_enumFree(childrenEnum);
 
-    if (tailOf(c) == c)
+    if (xs_isAtom(c))
         return list;
     else
-        return partnersOf(tailOf(c), a, list);
+        return xs_childrenOf(xs_getTail(c), a, list);
 }
 
 
 /** returns a list of all children of $a rooted within context path $c
     via link/unlink functions
  */
-Arrow xls_partnersOf(Arrow c, Arrow a) {
-    TRACEPRINTF("BEGIN xls_partnersOf(%O, %O)", c, a);
-    Arrow list = partnersOf(c, a, EVE);
-    TRACEPRINTF("END xls_partnersOf(%O, %O) = %O", c, a, list);
+Arrow xs_childrenOf(Arrow c, Arrow a) {
+    TRACEPRINTF("BEGIN xs_childrenOf(%O, %O)", c->id, a->id);
+    Arrow list = xs_childrenOf(c, a, EVE);
+    TRACEPRINTF("END xs_childrenOf(%O, %O) = %O", c->id, a->id, list);
     return list;
 }
 
 /** close a session $s */
-Arrow xls_close(Arrow s) {
-    TRACEPRINTF("BEGIN xls_close(%O)", s);
+Arrow xs_close(Arrow s) {
+    TRACEPRINTF("BEGIN xs_close(%O)", s);
     /* $session =  /$s/session/$agent+$uuid */
-    xls_reset(A(atom("locked"), s));
-    xls_reset(s);
-    xls_unroot(tailOf(s), headOf(s));
-    TRACEPRINTF("END xls_close(%O)", s);
+    xs_reset(A(atom("locked"), s));
+    xs_reset(s);
+    xs_unroot(tailOf(s), headOf(s));
+    TRACEPRINTF("END xs_close(%O)", s);
     return s;
 }
 
+#if 0
 static Arrow _fromUrl(Arrow context, char* url, char** urlEnd, int locateOnly) {
     DEBUGPRINTF("BEGIN _fromUrl(%06x, '%s')", context, url);
     Arrow a = EVE;
@@ -401,19 +791,19 @@ static Arrow fromUrl(Arrow context, char *url, int locateOnly) {
     return a;
 }
 
-Arrow xls_url(Arrow s, char* aUrl) {
-    TRACEPRINTF("BEGIN xls_url(%O, '%s')", s, aUrl);
+Arrow xs_url(Arrow s, char* aUrl) {
+    TRACEPRINTF("BEGIN xs_url(%O, '%s')", s, aUrl);
     Arrow locked = A(atom("locked"), s);
     Arrow arrow = fromUrl(locked, aUrl, 0);
-    TRACEPRINTF("END xls_url(%O, '%s') = %O", s, aUrl, arrow);
+    TRACEPRINTF("END xs_url(%O, '%s') = %O", s, aUrl, arrow);
     return arrow;
 }
 
-Arrow xls_urlMaybe(Arrow s, char* aUrl) {
-    TRACEPRINTF("BEGIN xls_urlMaybe(%O, '%s')", s, aUrl);
+Arrow xs_urlMaybe(Arrow s, char* aUrl) {
+    TRACEPRINTF("BEGIN xs_urlMaybe(%O, '%s')", s, aUrl);
     Arrow locked = A(atom("locked"), s);
     Arrow arrow = fromUrl(locked, aUrl, 1);
-    TRACEPRINTF("END xls_urlMaybe(%O, '%s') = %O", s, aUrl, arrow);
+    TRACEPRINTF("END xs_urlMaybe(%O, '%s') = %O", s, aUrl, arrow);
     return arrow;
 }
 
@@ -421,7 +811,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
     if (depth == 0) {
         char* url = malloc(8);
         assert(url);
-        Arrow sa = xls_root(context, e);
+        Arrow sa = xs_root(context, e);
         sprintf(url, "$%06x", (int)sa);
         *l = 7;
         return url;
@@ -442,12 +832,13 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
 }
 
 
-char* xls_urlOf(Arrow s, Arrow e, int depth) {
-    TRACEPRINTF("BEGIN xls_urlOf(%O, %O, %d)", s, e, depth);
+char* xs_urlOf(Arrow s, Arrow e, int depth) {
+    TRACEPRINTF("BEGIN xs_urlOf(%O, %O, %d)", s, e, depth);
     uint32_t l;
     Arrow locked = A(atom("locked"), s);
 
     char* url = toURL(locked, e, depth, &l);
-    TRACEPRINTF("END xls_urlOf(%O, %O, %d) = '%s'", s, e, depth, url);
+    TRACEPRINTF("END xs_urlOf(%O, %O, %d) = '%s'", s, e, depth, url);
     return url;
 }
+#endif

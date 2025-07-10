@@ -50,41 +50,61 @@
 
 #include "entrelacs/entrelacs.h"
 
-/** define a session
-    - in a given context $c,
-    - for a given agent $agent,
-    - with a given identifier $id.
+typedef enum xs_type {
+    XS_UNDEF = -1,
+    XS_EVE = 0,
+    XS_ATOM = 1,
+    XS_PAIR = 2
+} ArrowType;
 
-    = assimilate and root the arrow "/$agent+$id" in the context path "$c"
-*/
-Arrow xls_session(Arrow c, Arrow agent, Arrow id);
+/// @brief  Transient Arrow Structure
+typedef struct xs_arrow_s {
+    uint32_t hash;
+    Address  id;
+    union xs_arrow_u {
+        struct xs_atom_s {
+            uint8_t* raw;
+            uint32_t size;
+        } atom;
+        struct xs_pair_s {
+            Arrow tail;
+            Arrow head;
+        } pair;
+    } def;
+    ArrowType type;
+} ArrowValue;
 
-/** return a previously defined session /$c+sessions+/$agent+$id, Eve if not found
+
+/** create a new session for a given agent $agent
 */
-Arrow xls_sessionMaybe(Arrow c, Arrow agent, Arrow id);
+Arrow xs_open(char* agent);
+
+/** return a previously defined session, Eve if not found
+*/
+Arrow xs_getSession(char* agent, char* uuid);
 
 /** reset and remove (unroot) a session.
 */
-Arrow xls_close(Arrow s);
+Arrow xs_close(Arrow session);
 
 /** root an arrow $a in the context defined by path $c and return the resulting path "/$c+$a"
     Two arrows are actually rooted:
     $r1 = /C0/C1/../Cn+a
     $r2 = /$c+$a
 */
-Arrow xls_root(Arrow c, Arrow a);
+Arrow xs_root(Arrow c, Arrow a);
 
 /** return $c+$a if $a is rooted within a context defined by path $c, otherelse EVE.
       ~= isRooted(/$c+$a)
 */
-Arrow xls_isRooted(Arrow c, Arrow a);
+Arrow xs_isRooted(Arrow c, Arrow a);
 
 /** unroot an arrow $a within a context defined by its path $c, then returns it.
     Two arrows are actually unrooted:
     $r1 = /C0/C1/../Cn+a
     $r2 = /$c+$a
 */
-Arrow xls_unroot(Arrow c, Arrow a);
+Arrow xs_unroot(Arrow c, Arrow a);
 
 
 /** traditional edge storage;
@@ -93,63 +113,63 @@ Arrow xls_unroot(Arrow c, Arrow a);
     $r1 = /C0/C1/../Cn+/$source+$destination
     $r2 = //$c+$source+/$c+$destination
  */
-Arrow xls_link(Arrow c, Arrow source, Arrow destination);
+Arrow xs_link(Arrow c, Arrow source, Arrow destination);
 
 /** traditional edge removal;
     unroot a pair from $source to $destination in the context defined by $c path.
  */
-Arrow xls_unlink(Arrow c, Arrow source, Arrow destination);
+Arrow xs_unlink(Arrow c, Arrow source, Arrow destination);
 
 /** returns a list of all children of $a rooted within context path $c
     via link/unlink functions
  */
-Arrow xls_partnerOf(Arrow c, Arrow a);
+Arrow xs_partnerOf(Arrow c, Arrow a);
 
 /** unroot all arrows within a context defined by its path $c,
     and recursivly reset any sub-contexts.
 */
-void xls_reset(Arrow c);
+void xs_reset(Arrow c);
 
 /** traditional "set-key-value".
 
      1) reset context of path "/$c+$key" (see above)
      2) root $value in context "/$c+$key"
 */
-Arrow xls_set(Arrow c, Arrow slot, Arrow value);
+Arrow xs_set(Arrow c, Arrow slot, Arrow value);
 
 
 /** traditional "unset-key".
 
     reset context of path $c+$key
 */
-void  xls_unset(Arrow c, Arrow slot);
+void  xs_unset(Arrow c, Arrow slot);
 
 /** traditional "get-key".
     returns "the" rooted arrow in context of path "/$c+$key"
     - if several arrows are rooted there, only one is returned.
     - if no arrow, return NIL.
 */
-Arrow xls_get(Arrow c, Arrow slot);
+Arrow xs_get(Arrow c, Arrow slot);
 
 /** Forge an URL for a given arrow within a given session.
     Ancestors at 'depth' level are replaced by
     temporary ID which are only valid in this session.
 */
-char* xls_urlOf(Arrow s, Arrow a, int depth);
+char* xs_urlOf(Arrow s, Arrow a, int depth);
 
 /** Resolve an URL into an arrow.
     Any embedded ID must belong to the considered session.
 */
-Arrow xls_url(Arrow s, char* url);
+Arrow xs_url(Arrow s, char* url);
 
 /** Resolve an URL into an arrow if it exists.
     Any embedded ID must belong to the considered session.
 */
-Arrow xls_urlMaybe(Arrow s, char* url);
+Arrow xs_urlMaybe(Arrow s, char* url);
 
 /** returns a list of all rooted pairs within context path "/$c+$key"
 */
-Arrow xls_partnersOf(Arrow c, Arrow a);
+Arrow xs_partnersOf(Arrow c, Arrow a);
 
 
 #endif /* SESSION_H */

@@ -8,7 +8,7 @@
 #include "log/log.h"
 
 static Arrow print(Arrow arrow, Arrow context) {
-  char* url = xls_urlOf(EVE, arrow, -1);
+  char* url = xs_urlOf(EVE, arrow, -1);
   fprintf(stderr, "0x%6x %s\n", arrow, url);
   free(url);
   return EVE;
@@ -22,16 +22,16 @@ int main(int argc, char* argv[]) {
     DEFATOM(context);
     DEFATOM(hello);
     DEFATOM(world);
-    xls_set(context, hello, world);
+    xs_set(context, hello, world);
     fprintf(stderr, "1: xl_set\n");
     childrenOfCB(context, print, EVE);
-    xls_unset(context, hello);
+    xs_unset(context, hello);
     fprintf(stderr, "2: xl_unset\n");
     xl_commit();
     childrenOfCB(context, print, EVE);
-    xls_set(context, hello, world);
+    xs_set(context, hello, world);
     fprintf(stderr, "3: xl_get\n");
-    Arrow what = xls_get(context, hello);
+    Arrow what = xs_get(context, hello);
     print(what, EVE);
     xl_commit();
     return 0;

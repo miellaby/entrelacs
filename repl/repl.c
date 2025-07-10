@@ -125,12 +125,12 @@ void completion(const char *buf, linenoiseCompletions *lc) {
 
 }
 
-void tree(Arrow parent) {
+void tree(Address parent) {
     XLEnum e = xl_childrenOf(parent);
             
-    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+    Address next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
     while (next != XL_EVE) {
-        Arrow child = next;
+        Address child = next;
         next = xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
         tree(child);
         if (!xl_isRooted(child)) {
@@ -152,7 +152,7 @@ static void *do_yield(void *v) {
 int main(int argc, char **argv) {
     char *line;
     char *prgname = argv[0];
-    Arrow cwa = NIL;
+    Address cwa = NIL;
     char prompt[255] ="*global*> ";
     
     /* Parse options, with --multiline we enable multi line editing. */
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
             linenoiseHistorySave(repl_historyPath);
             XLEnum *e;
             char *arg = line + (line[2] == '\0' ? 2 : 3);
-            Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
+            Address parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
                 ? cwa == NIL ? NIL : cwa
                 : (*arg == '/' || cwa == NIL
                    ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
@@ -238,9 +238,9 @@ int main(int argc, char **argv) {
             } else {
                 e = xl_childrenOf(parent);
                         
-                Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+                Address next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
                 while (next != XL_EVE) {
-                    Arrow child = next;
+                    Address child = next;
                     next = xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
                     fprintf(stderr, "%s", (xl_isRooted(child) ? "_ " : "  "));
                     if (xl_tailOf(child) == cwa) {
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
             char *arg = line + (line[4] == '\0' ? 4 : 5);
-            Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
+            Address parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
                 ? cwa == NIL ? XL_EVE : cwa
                 : (*arg == '/' || cwa == NIL
                    ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
         } else if (line[0] != '\0') {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
-            Arrow p = (*line == '/' || cwa == NIL
+            Address p = (*line == '/' || cwa == NIL
                ? xl_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line)
                : xl_pair(cwa, xl_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line))); 
         
@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "EVE\n");
                 
             } else {
-                Arrow r = xl_eval(XL_EVE, p, XL_EVE);
+                Address r = xs_eval(XL_EVE, p, XL_EVE);
                 fprintf(stderr, "%O\n", r);
             }
 

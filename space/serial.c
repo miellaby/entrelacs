@@ -256,9 +256,9 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
 }
 
 
-Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist) {
+Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist) {
     TRACEPRINTF("BEGIN serial_parseUri(%s)", uri);
-    Arrow a = NIL;
+    Address a = NIL;
     uint32_t uriLength = NAN;
 
     char c = uri[0];
@@ -302,7 +302,7 @@ Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExi
             case '/':
             { // Pair
                 uint32_t tailUriLength, headUriLength;
-                Arrow tail, head;
+                Address tail, head;
                 
                 if (size != NAN) size--;
                 
@@ -381,10 +381,10 @@ Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExi
     return a;
 }
 
-Arrow serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: document actual design
+Address serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: document actual design
     char c;
     uint32_t uriLength, gap;
-    Arrow a = serial_parseUri(size, uri, &uriLength, ifExist);
+    Address a = serial_parseUri(size, uri, &uriLength, ifExist);
     if (uriLength == NAN)
         return a; // return NIL (wrong URI) or EVE (not assimilated)
     
@@ -399,7 +399,7 @@ Arrow serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: documen
     while ((size == NAN || size--) && (c = uri[uriLength])) {
         DEBUGPRINTF("nextUri = >%s<", uri + uriLength);
         uint32_t nextUriLength;
-        Arrow b = serial_parseUri(size, uri + uriLength, &nextUriLength, ifExist);
+        Address b = serial_parseUri(size, uri + uriLength, &nextUriLength, ifExist);
         if (nextUriLength == NAN)
             return b; // return NIL (wrong URI) or EVE (not assimilated)
         uriLength += nextUriLength;

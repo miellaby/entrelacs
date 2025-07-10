@@ -45,12 +45,12 @@ Most recent previous changes:
 * when an application is bound as is, it takes precedence over the corresponding closure evaluation.
   * it's an attempt to merge intensive and extensive definitions, that is function and environment/object.
 * operator, closure & paddock: auto escaped and somewhat typed litterals. paddock is for macro.
-* xls_get now returns NIL (FFFFFF) when no arrow found
+* xs_get now returns NIL (FFFFFF) when no arrow found
 * NIL is a undefined arrow. Different from Eve (0)
 * virtualized evaluation (root/get/set are confined in a nested hierarchy of contexts)
-* resolve now use xls_get to get "global" variable value
+* resolve now use xs_get to get "global" variable value
 * rooting a pair is not enough any more to make a global bound variable.
-  * Use xls_set(EVE,slot,value) instead.
+  * Use xs_set(EVE,slot,value) instead.
       * will do root((EVE->slot)->value) ; root(EVE->(slot->value)))
 * looseStack dumped in reverse order
 * new API to get and retrieve "uri" (no more xl_program)
@@ -98,7 +98,7 @@ Future:
 In study:
  * a session is actually a continuation
  * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
- * xls_set: create less arrows (but also less indexation)
+ * xs_set: create less arrows (but also less indexation)
      * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
  * Allows GC tooling.
     * when an operator is GC by forget() -if tail(a) == operator (space-level reserved keyword)-

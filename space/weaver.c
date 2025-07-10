@@ -14,12 +14,12 @@
 // The loose log.
 // This is a dynamic array containing all arrows in loose state.
 // it grows geometrically.
-static Arrow  *looseLog = NULL;
+static Address  *looseLog = NULL;
 static uint32_t looseLogMax = 0;
 uint32_t looseLogSize = 0;
 
 void weaver_addLoose(Address a) {
-    geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof (Arrow), looseLogSize + 1);
+    geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof (Address), looseLogSize + 1);
     looseLog[looseLogSize - 1] = a;
 }
 
@@ -53,7 +53,7 @@ void weaver_removeLoose(Address a) {
  * @param child the child
  * @param childWeakness !0 if one builds up a weak connection
  */
-void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
+void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
     TRACEPRINTF("weaver_connect child=%06x to a=%06x weakness=%1x outgoing=%1x", child, a, childWeakness, outgoing);
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
     space_stats.connect++;
@@ -106,7 +106,7 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
     // Update child0
     if (!childWeakness) {
       // child0 always point the last strongly connnected child
-      Arrow lastChild0 = cell.arrow.child0;
+      Address lastChild0 = cell.arrow.child0;
       int lastChild0Direction = ((cell.arrow.RWWnCn & FLAGS_C0D) ? 1 : 0);
       cell.arrow.child0 = child;
 
@@ -253,7 +253,7 @@ void weaver_connect(Arrow a, Arrow child, int childWeakness, int outgoing) {
  *      * So one adds it to the "loose log"
  *      * one disconnects "a" from its both parents.
  */
-void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
+void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
     TRACEPRINTF("weaver_disconnect child=%06x from a=%06x weakness=%1x outgoing=%1x", child, a, weakness, outgoing);
     space_stats.disconnect++;
     if (a == EVE) return; // One doesn't store Eve connectivity.
@@ -355,7 +355,7 @@ void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
         j = 0;
         while (j < 5) { // slot scanning
-            Arrow inSlot = nextCell.children.C[j];
+            Address inSlot = nextCell.children.C[j];
             if (inSlot == child
                 && (   (child == a && (nextCell.children.directions & (1 << (j + 8))))
                     || (child != a && 
@@ -414,7 +414,7 @@ void weaver_disconnect(Arrow a, Arrow child, int weakness, int outgoing) {
 
 
 /** forget a loose arrow, that is actually remove it from the main memory */
-void weaver_forgetLoose(Arrow a) {
+void weaver_forgetLoose(Address a) {
     TRACEPRINTF("forget loose arrow %06x", a);
     space_stats.forget++;
 
@@ -495,7 +495,7 @@ void weaver_performGC() {
     TRACEPRINTF("BEGIN weaver_performGC()");
 
     for (unsigned i = looseLogSize; i > 0; i--) { // loose stack scanning
-        Arrow a = looseLog[i - 1];
+        Address a = looseLog[i - 1];
 
         if (cell_isLoose(a)) { // a loose arrow is removed NOW
             weaver_forgetLoose(a);
@@ -513,7 +513,7 @@ void weaver_performGC() {
 }
 
 int weaver_init() {
-    geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof(Arrow), 0);
+    geoalloc((char**) &looseLog, &looseLogMax, &looseLogSize, sizeof(Address), 0);
     return 0;
 }
 void weaver_destroy() {

@@ -13,8 +13,8 @@
 // - New API: weak(arrow)
 // if: weak(A(root(atom('hello')), atom('world'))
 // when 'hello' unrooted, '/hello+world' is unrooted as well
-// attention: prefer xls_weak_link(C,A,B) = weak((C,A)=>(C,B)) then use xls_partnersOf(C,A)
-// xls_weak(c,x) add x in context c without preventing c removal and GC when no other content
+// attention: prefer xs_weak_link(C,A,B) = weak((C,A)=>(C,B)) then use xs_partnersOf(C,A)
+// xs_weak(c,x) add x in context c without preventing c removal and GC when no other content
 */
 
 #define _XOPEN_SOURCE 600
@@ -52,7 +52,7 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define LOCK() pthread_mutex_lock(&apiMutex)
 #define LOCK_END() pthread_mutex_unlock(&apiMutex)
-#define LOCK_OUT(X) (pthread_mutex_unlock(&apiMutex), (Arrow)X)
+#define LOCK_OUT(X) (pthread_mutex_unlock(&apiMutex), (Address)X)
 #define LOCK_OUT64(X) (pthread_mutex_unlock(&apiMutex), (uint64_t))
 #define LOCK_OUTSTR(X) (pthread_mutex_unlock(&apiMutex), (char*)X)
 #define LOCK_OUTRAW(X) (pthread_mutex_unlock(&apiMutex), (uint8_t*)X)
@@ -72,36 +72,36 @@ static int memCloseDone = 1; // 1->0 when a xl_over thread starts waiting, 0->1 
 /*
  * Eve
  */
-const Arrow Eve = EVE;
+const Address Eve = EVE;
 
 /** return Eve */
-Arrow xl_Eve() {
+Address xl_Eve() {
     return EVE;
 }
 
-uint32_t xl_hashOf(Arrow a) {
+uint32_t xl_hashOf(Address a) {
     LOCK();
     uint32_t cs = cell_getHash(a);
     return LOCK_OUT(cs);
 }
 
 
-Arrow xl_pair(Arrow tail, Arrow head) {
+Address xl_pair(Address tail, Address head) {
     LOCK();
-    Arrow a = assimilate_pair(tail, head, 0);
+    Address a = assimilate_pair(tail, head, 0);
     return LOCK_OUT(a);
 }
 
-Arrow xl_pairMaybe(Arrow tail, Arrow head) {
+Address xl_pairMaybe(Address tail, Address head) {
     LOCK();
-    Arrow a= assimilate_pair(tail, head, 1);
+    Address a= assimilate_pair(tail, head, 1);
     return LOCK_OUT(a);
 }
 
-Arrow xl_atom(char* str) {
+Address xl_atom(char* str) {
     uint32_t size = strlen(str);
     LOCK();
-    Arrow a =
+    Address a =
       (size == 0 ? // EVE has a zero payload
         EVE : (size < TAG_MINSIZE
             ? assimilate_small(size, (uint8_t *)str, 0)
@@ -111,10 +111,10 @@ Arrow xl_atom(char* str) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomMaybe(char* str) {
+Address xl_atomMaybe(char* str) {
     uint32_t size = strlen(str);
     LOCK();
-    Arrow a =
+    Address a =
       (size == 0 ? EVE // EVE 0 payload
       : (size < TAG_MINSIZE
         ? assimilate_small(size, (uint8_t *)str, 1)
@@ -124,8 +124,8 @@ Arrow xl_atomMaybe(char* str) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomn(uint32_t size, uint8_t* mem) {
-    Arrow a;
+Address xl_atomn(uint32_t size, uint8_t* mem) {
+    Address a;
     LOCK();
     if (size == 0)
         a = EVE;
@@ -139,8 +139,8 @@ Arrow xl_atomn(uint32_t size, uint8_t* mem) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_atomnMaybe(uint32_t size, uint8_t* mem) {
-    Arrow a;
+Address xl_atomnMaybe(uint32_t size, uint8_t* mem) {
+    Address a;
     LOCK();
     if (size == 0)
         a = EVE;
@@ -154,13 +154,13 @@ Arrow xl_atomnMaybe(uint32_t size, uint8_t* mem) {
     return LOCK_OUT(a);
 }
 
-Arrow xl_headOf(Arrow a) {
+Address xl_headOf(Address a) {
     if (a == EVE) return EVE;
     LOCK();
     return LOCK_OUT(cell_getHead(a));
 }
 
-Arrow xl_tailOf(Arrow a) {
+Address xl_tailOf(Address a) {
     if (a == EVE) return EVE;
     LOCK();
     return LOCK_OUT(cell_getTail(a));
@@ -168,7 +168,7 @@ Arrow xl_tailOf(Arrow a) {
 
 /** return the content behind an atom
 */
-uint8_t* xl_memOf(Arrow a, uint32_t* lengthP) {
+uint8_t* xl_memOf(Address a, uint32_t* lengthP) {
     if (a == EVE) { // Eve has an empty payload
         return cell_getPayload(EVE, NULL, lengthP);
     }
@@ -211,14 +211,14 @@ uint8_t* xl_memOf(Arrow a, uint32_t* lengthP) {
     return LOCK_OUTRAW(payload);
 }
 
-char* xl_strOf(Arrow a) {
+char* xl_strOf(Address a) {
     uint32_t lengthP;
     uint8_t* p = xl_memOf(a, &lengthP);
     return (char *)p;
 }
 
 
-char* xl_digestOf(Arrow a, uint32_t *l) {
+char* xl_digestOf(Address a, uint32_t *l) {
     TRACEPRINTF("BEGIN xl_digestOf(%06x)", a);
 
     if (a >= SPACE_SIZE) { // Address anomaly
@@ -242,64 +242,70 @@ char* xl_digestOf(Arrow a, uint32_t *l) {
     return LOCK_OUTSTR(digest);
 }
 
-char* xl_uriOf(Arrow a, uint32_t *l) {
+char* xl_uriOf(Address a, uint32_t *l) {
     LOCK();
     char *str = serial_toURI(a, l);
     return LOCK_OUTSTR(str);
 }
 
-Arrow xl_digestMaybe(char* digest) {
+Address xl_digestMaybe(char* digest) {
     TRACEPRINTF("BEGIN xl_digestMaybe(%.*s)", DIGEST_SIZE, digest);
     LOCK();
     return LOCK_OUT(probe_digest(digest));
 }
 
-Arrow xl_uri(char* aUri) {
+Address xl_uri(char* aUri) {
     LOCK();
-    Arrow a = serial_parseURIs(NAN, aUri, 0);
+    Address a = serial_parseURIs(NAN, aUri, 0);
     return LOCK_OUT(a);
 }
 
-Arrow xl_uriMaybe(char* aUri) {
+Address xl_uriMaybe(char* aUri) {
     LOCK();
-    Arrow a = serial_parseURIs(NAN, aUri, 1);
+    Address a = serial_parseURIs(NAN, aUri, 1);
     return LOCK_OUT(a);
 }
 
-Arrow xl_urin(uint32_t aSize, char* aUri) {
+Address xl_urin(uint32_t aSize, char* aUri) {
     LOCK();
-    Arrow a = serial_parseURIs(aSize, aUri, 0);
+    Address a = serial_parseURIs(aSize, aUri, 0);
     return LOCK_OUT(a);
 }
 
-Arrow xl_urinMaybe(uint32_t aSize, char* aUri) {
+Address xl_urinMaybe(uint32_t aSize, char* aUri) {
     LOCK();
-    Arrow a = serial_parseURIs(aSize, aUri, 1);
+    Address a = serial_parseURIs(aSize, aUri, 1);
     return LOCK_OUT(a);
 }
 
-Arrow xl_anonymous() {
-    char anonymous[CRYPTO_SIZE + 1];
-    Arrow a = NIL;
-    do {
-        // FIXME actual randomness
-        char random[80];
-        snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
-        hash_crypto(sizeof(random), (uint8_t *)random,  anonymous); // Access to unitialized data is wanted
-        a = xl_atomMaybe(anonymous);
-        assert(a != NIL);
-    } while (a);
-    return xl_atom(anonymous);
+void load_random(char *buffer) {
+  // FIXME actual randomness
+  char random[80];
+  snprintf(random, sizeof(random), "an0nymous:)%lx",
+           (long)rand() ^ (long)time(NULL));
+  hash_crypto(sizeof(random), (uint8_t *)random,
+              buffer); // Access to unitialized data is wanted
 }
 
-static Arrow unrootChild(Arrow child, Arrow context) {
+Address xl_anonymous() {
+  char anonymous[CRYPTO_SIZE + 1];
+  Address a = NIL;
+  do { // select a random key, check the atom doesn't exit 
+    load_random(anonymous);
+    a = xl_atomMaybe(random);
+    assert(a != NIL);
+  } while (a);
+  return xl_atom(random);
+}
+
+static Address unrootChild(Address child, Address context) {
     (void) context;
     xl_unroot(child);
     return EVE;
 }
 
-static Arrow getHookBadge() {
-    static Arrow hookBadge = EVE;
+static Address getHookBadge() {
+    static Address hookBadge = EVE;
     if (hookBadge != EVE) return hookBadge; // try to avoid the costly lock.
     LOCK();
     if (hookBadge != EVE) return LOCK_OUT(hookBadge);
@@ -312,15 +318,15 @@ static Arrow getHookBadge() {
     return LOCK_OUT(hookBadge);
 }
 
-Arrow xl_hook(void* hookp) {
+Address xl_hook(void* hookp) {
   char hooks[64]; 
   snprintf(hooks, 64, "%p", hookp);
   // Note: hook must be bottom-rooted to be valid
-  Arrow hook = xl_root(xl_pair(getHookBadge(), xl_atom(hooks)));
+  Address hook = xl_root(xl_pair(getHookBadge(), xl_atom(hooks)));
   return hook;
 }
 
-void* xl_pointerOf(Arrow a) { // Only bottom-rooted hook is accepted to limit hook forgery
+void* xl_pointerOf(Address a) { // Only bottom-rooted hook is accepted to limit hook forgery
     if (!xl_isPair(a) || xl_tailOf(a) != getHookBadge() || !xl_isRooted(a))
         return NULL;
     
@@ -332,11 +338,11 @@ void* xl_pointerOf(Arrow a) { // Only bottom-rooted hook is accepted to limit ho
     return hookp;
 }
 
-int xl_isEve(Arrow a) {
+int xl_isEve(Address a) {
     return (a == EVE);
 }
 
-Arrow xl_isPair(Arrow a) {
+Address xl_isPair(Address a) {
     if (a == EVE) {
       return EVE; 
     }
@@ -357,7 +363,7 @@ Arrow xl_isPair(Arrow a) {
     return (cell.full.type == CELLTYPE_PAIR ? a : EVE);
 }
 
-Arrow xl_isAtom(Arrow a) {
+Address xl_isAtom(Address a) {
     if (a == EVE) {
       return EVE; 
     }
@@ -378,7 +384,7 @@ Arrow xl_isAtom(Arrow a) {
     return (cell.full.type == CELLTYPE_PAIR ? EVE : a);
 }
 
-enum e_xlType xl_typeOf(Arrow a) {
+enum e_xlType xl_typeOf(Address a) {
     if (a == EVE) {
       return XL_EVE; 
     }
@@ -405,7 +411,7 @@ enum e_xlType xl_typeOf(Arrow a) {
 /** Get children
 *
 */
-void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
+void xl_childrenOfCB(Address a, XLCallBack cb, Address context) {
     TRACEPRINTF("xl_childrenOfCB a=%06x", a);
 
     if (a == EVE) {
@@ -474,7 +480,7 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
 
           } else if (inSlot != 0) {
             // child maybe found
-            Arrow child = inSlot;
+            Address child = inSlot;
 
             // get child cell
             Cell childCell;
@@ -498,9 +504,9 @@ void xl_childrenOfCB(Arrow a, XLCallBack cb, Arrow context) {
 
 typedef struct iterator_s {
     Cell     currentCell;
-    Arrow    parent;
+    Address    parent;
     Address  pos;
-    Arrow    current;
+    Address    current;
     uint32_t offset;
     int      iSlot;
     int      iCell;
@@ -514,7 +520,7 @@ static int xl_enumNextChildOf(XLEnum e) {
     Address pos = iteratorp->pos;
     int     i   = iteratorp->iSlot;
     int     ic  = iteratorp->iCell;
-    Arrow   a   = iteratorp->parent;
+    Address   a   = iteratorp->parent;
     uint32_t offset = iteratorp->offset;
 
     LOCK();
@@ -604,7 +610,7 @@ static int xl_enumNextChildOf(XLEnum e) {
 
           } else if (inSlot != 0) {
             // child maybe found
-            Arrow child = inSlot;
+            Address child = inSlot;
 
             // get child cell
             Cell childCell;
@@ -657,7 +663,7 @@ int xl_enumNext(XLEnum e) {
     return xl_enumNextChildOf(e);
 }
 
-Arrow xl_enumGet(XLEnum e) {
+Address xl_enumGet(XLEnum e) {
     assert(e);
     iterator_t *iteratorp = e;
     assert(iteratorp->type == 0);
@@ -668,7 +674,7 @@ void xl_enumFree(XLEnum e) {
     free(e);
 }
 
-XLEnum xl_childrenOf(Arrow a) {
+XLEnum xl_childrenOf(Address a) {
     TRACEPRINTF("xl_childrenOf a=%06x", a);
 
     if (a == EVE) {
@@ -702,7 +708,7 @@ XLEnum xl_childrenOf(Arrow a) {
 }
 
 /** root an arrow */
-Arrow xl_root(Arrow a) {
+Address xl_root(Address a) {
     if (a == EVE) {
         return EVE; // no
     }
@@ -755,7 +761,7 @@ Arrow xl_root(Arrow a) {
 }
 
 /** unroot a rooted arrow */
-Arrow xl_unroot(Arrow a) {
+Address xl_unroot(Address a) {
     if (a == EVE)
         return EVE; // no.
 
@@ -806,7 +812,7 @@ Arrow xl_unroot(Arrow a) {
 }
 
 /** return the root status */
-int xl_isRooted(Arrow a) {
+int xl_isRooted(Address a) {
     if (a == EVE) return EVE;
 
     LOCK();
@@ -824,7 +830,7 @@ int xl_isRooted(Arrow a) {
       return EVE;
 }
 
-int xl_equal(Arrow a, Arrow b) {
+int xl_equal(Address a, Address b) {
     return (a == b);
 }
 
@@ -890,9 +896,9 @@ void xl_commit() {
 }
 
 /** xl_yield */
-void xl_yield(Arrow a) {
+void xl_yield(Address a) {
     (void) a;
-    return; // FIXME je désactive yield tant que je n'ai pas trouvé une façon correcte de préserver des flèches manipulées en dehors de xl_run()
+    return; // FIXME je désactive yield tant que je n'ai pas trouvé une façon correcte de préserver des flèches manipulées en dehors de xs_run()
 }
 
 /** printf extension for arrow (%O specifier) */
@@ -900,7 +906,7 @@ static int printf_arrow_extension(FILE *stream,
         const struct printf_info *info,
         const void *const *args) {
     static const char* nilFakeURI = "(NIL)";
-    Arrow arrow = *((Arrow*) (args[0]));
+    Address arrow = *((Address*) (args[0]));
     char* uri = arrow != NIL ? xl_uriOf(arrow, NULL) : (char *)nilFakeURI;
     if (uri == NULL)
         uri = (char *)nilFakeURI;

@@ -29,11 +29,11 @@ Arrow tmp(Arrow M) {
     return A(tempVar, atom(memRef));
 }
 
-Arrow xl_operator(XLCallBack hookp, Arrow context) {
+Arrow xs_operator(XLCallBack hookp, Arrow context) {
     return A(operator, A(xl_hook(hookp), context));
 }
 
-Arrow xl_continuation(XLCallBack hookp, Arrow context) {
+Arrow xs_continuation(XLCallBack hookp, Arrow context) {
     return A(continuation, A(xl_hook(hookp), context));
 }
 
@@ -143,7 +143,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
         return brokenEnvironment;
     }
 
-    return xls_get(C, x);  // may be NIL
+    return xs_get(C, x);  // may be NIL
 }
 
 static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
@@ -678,7 +678,7 @@ Arrow linkTailWithHeadHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_link(C, xl_tailOf(arrow), xl_headOf(arrow));
+    Arrow r = xs_link(C, xl_tailOf(arrow), xl_headOf(arrow));
     return xl_reduceMachine(CM, r);
 }
 
@@ -686,7 +686,7 @@ Arrow unlinkTailAndHeadHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_unlink(C, xl_tailOf(arrow), xl_headOf(arrow));
+    Arrow r = xs_unlink(C, xl_tailOf(arrow), xl_headOf(arrow));
     return xl_reduceMachine(CM, r);
 }
 
@@ -694,7 +694,7 @@ Arrow partnersOfHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow list = xls_partnersOf(C, arrow);
+    Arrow list = xs_partnersOf(C, arrow);
     return xl_reduceMachine(CM, list);
 }
 
@@ -702,7 +702,7 @@ Arrow rootHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_root(C, arrow);
+    Arrow r = xs_root(C, arrow);
     return xl_reduceMachine(CM, headOf(r));  // one doesn't show the context
 }
 
@@ -710,7 +710,7 @@ Arrow unrootHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow contextPath = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_unroot(contextPath, arrow);
+    Arrow r = xs_unroot(contextPath, arrow);
     return xl_reduceMachine(CM, headOf(r));  // one doesn't show the context
 }
 
@@ -718,7 +718,7 @@ Arrow setTailWithHeadInHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_set(C, xl_tailOf(arrow), xl_headOf(arrow));
+    Arrow r = xs_set(C, xl_tailOf(arrow), xl_headOf(arrow));
     return xl_reduceMachine(CM, headOf(r));  // one doesn't show the context
 }
 
@@ -726,7 +726,7 @@ Arrow unsetVarHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow contextPath = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    xls_unset(contextPath, arrow);
+    xs_unset(contextPath, arrow);
     return xl_reduceMachine(CM, arrow);
 }
 
@@ -734,7 +734,7 @@ Arrow getVarHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_get(C, arrow);
+    Arrow r = xs_get(C, arrow);
     return xl_reduceMachine(CM, (r == NIL ? EVE : r));  // TODO: "throwing" an error?
 }
 
@@ -742,7 +742,7 @@ Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow contextPath = tailOf(CM);
     Arrow arrow = xl_argInMachine(CM);
-    Arrow r = xls_isRooted(contextPath, arrow);
+    Arrow r = xs_isRooted(contextPath, arrow);
     return xl_reduceMachine(CM, headOf(r));  // no context
 }
 
@@ -773,9 +773,9 @@ Arrow commitHook(Arrow CM, Arrow hookParameter) {
     (void) hookParameter; // NOT USED
     Arrow C = tailOf(CM);
     // Arrow M = headOf(CM);
-    xls_root(C, A(selfM, CM));  // TODO/FIXME fix this
+    xs_root(C, A(selfM, CM));  // TODO/FIXME fix this
     commit();
-    xls_unroot(C, A(selfM, CM));
+    xs_unroot(C, A(selfM, CM));
     return xl_reduceMachine(CM, EVE);
 }
 
@@ -812,7 +812,7 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     free(secret_s);
 
     Arrow CT = (isPair(C) ? xl_tailOf(C) : EVE);  // Meta-context
-    Arrow expression = xls_get(CT, A(target, xl_atom(secret_sha1)));
+    Arrow expression = xs_get(CT, A(target, xl_atom(secret_sha1)));
 
     if (expression == NIL) {
         WARNPRINTF("escalate attempt %O", target_secret_expr);
@@ -928,44 +928,44 @@ static void machine_init(Arrow CM) {
         Arrow operatorKeyword = atom(keyword);
         Arrow operatorArrow = operator(callBack, EVE);
         // always reset a callback at every reboot because moving pointers
-        // NOT A GOOD IDEA: if (xls_get(EVE, operatorKey) != NIL) continue;
-        xls_set(EVE, operatorKeyword, operatorArrow);
+        // NOT A GOOD IDEA: if (xs_get(EVE, operatorKey) != NIL) continue;
+        xs_set(EVE, operatorKeyword, operatorArrow);
         if (callBack == tailOfHook)
             tailOfOperator = operatorArrow;
         if (callBack == headOfHook)
             headOfOperator = operatorArrow;
     }
 
-    if (xls_get(EVE, atom("if")) == NIL)
-        xls_set(EVE, atom("if"),
+    if (xs_get(EVE, atom("if")) == NIL)
+        xs_set(EVE, atom("if"),
                 xl_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval/let//it/branch/var+condition/it//escape+escape/var+alternative+"));
-    if (xls_get(EVE, atom("equal")) == NIL)
-        xls_set(EVE, atom("equal"),
+    if (xs_get(EVE, atom("equal")) == NIL)
+        xs_set(EVE, atom("equal"),
                 xl_uri("/paddock//x/let//a/tailOf+x/let//b/headOf+x/arrow/let///tailOf/var+x/var+a/let///headOf/var+x/var+b/isClone/arrow///escape+var/tailOf/var+x//escape+var/"
                        "headOf/var+x+"));
-    if (xls_get(EVE, atom("get")) == NIL)
-        xls_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getVar//escape+escape/var+x+"));
-    if (xls_get(EVE, atom("unset")) == NIL)
-        xls_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
-    if (xls_get(EVE, atom("set")) == NIL)
-        xls_set(
+    if (xs_get(EVE, atom("get")) == NIL)
+        xs_set(EVE, atom("get"), xl_uri("/paddock//x/arrow/getVar//escape+escape/var+x+"));
+    if (xs_get(EVE, atom("unset")) == NIL)
+        xs_set(EVE, atom("unset"), xl_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
+    if (xs_get(EVE, atom("set")) == NIL)
+        xs_set(
             EVE, atom("set"),
             xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setTailWithHeadIn/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
-    if (xls_get(EVE, atom("link")) == NIL)
-        xls_set(EVE, atom("link"),
+    if (xs_get(EVE, atom("link")) == NIL)
+        xs_set(EVE, atom("link"),
                 xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/linkTailWithHead/arrow///escape+var/tailOf/"
                        "var+x//escape+var/headOf/var+x+"));
-    if (xls_get(EVE, atom("unlink")) == NIL)
-        xls_set(EVE, atom("unlink"),
+    if (xs_get(EVE, atom("unlink")) == NIL)
+        xs_set(EVE, atom("unlink"),
                 xl_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/unlinkTailAndHead/arrow///escape+var/tailOf/"
                        "var+x//escape+var/headOf/var+x+"));
 
     // System Init call
-    xl_eval(EVE, A(atom("init"), A(escape, CM)), atom("init"));  // we pass CM at parameter to preserve it from GC
+    xs_eval(EVE, A(atom("init"), A(escape, CM)), atom("init"));  // we pass CM at parameter to preserve it from GC
 }
 
-Arrow xl_run(Arrow C, Arrow M, Arrow session) {
-    TRACEPRINTF("BEGIN xl_run(%O, %O, %O", C, M, session);
+Arrow xs_run(Arrow C, Arrow M, Arrow session) {
+    TRACEPRINTF("BEGIN xs_run(%O, %O, %O", C, M, session);
     machine_init(A(C, M));
 
     // M = //p/e+k
@@ -993,7 +993,7 @@ Arrow xl_run(Arrow C, Arrow M, Arrow session) {
         }
 
         if (head(M) == land) {
-            xls_set(EVE, session, C);
+            xs_set(EVE, session, C);
             WARNPRINTF(" landing to %O", C);
             M = tail(M);
             continue;
@@ -1015,15 +1015,15 @@ Arrow xl_run(Arrow C, Arrow M, Arrow session) {
     if (w == NIL)
         w = EVE;
 
-    TRACEPRINTF("END xl_run(...) = %O transition=%d", w, machine_stats.transition);
+    TRACEPRINTF("END xs_run(...) = %O transition=%d", w, machine_stats.transition);
 
     machine_stats = machine_stats_zero;
 
     return w;
 }
 
-Arrow xl_eval(Arrow C /* ContextPath */, Arrow p /* program */, Arrow session) {
-    TRACEPRINTF("BEGIN xl_eval(%O, %O)", C, p);
+Arrow xs_eval(Arrow C /* ContextPath */, Arrow p /* program */, Arrow session) {
+    TRACEPRINTF("BEGIN xs_eval(%O, %O)", C, p);
     Arrow M = A(p, A(EVE, EVE));
-    return xl_run(C /* ContextPath */, M, session);
+    return xs_run(C /* ContextPath */, M, session);
 }

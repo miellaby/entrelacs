@@ -20,7 +20,7 @@
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_pair(Arrow tail, Arrow head, int ifExist) {
+Address assimilate_pair(Address tail, Address head, int ifExist) {
     uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress, firstFreeAddress;
@@ -147,7 +147,7 @@ Arrow assimilate_pair(Arrow tail, Arrow head, int ifExist) {
     return newArrow;
 }
 
-Arrow probe_digest(char *digest) {
+Address probe_digest(char *digest) {
     uint32_t hash;
     Address hashAddress, hashProbe;
     Address probeAddress;
@@ -204,7 +204,7 @@ Arrow probe_digest(char *digest) {
  * Will create the singleton if missing except if $ifExist is set.
  * $str might be a blob signature or a tag content.
  */
-Arrow assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
+Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
     Address hashAddress, hashProbe, hChain;
     uint32_t l;
     Address probeAddress, firstFreeAddress, next;
@@ -491,7 +491,7 @@ Arrow assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
+Address assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
     return assimilate_string(CELLTYPE_TAG, size, data, ifExist);
 }
 
@@ -499,7 +499,7 @@ Arrow assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
+Address assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
     char signature[CRYPTO_SIZE + 1];
     hash_crypto(size, data, signature);
     assert(strlen(signature) == CRYPTO_SIZE);
@@ -516,7 +516,7 @@ Arrow assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Arrow assimilate_small(int length, uint8_t* str, int ifExist) {
+Address assimilate_small(int length, uint8_t* str, int ifExist) {
     DEBUGPRINTF("small(%02x %.*s %1x) begin", length, length, str, ifExist);
 
     uint32_t hash;

@@ -18,7 +18,7 @@ static struct s_buffer {
     char* buffer;
 } buffer = {0, 0, NULL};
 
-Arrow _printArrow(Arrow a) {
+Address _printArrow(Address a) {
     
     if (xl_isRooted(a)) {
         int size = buffer.size;
@@ -51,7 +51,7 @@ Arrow _printArrow(Arrow a) {
     return a;
 }
 
-Arrow printArrow(Arrow a, Arrow ctx) {
+Address printArrow(Address a, Address ctx) {
     geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), 1);
     buffer.buffer[0] = '\0';
     _printArrow(a);
@@ -62,12 +62,12 @@ Arrow printArrow(Arrow a, Arrow ctx) {
 int basic() {
     // assimilate arrows
     test_title("assimilate arrows");
-    DEFATOM(hello); // Arrow hello = xl_atom("hello");
+    DEFATOM(hello); // Address hello = xl_atom("hello");
     DEFATOM(world);
     DEFATOM(small12345);
 
     DEFATOM(more_bigger_string_11111111111111111111);
-    DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
+    DEFA(hello, world); // Address _hello_world = xl_pair(hello, world);
     test_ok();
      
 
@@ -118,7 +118,7 @@ int basic() {
         test_title("check very big string (blob)");
 
         char* bigStr = "11111111112222222222233333333333334444444444445555555555566666666666677777777777788888888888888999999999999999";
-        Arrow bigAtom = atom(bigStr);
+        Address bigAtom = atom(bigStr);
         char* bigStrBack = strOf(bigAtom);
         assert(0 == strcmp(bigStrBack, bigStr));
         assert(xl_isAtom(bigAtom));
@@ -134,7 +134,7 @@ int basic() {
         
             { // check digest
             test_title("check digest-based arrow retrieval");
-            Arrow byDigest = digestMaybe(digest);
+            Address byDigest = digestMaybe(digest);
                 
             assert(byDigest == bigAtom);
             test_ok();
@@ -161,8 +161,8 @@ int basic() {
  
     // check deduplication
     test_title("check deduplication");
-    Arrow original = _hello_world;
-    Arrow original_big_string = more_bigger_string_11111111111111111111;
+    Address original = _hello_world;
+    Address original_big_string = more_bigger_string_11111111111111111111;
     {
         DEFATOM(more_bigger_string_11111111111111111111);
         assert(original_big_string == more_bigger_string_11111111111111111111);
@@ -176,7 +176,7 @@ int basic() {
     // check uri assimilation
     test_title("check URI assimilation");
     {
-        Arrow uri = uri("/hello+world");
+        Address uri = uri("/hello+world");
         assert(uri == _hello_world);
     }
     test_ok();
@@ -184,8 +184,8 @@ int basic() {
     // check natom/atom equivalency
     test_title("check natom/atom equivalency");
     {
-        Arrow helloB = atomn(5, "hello");
-        Arrow worldB = atomn(5, "world");
+        Address helloB = atomn(5, "hello");
+        Address worldB = atomn(5, "world");
         DEFA(helloB, worldB);
         assert(original == _helloB_worldB);
     }
@@ -193,13 +193,13 @@ int basic() {
  
     // check natom dedup
     test_title("check natom dedup");
-    Arrow fooB = atom("headOf");
-    Arrow barB = atom("tailOf");
+    Address fooB = atom("headOf");
+    Address barB = atom("tailOf");
     DEFA(fooB, barB);
-    Arrow originalB = _fooB_barB;
+    Address originalB = _fooB_barB;
     {
-        Arrow fooB = atomn(6, "headOf");
-        Arrow barB = atomn(6, "tailOf");
+        Address fooB = atomn(6, "headOf");
+        Address barB = atomn(6, "tailOf");
         DEFA(fooB, barB);
         assert(originalB == _fooB_barB);
     }
@@ -241,9 +241,9 @@ int basic() {
 
 int stress() {
     char buffer[50];
-    Arrow atoms[1000];
-    Arrow pairs[500];
-    Arrow big;
+    Address atoms[1000];
+    Address pairs[500];
+    Address big;
 
     // deduplication stress
     test_title("deduplication stress");
@@ -262,11 +262,11 @@ int stress() {
 
         for (int i = 0; i < 200; i++) {
             snprintf(buffer, 50, "This is the tag #%d", i);
-            Arrow tagi = atom(buffer);
+            Address tagi = atom(buffer);
             assert(atoms[i] == tagi);
             if (i % 2) {
                 int j = (i - 1) / 2;
-                Arrow pairj = A(atoms[i - 1], atoms[i]);
+                Address pairj = A(atoms[i - 1], atoms[i]);
                 assert(pairs[j] == pairj);
             }
         }
@@ -294,12 +294,12 @@ int stress() {
     {
         root(connectMe);
         for (int i = 0; i < 200; i++) {
-            Arrow child = A(connectMe, atoms[i]);
+            Address child = A(connectMe, atoms[i]);
             root(child);
         }
         for (int j = 0; j < 100; j++) {
             printArrow(pairs[j], Eve());
-            Arrow child = A(connectMe, pairs[j]);
+            Address child = A(connectMe, pairs[j]);
             root(child);
         }
         childrenOfCB(connectMe, printArrow, Eve());
@@ -310,11 +310,11 @@ int stress() {
     test_title("disconnection stress");
     {
         for (int i = 0; i < 200; i++) {
-            Arrow child = A(connectMe, atoms[i]);
+            Address child = A(connectMe, atoms[i]);
             unroot(child);
         }
         for (int j = 0; j < 100; j++) {
-            Arrow child = A(connectMe, pairs[j]);
+            Address child = A(connectMe, pairs[j]);
             unroot(child);
         }
         childrenOfCB(connectMe, printArrow, Eve());
@@ -324,7 +324,7 @@ int stress() {
     // connecting stress (big depth)
     test_title("connecting stress (big depth)");
     {
-        Arrow loose = atom("save me!");
+        Address loose = atom("save me!");
         big = loose;
         for (int i = 0; i < 2; i++) {
             if (i % 2)

@@ -1,7 +1,8 @@
 #pragma once
-#include <stdint.h>
+#include "space/hash.h"
 #include "space/cell.h"
 #include "entrelacs/entrelacs.h"
+#include <stdint.h>
 
 #define DIGEST_HASH_SIZE 8
 #define DIGEST_SIZE (2 + CRYPTO_SIZE + DIGEST_HASH_SIZE)
@@ -16,6 +17,6 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l);
 
 char* serial_toURI(Address a, uint32_t *l);
 
-Arrow serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist);
+Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist);
 
-Arrow serial_parseURIs(uint32_t size, char *uri, int ifExist);
+Address serial_parseURIs(uint32_t size, char *uri, int ifExist);

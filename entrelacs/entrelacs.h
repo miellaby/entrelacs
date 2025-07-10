@@ -13,19 +13,21 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+/// @brief  Transient Arrow
+typedef struct xs_arrow_s* Arrow;
 
 /* Assimilate binding */
-Arrow xl_operator(XLCallBack hook, Arrow); ///< assimilate a C implemented operator.
-Arrow xl_continuation(XLCallBack hook, Arrow); ///< assimilate a C implemented continuation.
+Arrow xs_operator(XLCallBack hook, Arrow); ///< assimilate a C implemented operator.
+Arrow xs_continuation(XLCallBack hook, Arrow); ///< assimilate a C implemented continuation.
 
 /** run an Entrelacs Machine.
  * $M is a machine state.
  * $contextPath is the path representating a nested hierarchy of contexts (/C0.C1...Cn).
  */
-Arrow xl_run(Arrow contextPath, Arrow M, Arrow session); ///< M == (<program> (<environment> <continuation-stack>))
+Arrow xs_run(Arrow contextPath, Arrow M, Arrow session); ///< M == (<program> (<environment> <continuation-stack>))
 
 /** Eval a program by building and running a machine */
-Arrow xl_eval(Arrow contextPath, Arrow program, Arrow session);
+Arrow xs_eval(Arrow contextPath, Arrow program, Arrow session);
 
 
 #ifdef	__cplusplus

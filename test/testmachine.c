@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
     xl_init();
 
 
-    //Arrow context = xls_session(EVE, xl_atom("test"), xl_anonymous());
+    //Arrow context = xs_open("test");
 
     struct s_test { char* program; char* result; } *test, tests[] = {
    // {"let//x+1/arrow//var+x+2", "/1+2"},
@@ -109,17 +109,17 @@ int main(int argc, char **argv) {
         Arrow program = xl_uri(programUri);
         Arrow wanted = xl_uri(wantedUri);
         assert(!xl_isEve(program) && !xl_isEve(wanted));
-        //xls_root(context, program);
-        //xls_root(context, wanted);
-        Arrow result = xl_eval(EVE, program, EVE);
+        //xs_root(context, program);
+        //xs_root(context, wanted);
+        Arrow result = xs_eval(EVE, program, EVE);
         program = xl_uri(programUri);
         wanted = xl_uri(wantedUri);
         if (!xl_equal(result, wanted)) {
             fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
             return EXIT_FAILURE;
         }
-        //xls_unroot(context, program);
-        //xls_unroot(context, wanted);
+        //xs_unroot(context, program);
+        //xs_unroot(context, wanted);
     }
     xl_over();
     return EXIT_SUCCESS;

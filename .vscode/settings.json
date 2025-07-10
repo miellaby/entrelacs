@@ -24,6 +24,9 @@
         "mem0.h": "c",
         "hash.h": "c",
         "stdlib.h": "c",
-        "assert.h": "c"
+        "assert.h": "c",
+        "arrow_space.h": "c",
+        "string.h": "c",
+        "serial.h": "c"
     }
 }

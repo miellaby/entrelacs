@@ -400,7 +400,7 @@ uint32_t cell_getHash(Address a) {
     Cell cell;
     
     if (a == EVE)
-      return EVE_HASH; // Eve hash is not zero!
+      return hash_eve(); // Eve hash is not zero!
     else if (a >= SPACE_SIZE)
       return 0; // Out of space
     else {

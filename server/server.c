@@ -160,7 +160,7 @@ static Arrow get_connection_session(const struct mg_connection *conn) {
 
     // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
     // TODO: remove the first parameter of sessionMaybe
-    Arrow session = xls_sessionMaybe(EVE, xl_atom("server"), xl_atom(session_uuid));
+    Arrow session = xs_getSession("server", session_uuid);
     if (session == EVE) {
         dputs("Unknown session cookie %s", session_uuid);
     } else {
@@ -184,31 +184,18 @@ static void *event_handler(enum mg_event event,
     xl_begin();
     if (event == MG_NEW_REQUEST) {
         Arrow session = get_connection_session(conn);
-        char* session_id;
         if (session == EVE) {
-            // generate session_id
-            // Note that it is easy to steal session cookies by sniffing traffic.
-            // This is why all communication must be SSL-ed.
-            char random[20];
-            session_id = (char *)malloc(33 * sizeof(char));
-            assert(session_id);
-            snprintf(random, sizeof(random), "%d", rand());
-            mg_md5(session_id, random, "server", NULL);
-            session_id[32] = '\0';
-
-            dputs("New session with id %s", session_id);
-
             // create session
-            session = xls_session(EVE, xl_atom("server"), xl_atom(session_id));
-        } else {
-            session_id = xl_strOf(xl_headOf(xl_headOf(xl_headOf(session))));
+            session = xs_open("server");
+            dputs("New session with id %s", session_id);
         }
+        char* session_id = xs_session_getId(session);
 
         dputs("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
-        xls_set(session, xl_atom("expire"), xl_atomn(sizeof(time_t), (uint8_t*)&now));
+        xs_set(session, xl_atom("expire"), xl_atomn(sizeof(time_t), (uint8_t*)&now));
 
-        Arrow input = xls_url(session, request_info->uri);
+        Arrow input = xs_url(session, request_info->uri);
         dputs("input %s assimilated as %O", request_info->uri, input);
         if (input == NIL) {
             free(session_id);
@@ -233,10 +220,10 @@ static void *event_handler(enum mg_event event,
             }
         }
         
-        Arrow sessionContext = xls_get(EVE, session);
+        Arrow sessionContext = xs_get(EVE, session);
         if (sessionContext == NIL)
             sessionContext = session;
-        Arrow output = xl_eval(sessionContext, xl_pair(method, input), session);
+        Arrow output = xs_eval(sessionContext, xl_pair(method, input), session);
 
         dputs("Evaluated output is %O", output);
 
@@ -254,7 +241,7 @@ static void *event_handler(enum mg_event event,
             l_depth = atoi(l_depthBuf);
         }
 
-        char* output_url = xls_urlOf(session, output, l_depth);
+        char* output_url = xs_urlOf(session, output, l_depth);
         int isAtomic  = xl_isAtom(output);
 
 // TODO
@@ -275,7 +262,7 @@ static void *event_handler(enum mg_event event,
             dputs("Content-Type: %s, output: %O", content_type, output);
 //        } else if (isAtomic) {
 //            Arrow application = xl_pair(xl_atom("Content-Type"), xl_pair(xl_atom("escape"), output));
-//            Arrow rta = xl_eval(session, application);
+//            Arrow rta = xs_eval(session, application);
 //            if (rta != EVE && xl_isAtom(rta)) {
 //               contentTypeCopy = xl_strOf(rta);
 //               content_type = contentTypeCopy;
@@ -287,7 +274,7 @@ static void *event_handler(enum mg_event event,
             content = xl_memOf(output, &content_length);
         }
         if (!content) {
-            char *url = xls_urlOf(session, output, i_depth);
+            char *url = xs_urlOf(session, output, i_depth);
             content = (uint8_t *) url;
             content_length = strlen(url);
         }
@@ -345,19 +332,19 @@ int _houseCleaning(void) {
           session = xl_pairMaybe(EVE, session); 
           if (session == EVE)
             continue; // maybe not a root session
-          // session = xls_isRooted(EVE, session);
+          // session = xs_isRooted(EVE, session);
           // if (session == EVE)
           //      continue; // session is not rooted
           sessionCount++;
-          Arrow expire = xls_get(session, expireTag);
+          Arrow expire = xs_get(session, expireTag);
           uint32_t var_size = 0;
           time_t* expire_time = (expire != NIL ? (time_t *)xl_memOf(expire, &var_size) : NULL);
 
           if (expire == NIL || var_size != sizeof(time_t)) {
               LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
               expiredSessionCount++;
-              xls_close(session);
-              xls_unset(EVE, session);
+              xs_close(session);
+              xs_unset(EVE, session);
               // restart loop as deep close may remove in-enum arrow
               //xl_enumFree(e);
               //sessionTag =  xl_atom("session");
@@ -366,8 +353,8 @@ int _houseCleaning(void) {
           } else if (*expire_time < now) {
               dputs("session %O outdated.", session);
               expiredSessionCount++;
-              xls_close(session);
-              xls_unset(EVE, session);
+              xs_close(session);
+              xs_unset(EVE, session);
               // restart loop as deep close may remove in-enum arrow
               xl_enumFree(e);
               // sessionTag =  xl_atom("session");
@@ -405,19 +392,19 @@ int main(void) {
   xl_init();
 
   xl_begin();
-  Arrow get = xls_get(EVE, xl_atom("GET"));
+  Arrow get = xs_get(EVE, xl_atom("GET"));
   if (get == NIL) {
-      xls_set(EVE, xl_atom("GET"), xl_uri("/paddock//x+x+"));
-      xls_set(EVE, xl_atom("PUT"), xl_uri("/paddock//x/arrow/set+/var+x+"));
-      xls_set(EVE, xl_atom("POST"), xl_uri("/paddock//x+x+"));
-      xls_set(EVE, xl_atom("DELETE"), xl_uri("/paddock//x/arrow/unset+/var+x+"));
+      xs_set(EVE, xl_atom("GET"), xl_uri("/paddock//x+x+"));
+      xs_set(EVE, xl_atom("PUT"), xl_uri("/paddock//x/arrow/set+/var+x+"));
+      xs_set(EVE, xl_atom("POST"), xl_uri("/paddock//x+x+"));
+      xs_set(EVE, xl_atom("DELETE"), xl_uri("/paddock//x/arrow/unset+/var+x+"));
   }
 
   {   // store secret as server-secret<->"/session-secret-pair-uri" hidden pair
       char* server_secret_sha1 = getenv("ENTRELACS_SECRET"); // TODO better solution
       if (!server_secret_sha1) server_secret_sha1 = "8f84b95af52fbfae67209b6cfd3ab7dd1f1e0b12";
       // meta-user do : mudo
-      xls_set(EVE, xl_pair(xl_atom("mudo"), xl_atom(server_secret_sha1)), xl_atom("eval"));
+      xs_set(EVE, xl_pair(xl_atom("mudo"), xl_atom(server_secret_sha1)), xl_atom("eval"));
       // TODO unroot while house cleaning
   }
   xl_over();
