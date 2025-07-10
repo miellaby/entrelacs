@@ -84,6 +84,7 @@ char* xl_uriOf(Address, uint32_t* size_p); ///< get arrow definition in URI nota
 uint32_t xl_hashOf(Address); ///< get arrow checksum.
 char* xl_digestOf(Address, uint32_t* size_p); ///< get arrow digest. @return pointer to freed.
 void* xl_pointerOf(Address); //< get the C pointer of a "hook" arrow. @return pointer.
+int   xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Address *head_p, uint8_t** raw_p, uint32_t *size_p); /// get infos about Arrow 
 
 // Rooting
 // -------

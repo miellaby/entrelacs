@@ -52,10 +52,10 @@ static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define LOCK() pthread_mutex_lock(&apiMutex)
 #define LOCK_END() pthread_mutex_unlock(&apiMutex)
-#define LOCK_OUT(X) (pthread_mutex_unlock(&apiMutex), (Address)X)
-#define LOCK_OUT64(X) (pthread_mutex_unlock(&apiMutex), (uint64_t))
-#define LOCK_OUTSTR(X) (pthread_mutex_unlock(&apiMutex), (char*)X)
-#define LOCK_OUTRAW(X) (pthread_mutex_unlock(&apiMutex), (uint8_t*)X)
+#define LOCK_OUT(X) (LOCK_END(), (Address)X)
+#define LOCK_OUT64(X) (LOCK_END(), (uint64_t))
+#define LOCK_OUTSTR(X) (LOCK_END(), (char*)X)
+#define LOCK_OUTRAW(X) (LOCK_END(), (uint8_t*)X)
 
 
 static pthread_cond_t apiNowDormant;   // Signaled when all thread are ready to commit
@@ -209,6 +209,49 @@ uint8_t* xl_memOf(Address a, uint32_t* lengthP) {
     // else: Tag or small case
     *lengthP = payloadLength;
     return LOCK_OUTRAW(payload);
+}
+
+int xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Address *head_p, uint8_t** raw_p, uint32_t *size_p) {
+  if (a >= SPACE_SIZE) {
+    return 1;
+  }
+  if (a == XL_EVE) { // Eve has an empty payload
+    *type_p = XL_EVE;
+    *tail_p = XL_EVE;
+    *head_p = XL_EVE;
+    *hash_p = hash_eve();
+    *raw_p = cell_getPayload(XL_EVE, NULL, size_p);
+    return 0;
+  }
+
+  // Lock mem access
+  LOCK();
+
+  // get the cell pointed by a
+  Cell cell;
+  mem_get(a, &cell.u_body);
+  ONDEBUG((LOGCELL('R', a, &cell)));
+
+  if (!CELL_CONTAINS_ARROW(cell)) { // empty/wrong
+      return NIL;
+  }
+  *hash_p = cell.arrow.hash;
+  if (cell.full.type == CELLTYPE_PAIR) { // pair
+    *type_p = XL_PAIR;
+    *tail_p = cell.pair.tail;
+    *head_p = cell.pair.head;
+    *raw_p = NULL;
+    *size_p = 0;
+
+  } else { // atom
+    *type_p = XL_ATOM;
+    *tail_p = a;
+    *head_p = a;
+    *raw_p = xl_memOf(a, size_p);
+  }
+
+  LOCK_END();
+  return 0;
 }
 
 char* xl_strOf(Address a) {
