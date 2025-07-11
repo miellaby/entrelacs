@@ -40,8 +40,8 @@ Arrow blobFromFile(char *f) {
 
 int main(int argc, char* argv[]) {
     log_init(NULL, "server,session,machine,space=debug");
-    xl_init();
-    xl_begin();
+    xs_init();
+    xl_open();
     // assimilate arrows
     DEFATOM(hello); // Arrow hello = xl_tag("hello");
     DEFATOM(world);
@@ -83,6 +83,6 @@ int main(int argc, char* argv[]) {
         free(s);
         
     }
-    xl_over();
+    xl_close();
     return 0;
 }

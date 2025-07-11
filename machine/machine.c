@@ -832,7 +832,7 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
 
     Arrow arrow = xs_argInMachine(CM);
     uint32_t digestSize;
-    char *digest = xl_digestOf(xs_getId(xs_assimilate(arrow)), &digestSize);
+    char *digest = xs_digestOf(arrow, &digestSize);
     return xs_reduceMachine(CM, atomn(digestSize, (uint8_t *)digest));
 }
 

@@ -35,7 +35,7 @@ extern const Address Eve; // Eve = XL_EVE
 
 // Life Cycle
 // ----------
-int  xl_init(); ///< system initialization
+int  xl_init(); ///< Arrow Space initialization
 void xl_destroy(); ///< release system resources and locks
  
 // Assimilation
@@ -86,9 +86,9 @@ Address xl_unroot(Address); ///< unroot arrow.
 
 // Transaction FIXME à déplacer dans session.h
 // -----------
-void xl_begin();  ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_over)
+void xl_open();  ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_close)
 void xl_yield(Address); ///< perform GC, only preserving one "state" arrow. wait for all threads being ready.
-void xl_over();   ///< decrement the global transaction counter. For example, before thread termination. Any previously assimilated arrow should be assimilated again.
+void xl_close();   ///< decrement the global transaction counter. For example, before thread termination. Any previously assimilated arrow should be assimilated again.
 void xl_commit(); ///< commit. wait for all transactions being over.
                   ///< Previously assimilated arrow must be assimilated again as they are forgotten if loose.
 

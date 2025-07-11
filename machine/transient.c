@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <printf.h>
 
 #include "entrelacs/entrelacs.h"
 #include "entrelacs/entrelacsm.h"
@@ -150,6 +151,11 @@ uint32_t xs_getHash(Arrow a) {
         }
     }
     return a->hash;
+}
+
+char* xs_getDigest(Arrow a, uint32_t *l) {
+    xs_assimilate(a);
+    return xl_digestOf(a->id, l);
 }
 
 Arrow xs_getTail(Arrow a) {
@@ -338,4 +344,40 @@ Arrow xs_atom_session() {
         .type = XS_ATOM
     };
     return &arrow;
+}
+
+/** printf extension for arrow (%O specifier) */
+static int printf_arrow_extension(FILE *stream,
+        const struct printf_info *info,
+        const void *const *args) {
+    static const char* nilFakeURI = "(NULL)";
+    Arrow arrow = *((Arrow*) (args[0]));
+    char* uri = arrow != NULL ? xs_uriOf(arrow, NULL) : (char *)nilFakeURI;
+    if (uri == NULL)
+        uri = (char *)nilFakeURI;
+    int len = fprintf(stream, "%*s", (info->left ? -info->width : info->width), uri);
+    if (uri != nilFakeURI)
+        free(uri);
+    return len;
+}
+
+/** printf extension "arginfo" */
+static int printf_arrow_arginfo_size(const struct printf_info *info, size_t n,
+        int *argtypes, int *size) {
+    (void) info; (void) size;
+    /* We always take exactly one argument and this is a pointer to the
+       structure.. */
+    if (n > 0)
+        argtypes[0] = PA_INT;
+    return 1;
+}
+
+int xs_init() {
+    if (xl_init())
+        return 1;
+    
+    pool_init();
+
+    // register a printf extension for arrow (glibc only!)
+    register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
 }

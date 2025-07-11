@@ -15,7 +15,7 @@ static Arrow print(Arrow arrow, Arrow context) {
 }
 
 int main(int argc, char* argv[]) {
-    xl_init();
+    xs_init();
     log_init(NULL, "server,session,space,machine=debug");
 
     char output[255];

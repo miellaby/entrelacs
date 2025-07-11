@@ -1,18 +1,18 @@
 Current changes:
  * better concurrent entrelacs process
    mem_open mem_close takes/releases a file lock
-   xl_over/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread
+   xl_close/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread
     graphic https://docs.google.com/presentation/d/1xRwA0RyQ73zqLdLzNCEo1-rzPEYdUVSUH2dcIe4dGGs/edit?usp=sharing
 
 Most recent previous changes:
  * non-blocking concurent entrelacs process partial support
-   * both entrelacsd & entrelacs do xl_begin/xl_over every second
-   * xl_begin;xl_over => mem GC => mem0_commit => persistenc efile unlock then lock
+   * both entrelacsd & entrelacs do xl_open/xl_close every second
+   * xl_open;xl_close => mem GC => mem0_commit => persistenc efile unlock then lock
    * another pending process can acquire the exclusive lock (actually random)
    * very messy, not proper life-cycle TODO revamp
  * real REPL (CLI) client called "entrelacs" in repl subdir
  * web terminal (sexy demo) arrow URL management revamped
- * xl_yield(arrow state) (in replacement of xl_over)
+ * xl_yield(arrow state) (in replacement of xl_close)
    * sync with all threads then GC
    * but in addition: preserve "state" arrow from GC (temporary root)
    * TBC: maybe timeout for yielding
@@ -31,7 +31,7 @@ Most recent previous changes:
  * API now reentrant. Lock at every sensible access of space.c/mem.c
      * no more global lock in server.c
  * a way to sync commit between concurrent agents
-     * xl_begin(), xl_over()/xl_commit()
+     * xl_open(), xl_close()/xl_commit()
      * see server.c & testshell.c for usage
  * lock on the persistent file to prevent concurrent clients.
      * avoid mess when running several entrelacsd, testshell or any other libentrelacs clients,

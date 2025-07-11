@@ -14,6 +14,7 @@
 #include "log/log.h"
 #include "machine/transient.h"
 #include "space/serial.h"
+#include "space/space.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,6 +24,8 @@
 extern Arrow xs_atom_session();
 
 Arrow xs_open(char* agent) {
+    xl_open();
+
     // $session =  /$s/session/$agent+$uuid
     Arrow uuid = xs_arrow(xl_anonymous());
     Arrow session = xs_pair(xs_atom_session(), xs_pair(xs_atom(agent), uuid));
@@ -52,18 +55,19 @@ Arrow xs_getSession(char* agent, char* uuid) {
 
 Arrow xs_commit(Arrow session) {
     // pool vidé à chaque commit
-    // donc on renvoie une nouvelle flèche session pour mise à jour
+    // récupération de l'addresse de la session
     Address s = xs_getId(xs_assimilate(session));
     xl_root(s);
     xl_commit();
     pool_reset();
+    // on renvoie une nouvelle flèche session après vidage du pool
     return xs_arrow(s);
 }
 
 void xs_close(Arrow session) {
     TRACEPRINTF("BEGIN xs_close(%O)", xs_getId(session));
     xs_unroot(session);
-    xl_commit();
+    xl_close();
     pool_reset();
 }
 
@@ -84,8 +88,7 @@ static char* xs_toURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with g
             size_t size;
             char* raw = xs_getMem(a, &size);
             if (size >= BLOB_MINSIZE) {
-                xs_assimilate(a);
-                uri = xl_digestOf(xs_getId(a), l);
+                uri = xs_digestOf(a, l);
                 uri = malloc(3 * size + 1); // memory allocation for encoded content
                 assert(uri);
                 size_t uri_size;

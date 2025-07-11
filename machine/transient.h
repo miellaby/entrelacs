@@ -65,6 +65,11 @@ ArrowType xs_getType(Arrow a);
 /// @return hashcode
 uint32_t xs_getHash(Arrow a);
 
+/// @brief get arrow diget
+/// @param a arrow
+/// @return heap-allocated digest
+char* xs_getDigest(Arrow a, uint32_t *l);
+
 /// @brief get arrow tail
 /// @param a arrow
 /// @return tail
@@ -83,13 +88,13 @@ Address xs_getId(Arrow a);
 
 /// @brief get atom as string
 /// @param a 
-/// @return string
+/// @return heap-allocated string
 char *xs_getStr(Arrow a);
 
 /// @brief get atom raw buffer
 /// @param a atom
 /// @param size updated with buffer size
-/// @return  buffer
+/// @return  heap-allocated buffer
 char *xs_getMem(Arrow a, size_t *size);
 
 /// @brief get canonical URI representation of the arrow
@@ -149,3 +154,6 @@ Arrow xs_root(Arrow a);
 /// @param a arrow
 /// @return the arrow
 Arrow xs_unroot(Arrow a);
+
+/// @brief system initialization
+int  xs_init(); 

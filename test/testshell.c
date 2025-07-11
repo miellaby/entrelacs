@@ -10,9 +10,9 @@ int main(int argc, char **argv) {
   //log_init(NULL, "server,session,machine,space=debug");
   log_init(NULL, "server,session,machine=debug");
 
-  xl_init();
+  xs_init();
   while (fgets(buffer, 1024, stdin) != NULL) {
-    xl_begin();
+    xl_open();
 //   Arrow p = xs_url(EVE, buffer);
     Arrow p = xl_uri(buffer);
     if (p == NIL) {
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
         Arrow r = xs_eval(EVE, p, EVE);
         fprintf(stderr, "eval %O =\n\t%O\n", p, r);
     }
-    xl_over();
+    xl_close();
   }
 
   return EXIT_SUCCESS;

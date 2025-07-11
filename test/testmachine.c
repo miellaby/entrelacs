@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
     //log_init(NULL, "server,session,machine,space=debug");
     log_init(NULL, "server,session,machine=debug");
 
-    xl_init();
+    xs_init();
 
 
     //Arrow context = xs_open("test");
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
         "///myGet+join+2+3",
 #endif
     };
-    xl_begin();
+    xl_open();
     for (int i = 0; test = &tests[i], test->program; i++) {
         char* programUri = test->program;
         char* wantedUri = test->result;
@@ -121,6 +121,6 @@ int main(int argc, char **argv) {
         //xs_unroot(context, program);
         //xs_unroot(context, wanted);
     }
-    xl_over();
+    xl_close();
     return EXIT_SUCCESS;
 }

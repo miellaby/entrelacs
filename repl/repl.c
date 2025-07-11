@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
     log_init(NULL, "server,session,machine=debug");
     //log_init(NULL, "session=warn");
 
-    xl_init();
+    xs_init();
 
     /* Set the completion callback. This will be called every time the
      * user uses the <tab> key. */
@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
      * linenoise, so the user needs to free() it. */
     while ((line = linenoise(prompt)) != NULL) {
         /* Do something with the string. */
-        xl_begin();
+        xl_open();
         if (strcmp("pwd", line) == 0) {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
@@ -285,7 +285,7 @@ int main(int argc, char **argv) {
         char *tmpUriCwa = cwa == NIL ? strdup("*global*") : xl_uriOf(cwa, NULL);
         sprintf(prompt, "%.252s> ", tmpUriCwa);
         free(tmpUriCwa);
-        xl_over();
+        xl_close();
     }
 
     return 0;

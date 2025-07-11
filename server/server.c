@@ -181,7 +181,7 @@ static void *event_handler(enum mg_event event,
                            struct mg_connection *conn,
                            const struct mg_request_info *request_info) {
     void *processed = "yes";
-    xl_begin();
+    xl_open();
     if (event == MG_NEW_REQUEST) {
         Arrow session = get_connection_session(conn);
         if (session == xs_eve()) {
@@ -209,7 +209,7 @@ static void *event_handler(enum mg_event event,
                       "\r\n", 400, origin ? origin : "*",
                       "BAD REQUEST");
             mg_write(conn, "", (size_t)0);
-            xl_over();
+            xl_close();
             return processed;
         }
         Arrow method = xs_atom(request_info->request_method);
@@ -305,12 +305,12 @@ static void *event_handler(enum mg_event event,
         processed = NULL;
     }
     //xl_commit();
-    xl_over();
+    xl_close();
     return processed;
 }
 
 int _houseCleaning(void) {
-    xl_begin();
+    xl_open();
     Arrow sessionTag = xs_assimilate(xs_atom("session"));
     Arrow expireTag = xs_atom("expire");
     XLEnum e = xl_childrenOf(xs_getId(sessionTag));
@@ -371,7 +371,7 @@ int _houseCleaning(void) {
     LOGPRINTF(LOG_WARN, "sessions: active=%d expired=%d total=%d",
         activeSessionCount, expiredSessionCount, sessionCount);
     xl_commit();
-    xl_over();
+    xl_close();
     xl_enumFree(e);
     dputs("House Cleaning done.");
     return 0;
@@ -389,9 +389,9 @@ int main(void) {
 #endif
 #endif
 
-  xl_init();
+  xs_init();
 
-  xl_begin();
+  xl_open();
   Arrow get = xs_context_get(xs_eve(), xs_atom("GET"));
   if (get == NIL) {
       xs_context_set(xs_eve(), xs_atom("GET"), xs_fromURI("/paddock//x+x+"));
@@ -407,7 +407,7 @@ int main(void) {
       xs_context_set(xs_eve(), xs_pair(xs_atom("mudo"), xs_atom(server_secret_sha1)), xs_atom("eval"));
       // TODO unroot while house cleaning
   }
-  xl_over();
+  xl_close();
   
   _houseCleaning();
 
@@ -434,8 +434,8 @@ int main(void) {
         sleepCount = 0;
       } else {
         // // this idiom leads to mem_yield() which allows other process to lock the persistence file
-        // xl_begin();
-        // xl_over();
+        // xl_open();
+        // xl_close();
       }
   }
   dputs("%s", "server stopped.");

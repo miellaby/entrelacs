@@ -16,8 +16,8 @@ int main(int argc, char **argv) {
   char buffer[1024];
   log_init(NULL, "server,session,machine,space=debug");
 
-  xl_init();
-  xl_begin();
+  xs_init();
+  xl_open();
   DEFATOM(root);
   DEFATOM(childrenOf);
   DEFATOM(unroot);
@@ -49,6 +49,6 @@ int main(int argc, char **argv) {
        assert(1);
     }
   }
-  xl_over();
+  xl_close();
   return EXIT_SUCCESS;
 }

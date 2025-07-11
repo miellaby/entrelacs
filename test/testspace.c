@@ -376,12 +376,12 @@ int space_unitTest();
 
 int main(int argc, char* argv[]) {
     log_init(NULL, "space=debug,mem=debug,cell=debug");
-    xl_init();
-    xl_begin();
+    xs_init();
+    xl_open();
     space_unitTest();
     basic();
     stress();
-    xl_over();
+    xl_close();
     test_done();
     return 0;
 }
