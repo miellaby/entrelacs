@@ -37,8 +37,8 @@
 /** assimilate a file descriptor
 */
 static Arrow fdatom(int fd) {
- Arrow a = EVE;
- if (fd < 0) return EVE;
+ Arrow a = xs_eve();
+ if (fd < 0) return xs_eve();
  
  struct stat stat;
  int r = fstat (fd, &stat);
@@ -49,7 +49,7 @@ static Arrow fdatom(int fd) {
   char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
   assert (data != (void*) -1);
   
-  a = xl_atomn(size, (uint8_t*)data);
+  a = xs_atomn(size, (uint8_t*)data);
   munmap(data, size);
  }
 
@@ -112,15 +112,15 @@ static Arrow assimilateUploadedData(struct mg_connection *conn) {
 
   if (contentLength <= 0) {
     // Empty file
-    return xl_pair(xl_atom("Content-Typed"),
-                        xl_pair(xl_atom(mimeType), EVE));
+    return xs_pair(xs_atom("Content-Typed"),
+                        xs_pair(xs_atom(mimeType), xs_eve()));
   }
 
   stream = tmpfile();
   
   if (stream == NULL) {
     LOGPRINTF(LOG_ERROR, "Cannot create tmp file");
-    return EVE;
+    return xs_eve();
   } else {
   
     // Success. Write data into the file.
@@ -138,8 +138,8 @@ static Arrow assimilateUploadedData(struct mg_connection *conn) {
     Arrow arrow = fdatom(fileno(stream));
     fclose(stream);
 
-    arrow = xl_pair(xl_atom("Content-Typed"),
-                        xl_pair(xl_atom(mimeType), arrow));
+    arrow = xs_pair(xs_atom("Content-Typed"),
+                        xs_pair(xs_atom(mimeType), arrow));
     return arrow;
   }
 }
@@ -154,14 +154,14 @@ static Arrow get_connection_session(const struct mg_connection *conn) {
     mg_get_cookie(conn, "session", session_uuid, sizeof(session_uuid));
     if (*session_uuid == '\0') {
         dputs("No session cookie");
-        return EVE;
+        return xs_eve();
     }
     session_uuid[32] = '\0';
 
     // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
     // TODO: remove the first parameter of sessionMaybe
     Arrow session = xs_getSession("server", session_uuid);
-    if (session == EVE) {
+    if (session == xs_eve()) {
         dputs("Unknown session cookie %s", session_uuid);
     } else {
         dputs("Session %s found", session_uuid);
@@ -184,7 +184,7 @@ static void *event_handler(enum mg_event event,
     xl_begin();
     if (event == MG_NEW_REQUEST) {
         Arrow session = get_connection_session(conn);
-        if (session == EVE) {
+        if (session == xs_eve()) {
             // create session
             session = xs_open("server");
             dputs("New session with id %s", session_id);
@@ -193,7 +193,7 @@ static void *event_handler(enum mg_event event,
 
         dputs("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
-        xs_set(session, xl_atom("expire"), xl_atomn(sizeof(time_t), (uint8_t*)&now));
+        xs_context_set(session, xs_atom("expire"), xs_atomn(sizeof(time_t), (uint8_t*)&now));
 
         Arrow input = xs_url(session, request_info->uri);
         dputs("input %s assimilated as %O", request_info->uri, input);
@@ -212,18 +212,18 @@ static void *event_handler(enum mg_event event,
             xl_over();
             return processed;
         }
-        Arrow method = xl_atom(request_info->request_method);
-        if (method == xl_atom("POST") || method == xl_atom("PUT")) {
+        Arrow method = xs_atom(request_info->request_method);
+        if (method == xs_atom("POST") || method == xs_atom("PUT")) {
             Arrow body = assimilateUploadedData(conn);
             if (body != NIL) {
-                input = xl_pair(input, body);
+                input = xs_pair(input, body);
             }
         }
         
-        Arrow sessionContext = xs_get(EVE, session);
+        Arrow sessionContext = xs_context_get(xs_eve(), session);
         if (sessionContext == NIL)
             sessionContext = session;
-        Arrow output = xs_eval(sessionContext, xl_pair(method, input), session);
+        Arrow output = xs_eval(sessionContext, xs_pair(method, input), session);
 
         dputs("Evaluated output is %O", output);
 
@@ -242,7 +242,7 @@ static void *event_handler(enum mg_event event,
         }
 
         char* output_url = xs_urlOf(session, output, l_depth);
-        int isAtomic  = xl_isAtom(output);
+        int isAtomic  = xs_isAtom(output);
 
 // TODO
 #if 1
@@ -255,15 +255,15 @@ static void *event_handler(enum mg_event event,
                        ? "application/octet-stream"
                        : URI_CONTENT_TYPE));
         char* contentTypeCopy = NULL;
-        if (i_depth != 0 && !isAtomic && xl_tailOf(output) == xl_atom("Content-Typed")) {
-            contentTypeCopy = xl_strOf(xl_tailOf(xl_headOf(output)));
+        if (i_depth != 0 && !isAtomic && xs_getTail(output) == xs_atom("Content-Typed")) {
+            contentTypeCopy = xl_strOf(xs_getTail(xs_getHead(output)));
             content_type = contentTypeCopy;
-            output = xl_headOf(xl_headOf(output));
+            output = xs_getHead(xs_getHead(output));
             dputs("Content-Type: %s, output: %O", content_type, output);
 //        } else if (isAtomic) {
-//            Arrow application = xl_pair(xl_atom("Content-Type"), xl_pair(xl_atom("escape"), output));
+//            Arrow application = xs_pair(xs_atom("Content-Type"), xs_pair(xs_atom("escape"), output));
 //            Arrow rta = xs_eval(session, application);
-//            if (rta != EVE && xl_isAtom(rta)) {
+//            if (rta != xs_eve() && xs_isAtom(rta)) {
 //               contentTypeCopy = xl_strOf(rta);
 //               content_type = contentTypeCopy;
 //            }
@@ -271,7 +271,7 @@ static void *event_handler(enum mg_event event,
         uint32_t content_length;
         uint8_t* content = NULL;
         if (i_depth != 0) {
-            content = xl_memOf(output, &content_length);
+            content = xs_getMem(output, &content_length);
         }
         if (!content) {
             char *url = xs_urlOf(session, output, i_depth);
@@ -311,55 +311,55 @@ static void *event_handler(enum mg_event event,
 
 int _houseCleaning(void) {
     xl_begin();
-    Arrow sessionTag = xl_atom("session");
-    Arrow expireTag = xl_atom("expire");
-    XLEnum e = xl_childrenOf(sessionTag);
+    Arrow sessionTag = xs_assimilate(xs_atom("session"));
+    Arrow expireTag = xs_atom("expire");
+    XLEnum e = xl_childrenOf(xs_getId(sessionTag));
     time_t now = time(NULL);
     dputs("House Cleaning ...");
 
       
-    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
     int sessionCount = 0;
     int expiredSessionCount = 0;
     int activeSessionCount = 0;
     
-    while (next != EVE) {
+    while (next != xs_eve()) {
           Arrow session = next;
-          next = xl_enumNext(e) ? xl_enumGet(e) : EVE;
-          if (xl_tailOf(session) != sessionTag)
+          next = xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
+          if (xs_getTail(session) != sessionTag)
               continue; // Not a /session+* arrow
           // consider /+/session+*
-          session = xl_pairMaybe(EVE, session); 
-          if (session == EVE)
+          session = xs_pair(xs_eve(), session); 
+          if (!xs_isKnown(session))
             continue; // maybe not a root session
-          // session = xs_isRooted(EVE, session);
-          // if (session == EVE)
+          // session = xs_context_isRooted(xs_eve(), session);
+          // if (session == xs_eve())
           //      continue; // session is not rooted
           sessionCount++;
-          Arrow expire = xs_get(session, expireTag);
+          Arrow expire = xs_context_get(session, expireTag);
           uint32_t var_size = 0;
-          time_t* expire_time = (expire != NIL ? (time_t *)xl_memOf(expire, &var_size) : NULL);
+          time_t* expire_time = (expire != NIL ? (time_t *)xs_getMem(expire, &var_size) : NULL);
 
           if (expire == NIL || var_size != sizeof(time_t)) {
               LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
               expiredSessionCount++;
               xs_close(session);
-              xs_unset(EVE, session);
+              xs_unset(xs_eve(), session);
               // restart loop as deep close may remove in-enum arrow
               //xl_enumFree(e);
-              //sessionTag =  xl_atom("session");
+              //sessionTag =  xs_atom("session");
               //e = xl_childrenOf(sessionTag);
-              //next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+              //next = e && xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
           } else if (*expire_time < now) {
               dputs("session %O outdated.", session);
               expiredSessionCount++;
               xs_close(session);
-              xs_unset(EVE, session);
+              xs_unset(xs_eve(), session);
               // restart loop as deep close may remove in-enum arrow
               xl_enumFree(e);
-              // sessionTag =  xl_atom("session");
-              e = xl_childrenOf(sessionTag);
-              next = e && xl_enumNext(e) ? xl_enumGet(e) : EVE;
+              // sessionTag =  xs_atom("session");
+              e = xl_childrenOf(xs_getId(sessionTag));
+              next = e && xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
           } else {
               activeSessionCount++;
           }
@@ -392,19 +392,19 @@ int main(void) {
   xl_init();
 
   xl_begin();
-  Arrow get = xs_get(EVE, xl_atom("GET"));
+  Arrow get = xs_context_get(xs_eve(), xs_atom("GET"));
   if (get == NIL) {
-      xs_set(EVE, xl_atom("GET"), xl_uri("/paddock//x+x+"));
-      xs_set(EVE, xl_atom("PUT"), xl_uri("/paddock//x/arrow/set+/var+x+"));
-      xs_set(EVE, xl_atom("POST"), xl_uri("/paddock//x+x+"));
-      xs_set(EVE, xl_atom("DELETE"), xl_uri("/paddock//x/arrow/unset+/var+x+"));
+      xs_context_set(xs_eve(), xs_atom("GET"), xs_fromURI("/paddock//x+x+"));
+      xs_context_set(xs_eve(), xs_atom("PUT"), xs_fromURI("/paddock//x/arrow/set+/var+x+"));
+      xs_context_set(xs_eve(), xs_atom("POST"), xs_fromURI("/paddock//x+x+"));
+      xs_context_set(xs_eve(), xs_atom("DELETE"), xs_fromURI("/paddock//x/arrow/unset+/var+x+"));
   }
 
   {   // store secret as server-secret<->"/session-secret-pair-uri" hidden pair
       char* server_secret_sha1 = getenv("ENTRELACS_SECRET"); // TODO better solution
       if (!server_secret_sha1) server_secret_sha1 = "8f84b95af52fbfae67209b6cfd3ab7dd1f1e0b12";
       // meta-user do : mudo
-      xs_set(EVE, xl_pair(xl_atom("mudo"), xl_atom(server_secret_sha1)), xl_atom("eval"));
+      xs_context_set(xs_eve(), xs_pair(xs_atom("mudo"), xs_atom(server_secret_sha1)), xs_atom("eval"));
       // TODO unroot while house cleaning
   }
   xl_over();

@@ -3,16 +3,9 @@
  *
  * Everything but the Arrow type is XL prefixed to prevent name conflicts.
  */
+ #pragma once
 
-
-
- #ifndef _ARROW_SPACE_H
- #define _ARROW_SPACE_H
- #ifdef	__cplusplus
- extern "C" {
- #endif
-
-#include <stdint.h>
+ #include <stdint.h>
 
 /// @brief  Arrow Reference
 typedef uint32_t Address;
@@ -53,16 +46,17 @@ Address xl_atom(char* str); ///< assimilate a C string
 Address xl_atomn(uint32_t size, uint8_t* raw); ///< assimilate raw data
 Address xl_uri(char* uri); ///< assimilate an URI. @return an arrow or NIL if bad URI
 Address xl_urin(uint32_t size, char* uri_part); ///< assimilate a part of URI. @return an arrow or NIL if bad URI
-
-// Compound arrow assimilation
-// ---------------------------
 Address xl_anonymous();   ///< assimilate a randomized value so to get an unique "anonymous" arrow.
-                        ///< This is NOT the way to knowledge representation within Entrelacs.
+                          ///< This is NOT the way to knowledge representation within Entrelacs.
+
+// Hook FIXME à déplacer dans transient ou session
+// ---------------------------
 Address xl_hook(void* hook); ///< assimilate a C pointer and return an arrow.
                         ///< unbuild with xl_pointerOf.
                         ///< Bottom-rooted to distinguish from evil attack attempt.
                         ///< Unroot to neutralize (xp_pointerOf returning NULL).
                         ///< Doesn't survive to reboot
+void* xl_pointerOf(Address); //< get the C pointer of a "hook" arrow. @return pointer.
 
 // Arrow testing without assimilation
 // -----------
@@ -83,7 +77,6 @@ uint8_t* xl_memOf(Address, uint32_t* size_p); /// get atomic arrow as binary dat
 char* xl_uriOf(Address, uint32_t* size_p); ///< get arrow definition in URI notation. @return pointer to freed.
 uint32_t xl_hashOf(Address); ///< get arrow checksum.
 char* xl_digestOf(Address, uint32_t* size_p); ///< get arrow digest. @return pointer to freed.
-void* xl_pointerOf(Address); //< get the C pointer of a "hook" arrow. @return pointer.
 int   xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Address *head_p, uint8_t** raw_p, uint32_t *size_p); /// get infos about Arrow 
 
 // Rooting
@@ -91,7 +84,7 @@ int   xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Addr
 Address xl_root(Address); ///< root arrow.
 Address xl_unroot(Address); ///< unroot arrow.
 
-// Transaction
+// Transaction FIXME à déplacer dans session.h
 // -----------
 void xl_begin();  ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_over)
 void xl_yield(Address); ///< perform GC, only preserving one "state" arrow. wait for all threads being ready.
@@ -115,10 +108,3 @@ int    xl_enumNext(XLEnum); ///< iterate enumerator. Return 0 if over or broken.
 Address  xl_enumGet(XLEnum); ///< get current arrow from enumerator.
 void   xl_enumFree(XLEnum); ///< free enumerator.
 void   xl_childrenOfCB(Address, XLCallBack, Address context); ///< apply a given function to each children of an arrow
-
-#ifdef	__cplusplus
-}
-#endif
-#endif // arrow_space.h
-
- 

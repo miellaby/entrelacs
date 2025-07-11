@@ -64,12 +64,6 @@ extern "C" {
 #define childrenOf(A) xl_childrenOf(A)
 #define childrenOfCB(A, CB, C) xl_childrenOfCB(A, CB, C)
 
-#define operator(H, C) xs_operator(H, C)
-#define continuation(H, C) xs_continuation(H, C)
-#define run(R,  M) xs_run(R,  M)
-#define eval(R, P) xs_eval(R, P)
-
-
 #ifdef	__cplusplus
 }
 #endif
