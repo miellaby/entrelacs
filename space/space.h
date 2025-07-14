@@ -19,16 +19,21 @@ typedef enum e_xlType {
 } XLType;
 
 /// Generic callback for arrow fetching
-typedef Address (*XLCallBack)(Address arrow, Address context); 
+typedef Address (*XLCallBack)(Address arrow, void* context);
 
 /// Enumerator type, as returned by xl_childrenOf.
-typedef void* XLEnum; 
+typedef void* XLEnum;
 
-/// Failure return code 
+/// Failure return code
 #define XL_NIL (0xFFFFFFFFU)
 
 /// Eve
 #define XL_EVE (0)
+#define EVE XL_EVE
+
+#define DEFATOM(V) Address V = xl_atom(#V)
+#define DEFA(T, H) Address _##T##_##H = A(T, H)
+
 
 /// Eve
 extern const Address Eve; // Eve = XL_EVE
@@ -37,7 +42,7 @@ extern const Address Eve; // Eve = XL_EVE
 // ----------
 int  xl_init(); ///< Arrow Space initialization
 void xl_destroy(); ///< release system resources and locks
- 
+
 // Assimilation
 // ------------
 Address xl_Eve(); ///< returns Eve.
@@ -48,15 +53,6 @@ Address xl_uri(char* uri); ///< assimilate an URI. @return an arrow or NIL if ba
 Address xl_urin(uint32_t size, char* uri_part); ///< assimilate a part of URI. @return an arrow or NIL if bad URI
 Address xl_anonymous();   ///< assimilate a randomized value so to get an unique "anonymous" arrow.
                           ///< This is NOT the way to knowledge representation within Entrelacs.
-
-// Hook FIXME à déplacer dans transient ou session
-// ---------------------------
-Address xl_hook(void* hook); ///< assimilate a C pointer and return an arrow.
-                        ///< unbuild with xl_pointerOf.
-                        ///< Bottom-rooted to distinguish from evil attack attempt.
-                        ///< Unroot to neutralize (xp_pointerOf returning NULL).
-                        ///< Doesn't survive to reboot
-void* xl_pointerOf(Address); //< get the C pointer of a "hook" arrow. @return pointer.
 
 // Arrow testing without assimilation
 // -----------
@@ -73,11 +69,11 @@ XLType xl_typeOf(Address); ///< get arrow type. // TODO: could it be a SMALL arr
 Address xl_headOf(Address);  ///< get arrow head.
 Address xl_tailOf(Address);  ///< get arrow tail.
 char* xl_strOf(Address);   ///< get atomic arrow as a C string. Null terminator always added. @return pointer to freed.
-uint8_t* xl_memOf(Address, uint32_t* size_p); /// get atomic arrow as binary data. No extra null terminator added. @return pointer to freed. 
+uint8_t* xl_memOf(Address, uint32_t* size_p); /// get atomic arrow as binary data. No extra null terminator added. @return pointer to freed.
 char* xl_uriOf(Address, uint32_t* size_p); ///< get arrow definition in URI notation. @return pointer to freed.
 uint32_t xl_hashOf(Address); ///< get arrow checksum.
 char* xl_digestOf(Address, uint32_t* size_p); ///< get arrow digest. @return pointer to freed.
-int   xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Address *head_p, uint8_t** raw_p, uint32_t *size_p); /// get infos about Arrow 
+int   xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Address *head_p, uint8_t** raw_p, uint32_t *size_p); /// get infos about Arrow
 
 // Rooting
 // -------
@@ -105,6 +101,6 @@ Address xl_isPair(Address); ///< returns given arrow if a pair, else Eve.
 XLEnum xl_childrenOf(Address); ///< return children of an arrow as an enumerator.
                              ///< enumerator must be freed by xl_enumFree
 int    xl_enumNext(XLEnum); ///< iterate enumerator. Return 0 if over or broken. !0 otherwise.
-Address  xl_enumGet(XLEnum); ///< get current arrow from enumerator.
+Address xl_enumGet(XLEnum); ///< get current arrow from enumerator.
 void   xl_enumFree(XLEnum); ///< free enumerator.
-void   xl_childrenOfCB(Address, XLCallBack, Address context); ///< apply a given function to each children of an arrow
+void   xl_childrenOfCB(Address, XLCallBack, void* context); ///< apply a given function to each children of an arrow

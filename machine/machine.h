@@ -1,9 +1,6 @@
 #include "machine/transient.h"
 
-/// Generic callback for client
-typedef Arrow (*XSCallBack)(Arrow arrow, Arrow context); 
-
-/* Assimilate bindings */
+// Assimilate bindings
 
 Arrow xs_operator(XSCallBack hook, Arrow); ///< assimilate a C implemented operator.
 

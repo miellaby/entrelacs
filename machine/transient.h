@@ -3,7 +3,7 @@
 
 /**
  * Transient Arrows
- * 
+ *
  * définition et manipulation de flèches éphémères assimilées paresseusement
  * idéal pour applicatif créant beaucoup de flèches intermédiaires:
  * API xl_... : flèches projetées dans le Arrow Space (ref = adresse)
@@ -23,6 +23,12 @@ typedef enum xs_type {
     XS_PAIR = 2
 } ArrowType;
 
+/// Generic callback for client
+typedef Arrow (*XSCallBack)(Arrow arrow, Arrow context);
+
+/// system initialization
+int  xs_init();
+
 /// EVE
 Arrow xs_eve();
 
@@ -33,27 +39,41 @@ Arrow xs_arrow(Address id);
 Arrow xs_pair(Arrow tail, Arrow head);
 
 /// @brief atom from buffer
-/// @param size 
-/// @param s 
-/// @return 
-Arrow xs_atomn(size_t size, uint8_t* s);
+/// @param size buffer size
+/// @param buffer buffer
+/// @return arrow
+Arrow xs_atomn(size_t size, uint8_t* buffer);
 
 /// @brief atom from string
-/// @param s 
+/// @param s string
 /// @return arrow
 Arrow xs_atom(char* s);
 
-/// @brief parse a canonical URI of an arrow
-/// @param size 
-/// @param uri 
-/// @param uri_size_p updated with actual parsed URI length 
-/// @return  arrow
-Arrow xs_parseURI(uint32_t size, char *uri, uint32_t *uri_size_p);
-
-/// @brief parse a canonical URI of an arrow
-/// @param uri 
+/// @brief atom from borrowed const buffer
+/// @param s string
 /// @return arrow
-Arrow xs_fromURI(char* uri);
+Arrow xs_constn(size_t size, const uint8_t* buffer);
+
+/// @brief atom from borrowed const string
+/// @param s string
+/// @return arrow
+Arrow xs_const(const char* s);
+
+/// @brief arrow from URI
+/// @param null-terminated URI string
+/// @return arrow
+Arrow xs_uri(char *aUri);
+
+/// @brief arrow from URI
+/// @param aSize buffer size
+/// @param uri buffer
+/// @return arrow
+Arrow xs_urin(uint32_t aSize, char *aUri);
+
+/// @brief get an arrow by its digest
+/// @param digest
+/// @return the arrow or NULL if wrong digest
+Arrow xs_digest(char *digest);
 
 /// @brief get arrow type
 /// @param a arrow
@@ -86,8 +106,13 @@ Arrow xs_getHead(Arrow a);
 /// @return address
 Address xs_getId(Arrow a);
 
+/// @brief get canonical URI representation of the arrow
+/// @param a arrow
+/// @return URI (heap allocated)
+char* xs_getUri(Arrow a);
+
 /// @brief get atom as string
-/// @param a 
+/// @param a
 /// @return heap-allocated string
 char *xs_getStr(Arrow a);
 
@@ -97,10 +122,33 @@ char *xs_getStr(Arrow a);
 /// @return  heap-allocated buffer
 char *xs_getMem(Arrow a, size_t *size);
 
-/// @brief get canonical URI representation of the arrow
+/// @brief get atom as string
+/// @param a
+/// @return Null terminated string in atom definition otherwise NULL
+/// @details check that the last char in buffer is a null-terminator
+char *xs_borrowStr(Arrow a);
+
+/// @brief get atom raw buffer
+/// @param a atom
+/// @param size updated with buffer size
+/// @return  buffer in atom definition
+uint8_t *xs_borrowMem(Arrow a, size_t *size);
+
+/// @brief getStr into size-limited buffer. Max size-1 chars. Null-terminator added.
+/// @param size buffer size
+/// @param buffer output buffer
 /// @param a arrow
-/// @return URI (heap allocated)
-char* xs_getUri(Arrow a);
+/// @param offset skipped bytes from arrow str
+/// @return read byte count
+int xs_readStr(size_t size, uint8_t* buffer, Arrow a, size_t offset);
+
+/// @brief getMem into size-limited buffer
+/// @param size buffer size
+/// @param buffer output buffer
+/// @param a arrow
+/// @param offset skipped bytes from arrow str
+/// @return read byte count
+int xs_readMem(size_t size, uint8_t* buffer, Arrow a, size_t offset);
 
 /// @brief resolve the arrow location in the AS
 /// @param a arrow
@@ -114,34 +162,34 @@ Arrow xs_resolve(Arrow a);
 Arrow xs_assimilate(Arrow a);
 
 /// @brief is eve?
-/// @param a 
+/// @param a
 /// @return true if eve
 int xs_isEve(Arrow* a);
 
 /// @brief is atom?
-/// @param a 
+/// @param a
 /// @return true if atom
 int xs_isAtom(Arrow* a);
 
 /// @brief is pair?
-/// @param a 
+/// @param a
 /// @return true if pair
 int xs_isPair(Arrow* a);
 
 /// @brief is known
 /// @details tell if arrow has already been assimilated
-/// @param a 
-/// @return true is arrow has an address 
+/// @param a
+/// @return true is arrow has an address
 int xs_isKnown(Arrow a);
 
 /// @brief is rooted?
-/// @param a 
+/// @param a
 /// @return true if a is rooted
 int xs_isRooted(Arrow a);
 
 /// @brief compare 2 arrow definitions
 /// @param a
-/// @param b 
+/// @param b
 /// @return a if equals to b, eve otherwise
 Arrow xs_equal(Arrow a, Arrow b);
 
@@ -155,5 +203,17 @@ Arrow xs_root(Arrow a);
 /// @return the arrow
 Arrow xs_unroot(Arrow a);
 
-/// @brief system initialization
-int  xs_init(); 
+/// apply a given function to each children of an arrow
+void xs_childrenOfCB(Arrow, XSCallBack, void* context);
+
+/// hook badge
+#define xs_hookBadge() xs_constn(7, "XShO0K")
+
+/// hook a pointer
+#define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), p)))
+
+/// read hooked pointer
+#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), pp, hook, 0)
+
+/// get hooked pointer
+#define xs_getPointer(hook) ({ void* pointer; xs_readPointer(hook, &pointer); pointer; })

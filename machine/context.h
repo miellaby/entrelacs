@@ -54,21 +54,29 @@ Arrow xs_context_root(Arrow context, Arrow a);
 */
 Arrow xs_context_unroot(Arrow context, Arrow a);
 
-/** return $c+$a if $a is rooted within a context defined by path $c, otherelse EVE.
+/** tell if $a has been rooted in a context $c via xs_context_root, otherwise NULL.
       ~= isRooted(/$c+$a)
 */
 Arrow xs_context_isRooted(Arrow context, Arrow a);
 
-/** returns a list of all children of $a rooted within context path $c
+/** list all arrows being rooted within a context $c
  */
-Arrow xs_context_childrenOf(Arrow c, Arrow a);
+Arrow xs_context_list(Arrow c);
+
+// ============================================
+// get/set: variable-like arrow management
+// ============================================
 
 /** regular "get key".
-    returns one suposedly unique rooted arrow in $c+$key sub-context
+ *  @details returns one suposedly unique rooted arrow in $c+$key sub-context
+ *  - if several arrows are rooted there, only one is returned.
+ *  - if no arrow, return NULL.
 */
 Arrow xs_context_get(Arrow c, Arrow key);
 
 /** regular "set key value"
+     1) reset context of path "/$c+$key" (see above)
+     2) root $value in context "/$c+$key"
 */
 Arrow xs_context_set(Arrow c, Arrow key, Arrow value);
 
@@ -77,60 +85,25 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value);
 void xs_context_unset(Arrow c, Arrow key);
 
 /** reset a context
-  Recursivly unroot any rooted arrow under a given context
- */
-void xs_context_reset(Arrow c);
-
-
-#if 0
-
-/** traditional edge
-    root a pair from $source to $destination in the context defined by $c path.
-    Two arrows are actually rooted:
-    $r1 = /C0/C1/../Cn+/$source+$destination
-    $r2 = //$c+$source+/$c+$destination
- */
-Arrow xs_context_link(Arrow c, Arrow source, Arrow destination);
-
-/** traditional edge removal
-    unroot a pair from $source to $destination in the context defined by $c path.
- */
-Arrow xs_context_unlink(Arrow c, Arrow source, Arrow destination);
-
-/** returns a list of all children of $a rooted within context path $c
-    via link/unlink functions
- */
-Arrow xs_context_partnerOf(Arrow c, Arrow a);
-
-/** returns a list of all rooted pairs within context path "/$c+$key"
-*/
-Arrow xs_context_partnersOf(Arrow c, Arrow a);
-
-/** unroot all arrows within a context defined by its path $c,
-    and recursivly reset any sub-contexts.
+  Recursivly unroot any rooted arrow under a given context c
+  also recursivly reset any sub-contexts to clean double-rooting.
 */
 void xs_context_reset(Arrow c);
 
-/** traditional "set-key-value".
+// ============================================
+// link/unlink: pair things together with arrows
+// ============================================
 
-     1) reset context of path "/$c+$key" (see above)
-     2) root $value in context "/$c+$key"
-*/
-Arrow xs_context_set(Arrow c, Arrow slot, Arrow value);
+/// root (s-->d) into context "c"
+#define xs_context_link(c,s,d) xs_context_root(xs_pair(c,s),d)
 
+/// unroot (s-->d) from context "c"
+#define xs_context_unlink(c,s,d) xs_context_unroot(xs_pair(c,s),d)
 
-/** traditional "unset-key".
+// list (s-->*) links in context "c"
+#define xs_context_browse(c,s) xs_context_list(xs_pair(c,s))
 
-    reset context of path $c+$key
-*/
-void  xs_context_unset(Arrow c, Arrow slot);
-
-/** traditional "get-key".
-    returns "the" rooted arrow in context of path "/$c+$key"
-    - if several arrows are rooted there, only one is returned.
-    - if no arrow, return NIL.
-*/
-Arrow xs_context_get(Arrow c, Arrow slot);
-
-#endif
-
+// note: these variants don't leverage contextual indexes
+// #define xs_context_link(c,s,d) xs_context_root(c,xs_pair(s,d))
+// #define xs_context_unlink(c,s,d) xs_context_unroot(c,xs_pair(s,d))
+// #define xs_context_browse(c,a) filter(xs_context_childrenOf(c), a => isChildOf(a))

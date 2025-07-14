@@ -9,31 +9,31 @@
 inline uint32_t hash_eve();
 
 /// @brief hash a regular arrow (pair)
-/// @param h_tail 
-/// @param h_head 
+/// @param h_tail
+/// @param h_head
 /// @return hash code
 uint32_t hash_pair(uint32_t h_tail, uint32_t h_head);
 
 /// @brief hash a string and compute its length
-/// @param[in] str 
-/// @param[out] length 
+/// @param[in] str
+/// @param[out] length
 /// @return hash code
 uint64_t hash_string(char *str, uint32_t* length);
 
 /// @brief hash a binary string
-/// @param[in] buffer 
-/// @param[in] length 
+/// @param[in] buffer
+/// @param[in] length
 /// @return hash code
 uint64_t hash_raw(uint8_t *buffer, uint32_t length);
 
-/// @brief return hChain for an arrow in a cell 
-/// @param cell 
+/// @brief return hChain for an arrow in a cell
+/// @param cell
 /// @return hash code
 uint32_t hash_chain(Cell* cell);
 
 /// @brief return hChildren for an arrow in a cell
-/// @param cell 
-/// @return 
+/// @param cell
+/// @return
 uint32_t hash_children(Cell* cell);
 
 /// @brief generate a crypto footprint of a blob
@@ -42,4 +42,3 @@ uint32_t hash_children(Cell* cell);
 /// @param[out] output hexadecimal crypto hash
 /// @return output
 char* hash_crypto(uint32_t size, uint8_t* data, char output[CRYPTO_SIZE + 1]);
-

@@ -30,6 +30,14 @@
         "serial.h": "c",
         "transient.h": "c",
         "url.h": "c",
-        "machine.h": "c"
+        "machine.h": "c",
+        "cmath": "c",
+        "compare": "c",
+        "concepts": "c",
+        "type_traits": "c",
+        "limits": "c",
+        "new": "c",
+        "typeinfo": "c",
+        "context.h": "c"
     }
 }

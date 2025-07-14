@@ -77,7 +77,7 @@ static uint32_t skeepSpacesAndOnePlus(uint32_t size, char* uriEnd) {
 /** get an URI path corresponding to an arrow */
 char* serial_toURI(Address a, uint32_t *l) { // TODO: could be rewritten with geoallocs
     if (a == EVE) { // Eve is identified by an empty path
-        
+
         // allocate and return an empty string
         char *s = (char*) malloc(1);
         if (!s) { // allocation failed
@@ -123,11 +123,11 @@ char* serial_toURI(Address a, uint32_t *l) { // TODO: could be rewritten with ge
 
             // encode content
             percent_encode(mem, memLength, uri, &encodedDataLength);
-            free(mem); // original content is not returned so freed 
-            
+            free(mem); // original content is not returned so freed
+
             // adjust memory allocaiton to free few bytes
             uri = realloc(uri, 1 + encodedDataLength);
-            
+
             if (l) *l = encodedDataLength; // return length if asked
             return uri;
         }
@@ -153,7 +153,7 @@ char* serial_toURI(Address a, uint32_t *l) { // TODO: could be rewritten with ge
 
             // concat identiers
             sprintf(uri, "/%s+%s", tailUri, headUri); // TODO no printf
-            
+
             // free both end identifiers
             free(tailUri);
             free(headUri);
@@ -238,11 +238,11 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
         hex[(hash >> 4)  & 0xF],
         hex[hash & 0xF]
     };
-    
+
     // copy the hash hexa at the digest beginning
     strncpy(digest + digestLength, hashMap, DIGEST_HASH_SIZE);
     digestLength += DIGEST_HASH_SIZE;
-    
+
     // then copy the crypto hash
     strncpy(digest + digestLength, hashStr, CRYPTO_SIZE);
     free(hashStr);
@@ -251,7 +251,7 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
 
     // return result and its length if asked
     if (l) *l = digestLength;
-    
+
     return digest;
 }
 
@@ -262,7 +262,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
     uint32_t uriLength = NAN;
 
     char c = uri[0];
-    
+
     if (c <= 32 || !size) { // Any control-caracters/white-spaces are considered as URI break
         a = EVE;
         uriLength = 0;
@@ -277,42 +277,42 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
                     TRACEPRINTF("serial_parseUri - not long enough for a digest: %d", size);
                     break;
                 }
-                
+
                 if (uri[1] != 'H') { // Only digest are allowed in URI
                     break;
                 }
 
                 uriLength = 2;
-                while ((size == NAN || uriLength < size) 
+                while ((size == NAN || uriLength < size)
                         && (c = uri[uriLength]) > 32 && c != '+' && c != '/')
                     uriLength++;
-                
+
                 if (uriLength != DIGEST_SIZE) {
                     TRACEPRINTF("serial_parseUri - wrong digest size %d", DIGEST_SIZE);
                     break;
                 }
 
                 a = probe_digest(uri);
-                
+
                 if (a == NIL) // Non assimilated blob
                     uriLength = NAN;
-                
+
                 break;
             }
             case '/':
             { // Pair
                 uint32_t tailUriLength, headUriLength;
                 Address tail, head;
-                
+
                 if (size != NAN) size--;
-                
+
                 tail = serial_parseUri(size, uri + 1, &tailUriLength, ifExist);
                 if (tailUriLength == NAN) { // Non assimilated tail
                     a = tail; // NIL or EVE
                     uriLength = NAN;
                     break;
                 }
-                
+
                 char tailUriEnd = uri[1 + tailUriLength];
                 if (tailUriEnd == '\0' || tailUriLength == size /* no more char */) {
                     a = tail;
@@ -330,7 +330,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
                         size -= tailUriLength;
                     headUriStart = uri + 1 + tailUriLength;
                 }
-                
+
                 head = serial_parseUri(size, headUriStart, &headUriLength, ifExist);
                 if (headUriLength == NAN) { // Non assimilated head
                     a = head; // NIL or EVE
@@ -344,7 +344,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
                     uriLength = NAN;
                     break;
                 }
-                
+
                 uriLength = 1 + tailUriLength + (tailUriEnd == '+' /* 1/0 */) + headUriLength;
                 break;
             }
@@ -352,7 +352,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
             { // ATOM
                 uint32_t atomLength;
 
-                // compute atom URI length 
+                // compute atom URI length
                 uriLength = 0;
                 while ((size == NAN || uriLength < size)
                         && (c = uri[uriLength]) > 32 && c != '+' && c != '/')
@@ -369,7 +369,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
                     a = assimilate_blob(atomLength, atomStr, ifExist);
                 }
                 free(atomStr);
-                
+
                 if (a == NIL || a == EVE) { // Non assimilated
                     uriLength = NAN;
                 }
@@ -387,7 +387,7 @@ Address serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: docum
     Address a = serial_parseUri(size, uri, &uriLength, ifExist);
     if (uriLength == NAN)
         return a; // return NIL (wrong URI) or EVE (not assimilated)
-    
+
     if (size != NAN) size -= uriLength;
     if (size == 0)
          return a;
@@ -407,7 +407,7 @@ Address serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: docum
         gap = skeepSpacesAndOnePlus(size, uri + uriLength);
         if (size != NAN) size -= gap;
         uriLength += gap;
-    
+
         a = assimilate_pair(a, b, ifExist);
         if (a == EVE) {
           return EVE; // not assimilated pair
@@ -416,4 +416,3 @@ Address serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: docum
 
     return a;
 }
-

@@ -1098,8 +1098,8 @@ $.extend(Entrelacs.prototype, {
         var isAtomic = a.isAtomic();
         var uri = a.serialize();
         var self = this;
-        // TODO linkTailWithHead : laborous; "linkify" might be better ; link to be renamed linker
-        var operator = (isAtomic ? "root" : "linkTailWithHead");
+        // TODO link : laborous; "linkify" might be better ; link to be renamed linker
+        var operator = (isAtomic ? "root" : "link");
         var req = self.serverUrl + '/' + operator + '/escape+' + uri;
         var promise = self.chain.pipe(function () {
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
@@ -1134,7 +1134,7 @@ $.extend(Entrelacs.prototype, {
             }
             var isAtomic = a.isAtomic();
             var uri = a.serialize();
-            var operator = (isAtomic ? "unroot" : "unlinkTailAndHead");
+            var operator = (isAtomic ? "unroot" : "unlink");
             var req = self.serverUrl + '/' + operator + '/escape+' + uri;
             return $.ajax({url: req, xhrFields: { withCredentials: true }});
         };
@@ -1235,7 +1235,7 @@ $.extend(Entrelacs.prototype, {
         var futur = function () {
             if (a.hc === undefined) return $.when(null); // a is GC-ed
             var uri = a.serialize();
-            var req = self.serverUrl + '/partnersOf/escape+' + uri + '?iDepth=10';
+            var req = self.serverUrl + '/browse/escape+' + uri + '?iDepth=10';
             return $.ajax({url: req, dataType: "text", xhrFields: { withCredentials: true }});
         };
         

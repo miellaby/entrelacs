@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
-    DEBUGPRINTF("BEGIN _fromUrl(%O, '%s')", xs_getId(context), url);
+    DEBUGPRINTF("BEGIN _fromUrl(%O, '%s')", context, url);
     Arrow eve = xs_eve();
     Arrow a = eve;
 
@@ -23,7 +23,7 @@ static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
                     *urlEnd = NULL;
                     break;
                 }
-                
+
                 if (!*tailUrlEnd) { // no more char
                     a = tail;
                     *urlEnd = tailUrlEnd;
@@ -37,7 +37,7 @@ static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
                     *urlEnd = NULL;
                     break;
                 }
-                
+
                 a = xs_pair(tail, head);
                 *urlEnd = headUrlEnd;
                 break;
@@ -53,7 +53,7 @@ static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
                         a = NULL;
                         *urlEnd = NULL;
                     }
-                    a = xs_headOf(sa);
+                    a = xs_getHead(sa);
                     *urlEnd = url + 7;
                     break;
                 }
@@ -72,13 +72,13 @@ static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
                     *urlEnd = NULL;
                     break;
                 }
-                
+
                 *urlEnd = url + urlLength;
                 break;
             }
         }
 
-    DEBUGPRINTF("END _fromUrl(%O, '%s') = %O", xs_getId(context), url, xs_getId(a));
+    DEBUGPRINTF("END _fromUrl(%O, '%s') = %O", context, url, a);
     return a;
 }
 
@@ -93,7 +93,7 @@ static char* skeepSpacesAndOnePlus(char* urlEnd) {
 }
 
 static Arrow fromUrl(Arrow context, char *url) {
-    DEBUGPRINTF("BEGIN fromUrl(%O, '%s')", xs_getId(context), url);
+    DEBUGPRINTF("BEGIN fromUrl(%O, '%s')", context, url);
     char *nextUrl;
     Arrow a = _fromUrl(context, url, &nextUrl);
     if (!nextUrl) return a; // NIL or EVE
@@ -103,21 +103,21 @@ static Arrow fromUrl(Arrow context, char *url) {
         DEBUGPRINTF("nextUrl = >%s<", nextUrl);
         Arrow b = _fromUrl(context, nextUrl, &nextUrl);
         if (!nextUrl) return b; // NIL or EVE
-        
+
         a = xs_pair(a, b); // TODO: document actual design
-        
+
         nextUrl = skeepSpacesAndOnePlus(nextUrl);
     }
 
-    DEBUGPRINTF("END fromUrl(%O, '%s') = %O", xs_getId(context), url, a);
+    DEBUGPRINTF("END fromUrl(%O, '%s') = %O", context, url, a);
     return a;
 }
 
-Arrow xs_url(Arrow s, char* aUrl) {
-    TRACEPRINTF("BEGIN xs_url(%O, '%s')", xs_getId(s), aUrl);
-    Arrow context = xs_pair(xs_atom("locked"), s);
+Arrow xs_url(Arrow context, char* aUrl) {
+    TRACEPRINTF("BEGIN xs_url(%O, '%s')", context, aUrl);
+    context = xs_pair(xs_const("locked"), context);
     Arrow arrow = fromUrl(context, aUrl);
-    TRACEPRINTF("END xs_url(%O, '%s') = %O", xs_getId(s), aUrl, arrow);
+    TRACEPRINTF("END xs_url(%O, '%s') = %O", context, aUrl, arrow);
     return arrow;
 }
 
@@ -130,10 +130,10 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         sprintf(url, "$%06x", (int)sa);
         *l = 7;
         return url;
-    } else if (xl_isPair(e)) { // TODO tuple
+    } else if (xs_isPair(e)) { // TODO tuple
         uint32_t l1, l2;
-        char *tailUrl = toURL(context, xl_tailOf(e), depth - 1, &l1);
-        char *headUrl = toURL(context, xl_headOf(e), depth - 1, &l2);
+        char *tailUrl = toURL(context, xs_getTail(e), depth - 1, &l1);
+        char *headUrl = toURL(context, xs_getHead(e), depth - 1, &l2);
         char *url = malloc(2 + l1 + l2 + 1) ;
         assert(url);
         sprintf(url, "/%s+%s", tailUrl, headUrl);
@@ -142,7 +142,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         *l = 2 + l1 + l2;
         return url;
     } else {
-        return uriOf(e, l);
+        return xs_getURI(e, l);
     }
 }
 
@@ -150,7 +150,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
 char* xs_urlOf(Arrow s, Arrow e, int depth) {
     TRACEPRINTF("BEGIN xs_urlOf(%O, %O, %d)", s, e, depth);
     uint32_t l;
-    Arrow context = xs_pair(xs_atom("locked"), s);
+    Arrow context = xs_pair(xs_const("locked"), s);
 
     char* url = toURL(context, e, depth, &l);
     TRACEPRINTF("END xs_urlOf(%O, %O, %d) = '%s'", s, e, depth, url);

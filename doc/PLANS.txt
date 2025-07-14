@@ -1,10 +1,19 @@
-Current changes:
+Current changes: Transient arrows
+ * the main C API is now transient arrows created in a stack freed at every commit
+ * transient arrows are not immediately mapped to the AS. "Lazy assimilation"
+ * Terminology changes
+    * "xl" API : true Arrow Space assimilations (refs = adresse)
+    * "xs" API : transient/temporary Arrows (refs = pointers)
+    * "xs" arrows are NOT deduplicated. See https://github.com/miellaby/entrelacs/blob/wiki/ArrowSpaceInterface.md
+    * "xs" performs assimilation ("xl") on demand
+    * "xs" arrows are allocated in a growing pool freed at each commit.
+    * machine/session/server/repl now uses the xs API instead of xl
+
+Most recent previous changes:
  * better concurrent entrelacs process
    mem_open mem_close takes/releases a file lock
    xl_close/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread
     graphic https://docs.google.com/presentation/d/1xRwA0RyQ73zqLdLzNCEo1-rzPEYdUVSUH2dcIe4dGGs/edit?usp=sharing
-
-Most recent previous changes:
  * non-blocking concurent entrelacs process partial support
    * both entrelacsd & entrelacs do xl_open/xl_close every second
    * xl_open;xl_close => mem GC => mem0_commit => persistenc efile unlock then lock
@@ -45,12 +54,12 @@ Most recent previous changes:
 * when an application is bound as is, it takes precedence over the corresponding closure evaluation.
   * it's an attempt to merge intensive and extensive definitions, that is function and environment/object.
 * operator, closure & paddock: auto escaped and somewhat typed litterals. paddock is for macro.
-* xs_get now returns NIL (FFFFFF) when no arrow found
+* xs_context_get now returns NIL (FFFFFF) when no arrow found
 * NIL is a undefined arrow. Different from Eve (0)
 * virtualized evaluation (root/get/set are confined in a nested hierarchy of contexts)
-* resolve now use xs_get to get "global" variable value
+* resolve now use xs_context_get to get "global" variable value
 * rooting a pair is not enough any more to make a global bound variable.
-  * Use xs_set(EVE,slot,value) instead.
+  * Use xs_context_set(EVE,slot,value) instead.
       * will do root((EVE->slot)->value) ; root(EVE->(slot->value)))
 * looseStack dumped in reverse order
 * new API to get and retrieve "uri" (no more xl_program)
@@ -97,8 +106,8 @@ Future:
 
 In study:
  * a session is actually a continuation
- * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
- * xs_set: create less arrows (but also less indexation)
+ * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment
+ * xs_context_set: create less arrows (but also less indexation)
      * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
  * Allows GC tooling.
     * when an operator is GC by forget() -if tail(a) == operator (space-level reserved keyword)-
@@ -107,4 +116,3 @@ In study:
                      and free anything
  * Web terminal
    * timeline
-   

@@ -4,17 +4,9 @@
 // - week arrow doesn't prevent parents GC
 // - removed when parents removed
 // - Arrow flags:
-//   R: root flag 
+//   R: root flag
 //   W: weak-root flag
 //   If (W && !R): GC when both ends are unrooted
-//
-// IN STUDY
-// - Weakness type: tail-weak, head-weak, both-weak
-// - New API: weak(arrow)
-// if: weak(A(root(atom('hello')), atom('world'))
-// when 'hello' unrooted, '/hello+world' is unrooted as well
-// attention: prefer xs_weak_link(C,A,B) = weak((C,A)=>(C,B)) then use xs_partnersOf(C,A)
-// xs_weak(c,x) add x in context c without preventing c removal and GC when no other content
 */
 
 #define _XOPEN_SOURCE 600
@@ -41,7 +33,7 @@
 
 struct s_space_stats space_stats_zero = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, space_stats = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-/** Things to make the API parallelizable 
+/** Things to make the API parallelizable
  */
 static pthread_mutexattr_t apiMutexAttr;
 static pthread_mutex_t apiMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -306,7 +298,7 @@ Address xl_urinMaybe(uint32_t aSize, char *aUri) {
     return LOCK_OUT(a);
 }
 
-void load_random(char *buffer) {
+static void generate_random(char *buffer) {
     // FIXME actual randomness
     char random[80];
     snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
@@ -318,7 +310,7 @@ Address xl_anonymous() {
     char anonymous[CRYPTO_SIZE + 1];
     Address a = NIL;
     do {  // select a random key, check the atom doesn't exit
-        load_random(anonymous);
+        generate_random(anonymous);
         a = xl_atomMaybe(random);
         assert(a != NIL);
     } while (a);
@@ -329,43 +321,6 @@ static Address unrootChild(Address child, Address context) {
     (void)context;
     xl_unroot(child);
     return EVE;
-}
-
-static Address getHookBadge() {
-    static Address hookBadge = EVE;
-    if (hookBadge != EVE)
-        return hookBadge;  // try to avoid the costly lock.
-    LOCK();
-    if (hookBadge != EVE)
-        return LOCK_OUT(hookBadge);
-    hookBadge = xl_atom("XLhO0K");
-    xl_root(hookBadge);
-
-    // prevent previous hooks to survive the reboot.
-    xl_childrenOfCB(hookBadge, unrootChild, EVE);
-
-    return LOCK_OUT(hookBadge);
-}
-
-Address xl_hook(void *hookp) {
-    char hooks[64];
-    snprintf(hooks, 64, "%p", hookp);
-    // Note: hook must be bottom-rooted to be valid
-    Address hook = xl_root(xl_pair(getHookBadge(), xl_atom(hooks)));
-    return hook;
-}
-
-void *xl_pointerOf(Address a) {  // Only bottom-rooted hook is accepted to limit hook forgery
-    if (!xl_isPair(a) || xl_tailOf(a) != getHookBadge() || !xl_isRooted(a))
-        return NULL;
-
-    char *hooks = xl_strOf(xl_headOf(a));
-    void *hookp;
-    int n = sscanf(hooks, "%p", &hookp);
-    if (!n)
-        hookp = NULL;
-    free(hooks);
-    return hookp;
 }
 
 int xl_isEve(Address a) {
@@ -439,7 +394,7 @@ enum e_xlType xl_typeOf(Address a) {
 /** Get children
 *
 */
-void xl_childrenOfCB(Address a, XLCallBack cb, Address context) {
+void xl_childrenOfCB(Address a, XLCallBack cb, void* context) {
     TRACEPRINTF("xl_childrenOfCB a=%06x", a);
 
     if (a == EVE) {
@@ -901,7 +856,7 @@ void xl_commit() {
         WAIT_DORMANCY();
         LOCK();
     } while (transactionCount > 0);  // spurious wakeup check
-    
+
     // Commiting doesn't leave a transaction, so we must enter one.
     ENTER_TRANSACTION();
 

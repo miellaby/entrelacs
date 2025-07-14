@@ -1,4 +1,4 @@
-#include "entrelacs/entrelacsm.h"
+#include "entrelacs/entrelacs.h"
 #include "mem/mem.h" // for geoalloc
 #include <stdlib.h> // free & co
 #include <stdio.h>  // sprintf & co
@@ -22,16 +22,16 @@ int main(int argc, char* argv[]) {
     DEFATOM(context);
     DEFATOM(hello);
     DEFATOM(world);
-    xs_set(context, hello, world);
+    xs_context_set(context, hello, world);
     fprintf(stderr, "1: xl_set\n");
     childrenOfCB(context, print, EVE);
     xs_unset(context, hello);
     fprintf(stderr, "2: xl_unset\n");
     xl_commit();
     childrenOfCB(context, print, EVE);
-    xs_set(context, hello, world);
+    xs_context_set(context, hello, world);
     fprintf(stderr, "3: xl_get\n");
-    Arrow what = xs_get(context, hello);
+    Arrow what = xs_context_get(context, hello);
     print(what, EVE);
     xl_commit();
     return 0;

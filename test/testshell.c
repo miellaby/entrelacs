@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "log/log.h"
 
-#include "entrelacs/entrelacsm.h"
+#include "entrelacs/entrelacs.h"
 #include "machine/session.h"
 int main(int argc, char **argv) {
   char buffer[1024];
@@ -17,10 +17,10 @@ int main(int argc, char **argv) {
     Arrow p = xl_uri(buffer);
     if (p == NIL) {
         fprintf(stderr, "Illegal input. Embedded URI may be wrong.\n");
-    
+
     } else if (p == EVE) {
         fprintf(stderr, "EVE\n");
-        
+
     } else {
         Arrow r = xs_eval(EVE, p, EVE);
         fprintf(stderr, "eval %O =\n\t%O\n", p, r);
