@@ -1,4 +1,5 @@
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 
 /**
@@ -164,17 +165,17 @@ Arrow xs_assimilate(Arrow a);
 /// @brief is eve?
 /// @param a
 /// @return true if eve
-int xs_isEve(Arrow* a);
+int xs_isEve(Arrow a);
 
 /// @brief is atom?
 /// @param a
 /// @return true if atom
-int xs_isAtom(Arrow* a);
+int xs_isAtom(Arrow a);
 
 /// @brief is pair?
 /// @param a
 /// @return true if pair
-int xs_isPair(Arrow* a);
+int xs_isPair(Arrow a);
 
 /// @brief is known
 /// @details tell if arrow has already been assimilated

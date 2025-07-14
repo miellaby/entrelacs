@@ -54,10 +54,10 @@ Arrow xs_context_root(Arrow context, Arrow a);
 */
 Arrow xs_context_unroot(Arrow context, Arrow a);
 
-/** tell if $a has been rooted in a context $c via xs_context_root, otherwise NULL.
+/** tell if $a has been rooted in a context $c via xs_context_root
       ~= isRooted(/$c+$a)
 */
-Arrow xs_context_isRooted(Arrow context, Arrow a);
+int xs_context_isRooted(Arrow context, Arrow a);
 
 /** list all arrows being rooted within a context $c
  */

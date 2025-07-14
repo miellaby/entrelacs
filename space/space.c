@@ -22,8 +22,8 @@
 #include "mem/geoalloc.h"
 #include "mem/mem.h"
 #include "sha1.h"
-#include "log/log.h"
 #define LOG_CURRENT LOG_SPACE
+#include "log/log.h"
 #include "space/cell.h"
 #include "space/stats.h"
 #include "space/hash.h"
@@ -212,7 +212,7 @@ int xl_read(Address a, XLType *type_p, uint32_t *hash_p, Address *tail_p, Addres
     ONDEBUG((LOGCELL('R', a, &cell)));
 
     if (!CELL_CONTAINS_ARROW(cell)) {  // empty/wrong
-        return NIL;
+        return XL_NIL;
     }
     *hash_p = cell.arrow.hash;
     if (cell.full.type == CELLTYPE_PAIR) {  // pair
@@ -307,12 +307,12 @@ static void generate_random(char *buffer) {
 }
 
 Address xl_anonymous() {
-    char anonymous[CRYPTO_SIZE + 1];
-    Address a = NIL;
+    char random[CRYPTO_SIZE + 1];
+    Address a = XL_NIL;
     do {  // select a random key, check the atom doesn't exit
-        generate_random(anonymous);
+        generate_random(random);
         a = xl_atomMaybe(random);
-        assert(a != NIL);
+        assert(a != XL_NIL);
     } while (a);
     return xl_atom(random);
 }
@@ -333,7 +333,7 @@ Address xl_isPair(Address a) {
     }
 
     if (a >= SPACE_SIZE) {  // Address anomaly
-        return NIL;
+        return XL_NIL;
     }
 
     LOCK();
@@ -343,7 +343,7 @@ Address xl_isPair(Address a) {
     UNLOCK();
 
     if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return NIL;
+        return XL_NIL;
 
     return (cell.full.type == CELLTYPE_PAIR ? a : EVE);
 }
@@ -354,7 +354,7 @@ Address xl_isAtom(Address a) {
     }
 
     if (a >= SPACE_SIZE) {  // Address anomaly
-        return NIL;
+        return XL_NIL;
     }
 
     LOCK();
@@ -364,7 +364,7 @@ Address xl_isAtom(Address a) {
     UNLOCK();
 
     if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return NIL;
+        return XL_NIL;
 
     return (cell.full.type == CELLTYPE_PAIR ? EVE : a);
 }
@@ -385,7 +385,7 @@ enum e_xlType xl_typeOf(Address a) {
     UNLOCK();
 
     if (cell.full.type > CELLTYPE_ARROWLIMIT)
-        return NIL;
+        return XL_NIL;
 
     static const enum e_xlType map[] = { XL_UNDEF, XL_PAIR, XL_ATOM, XL_ATOM, XL_ATOM };
 
@@ -574,7 +574,7 @@ static int xl_enumNextChildOf(XLEnum e) {
                     iteratorp->pos = pos;
                     iteratorp->iSlot = i;
                     iteratorp->iCell = ic;
-                    iteratorp->current = NIL;
+                    iteratorp->current = XL_NIL;
                     iteratorp->offset = offset;
                     TRACEPRINTF("terminator found in probed #%d", ic);
                     return LOCK_OUT(0);  // no child left

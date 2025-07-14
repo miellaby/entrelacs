@@ -1,6 +1,9 @@
 
 #include "machine/context.h"
+#define LOG_CURRENT LOG_SESSION
+#include "log/log.h"
 #include "space/space.h"
+
 // TODO
 // refondre la mémoire d'après https://docs.google.com/document/d/1h8U5LhEVQQN57zU0p97AMdx9LhVloxsMB97i0eB0e24/edit
 // et implémenter les nouveaux algos xs_context_*...
@@ -54,7 +57,7 @@ Arrow xs_context_unroot(Arrow c, Arrow a) {
     return a;
 }
 
-Arrow xs_context_isRooted(Arrow c, Arrow a) {
+int xs_context_isRooted(Arrow c, Arrow a) {
     if (xs_isEve(c)) {
         return xs_isRooted(a);
     }
@@ -69,12 +72,12 @@ Arrow xs_context_isRooted(Arrow c, Arrow a) {
 Arrow _xs_context_list(Arrow c, Arrow list) {
     // if c or a not assimilated there can't be children
     if (!xs_isKnown(c)) return list;
-    XLEnum childrenEnum = xl_childrenOf(c);
+    XLEnum childrenEnum = xl_childrenOf(xs_getId(c));
     while (xl_enumNext(childrenEnum)) {
         Address pair = xl_enumGet(childrenEnum);
-        int outgoing = (xl_getHead(pair) != c);
+        int outgoing = (xl_tailOf(pair) == xs_getId(c));
         if (outgoing) {
-            Address arrow = xl_getHead(pair);
+            Address arrow = xl_headOf(pair);
             list = xs_pair(xs_arrow(arrow), list);
         }
     }
@@ -148,14 +151,13 @@ void xs_context_unset(Arrow c, Arrow key) {
     returns one suposedly unique rooted arrow in $c+$key sub-context
 */
 Arrow xs_context_get(Arrow c, Arrow key) {
-    Arrow value;
     Arrow context_key = xs_pair(c, key);
     if (!xs_isKnown(context_key)) {
-        return xs_eve();
+        return NULL;
     }
     TRACEPRINTF("BEGIN xs_context_get(%O,%O)", c, key);
     Arrow list = xs_context_list(context_key);
-    Arrow value = xs_head(list);
+    Arrow value = xs_getHead(list);
     TRACEPRINTF("END xs_context_get(%O,%O)=%O", c, key, value);
     return value;
 }

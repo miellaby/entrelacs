@@ -9,10 +9,11 @@
 #include <printf.h>
 
 #include "entrelacs/entrelacs.h"
-#define LOG_CURRENT LOG_SESSION // TODO LOG_TRANSIENT
+#define LOG_CURRENT LOG_TRANSIENT
 #include "log/log.h"
 #include "machine/session.h"
 #include "space/serial.h"
+#include "machine/serial.h"
 #include "mem/geoalloc.h"
 
 
@@ -39,7 +40,7 @@ static ArrowValue eveValue = { 0 };
 static Arrow eve = &eveValue;
 
 // A Pool of transient arrows
-static Arrow *transient_pool = NULL;
+static ArrowValue *transient_pool = NULL;
 static uint32_t transient_pool_max = 0;  ///< heap allocated log size
 static uint32_t transient_pool_size = 0; ///< significative log size
 
@@ -82,19 +83,20 @@ Arrow xs_arrow(Address id) {
     XLType type;
     uint32_t hash;
     Address tail, head;
-    uint8_t raw;
+    uint8_t* raw;
     uint32_t size;
     if (xl_read(id, &type, &hash, &tail, &head, &raw, &size)) // bad id
         return NULL;
 
     Arrow a = arrow_new();
     a->id = id;
-    a->type = type;
     a->hash = hash;
     if (type == XL_ATOM) {
+        a->type = XS_ATOM;
         a->def.atom.raw = raw;
         a->def.atom.size = size;
     } else {
+        a->type = XS_PAIR
         a->def.pair.tail = xs_arrow(tail);
         a->def.pair.head = xs_arrow(head);
     }
@@ -119,24 +121,20 @@ Arrow xs_atomn(size_t size, uint8_t* s) {
 }
 
 Arrow xs_atom(char* s) {
-    return xs_atomn(strlen(s) + 1, s);
+    return xs_atomn(strlen(s) + 1, (uint8_t*) s);
 }
 
 Arrow xs_constn(size_t size, const uint8_t* buffer) {
     Arrow a = arrow_new();
     memset(a, 0, sizeof(ArrowValue));
     a->def.atom.size = size;
-    a->def.atom.raw = buffer;
+    a->def.atom.raw = (uint8_t*)buffer;
     a->def.atom.borrowed = 1;
     a->type = XS_ATOM;
 }
 
-Arrow xs_atom(char* s) {
-    return xs_atomn(strlen(s) + 1, s);
-}
-
 Arrow xs_const(const char* s) {
-    return xs_constn(strlen(s) + 1, s);
+    return xs_constn(strlen(s) + 1, (uint8_t *)s);
 }
 
 Arrow xs_uri(char *aUri) {
@@ -150,7 +148,7 @@ Arrow xs_urin(uint32_t aSize, char *aUri) {
 Arrow xs_digest(char *digest) {
     TRACEPRINTF("BEGIN xl_digest(%.*s)", DIGEST_SIZE, digest);
     Address address = probe_digest(digest);
-    if (address != NIL) {
+    if (address != XL_NIL) {
         return address;
     } else {
         return NULL;
@@ -337,15 +335,15 @@ Arrow xs_assimilate(Arrow a) {
     return a;
 }
 
-int xs_isEve(Arrow* a) {
+int xs_isEve(Arrow a) {
     return a && a == eve; // eve est automatiquement assimilée
 }
 
-int xs_isAtom(Arrow* a) {
+int xs_isAtom(Arrow a) {
     return a && xs_getType(a) == XS_ATOM;
 }
 
-int xs_isPair(Arrow* a) {
+int xs_isPair(Arrow a) {
     return a && xs_getType(a) == XS_PAIR;
 }
 

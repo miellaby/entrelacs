@@ -31,7 +31,7 @@
 typedef union u_cell {
   /** opaque for mem1 */
   CellBody u_body;
-  
+
   struct u_full {
 
     char data[22];
@@ -69,7 +69,7 @@ typedef union u_cell {
    *   +---------------------------------------------------+
    *                         22 bytes
    */
- 
+
   /** T = 1, 2, 3, 4: arrow definition.
   *   +--------+----------------------+-----------+----------+----+----+
   *   |  hash  | full or partial def  | RWC0dWnCn |  Child0  | cr | dr |
@@ -126,7 +126,7 @@ typedef union u_cell {
   *   +---+-------+-------------------+-----------+----------+----+----+
   *   | s | hash3 |        data       | RWC0dWnCn |  Child0  | cr | dr |
   *   +---+-------+-------------------+-----------+----------+----+----+
-  *     1    3               8      
+  *     1    3               8
   *   <---hash--->
   *
   *   s : small size (0 < s <= 11)
@@ -142,12 +142,12 @@ typedef union u_cell {
     unsigned char cr;
     unsigned char dr;
   } small;
-     
+
   /* T = 3: tag or T = 4: blob footprint.
   *   +--------+------------+----+-----------+----------+----+----+
   *   |  hash  |   slice0   | J0 | RWC0dWnCn |  Child0  | cr | dr |
   *   +--------+------------+----+-----------+----------+----+----+
-  *       4          7        1                     
+  *       4          7        1
   *   J = first slice jump, h-sequence multiplier (1 byte)
   */
   struct s_tagOrBlob {
@@ -191,7 +191,7 @@ typedef union u_cell {
    *   +--------+--------+--------------+
    *   |  from  |   to   |  ...         |
    *   +--------+--------+--------------+
-   *       4        4          
+   *       4        4
    */
   struct s_reattachment {
     uint32_t from;
@@ -208,7 +208,7 @@ typedef union u_cell {
    *        (list terminator = parent address with flag)
    *   t: terminators (1 byte with 5 terminator bits).
    *   d: directions (1 byte with 5 flags: 0 incoming/1 outgoing)
-   *   
+   *
    */
   struct s_children {
     uint32_t C[5];
@@ -218,12 +218,6 @@ typedef union u_cell {
 } Cell;
 
 #pragma pack(pop)   /* restore original alignment from stack */
-
-/// EVE
-#define EVE (0)
-
-/// Other reserved value
-#define NIL (0xFFFFFFFFU)
 
 /*
  * Size limit from where data is stored as "blob" or "tag" or "small"
