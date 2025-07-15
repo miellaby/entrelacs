@@ -1,14 +1,14 @@
 #include "space/hash.h"
-#include "log/log.h"
 #define LOG_CURRENT LOG_SPACE
+#include "log/log.h"
 #include "sha1/sha1.h"
 #include <stdio.h>
 
 /// Eve hash
-#define EVE_HASH (0x8421A593U) 
+#define EVE_HASH (0x8421A593U)
 
-inline uint32_t hash_eve() {
-    return EVE_HASH; 
+uint32_t hash_eve() {
+    return EVE_HASH;
 }
 
 uint32_t left_rotate(uint32_t value, int shift) {

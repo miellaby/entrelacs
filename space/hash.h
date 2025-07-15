@@ -6,7 +6,7 @@
 #define CRYPTO_SIZE 40
 
 /// @brief hash of XL_EVE
-inline uint32_t hash_eve();
+uint32_t hash_eve();
 
 /// @brief hash a regular arrow (pair)
 /// @param h_tail

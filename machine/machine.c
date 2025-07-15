@@ -2,6 +2,8 @@
 #define LOG_CURRENT LOG_MACHINE
 #include "log/log.h"
 #include "space/space.h"
+#include "machine/context.h"
+#include "sha1/sha1.h"
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
@@ -110,7 +112,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M);
  */
 static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
     // TODO: turn this call stack into machine states
-    if (isPair(a)) {
+    if (xs_isPair(a)) {
         Arrow t = xs_getTail(a);
         Arrow h = xs_getHead(a);
         if (xs_equals(t, escape))
@@ -497,7 +499,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
     Arrow v = xs_getHead(p);
     Arrow ws;
 
-    if (xl_isPair(v) && xs_equal(xs_getTail(v), comma)) {
+    if (xs_isPair(v) && xs_equal(xs_getTail(v), comma)) {
         dputs("p == (s (, next))");
         // TODO: right-paddock to emulate this
         //  <==> (let (it s) next)
@@ -683,9 +685,8 @@ Arrow headOfHook(Arrow CM, Arrow hookParameter) {
 
 Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     Arrow parent = xs_argInMachine(CM);
-    XLEnum e;
     if (xs_isEve(hookParameter)) {
-        e = xl_childrenOf(xs_getId(xs_assimilate(parent)));
+        XLEnum e = xl_childrenOf(xs_getId(xs_assimilate(parent)));
         return xs_reduceMachine(CM, xs_operator(childrenReviewOfHook, xs_hook(e)));
     }
     XLEnum e = xs_getPointer(hookParameter);
@@ -693,10 +694,9 @@ Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     if (!e) {
         child = eve;
     } else if (xl_enumNext(e)) {
-        child = xl_enumGet(e);
+        child = xs_arrow(xl_enumGet(e));
     } else {
         xl_enumFree(e); // FIXME : only on forget
-        xl_unroot(hookParameter); // should made it unreadable
         child = eve;
     }
     return xs_reduceMachine(CM, child);
@@ -711,7 +711,7 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
 
     Arrow list = eve;
     while (xl_enumNext(e)) {
-        Arrow child = xl_enumGet(e);
+        Arrow child = xs_arrow(xl_enumGet(e));
         list = xs_pair(child, list);
     }
     xl_enumFree(e);
@@ -770,7 +770,7 @@ Arrow unsetVarHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
-    xs_unset(contextPath, arrow);
+    xs_context_unset(contextPath, arrow);
     return xs_reduceMachine(CM, arrow);
 }
 
@@ -786,16 +786,16 @@ Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
-    Arrow r = xs_context_isRooted(contextPath, arrow);
-    return xs_reduceMachine(CM, xs_getHead(r));  // no context
+    int r = xs_context_isRooted(contextPath, arrow);
+    return xs_reduceMachine(CM, r ? arrow : xs_eve());  // no context
 }
 
 Arrow isPairHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     // Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
-    Arrow r = xl_isPair(arrow) ? arrow : eve;
-    return xs_reduceMachine(CM, r);
+    int r = xs_isPair(arrow);
+    return xs_reduceMachine(CM, r ? arrow : xs_eve());
 }
 
 Arrow branchHook(Arrow CM, Arrow hookParameter) {
@@ -842,7 +842,7 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     Arrow expr = xs_getHead(target_secret_expr);
     Arrow target = xs_getTail(target_secret);
     Arrow secret = xs_getHead(target_secret);
-    char *secret_s = str(secret);
+    char *secret_s = xs_getStr(secret);
     if (!secret_s)
         return xs_reduceMachine(CM, eve);
 
@@ -854,8 +854,8 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     }
     free(secret_s);
 
-    Arrow CT = (isPair(C) ? xs_getTail(C) : eve);  // Meta-context
-    Arrow expression = xs_context_get(CT, xs_pair(target, xl_atom(secret_sha1)));
+    Arrow CT = (xs_isPair(C) ? xs_getTail(C) : eve);  // Meta-context
+    Arrow expression = xs_context_get(CT, xs_pair(target, xs_atom(secret_sha1)));
 
     if (expression == NULL) {
         WARNPRINTF("escalate attempt %O", target_secret_expr);
@@ -869,7 +869,7 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
 Arrow landHook(Arrow CM, Arrow hookParameter) {
     (void) hookParameter; // NOT USED
 
-    return xs_pair(xs_reduceMachine(CM, eve), xs_const(land));
+    return xs_pair(xs_reduceMachine(CM, eve), land);
 }
 
 Arrow digestHook(Arrow CM, Arrow hookParameter) {
@@ -877,7 +877,7 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
 
     Arrow arrow = xs_argInMachine(CM);
     uint32_t digestSize;
-    char *digest = xs_digestOf(arrow, &digestSize);
+    char *digest = xs_getDigest(arrow, &digestSize);
     return xs_reduceMachine(CM, xs_atomn(digestSize, (uint8_t *)digest));
 }
 

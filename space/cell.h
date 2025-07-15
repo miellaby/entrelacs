@@ -1,5 +1,6 @@
 #pragma once
 #include "mem/mem0.h"
+#include "space/space.h"
 #include <stdint.h>
 
 /*

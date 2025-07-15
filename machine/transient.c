@@ -13,6 +13,7 @@
 #include "log/log.h"
 #include "machine/session.h"
 #include "space/serial.h"
+#include "space/assimilate.h"
 #include "machine/serial.h"
 #include "mem/geoalloc.h"
 
@@ -66,7 +67,7 @@ static void arrow_free(Arrow a) {
 
 void pool_reset() {
     for (uint32_t i = 0; i < transient_pool_size; i++) {
-        arrow_free(transient_pool[i]);
+        arrow_free(&transient_pool[i]);
     }
     geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
 }
@@ -96,7 +97,7 @@ Arrow xs_arrow(Address id) {
         a->def.atom.raw = raw;
         a->def.atom.size = size;
     } else {
-        a->type = XS_PAIR
+        a->type = XS_PAIR;
         a->def.pair.tail = xs_arrow(tail);
         a->def.pair.head = xs_arrow(head);
     }
@@ -149,7 +150,7 @@ Arrow xs_digest(char *digest) {
     TRACEPRINTF("BEGIN xl_digest(%.*s)", DIGEST_SIZE, digest);
     Address address = probe_digest(digest);
     if (address != XL_NIL) {
-        return address;
+        return xs_arrow(address);
     } else {
         return NULL;
     }
@@ -221,7 +222,7 @@ char *xs_borrowStr(Arrow a) {
     if (((char *) a->def.atom.raw)[a->def.atom.size - 1] != '\0') {
         return NULL;
     }
-    return a->def.atom.raw;
+    return (char *) a->def.atom.raw;
 }
 
 char *xs_getMem(Arrow a, size_t *size) {
@@ -247,14 +248,14 @@ uint8_t *xs_borrowMem(Arrow a, size_t *size) {
     return a->def.atom.raw;
 }
 
-size_t xs_getSize(Arrow a) {
+ssize_t xs_getSize(Arrow a) {
     if (a == NULL || a->type != XS_ATOM) {
         return -1;
     }
     return a->def.atom.size;
 }
 
-int xs_readMem(size_t size, uint8_t* buffer, Arrow a, size_t offset) {
+ssize_t xs_readMem(size_t size, uint8_t* buffer, Arrow a, size_t offset) {
     if (a == NULL || a->type != XS_ATOM || offset > a->def.atom.size) {
         return -1;
     }
@@ -274,7 +275,7 @@ int xs_readStr(size_t size, uint8_t* buffer, Arrow a, size_t offset) {
         return -1;
     }
     if (size > 0) {
-        size_t read_size = xs_readMem(size - 1, buffer, a, offset);
+        ssize_t read_size = xs_readMem(size - 1, buffer, a, offset);
         if (read_size == -1)
             return -1;
         buffer[size - 1] = '\0';
@@ -296,10 +297,10 @@ Arrow xs_resolve(Arrow a) {
         return a;
     }
 
-    uint32_t hash = xs_getHash(a);
+    // uint32_t hash = xs_getHash(a);
     if (a->type == XS_PAIR) {
         // FIXME essayer de tester immédiatement un candidat par le hash
-        // il faut inventer xl_probeByHash(type, hash, callback) qui renvoie toutes les paires avec un hash
+        // il faut coder xl_probeByHash(type, hash, callback) qui renvoie toutes les paires avec un hash
         Arrow tail = xs_resolve(a->def.pair.tail);
         Arrow head = xs_resolve(a->def.pair.head);
         if ((a->def.pair.tail == eve || tail->id)
@@ -319,7 +320,7 @@ Arrow xs_assimilate(Arrow a) {
     if (a == eve || a->id != 0) {
         return a;
     }
-    uint32_t hash = xs_getHash(a);
+    // uint32_t hash = xs_getHash(a);
     // FIXME essayer de trouver un candidat par le hash
 
     if (a->type == XS_PAIR) {
@@ -425,7 +426,7 @@ Arrow xs_atom_session() {
         .id = 0,
         .def = {
             .atom = {
-                .raw = "session",
+                .raw = (uint8_t *) "session",
                 .size = 7,
                 .borrowed = 1
             }
@@ -435,7 +436,7 @@ Arrow xs_atom_session() {
     return &arrow;
 }
 
-struct call_callback_closure { XLCallBack cb; void* context };
+struct call_callback_closure { XSCallBack cb; void* context; };
 
 static void call_callback(Address a, struct call_callback_closure* closure) {
     closure->cb(a, closure->context);

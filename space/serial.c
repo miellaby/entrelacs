@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
-#include "log/log.h"
 #define LOG_CURRENT LOG_SPACE
+#include "log/log.h"
 #include "space/cell.h"
 #include "space/hash.h"
 #include "mem/geoalloc.h"
@@ -258,7 +258,7 @@ char* serial_digest(Address a, Cell* cellp, uint32_t *l) {
 
 Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifExist) {
     TRACEPRINTF("BEGIN serial_parseUri(%s)", uri);
-    Address a = NIL;
+    Address a = XL_NIL;
     uint32_t uriLength = NAN;
 
     char c = uri[0];
@@ -294,7 +294,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
 
                 a = probe_digest(uri);
 
-                if (a == NIL) // Non assimilated blob
+                if (a == XL_NIL) // Non assimilated blob
                     uriLength = NAN;
 
                 break;
@@ -339,7 +339,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
                 }
 
                 a = assimilate_pair(tail, head, ifExist);
-                if (a == EVE || a == NIL) { // Non assimilated pair
+                if (a == EVE || a == XL_NIL) { // Non assimilated pair
                     a = head; // NIL or EVE
                     uriLength = NAN;
                     break;
@@ -370,7 +370,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
                 }
                 free(atomStr);
 
-                if (a == NIL || a == EVE) { // Non assimilated
+                if (a == XL_NIL || a == XL_EVE) { // Non assimilated
                     uriLength = NAN;
                 }
             }
@@ -409,8 +409,8 @@ Address serial_parseURIs(uint32_t size, char *uri, int ifExist) { // TODO: docum
         uriLength += gap;
 
         a = assimilate_pair(a, b, ifExist);
-        if (a == EVE) {
-          return EVE; // not assimilated pair
+        if (a == XL_EVE) {
+          return XL_EVE; // not assimilated pair
         }
     }
 

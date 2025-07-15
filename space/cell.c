@@ -2,8 +2,8 @@
 #include <string.h>
 #include "space/cell.h"
 #include "space/hash.h"
-#include "log/log.h"
 #define LOG_CURRENT LOG_SPACE
+#include "log/log.h"
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
 
@@ -118,7 +118,7 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
    uint32_t size = 0;
 
    if (a == EVE) { // Eve has an empty payload, length = 0
-       
+
        // allocate and return an empty string
        payload = (uint8_t*) malloc(1);
        if (!payload) { // allocation failed
@@ -143,10 +143,10 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
      }
 
      cell_getSmallPayload(&cell, payload);
-     
+
      // add a null terminator
      payload[cell.small.s] = '\0';
-     
+
      *lengthP = cell.small.s;
      return payload;
    }
@@ -162,7 +162,7 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
    }
 
    memcpy(payload, cell.tagOrBlob.slice0, sizeof(cell.tagOrBlob.slice0));
-   
+
    Address next = cell_jumpToFirst(cellp, a, hChain);
    Cell sliceCell;
    mem_get(next, &sliceCell.u_body);
@@ -170,7 +170,7 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
 
    while (1) {
        assert (sliceCell.full.type == CELLTYPE_SLICE || sliceCell.full.type == CELLTYPE_LAST);
-     
+
        int s = sliceCell.full.type == CELLTYPE_SLICE
          ? sizeof(sliceCell.slice.data)
          : sliceCell.last.size;
@@ -398,7 +398,7 @@ void cell_showChildren(Address a) {
 
 uint32_t cell_getHash(Address a) {
     Cell cell;
-    
+
     if (a == EVE)
       return hash_eve(); // Eve hash is not zero!
     else if (a >= SPACE_SIZE)
@@ -421,7 +421,7 @@ int cell_isLoose(Address a) {
   Cell cell;
   mem_get(a, &cell.u_body);
   ONDEBUG((LOGCELL('R', a, &cell)));
-  
+
   if (cell.full.type == CELLTYPE_EMPTY
       || cell.full.type > CELLTYPE_ARROWLIMIT)
     return 0;
@@ -434,4 +434,3 @@ int cell_isLoose(Address a) {
 
   return 1;
 }
-

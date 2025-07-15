@@ -5,8 +5,8 @@
 #include "space/stats.h"
 #include "space/cell.h"
 #include "space/hash.h"
-#include "log/log.h"
 #define LOG_CURRENT LOG_SPACE
+#include "log/log.h"
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
 #include "entrelacs/entrelacs.h"
@@ -57,13 +57,13 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
     TRACEPRINTF("weaver_connect child=%06x to a=%06x weakness=%1x outgoing=%1x", child, a, childWeakness, outgoing);
     if (a == EVE) return; // One doesn't store Eve connectivity. 18/8/11 Why not?
     space_stats.connect++;
-    
+
     // get the cell at a
     Cell cell;
     mem_get(a, &cell.u_body);
     ONDEBUG((LOGCELL('R', a, &cell)));
     assert(cell.full.type != CELLTYPE_EMPTY && cell.full.type <= CELLTYPE_ARROWLIMIT);
-  
+
     // is the parent arrow (@a) loose or connected?
     int childrenCount = (int)(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
     int weakChildrenCount = (int)((cell.arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
@@ -87,7 +87,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
                            && (childrenCount == 0
                             || (childrenCount == 1 && cell.arrow.child0)));
 
-    // Update children counters in parent cell    
+    // Update children counters in parent cell
     if (childWeakness) {
       if (weakChildrenCount < (int) MAX_WEAKREFCOUNT) {
           weakChildrenCount++;
@@ -119,7 +119,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
       child = lastChild0; // Now one puts the previous value of child0 into another cell
       outgoing = lastChild0Direction;
     }
-    
+
     // write parent cell
     mem_set(a, &cell.u_body);
     ONDEBUG((LOGCELL('W', a, &cell)));
@@ -128,10 +128,10 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
       // child0 was empty and got the back-ref, nothing left to do
       return;
     }
-  
+
     // Now, one puts a child reference into a children cell
 
-    // compute hChild used by probing 
+    // compute hChild used by probing
     uint32_t hChild = hash_children(&cell) % PRIM1;
     if (!hChild) hChild = 2; // offset can't be 0
 
@@ -156,7 +156,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
         memset(&nextCell.children.C, 0, sizeof(nextCell.children.C));
         nextCell.children.directions = 0;
         nextCell.full.type = CELLTYPE_CHILDREN;
-       // as j=0, will fill up the first slot 
+       // as j=0, will fill up the first slot
       }
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
@@ -164,7 +164,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
         j = 0;
         while (j < 5) { // slot scanning
           Address inSlot = nextCell.children.C[j];
-          
+
           if (noTerminatorYet) { // need to put a terminator
             /* why putting a terminator as soon?
                A: because one may probe several times the same cell,
@@ -178,7 +178,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
             if (inSlot == 0) {
               // free slot, put child in free slot
               nextCell.children.C[j] = child;
-          
+
               // set/reset flags
               nextCell.children.directions =
                 (nextCell.children.directions
@@ -186,7 +186,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
                 | (outgoing ? (1 << j) : 0);
               mem_set(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('W', next, &nextCell)));
-        
+
               // now search for a free slot to put a terminator
               child = a;
             }
@@ -199,7 +199,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
 
               // replace with child
               nextCell.children.C[j] = child;
-            
+
               // set/reset flags
               nextCell.children.directions =
                 (nextCell.children.directions
@@ -208,7 +208,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
                 | (outgoing ? (1 << j) : 0);
               mem_set(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('W', next, &nextCell)));
-        
+
               // Now one keeps on probing for a free slot to put the terminator into
               child = a;
             } // terminator found
@@ -220,7 +220,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
         if (j < 5) { // probing over, free slot found
           break;
         }
-      } // children cell 
+      } // children cell
     } // probing loop
 
     // fill up the free slot (terminator OR child)
@@ -248,7 +248,7 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
  * 7) If cell is empty, one may free it.
  * 8) If both counters == 0 or unique child in child0, one keeps on scaning
  *    the terminator
-      When found, emptying and freeing     
+      When found, emptying and freeing
  * 9) If counters == 0, and parent is not rooted, then it gets loose.
  *      * So one adds it to the "loose log"
  *      * one disconnects "a" from its both parents.
@@ -280,7 +280,7 @@ void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
       }
     }
     parent.arrow.RWWnCn = (parent.arrow.RWWnCn
-       & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu)) 
+       & ((FLAGS_WEAKCHILDRENMASK | FLAGS_CHILDRENMASK) ^ 0xFFFFFFFFu))
        | (weakChildrenCount << 15) | childrenCount;
 
     // check "loose" status evolution after child counters update
@@ -329,7 +329,7 @@ void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
     int j; //< slot index
 
     // If one child, one removes the list terminator
-    int removeTerminatorNow = 
+    int removeTerminatorNow =
             (!weakness
               && weakChildrenCount == 0
               && (childrenCount == 0
@@ -358,14 +358,14 @@ void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
             Address inSlot = nextCell.children.C[j];
             if (inSlot == child
                 && (   (child == a && (nextCell.children.directions & (1 << (j + 8))))
-                    || (child != a && 
+                    || (child != a &&
                       (    (outgoing && (nextCell.children.directions & (1 << j)))
                        || (!outgoing && !(nextCell.children.directions & (1 << j))))))
                ) { // back-ref or terminator found
-              
+
               // unload slot
               nextCell.children.C[j] = 0;
-          
+
               if (nextCell.children.C[0] | nextCell.children.C[1]
                   | nextCell.children.C[2] | nextCell.children.C[3]
                   | nextCell.children.C[4]) {
@@ -374,7 +374,7 @@ void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
                   nextCell.children.directions =
                     nextCell.children.directions
                     & (((1 << j) | (1 << (8 + j))) ^ 0xFFFF);
-     
+
               } else {
                   // Empty children cell can be recycled
                   // because the terminator isn't inside
@@ -384,7 +384,7 @@ void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
                   memset(nextCell.full.data, 0, sizeof(nextCell.full.data));
                   nextCell.full.type = CELLTYPE_EMPTY;
                   // but don't delete pebble!
-              } 
+              }
               mem_set(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('W', next, &nextCell)));
 
@@ -427,7 +427,7 @@ void weaver_forgetLoose(Address a) {
     uint32_t hash = cell.arrow.hash;
     Address hashAddress; // base address
     Address hashProbe; // probe offset
-    
+
     if (cell.full.type == CELLTYPE_TAG
         || cell.full.type == CELLTYPE_BLOB) {
         // Free chain
@@ -446,10 +446,10 @@ void weaver_forgetLoose(Address a) {
 
             memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
             sliceCell.full.type = CELLTYPE_EMPTY;
- 
+
             mem_set(current, &sliceCell.u_body);
             ONDEBUG((LOGCELL('W', current, &sliceCell)));
-            
+
             mem_get(next, &sliceCell.u_body);
             ONDEBUG((LOGCELL('R', next, &sliceCell)));
         }
@@ -457,7 +457,7 @@ void weaver_forgetLoose(Address a) {
         // free cell
         memset(sliceCell.full.data, 0, sizeof(sliceCell.full.data));
         sliceCell.full.type = CELLTYPE_EMPTY;
- 
+
         mem_set(next, &sliceCell.u_body);
         ONDEBUG((LOGCELL('W', next, &sliceCell)));
     }
@@ -504,7 +504,7 @@ void weaver_performGC() {
 
     TRACEPRINTF("END spaceGC() looseLogSize=%d get=%d root=%d unroot=%d new=%d (pair=%d atom=%d) found=%d connect=%d, disconnect=%d forget=%d",
         looseLogSize, space_stats.get, space_stats.root,
-        space_stats.unroot, space_stats.new, 
+        space_stats.unroot, space_stats.new,
         space_stats.pair, space_stats.atom, space_stats.found,
         space_stats.connect, space_stats.disconnect, space_stats.forget);
     space_stats = space_stats_zero;

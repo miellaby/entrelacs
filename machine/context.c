@@ -143,7 +143,7 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
     reset /$c+$key sub-context
 */
 void xs_context_unset(Arrow c, Arrow key) {
-    TRACEPRINTF("xs_unset(%O,%O)", c, key);
+    TRACEPRINTF("xs_context_unset(%O,%O)", c, key);
     xs_context_reset(xs_pair(c, key));
 }
 

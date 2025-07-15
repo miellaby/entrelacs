@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 /**
  * Transient Arrows
@@ -149,7 +150,7 @@ int xs_readStr(size_t size, uint8_t* buffer, Arrow a, size_t offset);
 /// @param a arrow
 /// @param offset skipped bytes from arrow str
 /// @return read byte count
-int xs_readMem(size_t size, uint8_t* buffer, Arrow a, size_t offset);
+ssize_t xs_readMem(size_t size, uint8_t* buffer, Arrow a, size_t offset);
 
 /// @brief resolve the arrow location in the AS
 /// @param a arrow
@@ -208,13 +209,13 @@ Arrow xs_unroot(Arrow a);
 void xs_childrenOfCB(Arrow, XSCallBack, void* context);
 
 /// hook badge
-#define xs_hookBadge() xs_constn(7, "XShO0K")
+#define xs_hookBadge() xs_constn(7, (uint8_t *)"XShO0K")
 
 /// hook a pointer
 #define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), p)))
 
 /// read hooked pointer
-#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), pp, hook, 0)
+#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (void **)pp, hook, 0)
 
 /// get hooked pointer
 #define xs_getPointer(hook) ({ void* pointer; xs_readPointer(hook, &pointer); pointer; })

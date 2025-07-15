@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     xs_context_set(context, hello, world);
     fprintf(stderr, "1: xl_set\n");
     childrenOfCB(context, print, EVE);
-    xs_unset(context, hello);
+    xs_context_unset(context, hello);
     fprintf(stderr, "2: xl_unset\n");
     xl_commit();
     childrenOfCB(context, print, EVE);

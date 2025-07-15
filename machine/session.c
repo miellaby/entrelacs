@@ -27,7 +27,7 @@ Arrow xs_open(char* agent) {
     xl_open();
 
     // $session =  /$s/session/$agent+$uuid
-    Arrow uuid = xs_anonymous();
+    Arrow uuid = xs_arrow(xl_anonymous());
     Arrow session = xs_pair(xs_atom_session(), xs_pair(xs_atom(agent), uuid));
     xs_root(session);
     return session;

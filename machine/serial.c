@@ -21,7 +21,7 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
             size_t size;
             uint8_t* raw = xs_borrowMem(a, &size);
             if (size >= BLOB_MINSIZE) {
-                uri = xs_digestOf(a, l);
+                uri = xs_getDigest(a, l);
                 uri = malloc(3 * size + 1); // memory allocation for encoded content
                 assert(uri);
                 size_t uri_size;

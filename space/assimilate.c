@@ -5,8 +5,8 @@
 #include <ctype.h>
 
 #include "serial.h"
-#include "log/log.h"
 #define LOG_CURRENT LOG_SPACE
+#include "log/log.h"
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
 #include "space/hash.h"
@@ -26,9 +26,9 @@ Address assimilate_pair(Address tail, Address head, int ifExist) {
     Address probeAddress, firstFreeAddress;
     int safeguard;
 
-    if (tail == NIL || head == NIL)
-        return NIL;
- 
+    if (tail == XL_NIL || head == XL_NIL)
+        return XL_NIL;
+
     space_stats.get++;
 
     // Compute hashs
@@ -36,7 +36,7 @@ Address assimilate_pair(Address tail, Address head, int ifExist) {
     hashAddress = hash % PRIM0; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
-    
+
     // Probe for an existing singleton
     Cell probed;
     probeAddress = hashAddress;
@@ -45,10 +45,10 @@ Address assimilate_pair(Address tail, Address head, int ifExist) {
     while (--safeguard) {
         mem_get(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-    
+
         if (probed.full.type == CELLTYPE_EMPTY)
             firstFreeAddress = probeAddress;
-    
+
         else if (probed.full.type == CELLTYPE_PAIR
                 && probed.pair.tail == tail
                 && probed.pair.head == head
@@ -78,7 +78,7 @@ Address assimilate_pair(Address tail, Address head, int ifExist) {
       }
     }
     assert(safeguard);
-    
+
     if (ifExist) // one only want to test for singleton existence in the arrows space
         return EVE; // Eve means not found
 
@@ -90,11 +90,11 @@ Address assimilate_pair(Address tail, Address head, int ifExist) {
         // one may create arrows out of the probing limit
         while (--safeguard) {
             ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
-        
+
             Cell probed;
             mem_get(probeAddress, &probed.u_body);
             ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-            
+
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
                 break;
@@ -136,7 +136,7 @@ Address assimilate_pair(Address tail, Address head, int ifExist) {
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         if (probed.full.pebble != PEEBLE_MAX)
           probed.full.pebble++;
-        
+
         mem_set(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
@@ -159,7 +159,7 @@ Address probe_digest(char *digest) {
     while (++i < 10) { // read 8 hexa digit
         hash = (hash << 4) | (uint32_t)HEXTOI(digest[i]);
     }
-    
+
     hashAddress = hash % PRIM0; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
@@ -171,7 +171,7 @@ Address probe_digest(char *digest) {
     int safeguard = PROBE_LIMIT;
     while (--safeguard) { // probing limit
         Cell probed;
-        
+
         mem_get(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
 
@@ -196,8 +196,8 @@ Address probe_digest(char *digest) {
         // shift probe
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
     }
-    
-    return NIL; //< Probing over. It's a miss
+
+    return XL_NIL; //< Probing over. It's a miss
 }
 
 /** assimilate the arrow corresponding to data at $str with size $length and precomputed $hash.
@@ -223,8 +223,8 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
     hashAddress = hash % PRIM0;
     hashProbe = hash % PRIM1;
     if (!hashProbe) hashProbe = 1; // offset can't be 0
-   
-    
+
+
     // Search for an existing singleton
     probeAddress = hashAddress;
     firstFreeAddress = EVE;
@@ -298,7 +298,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
 
             mem_get(probeAddress, &probed.u_body);
             ONDEBUG((LOGCELL('R', probeAddress, &probed)));
-            
+
             if (probed.full.type == CELLTYPE_EMPTY) {
                 firstFreeAddress = probeAddress;
                 break;
@@ -307,7 +307,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
         assert(safeguard);
     }
 
-   
+
     // Create an arrow representation
 
     Address current, newArrow = firstFreeAddress;
@@ -318,7 +318,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
 
 
     /*   |  hash  | slice0  | J | R.W.Wn.Cn |  Child0  | cr | dr |
-    *       4          7        1                     
+    *       4          7        1
     */
     newCell.tagOrBlob.hash = hash;
     memcpy(newCell.tagOrBlob.slice0, str, sizeof(newCell.tagOrBlob.slice0));
@@ -332,7 +332,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
 
     Address offset = hChain;
     ADDRESS_SHIFT(newArrow, next, offset);
-    
+
     mem_get(next, &nextCell.u_body);
     ONDEBUG((LOGCELL('R', next, &nextCell)));
 
@@ -349,17 +349,17 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
 
     if (jump >= MAX_JUMP) {
         Address sync = next;
-        Cell syncCell = nextCell; 
+        Cell syncCell = nextCell;
         syncCell.full.type = CELLTYPE_REATTACHMENT;
         syncCell.reattachment.from = newArrow;
         syncCell.reattachment.to   = newArrow; // will be overwritten as soon as possible
-        
+
         mem_set(sync, &syncCell.u_body);
         ONDEBUG((LOGCELL('W', sync, &syncCell)));
-        
+
         offset = hChain;
         ADDRESS_SHIFT(next, next, offset);
-        
+
         mem_get(next, &nextCell.u_body);
         ONDEBUG((LOGCELL('R', next, &nextCell)));
 
@@ -373,7 +373,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
         assert(safeguard);
 
         syncCell.reattachment.to = next;
-        
+
         mem_set(sync, &syncCell.u_body);
         ONDEBUG((LOGCELL('W', sync, &syncCell)));
 
@@ -384,7 +384,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
 
     mem_set(newArrow, &newCell.u_body);
     ONDEBUG((LOGCELL('W', newArrow, &newCell)));
-    
+
     current = next;
     currentCell = nextCell;
     p = str + sizeof(newCell.tagOrBlob.slice0);
@@ -403,31 +403,31 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
 
             mem_get(next, &nextCell.u_body);
             ONDEBUG((LOGCELL('R', next, &nextCell)));
-            
+
             jump = 0;
             int safeguard = PROBE_LIMIT;
             while (nextCell.full.type != CELLTYPE_EMPTY && --safeguard) {
                 jump++;
                 ADDRESS_SHIFT(next, next, offset);
-            
+
                 mem_get(next, &nextCell.u_body);
                 ONDEBUG((LOGCELL('R', next, &nextCell)));
             }
             assert(safeguard);
-            
+
             if (jump >= MAX_JUMP) {
               Address sync = next;
-              Cell syncCell = nextCell; 
+              Cell syncCell = nextCell;
               syncCell.full.type = CELLTYPE_REATTACHMENT;
               syncCell.reattachment.from = current;
               syncCell.reattachment.to   = current; // will be overwritten as soon as possible
-              
+
               mem_set(sync, &syncCell.u_body);
               ONDEBUG((LOGCELL('W', sync, &syncCell)));
-              
+
               offset = hChain;
               ADDRESS_SHIFT(next, next, offset);
-              
+
               mem_get(next, &nextCell.u_body);
               ONDEBUG((LOGCELL('R', next, &nextCell)));
 
@@ -441,7 +441,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
               assert(safeguard);
 
               syncCell.reattachment.to = next;
-              
+
               mem_set(sync, &syncCell.u_body);
               ONDEBUG((LOGCELL('W', sync, &syncCell)));
 
@@ -465,7 +465,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
     ONDEBUG((LOGCELL('W', current, &currentCell)));
 
     // Now incremeting "pebble" counters in the probing path up to the new singleton
-    // important to reinitialize probing variables  
+    // important to reinitialize probing variables
     probeAddress = /* hash % PRIM0 */ hashAddress;
     hashProbe = hash % PRIM1;
     if (!hashProbe)
@@ -476,7 +476,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         if (probed.full.pebble != PEEBLE_MAX)
           probed.full.pebble++;
-        
+
         mem_set(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
@@ -511,7 +511,7 @@ Address assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
     // TODO: remove data when cell at h is recycled.
     return assimilate_string(CELLTYPE_BLOB, CRYPTO_SIZE, (uint8_t *)signature, ifExist);
 }
-  
+
 /** assimilate small
  * by creating the singleton if not found.
  * except if ifExist param is set.
@@ -526,9 +526,9 @@ Address assimilate_small(int length, uint8_t* str, int ifExist) {
     uint8_t* buffer = (uint8_t *)uint_buffer;
 
     if (length == 0 || length > 11)
-        return NIL;
+        return XL_NIL;
 
-    
+
     memcpy(buffer + 4, str, (length > 8 ? 8 : length));
     if (length < 8) {
         memset(buffer + 4 + length, (uint8_t)length, 8 - length);
@@ -543,10 +543,10 @@ Address assimilate_small(int length, uint8_t* str, int ifExist) {
     } else {
       memset(buffer, (uint8_t)length, 4);
     }
-    
+
     /*| s | hash3 |        data       | R.W.Wn.Cn  |  Child0  | cr | dr |
     *   s : small size (0 < s <= 11)
-    *   hash3: (data 1st word ^ 2d word ^ 3d word) with s completion 
+    *   hash3: (data 1st word ^ 2d word ^ 3d word) with s completion
     */
     buffer[1] = buffer[1] ^ buffer[5] ^ buffer[9];
     buffer[2] = buffer[2] ^ buffer[6] ^ buffer[10];
@@ -559,14 +559,14 @@ Address assimilate_small(int length, uint8_t* str, int ifExist) {
     hashAddress = hash % PRIM0; // base address
     hashProbe = hash % PRIM1; // probe offset
     if (!hashProbe) hashProbe = 1; // offset can't be 0
-    
+
     // Probe for an existing singleton
     probeAddress = hashAddress;
     firstFreeAddress = EVE;
 
     int safeguard = PROBE_LIMIT;
     while (--safeguard) { // probe loop
-    
+
         // get probed cell
         Cell probed;
         mem_get(probeAddress, &probed.u_body);
@@ -641,7 +641,7 @@ Address assimilate_small(int length, uint8_t* str, int ifExist) {
         ONDEBUG((LOGCELL('R', probeAddress, &probed)));
         if (probed.full.pebble != PEEBLE_MAX)
           probed.full.pebble++;
-        
+
         mem_set(probeAddress, &probed.u_body);
         ONDEBUG((LOGCELL('W', probeAddress, &probed)));
         ADDRESS_SHIFT(probeAddress, probeAddress, hashProbe);
@@ -651,6 +651,3 @@ Address assimilate_small(int length, uint8_t* str, int ifExist) {
     weaver_addLoose(newArrow);
     return newArrow;
 }
-
-
-
