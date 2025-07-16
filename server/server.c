@@ -8,6 +8,8 @@
  */
 #define _POSIX_SOURCE
 #define SERVER_C
+#include <stddef.h>
+#include "server/server.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -18,7 +20,7 @@
 #include <pthread.h>
 #define LOG_CURRENT LOG_SERVER
 #include "log/log.h"
-#include "server/server.h"
+#include "server/url.h"
 #include "entrelacs/entrelacs.h"
 #include "machine/session.h"
 #include "machine/context.h"
@@ -45,8 +47,6 @@ static Arrow fdatom(int fd) {
     if (r < 0) return NULL;
 
     size_t size = stat.st_size;
-    if (size < 0) return NULL;
-
     char* data = NULL;
     if (size > 0) {
         data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
@@ -240,7 +240,7 @@ static void* event_handler(enum mg_event event,
             l_depth = atoi(l_depthBuf);
         }
 
-        char* output_url = xs_urlOf(session, output, l_depth);
+        char* output_url = xs_getURL(session, output, l_depth);
         int isAtomic = xs_isAtom(output);
 
         // TODO
@@ -255,7 +255,7 @@ static void* event_handler(enum mg_event event,
                     : URI_CONTENT_TYPE));
         char* contentTypeCopy = NULL;
         if (i_depth != 0 && !isAtomic && xs_equal(xs_getTail(output), xs_const("Content-Typed"))) {
-            contentTypeCopy = xl_strOf(xs_getTail(xs_getHead(output)));
+            contentTypeCopy = xs_getStr(xs_getTail(xs_getHead(output)));
             content_type = contentTypeCopy;
             output = xs_getHead(xs_getHead(output));
             dputs("Content-Type: %s, output: %O", content_type, output);
@@ -267,13 +267,13 @@ static void* event_handler(enum mg_event event,
 //               content_type = contentTypeCopy;
 //            }
         }
-        uint32_t content_length;
+        size_t content_length;
         uint8_t* content = NULL;
         if (i_depth != 0) {
             content = xs_getMem(output, &content_length);
         }
         if (!content) {
-            char* url = xs_urlOf(session, output, i_depth);
+            char* url = xs_getURL(session, output, i_depth);
             content = (uint8_t*)url;
             content_length = strlen(url);
         }
@@ -294,7 +294,7 @@ static void* event_handler(enum mg_event event,
         mg_printf(conn, "Set-Cookie: session=%s; max-age=60; path=/\r\n", session_id);
         mg_printf(conn, "X-Entrelacs: %s\r\n", session_id);
         mg_printf(conn, "\r\n");
-        mg_write(conn, content, (size_t)content_length);
+        mg_write(conn, content, content_length);
         free(output_url);
         free(content);
         free(session_id);
@@ -317,21 +317,21 @@ int _houseCleaning(void) {
     time_t now = time(NULL);
     dputs("House Cleaning ...");
 
-    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
+    Address next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
     int sessionCount = 0;
     int expiredSessionCount = 0;
     int activeSessionCount = 0;
 
-    while (next != xs_eve()) {
-        Arrow session = next;
-        next = xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
+    while (next != XL_EVE) {
+        Arrow session = xs_arrow(next);
+        next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
         if (!xs_equal(xs_getTail(session), sessionTag))
             continue; // Not a /session+* arrow
         if (!xs_isRooted(session))
             continue; // maybe not a root session
         sessionCount++;
         Arrow expire = xs_context_get(session, expireTag);
-        uint32_t var_size = 0;
+        size_t var_size = 0;
         time_t* expire_time = (expire != NULL ? (time_t*)xs_borrowMem(expire, &var_size) : NULL);
 
         if (expire == NULL || var_size != sizeof(time_t)) {
@@ -352,7 +352,7 @@ int _houseCleaning(void) {
             // restart loop as deep close may remove in-enum arrow
             xl_enumFree(e);
             e = xl_childrenOf(xs_getId(sessionTag));
-            next = e && xl_enumNext(e) ? xl_enumGet(e) : xs_eve();
+            next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
         }
         else {
             activeSessionCount++;

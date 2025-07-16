@@ -15,23 +15,23 @@
 
 #define test_title(T) fprintf(stderr, T "\n")
 
-Arrow blobFromFile(char *f) {
+Address blobFromFile(char *f) {
   int fd = open(f, O_RDONLY);
   struct stat stat;
   int r = fstat(fd, &stat);
   if (r < 0) {
     close(fd);
-    return NULL;
+    return XL_EVE;
   }
   size_t size = stat.st_size;
 
-  Arrow a = NULL;
+  Address a = XL_EVE;
 
   if (size > 0) {
     char *data = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
     assert(data != (void *)-1);
 
-    a = xl_atomn(size, data);
+    a = xl_atomn(size, (uint8_t *)data);
     munmap(data, size);
   }
 
@@ -40,13 +40,15 @@ Arrow blobFromFile(char *f) {
 }
 
 int main(int argc, char *argv[]) {
+  (void) argc; (void)argv;
+  
   log_init(NULL, "server,session,machine,space=debug");
   xs_init();
   xl_open();
   // assimilate arrows
-  DEFATOM(hello); // Arrow hello = xl_tag("hello");
+  DEFATOM(hello); // Address hello = xl_tag("hello");
   DEFATOM(world);
-  DEFA(hello, world); // Arrow _hello_world = xl_pair(hello, world);
+  DEFA(hello, world); // Address _hello_world = xl_pair(hello, world);
 
   test_title("check /hello+world URI");
   {
@@ -59,7 +61,7 @@ int main(int argc, char *argv[]) {
 
   test_title("check generating and assimilating Blob URI");
   {
-    Arrow someBlob = blobFromFile("web-terminal/help.wiki");
+    Address someBlob = blobFromFile("web-terminal/help.wiki");
     char *u = xl_uriOf(someBlob, NULL);
     assert(u);
     fprintf(stderr, "%s\n", u);
@@ -76,7 +78,7 @@ int main(int argc, char *argv[]) {
 
   test_title("check assimilating complex URI");
   {
-    Arrow a = xl_uri(
+    Address a = xl_uri(
         "/browse/escape+//Content-Typed+/"
         "text%2Fx-creole+%3D%3D%20Browse%20content%0A%0AUse%20%2F%2F%3F%2F%2F%"
         "20button%20to%20display%20children.%0ARepeat%20to%20%2F%2Fgo%20meta%"

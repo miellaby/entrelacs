@@ -1,5 +1,12 @@
 #include "url.h"
+#define LOG_CURRENT LOG_SERVER
+#include "log/log.h"
+#include "machine/uri.h"
+#include "machine/context.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+
 
 static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
     DEBUGPRINTF("BEGIN _fromUrl(%O, '%s')", context, url);
@@ -127,7 +134,7 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
         char* url = malloc(8);
         assert(url);
         Arrow sa = xs_context_root(context, e);
-        sprintf(url, "$%06x", (int)sa);
+        sprintf(url, "$%06x", (int)xs_getId(sa));
         *l = 7;
         return url;
     } else if (xs_isPair(e)) { // TODO tuple
@@ -147,12 +154,12 @@ static char* toURL(Arrow context, Arrow e, int depth, uint32_t *l) { // TODO: co
 }
 
 
-char* xs_urlOf(Arrow s, Arrow e, int depth) {
-    TRACEPRINTF("BEGIN xs_urlOf(%O, %O, %d)", s, e, depth);
+char* xs_getURL(Arrow s, Arrow e, int depth) {
+    TRACEPRINTF("BEGIN xs_getURL(%O, %O, %d)", s, e, depth);
     uint32_t l;
     Arrow context = xs_pair(xs_const("locked"), s);
 
     char* url = toURL(context, e, depth, &l);
-    TRACEPRINTF("END xs_urlOf(%O, %O, %d) = '%s'", s, e, depth, url);
+    TRACEPRINTF("END xs_getURL(%O, %O, %d) = '%s'", s, e, depth, url);
     return url;
 }

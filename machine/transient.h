@@ -31,6 +31,9 @@ typedef Arrow (*XSCallBack)(Arrow arrow, Arrow context);
 /// system initialization
 int  xs_init();
 
+/// reset transient arrows
+void xs_pool_reset();
+
 /// EVE
 Arrow xs_eve();
 
@@ -122,7 +125,7 @@ char *xs_getStr(Arrow a);
 /// @param a atom
 /// @param size updated with buffer size
 /// @return  heap-allocated buffer
-char *xs_getMem(Arrow a, size_t *size);
+uint8_t *xs_getMem(Arrow a, size_t *size);
 
 /// @brief get atom as string
 /// @param a
@@ -215,7 +218,7 @@ void xs_childrenOfCB(Arrow, XSCallBack, void* context);
 #define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), p)))
 
 /// read hooked pointer
-#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (void **)pp, hook, 0)
+#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (void *)pp, hook, 0)
 
 /// get hooked pointer
 #define xs_getPointer(hook) ({ void* pointer; xs_readPointer(hook, &pointer); pointer; })

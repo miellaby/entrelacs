@@ -12,7 +12,6 @@
 
 #define LOG_CURRENT LOG_SESSION
 #include "log/log.h"
-#include "machine/transient.h"
 #include "space/serial.h"
 #include "space/space.h"
 
@@ -59,7 +58,7 @@ Arrow xs_commit(Arrow session) {
     Address s = xs_getId(xs_assimilate(session));
     xl_root(s);
     xl_commit();
-    pool_reset();
+    xs_pool_reset();
     // on renvoie une nouvelle flèche session après vidage du pool
     return xs_arrow(s);
 }
@@ -68,5 +67,5 @@ void xs_close(Arrow session) {
     TRACEPRINTF("BEGIN xs_close(%O)", session);
     xs_unroot(session);
     xl_close();
-    pool_reset();
+    xs_pool_reset();
 }

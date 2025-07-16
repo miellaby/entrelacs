@@ -1,5 +1,6 @@
 #ifndef SESSION_H
 #define SESSION_H
+#include "machine/transient.h"
 /** @file
  *
  * session for agents interacting with the Entrelacs System

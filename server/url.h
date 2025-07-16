@@ -5,7 +5,7 @@
     Ancestors at 'depth' level are replaced by
     temporary ID which are only valid in this session.
 */
-char* xs_urlOf(Arrow s, Arrow a, int depth);
+char* xs_getURL(Arrow s, Arrow a, int depth);
 
 /** Turn an URL into an arrow.
  *  Any embedded ID must belong to the considered session.

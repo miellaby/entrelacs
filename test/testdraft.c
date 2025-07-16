@@ -8,7 +8,7 @@
 #include "log/log.h"
 
 static Arrow print(Arrow arrow, Arrow context) {
-  char* url = xs_urlOf(EVE, arrow, -1);
+  char* url = xs_getURL(EVE, arrow, -1);
   fprintf(stderr, "0x%6x %s\n", arrow, url);
   free(url);
   return EVE;

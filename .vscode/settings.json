@@ -38,6 +38,11 @@
         "limits": "c",
         "new": "c",
         "typeinfo": "c",
-        "context.h": "c"
+        "context.h": "c",
+        "weaver.h": "c",
+        "assimilate.h": "c",
+        "server.h": "c",
+        "cstdio": "c",
+        "stddef.h": "c"
     }
 }

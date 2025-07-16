@@ -3,6 +3,7 @@
 #include "log/log.h"
 #include "space/space.h"
 #include "machine/context.h"
+#include "machine/session.h"
 #include "sha1/sha1.h"
 #include <string.h>
 #include <assert.h>
@@ -54,18 +55,18 @@ static void update_keywords() {
 static void machine_init(Arrow);
 
 Arrow xs_operator(XSCallBack hookp, Arrow context) {
-    return xs_pair(operator, xs_pair(xs_hook(hookp), context));
+    return xs_pair(operator, xs_pair(xs_hook((void *)hookp), context));
 }
 
 Arrow xs_continuation(XSCallBack hookp, Arrow context) {
-    return xs_pair(continuation, xs_pair(xs_hook(hookp), context));
+    return xs_pair(continuation, xs_pair(xs_hook((void *)hookp), context));
 }
 
 Arrow _machine_commit(Arrow C, Arrow preserved) {
     // Arrow M = xs_getHead(CM);
     xs_context_root(C, preserved);  // TODO/FIXME fix this
     Address preserved_id = xs_getId(xs_resolve(preserved));
-    xs_commit();
+    C = xs_commit(C);
     update_keywords();
     preserved = xs_arrow(preserved_id);
     xs_context_unroot(C, preserved);  // TODO/FIXME fix this
@@ -88,7 +89,7 @@ static Arrow _load_binding(Arrow x, Arrow w, Arrow e) {
         if (xs_isEve(et))
             break;
         Arrow c = xs_getTail(et);
-        if (xs_equals(xs_getTail(c), x))
+        if (xs_equal(xs_getTail(c), x))
             break;
         temp = xs_pair(c, temp);
         et = xs_getHead(et);
@@ -115,9 +116,9 @@ static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
     if (xs_isPair(a)) {
         Arrow t = xs_getTail(a);
         Arrow h = xs_getHead(a);
-        if (xs_equals(t, escape))
+        if (xs_equal(t, escape))
             return h;
-        else if (xs_equals(t, var)) {
+        else if (xs_equal(t, var)) {
             Arrow w = _resolve(a, e, C, M);
             if (w == NULL)
                 w = eve;
@@ -136,34 +137,34 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     DEBUGPRINTF("   _resolve a = %O", a);
     if (xs_isEve(a))
         return a;
-    if (xs_equals(a, selfM))
+    if (xs_equal(a, selfM))
         return M;
 
     Arrow x = a;
     if (xs_isPair(a)) {
         Arrow t = xs_getTail(a);
-        if (xs_equals(t, swearWord) ||
-            xs_equals(t, closure) ||
-            xs_equals(t, paddock) ||
-            xs_equals(t, operator)) {
+        if (xs_equal(t, swearWord) ||
+            xs_equal(t, closure) ||
+            xs_equal(t, paddock) ||
+            xs_equal(t, operator)) {
             return a;  // naturally escaped / typed litteral
-        } else if (xs_equals(t, arrowWord)) {
+        } else if (xs_equal(t, arrowWord)) {
             Arrow h = xs_getHead(a);
             return _resolve_deeply(h, e, C, M);
-        } else if (xs_equals(t, escape)) {
+        } else if (xs_equal(t, escape)) {
             return xs_getHead(a);
-        } else if (xs_equals(t, lambda)) {
+        } else if (xs_equal(t, lambda)) {
             Arrow xs = xs_getHead(a);
             return xs_pair(closure, xs_pair(xs, e));
-        } else if (xs_equals(t, rlambda)) {
+        } else if (xs_equal(t, rlambda)) {
             Arrow xs = xs_getHead(a);
             return xs_pair(closure, xs_pair(eve, xs_pair(xs, e)));  // recursive closure
-        } else if (xs_equals(t, macro)) {
+        } else if (xs_equal(t, macro)) {
             Arrow xs = xs_getHead(a);
             return xs_pair(paddock, xs_pair(xs, e));
         }
 
-        if (xs_equals(t, var)) {
+        if (xs_equal(t, var)) {
             x = xs_getHead(a);
         }
     }
@@ -172,7 +173,7 @@ static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     while (xs_isPair(se)) {
         Arrow b = xs_getTail(se);
         Arrow bx = xs_getTail(b);
-        if (xs_equals(bx, x))
+        if (xs_equal(bx, x))
             return xs_getHead(b);
         se = xs_getHead(se);
     }
@@ -189,7 +190,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     Arrow w = _resolve(a, e, C, M);
 
     if (w == NULL) {              // Not bound
-        if (xs_equals(xs_getTail(a), var)) {  // var+a
+        if (xs_equal(xs_getTail(a), var)) {  // var+a
             w = eve;             // unbound var+x resolved to eve
         } else {
             w = a;  // unbound atom (not variable casted) is let as is
@@ -206,16 +207,16 @@ static int isTrivial(Arrow s) {
     Arrow t = xs_getTail(s);
     // TODO what if I used arrows for casting these keywords?
     if (
-        xs_equals(t, swearWord) ||
-            xs_equals(t, closure) ||
-            xs_equals(t, paddock) ||
-            xs_equals(t, operator) ||
-            xs_equals(t, arrowWord) ||
-            xs_equals(t, escape) ||
-            xs_equals(t, lambda) ||
-            xs_equals(t, rlambda) ||
-            xs_equals(t, macro) ||
-            xs_equals(t, var)
+        xs_equal(t, swearWord) ||
+            xs_equal(t, closure) ||
+            xs_equal(t, paddock) ||
+            xs_equal(t, operator) ||
+            xs_equal(t, arrowWord) ||
+            xs_equal(t, escape) ||
+            xs_equal(t, lambda) ||
+            xs_equal(t, rlambda) ||
+            xs_equal(t, macro) ||
+            xs_equal(t, var)
         )
         return 1;  // TODO closure,paddock,escape,arrowWord,var: as hooks
     return 0;
@@ -388,7 +389,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             M = cb(xs_pair(C, M), operatorParameter);
             return M;
 
-        } else if (xs_equal(w0_type, paddock) || xs_equals(w0_type, closure)) {
+        } else if (xs_equal(w0_type, paddock) || xs_equal(w0_type, closure)) {
             dputs("    w0_type = %O", w0_type);
             Arrow yse = xs_getHead(w0);
             Arrow ee = xs_getHead(yse);
@@ -457,7 +458,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             M = cb(xs_pair(C, M), continuationParameter);
             return M;
 
-        } else if (xs_equak(xs_getTail(k), evalOp)) {  // #e# special "eval" continuation
+        } else if (xs_equal(xs_getTail(k), evalOp)) {  // #e# special "eval" continuation
             // k == (eval (ee kk))
             dputs("    k == (eval (ee kk))");
             Arrow eekk = xs_getHead(k);

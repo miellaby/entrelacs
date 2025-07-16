@@ -5,6 +5,7 @@
 #include "log/log.h"
 
 #include "entrelacs/entrelacs.h"
+#include "space/space.h"
 #include "mem/geoalloc.h"
 
 char* test_title;
@@ -18,7 +19,6 @@ static struct s_buffer {
 } buffer = {0, 0, NULL};
 
 Address _printArrow(Address a) {
-
     if (xl_isRooted(a)) {
         int size = buffer.size;
         geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + 1);
@@ -27,8 +27,8 @@ Address _printArrow(Address a) {
 
     enum e_xlType t = xl_typeOf(a);
     if (t == XL_ATOM) {
-        int l;
-        char* s = xl_memOf(a, &l);
+        uint32_t l;
+        char* s = (char *)xl_memOf(a, &l);
         int size = buffer.size;
         geoalloc(&buffer.buffer, &buffer.max, &buffer.size, sizeof (char), size + l + 2);
         sprintf(buffer.buffer + size - 1, "\"%s\"", s);
@@ -75,8 +75,8 @@ int basic() {
     // check regular pairs
     test_title("check regular pairs");
     assert(xl_typeOf(_hello_world) == XL_PAIR);
-    assert(tail(_hello_world) == hello);
-    assert(head(_hello_world) == world);
+    assert(xl_tailOf(_hello_world) == hello);
+    assert(xl_headOf(_hello_world) == world);
     test_ok();
 
     test_title("Test Adam special case");
@@ -89,19 +89,19 @@ int basic() {
             && xl_typeOf(more_bigger_string_11111111111111111111) == XL_ATOM
             && xl_typeOf(small12345) == XL_ATOM);
 
-    char *s1 = str(hello);
+    char *s1 = xl_strOf(hello);
     assert(!strcmp("hello", s1));
     free(s1);
 
-    char *s2 = str(world);
+    char *s2 = xl_strOf(world);
     assert(!strcmp("world", s2));
     free(s2);
 
-    char *s3 = str(more_bigger_string_11111111111111111111);
+    char *s3 = xl_strOf(more_bigger_string_11111111111111111111);
     assert(!strcmp("more_bigger_string_11111111111111111111", s3));
     free(s3);
 
-    char *s4 = str(small12345);
+    char *s4 = xl_strOf(small12345);
     assert(!strcmp("small12345", s4));
     free(s4);
     test_ok();
@@ -185,8 +185,8 @@ int basic() {
     // check nxl_atom/xl_atom equivalency
     test_title("check nxl_atom/xl_atom equivalency");
     {
-        Address helloB = xl_atomn(5, "hello");
-        Address worldB = xl_atomn(5, "world");
+        Address helloB = xl_atomn(5, (uint8_t *)"hello");
+        Address worldB = xl_atomn(5, (uint8_t *)"world");
         DEFA(helloB, worldB);
         assert(original == _helloB_worldB);
     }
@@ -199,8 +199,8 @@ int basic() {
     DEFA(fooB, barB);
     Address originalB = _fooB_barB;
     {
-        Address fooB = xl_atomn(6, "headOf");
-        Address barB = xl_atomn(6, "tailOf");
+        Address fooB = xl_atomn(6, (uint8_t *)"headOf");
+        Address barB = xl_atomn(6, (uint8_t *)"tailOf");
         DEFA(fooB, barB);
         assert(originalB == _fooB_barB);
     }
@@ -255,9 +255,9 @@ int stress() {
             if (i % 2) {
                 int j = (i - 1) / 2;
                 pairs[j] = xl_pair(xl_atoms[i - 1], xl_atoms[i]);
-                printArrow(xl_tailOf(pairs[j]), xl_Eve());
-                printArrow(xl_headOf(pairs[j]), xl_Eve());
-                printArrow(pairs[j], xl_Eve());
+                printArrow(xl_tailOf(pairs[j]), NULL);
+                printArrow(xl_headOf(pairs[j]), NULL);
+                printArrow(pairs[j], NULL);
             }
         }
 
@@ -343,7 +343,7 @@ int stress() {
         xl_commit();
 
         assert(xl_typeOf(loose) == XL_ATOM);
-        printArrow(big, xl_Eve());
+        printArrow(big, NULL);
     }
     test_ok();
 
@@ -376,6 +376,7 @@ int stress() {
 int space_unitTest();
 
 int main(int argc, char* argv[]) {
+    (void) argc; (void) argv;
     log_init(NULL, "space=debug,mem=debug,cell=debug");
     xs_init();
     xl_open();

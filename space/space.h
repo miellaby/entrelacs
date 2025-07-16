@@ -32,7 +32,7 @@ typedef void* XLEnum;
 #define EVE XL_EVE
 
 #define DEFATOM(V) Address V = xl_atom(#V)
-#define DEFA(T, H) Address _##T##_##H = A(T, H)
+#define DEFA(T, H) Address _##T##_##H = xl_pair(T, H)
 
 
 /// Eve

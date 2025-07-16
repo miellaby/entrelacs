@@ -14,7 +14,7 @@
 #include "machine/session.h"
 #include "space/serial.h"
 #include "space/assimilate.h"
-#include "machine/serial.h"
+#include "machine/uri.h"
 #include "mem/geoalloc.h"
 
 
@@ -65,7 +65,7 @@ static void arrow_free(Arrow a) {
     }
 }
 
-void pool_reset() {
+void xs_pool_reset() {
     for (uint32_t i = 0; i < transient_pool_size; i++) {
         arrow_free(&transient_pool[i]);
     }
@@ -109,6 +109,7 @@ Arrow xs_pair(Arrow tail, Arrow head) {
     a->def.pair.head = head;
     a->def.pair.tail = tail;
     a->type = XS_PAIR;
+    return a;
 }
 
 Arrow xs_atomn(size_t size, uint8_t* s) {
@@ -119,6 +120,7 @@ Arrow xs_atomn(size_t size, uint8_t* s) {
     assert(a->def.atom.raw);
     memcpy(a->def.atom.raw, s, a->def.atom.size);
     a->type = XS_ATOM;
+    return a;
 }
 
 Arrow xs_atom(char* s) {
@@ -132,6 +134,7 @@ Arrow xs_constn(size_t size, const uint8_t* buffer) {
     a->def.atom.raw = (uint8_t*)buffer;
     a->def.atom.borrowed = 1;
     a->type = XS_ATOM;
+    return a;
 }
 
 Arrow xs_const(const char* s) {
@@ -225,14 +228,14 @@ char *xs_borrowStr(Arrow a) {
     return (char *) a->def.atom.raw;
 }
 
-char *xs_getMem(Arrow a, size_t *size) {
+uint8_t *xs_getMem(Arrow a, size_t *size) {
     if (a == NULL || a->type != XS_ATOM) {
         return NULL;
     }
     if (size) {
         *size = a->def.atom.size;
     }
-    char* raw = malloc(a->def.atom.size + 1);
+    uint8_t* raw = malloc(a->def.atom.size + 1);
     assert(raw);
     memcpy(raw, a->def.atom.raw, a->def.atom.size);
     return raw;
@@ -438,8 +441,10 @@ Arrow xs_atom_session() {
 
 struct call_callback_closure { XSCallBack cb; void* context; };
 
-static void call_callback(Address a, struct call_callback_closure* closure) {
-    closure->cb(a, closure->context);
+static Address call_callback(Address a, void* context) {
+    struct call_callback_closure* closure = context;
+    closure->cb(xs_arrow(a), closure->context);
+    return XL_EVE;
 };
 
 void xs_childrenOfCB(Arrow a, XSCallBack cb, void* context) {
@@ -484,4 +489,5 @@ int xs_init() {
 
     // register a printf extension for arrow (glibc only!)
     register_printf_specifier('O', printf_arrow_extension, printf_arrow_arginfo_size);
+    return 0;
 }

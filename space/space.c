@@ -317,12 +317,6 @@ Address xl_anonymous() {
     return xl_atom(random);
 }
 
-static Address unrootChild(Address child, Address context) {
-    (void)context;
-    xl_unroot(child);
-    return EVE;
-}
-
 int xl_isEve(Address a) {
     return (a == EVE);
 }

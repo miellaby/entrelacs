@@ -1,8 +1,61 @@
-#include "machine/serial.h"
+#include "machine/uri.h"
 #include "space/cell.h"
 #define LOG_CURRENT LOG_MACHINE
 #include "log/log.h"
 #include <stddef.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+
+#define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
+
+/// URL-encode input buffer into destination buffer.
+/// 0-terminate the destination buffer.
+static void percent_encode(uint8_t *src, uint32_t src_len, char *dst, size_t* dst_len_p) {
+    static const char *dont_escape = "_-,;~()";
+    static const char *hex = "0123456789abcdef";
+    uint32_t i, j;
+    for (i = j = 0; i < src_len; i++, src++, dst++, j++) {
+        if (*src && (isalnum(*src) ||
+                strchr(dont_escape, *src) != NULL)) {
+            *dst = *src;
+        } else {
+            dst[0] = '%';
+            dst[1] = hex[(*src) >> 4];
+            dst[2] = hex[(*src) & 0xf];
+            dst += 2;
+            j += 2;
+        }
+    }
+
+    *dst = '\0';
+    *dst_len_p = j;
+}
+
+/// URL-decode input buffer into destination buffer.
+/// 0-terminate the destination buffer.
+static void percent_decode(const char *src, uint32_t src_len, uint8_t *dst, uint32_t* dst_len_p) {
+    uint32_t i, j;
+    int a, b;
+
+    for (i = j = 0; i < src_len; i++, j++) {
+        if (src[i] == '%' &&
+                isxdigit(a = src[i + 1]) &&
+                isxdigit(b = src[i + 2])) {
+            a = tolower(a);
+            b = tolower(b);
+            dst[j] = (char) ((HEXTOI(a) << 4) | HEXTOI(b));
+            i += 2;
+        } else {
+            dst[j] = src[i];
+        }
+    }
+
+    dst[j] = '\0'; // Null-terminate the destination
+    *dst_len_p = j;
+}
 
 // get an URI path corresponding to an arrow
 char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
@@ -121,7 +174,7 @@ Arrow xs_parseURI(uint32_t size, char *uri, uint32_t *uri_size_p) {
         case '/':
         { // Pair
             uint32_t tailUriSize, headUriSize;
-            Address tail, head;
+            Arrow tail, head;
 
             if (size != NAN) size--;
 
@@ -182,7 +235,7 @@ Arrow xs_parseURI(uint32_t size, char *uri, uint32_t *uri_size_p) {
 Arrow xs_parseURIs(uint32_t size, char *uri, uint32_t *uri_size_p) { // TODO: document actual design
     char c;
     uint32_t uriLength, gap;
-    Arrow a = xs_parseUri(size, uri, &uriLength);
+    Arrow a = xs_parseURI(size, uri, &uriLength);
     if (a == NULL)
         return NULL; // return NULL
 
@@ -199,7 +252,7 @@ Arrow xs_parseURIs(uint32_t size, char *uri, uint32_t *uri_size_p) { // TODO: do
     while ((size == NAN || size--) && (c = uri[uriLength])) {
         DEBUGPRINTF("nextUri = >%s<", uri + uriLength);
         uint32_t nextUriOffset;
-        Arrow b = serial_parseUri(size, uri + uriLength, &nextUriOffset);
+        Arrow b = xs_parseURI(size, uri + uriLength, &nextUriOffset);
         if (b == NULL) {
             if (uri_size_p) *uri_size_p = uriLength;
             return NULL; // return NULL wrong URI
