@@ -54,18 +54,22 @@ Arrow xs_getSession(char* agent, char* uuid) {
 
 Arrow xs_commit(Arrow session) {
     // pool vidé à chaque commit
-    // récupération de l'addresse de la session
-    Address s = xs_getId(xs_assimilate(session));
-    xl_root(s);
+    Address s = XL_EVE;
+    if (session != NULL) {
+        // récupération de l'addresse de la session
+        s = xs_getId(xs_assimilate(session));
+        xl_root(s);
+    }
     xl_commit();
     xs_pool_reset();
+    
     // on renvoie une nouvelle flèche session après vidage du pool
     return xs_arrow(s);
 }
 
 void xs_close(Arrow session) {
     TRACEPRINTF("BEGIN xs_close(%O)", session);
-    xs_unroot(session);
+    if (session != NULL) xs_unroot(session);
     xl_close();
     xs_pool_reset();
 }

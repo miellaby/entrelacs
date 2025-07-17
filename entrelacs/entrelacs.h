@@ -10,6 +10,7 @@ extern "C" {
 
 #include "space/space.h"
 #include "machine/transient.h"
+#include "machine/session.h"
 #include "machine/machine.h"
 
 #ifdef	__cplusplus
