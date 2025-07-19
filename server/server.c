@@ -172,7 +172,7 @@ static Arrow get_connection_session(const struct mg_connection* conn) {
 }
 
 static void get_qsvar(const struct mg_request_info* request_info,
-    const char* name, char* dst, size_t dst_len) {
+    const char* name, char* dst, ssize_t dst_len) {
     const char* qs = request_info->query_string;
     mg_get_var(qs, strlen(qs == NULL ? "" : qs), name, dst, dst_len);
     dputs(dst_len == -1 ? "no %s variable in query string" :
@@ -186,12 +186,12 @@ static void* event_handler(enum mg_event event,
     xl_open();
     if (event == MG_NEW_REQUEST) {
         Arrow session = get_connection_session(conn);
+        char* session_id = xs_session_getId(session);
         if (session == NULL) {
             // create session
             session = xs_open("server");
             dputs("New session with id %s", session_id);
         }
-        char* session_id = xs_session_getId(session);
 
         dputs("session arrow is %O", session);
         time_t now = time(NULL) + SESSION_TTL;
@@ -200,7 +200,6 @@ static void* event_handler(enum mg_event event,
         Arrow input = xs_url(session, request_info->uri);
         dputs("input %s assimilated as %O", request_info->uri, input);
         if (input == NULL) {
-            free(session_id);
             const char* origin = mg_get_header(conn, "Origin");
             mg_printf(conn, "HTTP/1.1 %d %s\r\n"
                 "Access-Control-Allow-Origin: %s\r\n"

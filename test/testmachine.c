@@ -100,27 +100,27 @@ int main(int argc, char **argv) {
         "///myGet+join+2+3",
 #endif
     };
-    xl_open();
+    Arrow session = xs_open("testmachine");
     for (int i = 0; test = &tests[i], test->program; i++) {
         char* programUri = test->program;
         char* wantedUri = test->result;
 
         fprintf(stderr, "Now evaluating '%s' ; ", programUri);
-        Arrow program = xl_uri(programUri);
-        Arrow wanted = xl_uri(wantedUri);
-        assert(!xl_isEve(program) && !xl_isEve(wanted));
+        Arrow program = xs_uri(programUri);
+        Arrow wanted = xs_uri(wantedUri);
+        assert(!xs_isEve(program) && !xs_isEve(wanted));
         //xs_root(context, program);
         //xs_root(context, wanted);
         Arrow result = xs_eval(EVE, program, EVE);
-        program = xl_uri(programUri);
-        wanted = xl_uri(wantedUri);
-        if (!xl_equal(result, wanted)) {
+        program = xs_uri(programUri);
+        wanted = xs_uri(wantedUri);
+        if (!xs_equal(result, wanted)) {
             fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
             return EXIT_FAILURE;
         }
         //xs_unroot(context, program);
         //xs_unroot(context, wanted);
     }
-    xl_close();
+    xs_close(session);
     return EXIT_SUCCESS;
 }

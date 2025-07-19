@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <printf.h>
 #include <ctype.h>
 #include <pthread.h>
 #include "entrelacs/entrelacs.h"
@@ -301,6 +300,7 @@ Address xl_urinMaybe(uint32_t aSize, char *aUri) {
 static void generate_random(char *buffer) {
     // FIXME actual randomness
     char random[80];
+    memset(random, 0, 80);
     snprintf(random, sizeof(random), "an0nymous:)%lx", (long)rand() ^ (long)time(NULL));
     hash_crypto(sizeof(random), (uint8_t *)random,
                 buffer);  // Access to unitialized data is wanted

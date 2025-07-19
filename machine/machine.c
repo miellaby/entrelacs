@@ -134,7 +134,7 @@ static Arrow _resolve_deeply(Arrow a, Arrow e, Arrow C, Arrow M) {
 }
 
 static Arrow _resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
-    DEBUGPRINTF("   _resolve a = %O", a);
+    //DEBUGPRINTF("   _resolve a = %O", a);
     if (xs_isEve(a))
         return a;
     if (xs_equal(a, selfM))
@@ -1001,7 +1001,7 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
         return xs_getTail(xs_getHead(M));
     }
 
-    DEBUGPRINTF("run finished with M = %O", M);
+    //DEBUGPRINTF("run finished with M = %O", M);
     if (w == NULL)
         w = eve;
 

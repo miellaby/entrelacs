@@ -59,6 +59,7 @@ static void percent_decode(const char *src, uint32_t src_len, uint8_t *dst, uint
 
 // get an URI path corresponding to an arrow
 char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
+    DEBUGPRINTF("xs_getURI(%p)", a);
     if (xs_isEve(a)) { // Eve is identified by an empty path
         // allocate and return an empty string
         char *s = (char*) malloc(1);
@@ -73,20 +74,20 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
             char *uri;
             size_t size;
             uint8_t* raw = xs_borrowMem(a, &size);
+            size_t uri_size;
             if (size >= BLOB_MINSIZE) {
-                uri = xs_getDigest(a, l);
-                uri = malloc(3 * size + 1); // memory allocation for encoded content
-                assert(uri);
-                size_t uri_size;
+                return xs_getDigest(a, &uri_size);
+            } else {
+                uri = malloc(3 * size + 1);
                 percent_encode(raw, size, uri, &uri_size);
                 uri = realloc(uri, 1 + uri_size);
-                if (l) *l = uri_size; // return length if asked
             }
+            if (l) *l = uri_size; // return length if asked
             return uri;
         }
         case XS_PAIR:
         { // concat tail and head identifiers into /tail+head style URI
-            uint32_t l1, l2;
+            uint32_t l1 = 0, l2 = 0;
             char *tailUri = xs_getURI(xs_getTail(a), &l1);
             if (tailUri == NULL) return NULL;
 
@@ -223,7 +224,8 @@ Arrow xs_parseURI(uint32_t size, char *uri, uint32_t *uri_size_p) {
 
             uint8_t *atomStr = malloc(uri_size + 1);
             percent_decode(uri, uri_size, atomStr, &atomLength);
-            a = xs_atomn(atomLength, atomStr);
+            // DEBUGPRINTF("atom is %.*s", atomLength, atomStr);
+            a = xs_atomn(atomLength + 1, atomStr);
             free(atomStr);
         }
     }

@@ -16,9 +16,10 @@ static Arrow printCB(Arrow arrow, Arrow context) {
 
 int main(int argc, char **argv) {
   (void) argc; (void) argv;
-  log_init(NULL, "server,session,machine,space=debug");
+  log_init(NULL, "server,session,machine,transient=debug,space");
 
   xs_init();
+  Arrow session = xs_open("testscript");
 
   for (int i = 0; tests[i] != NULL; i++) {
     char *buffer = tests[i];
@@ -26,6 +27,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s assimilated as %O\n", buffer, a);
     Arrow command = xs_getHead(a);
     Arrow arg = xs_getTail(a);
+    fprintf(stderr, "command %O ...\n", command);
 
     if (xs_equal(command, xs_const("root"))) {
       fprintf(stderr, "rooting %O ...\n", arg);
@@ -44,8 +46,8 @@ int main(int argc, char **argv) {
     }
 
     fprintf(stderr, "commiting ...\n");
-    xs_commit(NULL);
+    session = xs_commit(session);
   }
-  xl_close();
+  xs_close(session);
   return EXIT_SUCCESS;
 }

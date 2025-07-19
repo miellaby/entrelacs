@@ -42,16 +42,24 @@ static Arrow eve = &eveValue;
 
 // A Pool of transient arrows
 static ArrowValue *transient_pool = NULL;
-static uint32_t transient_pool_max = 0;  ///< heap allocated log size
+// static uint32_t transient_pool_max = 0;  ///< heap allocated log size
 static uint32_t transient_pool_size = 0; ///< significative log size
 
 void pool_init() {
-    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
+    //DEBUGPRINTF("pool init");
+    transient_pool_size = 0;
+    transient_pool = malloc(10000 * sizeof(ArrowValue));
+//    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
 }
 
 static Arrow arrow_new() {
-    Arrow a = &transient_pool[transient_pool_size];
-    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), transient_pool_size + 1);
+    transient_pool_size++;
+//    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), transient_pool_size + 1);
+    DEBUGPRINTF("pool size %d", transient_pool_size);
+    Arrow a = &transient_pool[transient_pool_size - 1];
+    a->type = 0;
+    a->id = 0;
+    a->hash = 0;
     memset(a, 0, sizeof(ArrowValue));
     return a;
 }
@@ -61,15 +69,18 @@ static void arrow_free(Arrow a) {
         if (!a->def.atom.borrowed) {
             free (a->def.atom.raw);
             a->type = XS_UNDEF;
+            //DEBUGPRINTF("atom raw freed");
         }
     }
 }
 
 void xs_pool_reset() {
+    //DEBUGPRINTF("pool reset");
     for (uint32_t i = 0; i < transient_pool_size; i++) {
         arrow_free(&transient_pool[i]);
     }
-    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
+    transient_pool_size = 0;
+    // geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
 }
 
 Arrow xs_eve() {
@@ -93,11 +104,13 @@ Arrow xs_arrow(Address id) {
     a->id = id;
     a->hash = hash;
     if (type == XL_ATOM) {
+        //DEBUGPRINTF("new atom %p from id %u = %.*s", a, id, size, raw);
         a->type = XS_ATOM;
         a->def.atom.raw = raw;
         a->def.atom.size = size;
     } else {
         a->type = XS_PAIR;
+        //DEBUGPRINTF("new pair %p from ids %u %u", a, (unsigned) tail, (unsigned) head);
         a->def.pair.tail = xs_arrow(tail);
         a->def.pair.head = xs_arrow(head);
     }
@@ -106,6 +119,7 @@ Arrow xs_arrow(Address id) {
 
 Arrow xs_pair(Arrow tail, Arrow head) {
     Arrow a = arrow_new();
+    //DEBUGPRINTF("new pair %p=/%p+%p", a, tail, head);
     a->def.pair.head = head;
     a->def.pair.tail = tail;
     a->type = XS_PAIR;
@@ -114,6 +128,7 @@ Arrow xs_pair(Arrow tail, Arrow head) {
 
 Arrow xs_atomn(size_t size, uint8_t* s) {
     Arrow a = arrow_new();
+    //DEBUGPRINTF("new atom %p=%.*s", a, size, s);
     memset(a, 0, sizeof(ArrowValue));
     a->def.atom.size = size;
     a->def.atom.raw = (uint8_t*) malloc(a->def.atom.size);
@@ -124,7 +139,7 @@ Arrow xs_atomn(size_t size, uint8_t* s) {
 }
 
 Arrow xs_atom(char* s) {
-    return xs_atomn(strlen(s) + 1, (uint8_t*) s);
+    return xs_atomn(strlen(s), (uint8_t*) s);
 }
 
 Arrow xs_constn(size_t size, const uint8_t* buffer) {
@@ -138,7 +153,7 @@ Arrow xs_constn(size_t size, const uint8_t* buffer) {
 }
 
 Arrow xs_const(const char* s) {
-    return xs_constn(strlen(s) + 1, (uint8_t *)s);
+    return xs_constn(strlen(s), (uint8_t *)s);
 }
 
 Arrow xs_uri(char *aUri) {
@@ -175,6 +190,7 @@ uint32_t xs_getHash(Arrow a) {
             a->hash = hash_eve();
         }
     }
+    //DEBUGPRINTF("getHash %p = %d", a, a->hash);
     return a->hash;
 }
 
@@ -216,16 +232,6 @@ char *xs_getStr(Arrow a) {
     memcpy(str, a->def.atom.raw, a->def.atom.size);
     str[a->def.atom.size] = '\0';
     return str;
-}
-
-char *xs_borrowStr(Arrow a) {
-    if (a == NULL || a->type != XS_ATOM || a->def.atom.size == 0) {
-        return NULL;
-    }
-    if (((char *) a->def.atom.raw)[a->def.atom.size - 1] != '\0') {
-        return NULL;
-    }
-    return (char *) a->def.atom.raw;
 }
 
 uint8_t *xs_getMem(Arrow a, size_t *size) {
@@ -293,6 +299,7 @@ char* xs_getUri(Arrow a) {
 }
 
 Arrow xs_resolve(Arrow a) {
+    //DEBUGPRINTF("xs_resolve(%p)", a);
     if (a == NULL) {
         return NULL;
     }
@@ -317,6 +324,7 @@ Arrow xs_resolve(Arrow a) {
 }
 
 Arrow xs_assimilate(Arrow a) {
+    //DEBUGPRINTF("xs_assimilate(%p)", a);
     if (a == NULL) {
         return NULL;
     }
@@ -404,6 +412,7 @@ Arrow xs_equal(Arrow a, Arrow b) {
 }
 
 Arrow xs_root(Arrow e) {
+    INFOPRINTF("xs_root(%p)", e);
     xs_assimilate(e);
     INFOPRINTF("xs_root(%O)", e);
     xl_root(e->id);
@@ -430,7 +439,7 @@ Arrow xs_atom_session() {
         .def = {
             .atom = {
                 .raw = (uint8_t *) "session",
-                .size = 7,
+                .size = 8,
                 .borrowed = 1
             }
         },
@@ -477,7 +486,7 @@ static int printf_arrow_arginfo_size(const struct printf_info *info, size_t n,
     /* We always take exactly one argument and this is a pointer to the
        structure.. */
     if (n > 0)
-        argtypes[0] = PA_INT;
+        argtypes[0] = PA_POINTER;
     return 1;
 }
 

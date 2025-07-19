@@ -376,7 +376,7 @@ Address serial_parseUri(uint32_t size, char* uri, uint32_t* uriLength_p, int ifE
             }
         }
 
-    DEBUGPRINTF("END serial_parseUri(%s) = %O (length = %d)", uri, a, uriLength);
+    DEBUGPRINTF("END serial_parseUri(%s) = %06x (length = %d)", uri, a, uriLength);
     *uriLength_p = uriLength;
     return a;
 }

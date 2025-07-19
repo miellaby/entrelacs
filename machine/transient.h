@@ -127,12 +127,6 @@ char *xs_getStr(Arrow a);
 /// @return  heap-allocated buffer
 uint8_t *xs_getMem(Arrow a, size_t *size);
 
-/// @brief get atom as string
-/// @param a
-/// @return Null terminated string in atom definition otherwise NULL
-/// @details check that the last char in buffer is a null-terminator
-char *xs_borrowStr(Arrow a);
-
 /// @brief get atom raw buffer
 /// @param a atom
 /// @param size updated with buffer size

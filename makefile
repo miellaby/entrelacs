@@ -5,17 +5,17 @@
 # make start # compile then start the server
 # make gdb
 # make valgrind
-# 
+#
 # make run.machine # compile and run one test
 # make tests # compile tests
 # make clean # clean in order to rebuild
 # make clean.testmachine # clean one test
-# 
+#
 # CFLAGS=-DPRODUCTION make clean all
 # CFLAGS="-g -o0" make clean all
 # CFLAGS="-DDEBUG -g -o0" make clean all
 # CFLAGS="-g -o0" make clean.testmachine testmachine
-# 
+#
 # make help # this help
 
 .PHONY: help server clean all clean.% test.% run.% tests run start
@@ -55,7 +55,7 @@ $(TESTS:%=clean.test%):
 $(UTESTS:%=clean.utest%):
 	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
 
-utest.%: $(BINDIR)/utest% 
+utest.%: $(BINDIR)/utest%
 	-true
 
 test.%: $(BINDIR)/test%
@@ -78,7 +78,7 @@ $(BINDIR)/test%: $(BINDIR)/test%.o $(BINDIR)/libentrelacs.a
 
 $(BINDIR)/libentrelacs.a: $(BINOBJECTS)
 	ar rvs $(@) $^
-	
+
 $(BINDIR)/libentrelacs.so: $(BINOBJECTS)
 	$(LD) $(LDFLAGS) -o $(@) $^ -shared -lc
 
@@ -115,14 +115,15 @@ gdb:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
-	CFLAGS+="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) gdb $(BINDIR)/entrelacsd
+	CFLAGS="-DDEBUG -g -o0" make clean all $(BINDIR)/testmachine
+	ENTRELACS=$(PERSISTENCE_FILE) gdb $(BINDIR)/testmachine
+	# $(BINDIR)/entrelacsd
 	#od -t x1z -w8 $(PERSISTENCE_FILE)
 
 valgrind:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
-	CFLAGS+="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) valgrind --leak-check=full $(BINDIR)/entrelacsd
+	CFLAGS="-DDEBUG -g -o0" make clean all $(BINDIR)/testmachine
+	ENTRELACS=$(PERSISTENCE_FILE) valgrind --leak-check=full $(BINDIR)/testmachine
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
