@@ -60,6 +60,9 @@ static void percent_decode(const char *src, uint32_t src_len, uint8_t *dst, uint
 // get an URI path corresponding to an arrow
 char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallocs
     DEBUGPRINTF("xs_getURI(%p)", a);
+    if (a == NULL) {
+        return NULL;
+    }
     if (xs_isEve(a)) { // Eve is identified by an empty path
         // allocate and return an empty string
         char *s = (char*) malloc(1);

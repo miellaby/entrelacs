@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
     (void) argc; (void) argv;
 
     //log_init(NULL, "server,session,machine,space=debug");
-    log_init(NULL, "server,session,machine=debug");
+    log_init(NULL, "server,session,machine=trace");
 
     xs_init();
 

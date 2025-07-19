@@ -636,6 +636,7 @@ Address xl_enumGet(XLEnum e) {
 }
 
 void xl_enumFree(XLEnum e) {
+    assert(e);
     free(e);
 }
 
@@ -643,6 +644,7 @@ XLEnum xl_childrenOf(Address a) {
     TRACEPRINTF("xl_childrenOf a=%06x", a);
 
     if (a == EVE) {
+        ERRORPRINTF("xl_childrenOf Eve");
         return NULL;  // Eve connectivity not traced
     }
 

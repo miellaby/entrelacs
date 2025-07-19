@@ -9,12 +9,13 @@
 // et implémenter les nouveaux algos xs_context_*...
 
 Arrow xs_context_root(Arrow c, Arrow a) {
+    TRACEPRINTF("xs_context_root(%O,%O)", c, a);
     if (xs_isEve(c)) {
         return xs_root(a);
     }
     xs_assimilate(a);
     xs_assimilate(c);
-    INFOPRINTF("xs_root(%O,%O)", c, a);
+
     /// first-root for indexation
     xs_root(xs_pair(c, a));
 
@@ -32,6 +33,7 @@ Arrow xs_context_root(Arrow c, Arrow a) {
 
 /// unroot in a context
 Arrow xs_context_unroot(Arrow c, Arrow a) {
+    TRACEPRINTF("xs_context_unroot(%O,%O)", c, a);
     if (xs_isEve(c)) {
         return xs_unroot(a);
     }
@@ -45,7 +47,6 @@ Arrow xs_context_unroot(Arrow c, Arrow a) {
 
     xs_unroot(idx);
 
-    INFOPRINTF("xs_root(%O,%O)", c, a);
     Arrow s = a;
     Arrow d = c;
     while (xs_isPair(d)) {
@@ -58,6 +59,7 @@ Arrow xs_context_unroot(Arrow c, Arrow a) {
 }
 
 int xs_context_isRooted(Arrow c, Arrow a) {
+    TRACEPRINTF("xs_context_isRooted(%O,%O)", c, a);
     if (xs_isEve(c)) {
         return xs_isRooted(a);
     }
@@ -70,6 +72,10 @@ int xs_context_isRooted(Arrow c, Arrow a) {
 /// @param list child accumulator
 /// @return list + more children
 Arrow _xs_context_list(Arrow c, Arrow list) {
+    if (xs_isEve(c)) {
+        return list;
+    }
+
     // if c or a not assimilated there can't be children
     if (!xs_isKnown(c)) return list;
     XLEnum childrenEnum = xl_childrenOf(xs_getId(c));
@@ -90,14 +96,17 @@ Arrow _xs_context_list(Arrow c, Arrow list) {
 }
 
 Arrow xs_context_list(Arrow c) {
+    TRACEPRINTF("BEGIN xs_context_list(%O)", c);
+    if (xs_isEve(c)) {
+        return xs_eve();
+    }
     xs_resolve(c);
     if (xs_isKnown(c)) {
-        TRACEPRINTF("BEGIN xs_context_list(%O)", c);
         Arrow list = _xs_context_list(c, xs_eve());
         TRACEPRINTF("END xs_context_list(%O) = %O", c, list);
         return list;
     } else {
-        TRACEPRINTF("xs_context_list: c or a missing");
+        TRACEPRINTF("END xs_context_list: c not assimilated");
         return xs_eve();
     }
 }
@@ -106,6 +115,7 @@ Arrow xs_context_list(Arrow c) {
   Recursively unroot any rooted arrow under a given context
  */
 void xs_context_reset(Arrow c) {
+    TRACEPRINTF("xs_context_reset(%O)", c);
     if (!xs_isKnown(c)) return;
     Address context = xs_getId(c);
     XLEnum childrenEnum = xl_childrenOf(context);
@@ -130,10 +140,10 @@ void xs_context_reset(Arrow c) {
      2) root $value in /$c+$key sub-context
 */
 Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
+    TRACEPRINTF("xs_context_set(%O,%O,%O)", c, key, value);
     xs_assimilate(c);
     xs_assimilate(key);
     xs_assimilate(value);
-    TRACEPRINTF("xs_context_set(%O,%O,%O)", c, key, value);
     Arrow sub_context = xs_pair(c, key);
     xs_context_reset(sub_context);
     return xs_context_root(sub_context, value);
@@ -151,11 +161,11 @@ void xs_context_unset(Arrow c, Arrow key) {
     returns one suposedly unique rooted arrow in $c+$key sub-context
 */
 Arrow xs_context_get(Arrow c, Arrow key) {
+    TRACEPRINTF("BEGIN xs_context_get(%O,%O)", c, key);
     Arrow context_key = xs_pair(c, key);
     if (!xs_isKnown(context_key)) {
         return NULL;
     }
-    TRACEPRINTF("BEGIN xs_context_get(%O,%O)", c, key);
     Arrow list = xs_context_list(context_key);
     Arrow value = xs_getHead(list);
     TRACEPRINTF("END xs_context_get(%O,%O)=%O", c, key, value);

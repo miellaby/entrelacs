@@ -3,11 +3,11 @@
 
  A "context" is a way to represent a hierarchical structure of nested contexts.
 
- It's an arrow in the form "/C0+C1+C2..+Cn" where
+ It's an arrow in the form "////C0+C1+C2..+Cn" where
   - C0 is an atom
   - each Cx is an identifier of some nested context in a parent context
 
- For example : "/World+Europa+France" represents :
+ For example : "//World+Europa+France" represents :
    - the context of "France"
    - in the parent context of "Europa"
    - in the parent context "World"
@@ -15,8 +15,8 @@
 
  One can root/unroot an arrow "$a" within a context path "$c".
  It consists in rooting 2 arrows ("double rooting"):
-   - $r1 = "/C0/C1/../Cn+$a"
-   - $r2 = "/C0+C1..+Cn+$a" (that is "/$c+$a")
+   - $r1 = "/../C0/C1/../Cn+$a"
+   - $r2 = "/////C0+C1..+Cn+$a" (that is "/$c+$a")
 
   $r1 is costly to build and store as each ancester up to $a is likely to
   be created. But $r1 contributes to index arrows and contexts whatever the abstraction levels.
@@ -26,14 +26,16 @@
   context path. It allows to get immediatly the context $a is rooted.
 
   What does it mean concretly ?
-   - consider some atom, eg: "red"
-   - By fetching rooted incoming arrows ($r1 arrows), you can easily get all the contexts
-     linked to "red", e.g: "/canada+tree+autumn+tree+color+red".
-   - Now by considering the "meta" arrow /color+red, you can easily explore its descendants up
-     to rooted $r1 arrows. It allows to efficiently get all the context paths where /color+red
-     is rooted!
+   - By retrieving desecendants of arrows like /color+red up to rooted $r1 arrows,
+     one gets all contexts where /color+red is defined! But it's a inefficient way to check
+     if the arrow is defined within a given context'
+   - By testing the $r2 arrows, one can immediatly check a contextualized arrow existence
+   - By fetching rooted outgoing children ($r2 arrows) from a context, one quickly list
+     all "defined" arrows within the context
+   - By fetching rooted incoming children ($r2 arrows) to an arrow like "red", one quickly list all
+     the contexts this arrow is defined in, like: "////canada+autumn+tree+color+red".
 
- Directly rooting an arrow "$a" corresponds to the specific case where the context path is Eve.
+  Directly rooting an arrow "$a" corresponds to the specific case where the context path is Eve.
 
 */
 #pragma once
@@ -60,6 +62,7 @@ Arrow xs_context_unroot(Arrow context, Arrow a);
 int xs_context_isRooted(Arrow context, Arrow a);
 
 /** list all arrows being rooted within a context $c
+ *  IMPORTANT: Eve can't be browsed this way (no connectivity for Eve)
  */
 Arrow xs_context_list(Arrow c);
 
