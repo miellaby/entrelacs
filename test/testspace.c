@@ -7,11 +7,8 @@
 #include "entrelacs/entrelacs.h"
 #include "space/space.h"
 #include "mem/geoalloc.h"
+#include "test/stupid_test.h"
 
-char* test_title;
-#define test_title(T) fprintf(stderr, "%s BEGIN\n", (test_title = T))
-#define test_ok()  fprintf(stderr, "%s: OK\n", test_title)
-#define test_done() fprintf(stderr, "ALL TESTS FROM " __FILE__ " : OK\n")
 static struct s_buffer {
     uint32_t size;
     uint32_t max;

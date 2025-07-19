@@ -40,28 +40,114 @@ typedef struct xs_arrow_s {
 static ArrowValue eveValue = { 0 };
 static Arrow eve = &eveValue;
 
-// A Pool of transient arrows
-static ArrowValue *transient_pool = NULL;
-// static uint32_t transient_pool_max = 0;  ///< heap allocated log size
-static uint32_t transient_pool_size = 0; ///< significative log size
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+// Internal chunk structure
+typedef struct chunk {
+    ArrowValue *arrows;    // Array of arrows in this chunk
+    size_t capacity;       // How many arrows this chunk can hold
+    size_t count;          // How many arrows are currently used
+    struct chunk *next;    // Next chunk in the list
+} chunk_t;
+
+// Global pool state
+static struct {
+    chunk_t *first_chunk;
+    chunk_t *current_chunk;
+    size_t   arrows_per_chunck;
+    int initialized;
+} g_pool = {0};
+
+#define FIRST_CHUNCK_SIZE 128
 void pool_init() {
-    //DEBUGPRINTF("pool init");
-    transient_pool_size = 0;
-    transient_pool = malloc(10000 * sizeof(ArrowValue));
-//    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
+    g_pool.arrows_per_chunck = FIRST_CHUNCK_SIZE;
+    g_pool.first_chunk = malloc(sizeof(chunk_t));
+    g_pool.first_chunk->arrows = malloc(sizeof(ArrowValue) * g_pool.arrows_per_chunck);
+    g_pool.first_chunk->capacity = g_pool.arrows_per_chunck;
+    g_pool.first_chunk->count = 0;
+    g_pool.first_chunk->next = NULL;
+
+    g_pool.current_chunk = g_pool.first_chunk;
+    g_pool.initialized = 1;
 }
 
 static Arrow arrow_new() {
-    transient_pool_size++;
-//    geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), transient_pool_size + 1);
-    DEBUGPRINTF("pool size %d", transient_pool_size);
-    Arrow a = &transient_pool[transient_pool_size - 1];
+    // Check if current chunk has space
+    if (g_pool.current_chunk->count < g_pool.current_chunk->capacity) {
+        Arrow a = &g_pool.current_chunk->arrows[g_pool.current_chunk->count];
+        g_pool.current_chunk->count++;
+        a->type = 0;
+        a->id = 0;
+        a->hash = 0;
+        memset(a, 0, sizeof(ArrowValue));
+        return a;
+    }
+
+    // Need a new chunk - double the size for geometric growth
+    size_t new_chunk_size = g_pool.arrows_per_chunck * 2;
+    g_pool.arrows_per_chunck = new_chunk_size;
+
+    chunk_t *new_chunk = malloc(sizeof(chunk_t));
+    new_chunk->arrows = malloc(sizeof(ArrowValue) * new_chunk_size);
+    new_chunk->capacity = new_chunk_size;
+    new_chunk->count = 1;  // We're immediately using one object
+    new_chunk->next = NULL;
+
+    // Link the new chunk
+    g_pool.current_chunk->next = new_chunk;
+    g_pool.current_chunk = new_chunk;
+
+    Arrow a = &new_chunk->arrows[0];
     a->type = 0;
     a->id = 0;
     a->hash = 0;
     memset(a, 0, sizeof(ArrowValue));
     return a;
+}
+
+void pool_reset() {
+    // Free all chunks except the first one
+    chunk_t *chunk = g_pool.first_chunk->next;
+    while (chunk) {
+        chunk_t *next = chunk->next;
+        free(chunk->arrows);
+        free(chunk);
+        chunk = next;
+    }
+
+    // Reset the first chunk
+    g_pool.first_chunk->count = 0;
+    g_pool.first_chunk->next = NULL;
+    g_pool.current_chunk = g_pool.first_chunk;
+    g_pool.arrows_per_chunck = FIRST_CHUNCK_SIZE;  // Reset to initial size
+}
+
+// Optional: get pool statistics
+typedef struct {
+    size_t total_arrows;
+    size_t total_capacity;
+    size_t num_chunks;
+    size_t memory_used;
+} pool_stats_t;
+
+pool_stats_t pool_get_stats() {
+    pool_stats_t stats = {0};
+
+    if (!g_pool.initialized) return stats;
+
+    chunk_t *chunk = g_pool.first_chunk;
+    while (chunk) {
+        stats.total_arrows += chunk->count;
+        stats.total_capacity += chunk->capacity;
+        stats.num_chunks++;
+        stats.memory_used += sizeof(chunk_t) + (sizeof(ArrowValue) * chunk->capacity);
+        chunk = chunk->next;
+    }
+
+    return stats;
 }
 
 static void arrow_free(Arrow a) {
@@ -76,11 +162,13 @@ static void arrow_free(Arrow a) {
 
 void xs_pool_reset() {
     //DEBUGPRINTF("pool reset");
-    for (uint32_t i = 0; i < transient_pool_size; i++) {
-        arrow_free(&transient_pool[i]);
+    for (chunk_t *chunk = g_pool.first_chunk; chunk != NULL; chunk = chunk->next) {
+        for (size_t i = 0; i < chunk->count; i++) {
+            Arrow a = &chunk->arrows[i];
+            arrow_free(a);
+        }
     }
-    transient_pool_size = 0;
-    // geoalloc((char **)&transient_pool, &transient_pool_max, &transient_pool_size, sizeof(ArrowValue), 0);
+    pool_reset();
 }
 
 Arrow xs_eve() {
@@ -377,37 +465,35 @@ Arrow xs_equal(Arrow a, Arrow b) {
     if (a == NULL) {
         return NULL;
     } else if (b == NULL) {
-        return eve;
-    } else if (a == eve) {
-        return eve;
+        return 0;
     } else if (a == b) {
-        return a;
+        return 1;
     } else if (a->id && b->id) {
-        return a->id == b->id ? a : eve;
+        return a->id == b->id;
     } else if (a->type != b->type) {
-        return eve;
+        return 0;
     } else if (a->id) {
-        return xs_resolve(b)->id == a->id ? a : eve;
+        return xs_resolve(b)->id == a->id;
     } else if (b->id) {
-        return xs_resolve(a)->id == b->id ? a : eve;
+        return xs_resolve(a)->id == b->id;
     } else if (a->type == XS_ATOM) {
         if (a->def.atom.size != b->def.atom.size) {
-            return eve;
+            return 0;
         } else if (a->def.atom.raw == b->def.atom.raw) {
-            return a;
+            return 1;
         } else {
-            return memcmp(a->def.atom.raw, b->def.atom.raw, a->def.atom.size) == 0 ? a : eve;
+            return memcmp(a->def.atom.raw, b->def.atom.raw, a->def.atom.size) == 0;
         }
     } else if (a->type == XS_PAIR) {
         Arrow tail_a = xs_getTail(a);
         Arrow head_a = xs_getHead(a);
         Arrow tail_b = xs_getTail(b);
         Arrow head_b = xs_getHead(b);
-        int same_tail = (tail_a == eve ? tail_b == eve : xs_equal(tail_a, tail_b) != eve);
-        int same_head = (head_a == eve ? head_b == eve : xs_equal(head_a, head_b) != eve);
-        return same_tail && same_head ? a : eve;
+        int same_tail = (tail_a == eve ? tail_b == eve : xs_equal(tail_a, tail_b));
+        int same_head = (head_a == eve ? head_b == eve : xs_equal(head_a, head_b));
+        return same_tail && same_head;
     } else {
-        return eve;
+        return 0;
     }
 }
 

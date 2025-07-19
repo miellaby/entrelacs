@@ -7,7 +7,7 @@
             "problemMatchers": [
                 "$gcc"
             ],
-            "makeArgs": []
+            "makeArgs": [],
         },
     ],
     "files.associations": {
@@ -44,5 +44,13 @@
         "server.h": "c",
         "cstdio": "c",
         "stddef.h": "c"
-    }
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/sylvaingarden/workspace/entrelacs/bin",
+            "binaryPath": "/home/sylvaingarden/workspace/entrelacs/bin/testmachine",
+            "binaryArgs": []
+        }
+    ],
+    "makefile.makePath": ""
 }

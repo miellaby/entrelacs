@@ -240,8 +240,8 @@ static int isTrivialOrBound(Arrow a, Arrow e, Arrow C, Arrow M, Arrow *w) {
 static int chainSize = 0;  // TODO thread safe
 
 static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
+    assert(M);
     TRACEPRINTF("transition M = %O", M);
-
     Arrow p = xs_getTail(M);    // program
     Arrow ins = xs_getTail(p);  // let,load,eval,lambda,macro,... instruction
     Arrow param = xs_getHead(p);
@@ -928,11 +928,11 @@ static void machine_init(Arrow CM) {
 
     if (xs_context_get(eve, xs_const("if")) == NULL)
         xs_context_set(eve, xs_const("if"),
-                xs_uri("/paddock//x/let//condition/getTail+x/let//alternative/getHead+x/arrow/eval/let//it/branch/var+condition/it//escape+escape/var+alternative+"));
+                xs_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval/let//it/branch/var+condition/it//escape+escape/var+alternative+"));
     if (xs_context_get(eve, xs_const("equal")) == NULL)
         xs_context_set(eve, xs_const("equal"),
-                xs_uri("/paddock//x/let//a/getTail+x/let//b/getHead+x/arrow/let///getTail/var+x/var+a/let///getHead/var+x/var+b/isClone/arrow///escape+var/getTail/var+x//escape+var/"
-                       "xs_getHead/var+x+"));
+                xs_uri("/paddock//x/let//a/tailOf+x/let//b/tailOf+x/arrow/let///headOf/var+x/var+a/let///headOf/var+x/var+b/isClone/arrow///escape+var/tailOf/var+x//escape+var/"
+                       "headOf/var+x+"));
     if (xs_context_get(eve, xs_const("get")) == NULL)
         xs_context_set(eve, xs_const("get"), xs_uri("/paddock//x/arrow/getVar//escape+escape/var+x+"));
     if (xs_context_get(eve, xs_const("unset")) == NULL)
@@ -940,15 +940,15 @@ static void machine_init(Arrow CM) {
     if (xs_context_get(eve, xs_const("set")) == NULL)
         xs_context_set(
             eve, xs_const("set"),
-            xs_uri("/paddock//x/let//slot/getTail+x/let//exp/getHead+x/arrow/let///getHead/var+x/var+exp/setVar/arrow///escape+escape/var+slot//escape+var/getHead/var+x+"));
+            xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setVar/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
     if (xs_context_get(eve, xs_const("link")) == NULL)
         xs_context_set(eve, xs_const("link"),
-                xs_uri("/paddock//x/let//slot/getTail+x/let//exp/getHead+x/arrow/let///getTail/var+x/var+slot/let///getHead/var+x/var+exp/link/arrow///escape+var/getTail/"
-                       "var+x//escape+var/getHead/var+x+"));
+                xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/link/arrow///escape+var/tailOf/"
+                       "var+x//escape+var/headOf/var+x+"));
     if (xs_context_get(eve, xs_const("unlink")) == NULL)
         xs_context_set(eve, xs_const("unlink"),
-                xs_uri("/paddock//x/let//slot/getTail+x/let//exp/getHead+x/arrow/let///getTail/var+x/var+slot/let///getHead/var+x/var+exp/unlink/arrow///escape+var/getTail/"
-                       "var+x//escape+var/getHead/var+x+"));
+                xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/unlink/arrow///escape+var/tailOf/"
+                       "var+x//escape+var/headOf/var+x+"));
 
     // System Init call
     // xs_eval(eve, xs_pair(xs_const("init"), xs_pair(escape, CM)), xs_const("init"));  // we pass CM at parameter to preserve it from GC
@@ -961,7 +961,12 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
     // M = //p/e+k
     chainSize = 0;
     Arrow w;
-    while (chainSize < 500 && xs_getTail(M) != swearWord && (/*k*/ xs_getHead(xs_getHead(M)) != eve || !isTrivialOrBound(xs_getTail(M) /*p*/, xs_getTail(xs_getHead(M)) /*e*/, C, M, &w))) {
+    while (chainSize < 500
+        && xs_getTail(M) != swearWord
+        && (
+            /*k*/ xs_getHead(xs_getHead(M)) != eve
+             || !isTrivialOrBound(xs_getTail(M) /*p*/, xs_getTail(xs_getHead(M)) /*e*/, C, M, &w)
+            )) {
         // only operators can produce fall/escalate states
         // TODO check secret here
         Arrow MHead = xs_getHead(M);
@@ -990,13 +995,14 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
         }
 
         M = transition(C, M);
-        xl_yield(xs_getId(xs_assimilate(xs_pair(C, M))));
     }
 
     if (chainSize >= 500) {
         TRACEPRINTF("Continuation chain is too long (infinite loop?), p=%O", xs_getTail(M));
         return xs_pair(swearWord, xs_atom("too long continuation chain"));
-    } else if (xs_equal(xs_getTail(M), swearWord)) {
+    }
+
+    if (xs_equal(xs_getTail(M), swearWord)) {
         TRACEPRINTF("run finished with error : %O", xs_getHead(M));
         return xs_getTail(xs_getHead(M));
     }
@@ -1013,7 +1019,7 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
 }
 
 Arrow xs_eval(Arrow C /* ContextPath */, Arrow p /* program */, Arrow session) {
-    TRACEPRINTF("BEGIN xs_eval(%O, %O)", C, p);
-    Arrow M = xs_pair(p, xs_pair(eve, eve));
+    TRACEPRINTF("xs_eval(%O, %O)", C, p);
+    Arrow M = xs_pair(p, xs_pair(xs_eve(), xs_eve()));
     return xs_run(C /* ContextPath */, M, session);
 }

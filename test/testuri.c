@@ -12,8 +12,7 @@
 
 #include "entrelacs/entrelacs.h"
 #include "mem/geoalloc.h"
-
-#define test_title(T) fprintf(stderr, T "\n")
+#include "test/stupid_test.h"
 
 Address blobFromFile(char *f) {
   int fd = open(f, O_RDONLY);
@@ -41,7 +40,7 @@ Address blobFromFile(char *f) {
 
 int main(int argc, char *argv[]) {
   (void) argc; (void)argv;
-  
+
   log_init(NULL, "server,session,machine,space=debug");
   xs_init();
   xl_open();

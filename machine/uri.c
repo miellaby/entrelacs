@@ -100,14 +100,23 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
                 return NULL;
             }
 
-            // allocate to save result
-            char *uri = malloc(2 + l1 + l2 + 1);
-            assert(uri);
             // concat identiers
-            sprintf(uri, "/%s+%s", tailUri, headUri); // TODO no printf
+            char *uri;
+            size_t uri_length;
+            if (*headUri == '/') { // save +
+                uri_length = 1 + l1 + l2;
+                uri = malloc(uri_length + 1);
+                assert(uri);
+                sprintf(uri, "/%s%s", tailUri, headUri); // TODO no printf
+            } else {
+                uri_length = 2 + l1 + l2;
+                uri = malloc(uri_length + 1);
+                assert(uri);
+                sprintf(uri, "/%s+%s", tailUri, headUri);
+            }
             free(tailUri);
             free(headUri);
-            if (l) *l = 2 + l1 + l2; // return length if asked
+            if (l) *l = uri_length + 1; // return length if asked
             return uri;
         }
         default:
@@ -228,7 +237,7 @@ Arrow xs_parseURI(uint32_t size, char *uri, uint32_t *uri_size_p) {
             uint8_t *atomStr = malloc(uri_size + 1);
             percent_decode(uri, uri_size, atomStr, &atomLength);
             // DEBUGPRINTF("atom is %.*s", atomLength, atomStr);
-            a = xs_atomn(atomLength + 1, atomStr);
+            a = xs_atomn(atomLength, atomStr);
             free(atomStr);
         }
     }

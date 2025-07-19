@@ -34,6 +34,11 @@ TESTS = space uri script machine shell
 
 UTESTS = hash
 
+TEST_EXECUTABLES = $(TESTS:%=$(BINDIR)/test%) $(UTESTS:%=$(BINDIR)/utest%)
+
+.SECONDARY: $(TEST_EXECUTABLES)
+
+
 PERSISTENCE_FILE=/tmp/entrelacs_test.dat
 
 
@@ -43,25 +48,13 @@ BINOBJECTS_entrelacsd = $(OBJECTS_entrelacsd:%=$(BINDIR)/%)
 
 all: $(BINTARGETS)
 
+tests: $(TEST_EXECUTABLES)
+
 help:
 	@head -30 makefile | grep '^#' | sed -e '/# .*/ s/# \(.*\)/\1/'
 
-clean: $(UTESTS:%=clean.utest%) $(TESTS:%=clean.test%)
-	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd)
-
-$(TESTS:%=clean.test%):
-	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
-
-$(UTESTS:%=clean.utest%):
-	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
-
-utest.%: $(BINDIR)/utest%
-	-true
-
-test.%: $(BINDIR)/test%
-	-true
-
-tests: all $(UTESTS:%=utest.%) $(TESTS:%=test.%)
+clean:
+	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd) $(TEST_EXECUTABLES)
 
 server: $(BINDIR)/entrelacsd
 
@@ -95,15 +88,12 @@ $(BINDIR)/%.o: test/%.c
 
 prompt: run.shell
 
-run: $(UTESTS:%=urun.%) $(TESTS:%=run.%)
+run: $(TESTS:%=run.test%) $(UTESTS:%=run.utest%)
 
-run.%: $(BINDIR)/test%
+run.%: $(BINDIR)/%
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
-
-urun.%: $(BINDIR)/utest%
-	./$<
 
 start: server
 	-pkill entrelacsd

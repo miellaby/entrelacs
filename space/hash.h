@@ -5,6 +5,10 @@
 /// See hash_crypto()
 #define CRYPTO_SIZE 40
 
+// helpers
+uint32_t left_rotate(uint32_t value, int shift);
+uint32_t right_rotate(uint32_t value, int shift);
+
 /// @brief hash of XL_EVE
 uint32_t hash_eve();
 

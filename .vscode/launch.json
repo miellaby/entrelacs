@@ -8,10 +8,10 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/testspace",
+            "program": "${workspaceFolder}/bin/testmachine",
             "args": [],
-            "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
             "environment": [
                 {
                     "name": "ENTRELACS",
@@ -24,6 +24,7 @@
             ],
             "externalConsole": false,
             "MIMode": "gdb",
+            "preLaunchTask": "Make: clean rebuild debuggable tests",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
