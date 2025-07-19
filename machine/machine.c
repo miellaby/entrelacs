@@ -951,7 +951,7 @@ static void machine_init(Arrow CM) {
                        "var+x//escape+var/getHead/var+x+"));
 
     // System Init call
-    xs_eval(eve, xs_pair(xs_const("init"), xs_pair(escape, CM)), xs_const("init"));  // we pass CM at parameter to preserve it from GC
+    // xs_eval(eve, xs_pair(xs_const("init"), xs_pair(escape, CM)), xs_const("init"));  // we pass CM at parameter to preserve it from GC
 }
 
 Arrow xs_run(Arrow C, Arrow M, Arrow session) {

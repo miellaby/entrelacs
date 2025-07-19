@@ -167,7 +167,7 @@ Arrow xs_context_get(Arrow c, Arrow key) {
         return NULL;
     }
     Arrow list = xs_context_list(context_key);
-    Arrow value = xs_getHead(list);
+    Arrow value = xs_getTail(list);
     TRACEPRINTF("END xs_context_get(%O,%O)=%O", c, key, value);
     return value;
 }

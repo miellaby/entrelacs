@@ -128,7 +128,7 @@ static uint32_t skeepSpacesAndOnePlus(uint32_t size, char* uriEnd) {
 }
 
 Arrow xs_parseURI(uint32_t size, char *uri, uint32_t *uri_size_p) {
-    TRACEPRINTF("BEGIN xs_parseUri(%s)", uri);
+    DEBUGPRINTF("BEGIN xs_parseUri(%s)", uri);
     if (uri == NULL) {
         return NULL;
     }
