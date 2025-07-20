@@ -140,7 +140,7 @@ void xs_context_reset(Arrow c) {
      2) root $value in /$c+$key sub-context
 */
 Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
-    TRACEPRINTF("xs_context_set(%O,%O,%O)", c, key, value);
+    INFOPRINTF("xs_context_set(%O,%O,%O)", c, key, value);
     xs_assimilate(c);
     xs_assimilate(key);
     xs_assimilate(value);

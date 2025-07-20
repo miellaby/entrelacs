@@ -93,7 +93,7 @@ uint32_t xs_getHash(Arrow a);
 /// @brief get arrow diget
 /// @param a arrow
 /// @return heap-allocated digest
-char* xs_getDigest(Arrow a, uint32_t *l);
+char* xs_getDigest(Arrow a, size_t *l);
 
 /// @brief get arrow tail
 /// @param a arrow
@@ -190,7 +190,7 @@ int xs_isRooted(Arrow a);
 /// @param a
 /// @param b
 /// @return a if equals to b, eve otherwise
-Arrow xs_equal(Arrow a, Arrow b);
+int xs_equal(Arrow a, Arrow b);
 
 /// @brief root arrow
 /// @param a arrow
@@ -209,10 +209,10 @@ void xs_childrenOfCB(Arrow, XSCallBack, void* context);
 #define xs_hookBadge() xs_constn(7, (uint8_t *)"XShO0K")
 
 /// hook a pointer
-#define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), p)))
+#define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), &(p))))
 
 /// read hooked pointer
-#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (void *)pp, hook, 0)
+#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (uint8_t *)pp, xs_getHead(hook), 0)
 
 /// get hooked pointer
-#define xs_getPointer(hook) ({ void* pointer; xs_readPointer(hook, &pointer); pointer; })
+#define xs_getPointer(hook) ({ void* pointer; ssize_t s = xs_readPointer(hook, &pointer); assert(s == sizeof(void *)); pointer; })

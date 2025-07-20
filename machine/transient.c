@@ -217,11 +217,10 @@ Arrow xs_pair(Arrow tail, Arrow head) {
 Arrow xs_atomn(size_t size, uint8_t* s) {
     Arrow a = arrow_new();
     //DEBUGPRINTF("new atom %p=%.*s", a, size, s);
-    memset(a, 0, sizeof(ArrowValue));
     a->def.atom.size = size;
-    a->def.atom.raw = (uint8_t*) malloc(a->def.atom.size);
+    a->def.atom.raw = (uint8_t*) malloc(size);
     assert(a->def.atom.raw);
-    memcpy(a->def.atom.raw, s, a->def.atom.size);
+    memcpy(a->def.atom.raw, s, size);
     a->type = XS_ATOM;
     return a;
 }
@@ -232,9 +231,8 @@ Arrow xs_atom(char* s) {
 
 Arrow xs_constn(size_t size, const uint8_t* buffer) {
     Arrow a = arrow_new();
-    memset(a, 0, sizeof(ArrowValue));
     a->def.atom.size = size;
-    a->def.atom.raw = (uint8_t*)buffer;
+    a->def.atom.raw = buffer;
     a->def.atom.borrowed = 1;
     a->type = XS_ATOM;
     return a;
@@ -282,9 +280,12 @@ uint32_t xs_getHash(Arrow a) {
     return a->hash;
 }
 
-char* xs_getDigest(Arrow a, uint32_t *l) {
+char* xs_getDigest(Arrow a, size_t *l) {
     xs_assimilate(a);
-    return xl_digestOf(xs_getId(a), l);
+    uint32_t length;
+    char* digest = xl_digestOf(xs_getId(a), &length);
+    *l = length;
+    return digest;
 }
 
 Arrow xs_getTail(Arrow a) {
@@ -461,9 +462,9 @@ int xs_isRooted(Arrow a) {
     return (xs_isEve(a) || xs_resolve(a)->id) && xl_isRooted(a->id);
 }
 
-Arrow xs_equal(Arrow a, Arrow b) {
+int xs_equal(Arrow a, Arrow b) {
     if (a == NULL) {
-        return NULL;
+        return 0;
     } else if (b == NULL) {
         return 0;
     } else if (a == b) {

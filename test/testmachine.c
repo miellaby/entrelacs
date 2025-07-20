@@ -10,15 +10,16 @@ int main(int argc, char **argv) {
     (void) argc; (void) argv;
 
     //log_init(NULL, "server,session,machine,space=debug");
-    log_init(NULL, "server,session,machine=trace");
+    log_init(NULL, "server,session,transient=info,machine=trace");
 
     xs_init();
 
 
     //Arrow context = xs_open("test");
 
-    struct s_test { char* program; char* result; char* title } *test, tests[] = {
-   // {"let//x+1/arrow//var+x+2", "/1+2", ""},
+    struct s_test { char* program; char* result; char* title; } *test, tests[] = {
+    {"/tailOf/a+b", "a", "operator call"},
+    // {"let//x+1/arrow//var+x+2", "/1+2", ""},
     //{NULL, NULL},
     // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1", ""},
     {"foo", "foo", "atom"},
@@ -92,7 +93,7 @@ int main(int argc, char **argv) {
     {"/fall+context/,/escalate/escape//demo+demo/set/foo+bar", "bar", ""},
     {"/say/get+foo", "/say+", ""},
     {"/fall+demo/,/say/get+foo", "/say+bar", ""},
-    {NULL, NULL}
+    {NULL, NULL, NULL}
 #if 0
         // TODO remake of next expressions
 

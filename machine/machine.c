@@ -55,11 +55,11 @@ static void update_keywords() {
 static void machine_init(Arrow);
 
 Arrow xs_operator(XSCallBack hookp, Arrow context) {
-    return xs_pair(operator, xs_pair(xs_hook((void *)hookp), context));
+    return xs_pair(operator, xs_pair(xs_hook(hookp), context));
 }
 
 Arrow xs_continuation(XSCallBack hookp, Arrow context) {
-    return xs_pair(continuation, xs_pair(xs_hook((void *)hookp), context));
+    return xs_pair(continuation, xs_pair(xs_hook(hookp), context));
 }
 
 Arrow _machine_commit(Arrow C, Arrow preserved) {
@@ -877,7 +877,7 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
     (void) hookParameter; // NOT USED
 
     Arrow arrow = xs_argInMachine(CM);
-    uint32_t digestSize;
+    size_t digestSize;
     char *digest = xs_getDigest(arrow, &digestSize);
     return xs_reduceMachine(CM, xs_atomn(digestSize, (uint8_t *)digest));
 }
@@ -938,8 +938,7 @@ static void machine_init(Arrow CM) {
     if (xs_context_get(eve, xs_const("unset")) == NULL)
         xs_context_set(eve, xs_const("unset"), xs_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
     if (xs_context_get(eve, xs_const("set")) == NULL)
-        xs_context_set(
-            eve, xs_const("set"),
+        xs_context_set(eve, xs_const("set"),
             xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setVar/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
     if (xs_context_get(eve, xs_const("link")) == NULL)
         xs_context_set(eve, xs_const("link"),
