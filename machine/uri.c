@@ -1,6 +1,6 @@
 #include "machine/uri.h"
 #include "space/cell.h"
-#define LOG_CURRENT LOG_MACHINE
+#define LOG_CURRENT LOG_TRANSIENT
 #include "log/log.h"
 #include <stddef.h>
 #include <stdlib.h>

@@ -83,11 +83,10 @@ extern int log_verbose();
 #define ERRORPRINTF(format, arg...) LOGPRINTF(LOG_ERROR, format, ##arg)
 #define WARNPRINTF(format, arg...) LOGPRINTF(LOG_WARN, format, ##arg)
 #define INFOPRINTF(format, arg...) LOGPRINTF(LOG_INFO, format, ##arg)
-#ifdef DEBUG
 #define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
+#ifdef DEBUG
 #define DEBUGPRINTF(format, arg...) LOGPRINTF(LOG_DEBUG, format, ##arg)
 #else
-#define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
 #define DEBUGPRINTF(format, arg...) (void)(0)
 #endif
 #endif

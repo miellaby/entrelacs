@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     (void) argc; (void) argv;
 
     //log_init(NULL, "server,session,machine,space=debug");
-    log_init(NULL, "server,session,transient=info,machine=trace");
+    log_init(NULL, "server,session,transient=info,machine=debug");
 
     xs_init();
 
@@ -18,7 +18,13 @@ int main(int argc, char **argv) {
     //Arrow context = xs_open("test");
 
     struct s_test { char* program; char* result; char* title; } *test, tests[] = {
-    {"/tailOf/a+b", "a", "operator call"},
+        {"a", "a", "a is a"},
+        {"/tailOf/a+b", "a", "operator call"},
+        {"/set/a/headOf/a+b", "b", "set macro escape var name and evaluate expr"},
+        {"a", "b", "global var is set"},
+        {"/unset+a", "a", "unset call"},
+        {"a", "a", "global var is unset"},
+        {NULL, NULL, NULL},
     // {"let//x+1/arrow//var+x+2", "/1+2", ""},
     //{NULL, NULL},
     // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1", ""},

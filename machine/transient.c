@@ -499,9 +499,9 @@ int xs_equal(Arrow a, Arrow b) {
 }
 
 Arrow xs_root(Arrow e) {
-    INFOPRINTF("xs_root(%p)", e);
+    TRACEPRINTF("xs_root(%p)", e);
     xs_assimilate(e);
-    INFOPRINTF("xs_root(%O)", e);
+    TRACEPRINTF("xs_root(%O)", e);
     xl_root(e->id);
     return e;
 }

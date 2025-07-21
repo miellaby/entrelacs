@@ -190,7 +190,7 @@ static Arrow resolve(Arrow a, Arrow e, Arrow C, Arrow M) {
     Arrow w = _resolve(a, e, C, M);
 
     if (w == NULL) {              // Not bound
-        if (xs_equal(xs_getTail(a), var)) {  // var+a
+        if (xs_equal(xs_getTail(a), var)) {  // var+x
             w = eve;             // unbound var+x resolved to eve
         } else {
             w = a;  // unbound atom (not variable casted) is let as is
@@ -541,7 +541,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
 
     Arrow ws_type = xs_getTail(ws);
     Arrow wv = NULL;
-    if (!isTrivialOrBound(v, e, C, M, &wv) && ws_type != paddock) {  // Not trivial argument in application #e#
+    if (!isTrivialOrBound(v, e, C, M, &wv) && !xs_equal(ws_type, paddock)) {  // Not trivial argument in application #e#
         dputs("    v (%O) == something not trivial", v);
         // rewriting rule: pp = (let ((tmp v) (s (var tmp))))
         // ==> M = (v (e ((tmp ((s (var tmp)) e)) k))))
@@ -939,7 +939,7 @@ static void machine_init(Arrow CM) {
         xs_context_set(eve, xs_const("unset"), xs_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
     if (xs_context_get(eve, xs_const("set")) == NULL)
         xs_context_set(eve, xs_const("set"),
-            xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setVar/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
+            xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/setVar///escape+escape/var+slot/var+exp+"));
     if (xs_context_get(eve, xs_const("link")) == NULL)
         xs_context_set(eve, xs_const("link"),
                 xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/link/arrow///escape+var/tailOf/"
@@ -954,18 +954,30 @@ static void machine_init(Arrow CM) {
 }
 
 Arrow xs_run(Arrow C, Arrow M, Arrow session) {
-    TRACEPRINTF("BEGIN xs_run(%O, %O, %O)", C, M, session);
+    TRACEPRINTF("BEGIN xs_run(%O)", M);
+    TRACEPRINTF(" C = %O", C);
+    TRACEPRINTF(" session = %O", session);
     machine_init(xs_pair(C, M));
 
     // M = //p/e+k
     chainSize = 0;
     Arrow w;
     while (chainSize < 500
-        && xs_getTail(M) != swearWord
-        && (
-            /*k*/ xs_getHead(xs_getHead(M)) != eve
-             || !isTrivialOrBound(xs_getTail(M) /*p*/, xs_getTail(xs_getHead(M)) /*e*/, C, M, &w)
-            )) {
+        && !xs_equal(xs_getTail(M), swearWord)) {
+        // M = //p/e+k
+        Arrow p = xs_getTail(M);
+        Arrow ek = xs_getHead(M);
+        Arrow e = xs_getTail(ek);
+        Arrow k = xs_getHead(ek);
+        TRACEPRINTF("New state M = //p/e+k");
+        TRACEPRINTF("p = %O", p);
+        TRACEPRINTF("e = %O", e);
+        TRACEPRINTF("k = %O", k);
+        if (k == eve
+             && isTrivialOrBound(p, e, C, M, &w)
+            ) break;
+
+
         // only operators can produce fall/escalate states
         // TODO check secret here
         Arrow MHead = xs_getHead(M);
