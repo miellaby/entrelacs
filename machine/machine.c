@@ -241,7 +241,6 @@ static int chainSize = 0;  // TODO thread safe
 
 static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
     assert(M);
-    TRACEPRINTF("transition M = %O", M);
     Arrow p = xs_getTail(M);    // program
     Arrow ins = xs_getTail(p);  // let,load,eval,lambda,macro,... instruction
     Arrow param = xs_getHead(p);
@@ -250,7 +249,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
     Arrow k = xs_getHead(ek);
     Arrow w;
 
-    TRACEPRINTF("=== P %O ===\n   e = %O\n   k = %O", p, e, k);
+    TRACEPRINTF("\ntransition p = %O\n   e = %O\n   k = %O", p, e, k);
     machine_stats.transition++;
 
     if (xs_equal(ins, load)) {  //load expression #e#
@@ -748,7 +747,7 @@ Arrow rootHook(Arrow CM, Arrow hookParameter) {
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_root(C, arrow);
-    return xs_reduceMachine(CM, xs_getHead(r));  // one doesn't show the context
+    return xs_reduceMachine(CM, r);
 }
 
 Arrow unrootHook(Arrow CM, Arrow hookParameter) {
@@ -756,7 +755,7 @@ Arrow unrootHook(Arrow CM, Arrow hookParameter) {
     Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_unroot(contextPath, arrow);
-    return xs_reduceMachine(CM, xs_getHead(r));  // one doesn't show the context
+    return xs_reduceMachine(CM, r);
 }
 
 Arrow setVarHook(Arrow CM, Arrow hookParameter) {
@@ -764,7 +763,7 @@ Arrow setVarHook(Arrow CM, Arrow hookParameter) {
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_set(C, xs_getTail(arrow), xs_getHead(arrow));
-    return xs_reduceMachine(CM, xs_getHead(r));  // one doesn't show the context
+    return xs_reduceMachine(CM, r);
 }
 
 Arrow unsetVarHook(Arrow CM, Arrow hookParameter) {
@@ -939,7 +938,7 @@ static void machine_init(Arrow CM) {
         xs_context_set(eve, xs_const("unset"), xs_uri("/paddock//x/arrow/unsetVar//escape+escape/var+x+"));
     if (xs_context_get(eve, xs_const("set")) == NULL)
         xs_context_set(eve, xs_const("set"),
-            xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/setVar///escape+escape/var+slot/var+exp+"));
+            xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///headOf/var+x/var+exp/setVar/arrow///escape+escape/var+slot//escape+var/headOf/var+x+"));
     if (xs_context_get(eve, xs_const("link")) == NULL)
         xs_context_set(eve, xs_const("link"),
                 xs_uri("/paddock//x/let//slot/tailOf+x/let//exp/headOf+x/arrow/let///tailOf/var+x/var+slot/let///headOf/var+x/var+exp/link/arrow///escape+var/tailOf/"

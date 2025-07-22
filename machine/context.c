@@ -81,6 +81,9 @@ Arrow _xs_context_list(Arrow c, Arrow list) {
     XLEnum childrenEnum = xl_childrenOf(xs_getId(c));
     while (xl_enumNext(childrenEnum)) {
         Address pair = xl_enumGet(childrenEnum);
+        if (!xl_isRooted(pair)) {
+            continue;
+        }
         int outgoing = (xl_tailOf(pair) == xs_getId(c));
         if (outgoing) {
             Address arrow = xl_headOf(pair);
@@ -164,10 +167,17 @@ Arrow xs_context_get(Arrow c, Arrow key) {
     TRACEPRINTF("BEGIN xs_context_get(%O,%O)", c, key);
     Arrow context_key = xs_pair(c, key);
     if (!xs_isKnown(context_key)) {
+        TRACEPRINTF("END xs_context_get(%O,%O) = NULL", c, key);
         return NULL;
     }
     Arrow list = xs_context_list(context_key);
+    if (xs_isEve(list)) {
+        // no value found
+        TRACEPRINTF("END xs_context_get(%O,%O) = NULL", c, key);
+        return NULL;
+    }
     Arrow value = xs_getTail(list);
+
     TRACEPRINTF("END xs_context_get(%O,%O)=%O", c, key, value);
     return value;
 }
