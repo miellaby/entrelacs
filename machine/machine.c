@@ -22,7 +22,7 @@ static struct s_machine_stats {
 static Arrow tailOfOperator = 0, headOfOperator = 0;
 
 static Arrow eve = 0, let = 0, load = 0, escape = 0, var = 0, comma = 0, it = 0, evalOp = 0, lambda = 0, macro = 0, closure = 0, paddock = 0, rlambda = 0, operator = 0, continuation = 0,
-             fall = 0, escalate = 0, selfM = 0, arrowWord = 0, swearWord = 0, brokenEnvironment = 0, land = 0, tempVar = 0;
+             enterM = 0, exitM = 0, selfM = 0, arrowWord = 0, swearWord = 0, brokenEnvironment = 0, land = 0, tempVar = 0;
 
 /// initialize key arrows
 static void update_keywords() {
@@ -42,8 +42,8 @@ static void update_keywords() {
     continuation = xs_const("continuation");
     selfM = xs_const("@M");
     arrowWord = xs_const("arrow");
-    fall = xs_const("fall");
-    escalate = xs_const("escalate");
+    enterM = xs_const("enter");
+    exitM = xs_const("exit");
     land = xs_const("land");
     comma = xs_const(",");
     it = xs_const("it");
@@ -664,7 +664,7 @@ Arrow xs_reduceMachine(Arrow CM, Arrow r) {
 Arrow runHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow M = xs_argInMachine(CM);
-    if (xs_equal(xs_getHead(M), escalate))  // NO
+    if (xs_equal(xs_getHead(M), exitM))  // NO
         return eve;
 
     return M;
@@ -823,15 +823,15 @@ Arrow commitHook(Arrow CM, Arrow hookParameter) {
     return xs_reduceMachine(CM, eve);
 }
 
-Arrow fallHook(Arrow CM, Arrow hookParameter) {
+Arrow enterHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     // Arrow C = xs_getTail(CM);
     // Arrow M = xs_getHead(CM);
     Arrow V = xs_argInMachine(CM);
-    return xs_pair(xs_pair(V, xs_reduceMachine(CM, eve)), fall);
+    return xs_pair(xs_pair(V, xs_reduceMachine(CM, eve)), enterM);
 }
 
-Arrow escalateHook(Arrow CM, Arrow hookParameter) {
+Arrow exitHook(Arrow CM, Arrow hookParameter) {
     (void)hookParameter;  // NOT USED
     Arrow C = xs_getTail(CM);
     // Arrow M = xs_getHead(CM);
@@ -859,12 +859,12 @@ Arrow escalateHook(Arrow CM, Arrow hookParameter) {
     Arrow expression = xs_context_get(CT, xs_pair(target, xs_atom(secret_sha1)));
 
     if (expression == NULL) {
-        WARNPRINTF("escalate attempt %O", target_secret_expr);
+        WARNPRINTF("exit attempt %O", target_secret_expr);
 
         return xs_reduceMachine(CM, eve);
     }
 
-    return xs_pair(xs_pair(xs_pair(expression, expr), eve), escalate);
+    return xs_pair(xs_pair(xs_pair(expression, expr), eve), exitM);
 }
 
 Arrow landHook(Arrow CM, Arrow hookParameter) {
@@ -883,6 +883,8 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
 }
 
 static void machine_init(Arrow CM) {
+    (void) CM;
+
     char *keyword;
     XSCallBack callBack;
 
@@ -910,8 +912,8 @@ static void machine_init(Arrow CM) {
                       { "branch", branchHook },
                       { "isClone", isCloneHook },
                       { "commit", commitHook },
-                      { "fall", fallHook },
-                      { "escalate", escalateHook },
+                      { "enter", enterHook },
+                      { "exit", exitHook },
                       { "land", landHook },
                       { "digest", digestHook },
                       { NULL, NULL } };
@@ -978,22 +980,23 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
             ) break;
 
 
-        // only operators can produce fall/escalate states
+        // only operators can produce enter/exit states
         // TODO check secret here
         Arrow MHead = xs_getHead(M);
-        if (xs_equal(MHead, fall)) {
+        if (xs_equal(MHead, enterM)) {
             Arrow VM = xs_getTail(M);
             Arrow V = xs_getTail(VM);
             C = xs_pair(C, V);  // Fall into context
             M = xs_getHead(VM);
-            WARNPRINTF("machine context fall to %O", V);
+            WARNPRINTF("machine enters into context %O", V);
             continue;
         }
 
         // only operators can produce such a state
-        if (xs_equal(MHead, escalate)) {
+        if (xs_equal(MHead, exitM)) {
+            WARNPRINTF("machine exits from context %O", C);
             C = xs_getTail(C);  // Escape from enclosing context
-            WARNPRINTF("machine context escalate to %O", C);
+            WARNPRINTF("machine context is now %O", C);
             M = xs_getTail(M);
             continue;
         }

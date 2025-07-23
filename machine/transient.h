@@ -131,7 +131,7 @@ uint8_t *xs_getMem(Arrow a, size_t *size);
 /// @param a atom
 /// @param size updated with buffer size
 /// @return  buffer in atom definition
-uint8_t *xs_borrowMem(Arrow a, size_t *size);
+const uint8_t *xs_borrowMem(Arrow a, size_t *size);
 
 /// @brief getStr into size-limited buffer. Max size-1 chars. Null-terminator added.
 /// @param size buffer size
@@ -209,7 +209,7 @@ void xs_childrenOfCB(Arrow, XSCallBack, void* context);
 #define xs_hookBadge() xs_constn(7, (uint8_t *)"XShO0K")
 
 /// hook a pointer
-#define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), &(p))))
+#define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), (uint8_t *)&(p))))
 
 /// read hooked pointer
 #define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (uint8_t *)pp, xs_getHead(hook), 0)

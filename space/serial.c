@@ -17,7 +17,7 @@
 
 /// URL-encode input buffer into destination buffer.
 /// 0-terminate the destination buffer.
-static void percent_encode(uint8_t *src, uint32_t src_len, char *dst, uint32_t* dst_len_p) {
+static void percent_encode(const uint8_t *src, const uint32_t src_len, char *dst, uint32_t* dst_len_p) {
     static const char *dont_escape = "_-,;~()";
     static const char *hex = "0123456789abcdef";
     uint32_t i, j;
@@ -41,7 +41,7 @@ static void percent_encode(uint8_t *src, uint32_t src_len, char *dst, uint32_t* 
 
 /// URL-decode input buffer into destination buffer.
 /// 0-terminate the destination buffer.
-static void percent_decode(const char *src, uint32_t src_len, uint8_t *dst, uint32_t* dst_len_p) {
+static void percent_decode(const char *src, const uint32_t src_len, uint8_t *dst, uint32_t* dst_len_p) {
     uint32_t i, j;
     int a, b;
 
@@ -62,7 +62,7 @@ static void percent_decode(const char *src, uint32_t src_len, uint8_t *dst, uint
     *dst_len_p = j;
 }
 
-static uint32_t skeepSpacesAndOnePlus(uint32_t size, char* uriEnd) {
+static uint32_t skeepSpacesAndOnePlus(const uint32_t size, const char* uriEnd) {
     char c;
     uint32_t l = 0;
     while ((size == NAN || l < size)

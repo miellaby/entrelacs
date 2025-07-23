@@ -354,7 +354,6 @@ void cell_showChildren(Address a) {
 
     // compute hash_children
     uint32_t hChild = hash_children(&cell) % PRIM1;
-    if (!hChild) hChild = 2; // offset can't be 0
 
     if (cell.arrow.child0) {
       // child0

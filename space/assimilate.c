@@ -204,14 +204,15 @@ Address probe_digest(char *digest) {
  * Will create the singleton if missing except if $ifExist is set.
  * $str might be a blob signature or a tag content.
  */
-Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
+Address assimilate_string(int cellType, const int length, const uint8_t *str, int ifExist) {
     Address hashAddress, hashProbe, hChain;
     uint32_t l;
     Address probeAddress, firstFreeAddress, next;
     Cell probed, sliceCell;
 
     unsigned i, safeguard, jump;
-    uint8_t c, *p;
+    uint8_t c;
+    const uint8_t *p;
 
     space_stats.atom++;
 
@@ -491,7 +492,7 @@ Address assimilate_string(int cellType, int length, uint8_t *str, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Address assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
+Address assimilate_tag(const uint32_t size, const uint8_t* data, int ifExist) {
     return assimilate_string(CELLTYPE_TAG, size, data, ifExist);
 }
 
@@ -499,7 +500,7 @@ Address assimilate_tag(uint32_t size, uint8_t* data, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Address assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
+Address assimilate_blob(const uint32_t size, const uint8_t* data, int ifExist) {
     char signature[CRYPTO_SIZE + 1];
     hash_crypto(size, data, signature);
     assert(strlen(signature) == CRYPTO_SIZE);
@@ -516,7 +517,7 @@ Address assimilate_blob(uint32_t size, uint8_t* data, int ifExist) {
  * by creating the singleton if not found.
  * except if ifExist param is set.
  */
-Address assimilate_small(int length, uint8_t* str, int ifExist) {
+Address assimilate_small(const int length, const uint8_t* str, int ifExist) {
     DEBUGPRINTF("small(%02x %.*s %1x) begin", length, length, str, ifExist);
 
     uint32_t hash;

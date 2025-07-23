@@ -24,8 +24,8 @@ typedef struct xs_arrow_s {
     Address  id;
     union xs_arrow_u {
         struct xs_atom_s {
-            uint8_t* raw;
-            uint32_t size;
+            const uint8_t* raw;
+            const uint32_t size;
             int      borrowed;
         } atom;
         struct xs_pair_s {
@@ -153,7 +153,7 @@ pool_stats_t pool_get_stats() {
 static void arrow_free(Arrow a) {
     if (xs_getType(a) == XS_ATOM) {
         if (!a->def.atom.borrowed) {
-            free (a->def.atom.raw);
+            free ((void *)a->def.atom.raw);
             a->type = XS_UNDEF;
             //DEBUGPRINTF("atom raw freed");
         }
@@ -189,18 +189,28 @@ Arrow xs_arrow(Address id) {
         return NULL;
 
     Arrow a = arrow_new();
-    a->id = id;
-    a->hash = hash;
     if (type == XL_ATOM) {
         //DEBUGPRINTF("new atom %p from id %u = %.*s", a, id, size, raw);
-        a->type = XS_ATOM;
-        a->def.atom.raw = raw;
-        a->def.atom.size = size;
+        memcpy(a, &(ArrowValue){
+            .id = id,
+            .hash = hash,
+            .type = XS_ATOM,
+            .def.atom = {
+                .raw = raw,
+                .size = size,
+                .borrowed = 0
+            }
+        }, sizeof(ArrowValue));
     } else {
-        a->type = XS_PAIR;
-        //DEBUGPRINTF("new pair %p from ids %u %u", a, (unsigned) tail, (unsigned) head);
-        a->def.pair.tail = xs_arrow(tail);
-        a->def.pair.head = xs_arrow(head);
+        memcpy(a, &(ArrowValue){
+            .id = id,
+            .hash = hash,
+            .type = XS_PAIR,
+            .def.pair = {
+                .tail = xs_arrow(tail),
+                .head = xs_arrow(head)
+            }
+        }, sizeof(ArrowValue));
     }
     return a;
 }
@@ -217,10 +227,18 @@ Arrow xs_pair(Arrow tail, Arrow head) {
 Arrow xs_atomn(size_t size, uint8_t* s) {
     Arrow a = arrow_new();
     //DEBUGPRINTF("new atom %p=%.*s", a, size, s);
-    a->def.atom.size = size;
-    a->def.atom.raw = (uint8_t*) malloc(size);
+    memcpy(a, &(ArrowValue){
+        .id = 0,   // not assimilated yet
+        .hash = 0, // not computed yet
+        .type = XS_ATOM,
+        .def.atom = {
+            .raw = (uint8_t*) malloc(size),
+            .size = size,
+            .borrowed = 0
+        }
+    }, sizeof(ArrowValue));
     assert(a->def.atom.raw);
-    memcpy(a->def.atom.raw, s, size);
+    memcpy((void *)a->def.atom.raw, s, size);
     a->type = XS_ATOM;
     return a;
 }
@@ -231,10 +249,16 @@ Arrow xs_atom(char* s) {
 
 Arrow xs_constn(size_t size, const uint8_t* buffer) {
     Arrow a = arrow_new();
-    a->def.atom.size = size;
-    a->def.atom.raw = buffer;
-    a->def.atom.borrowed = 1;
-    a->type = XS_ATOM;
+    memcpy(a, &(ArrowValue){
+        .id = 0,   // not assimilated yet
+        .hash = 0, // not computed yet
+        .type = XS_ATOM,
+        .def.atom = {
+            .raw = buffer,
+            .size = size,
+            .borrowed = 1
+        }
+    }, sizeof(ArrowValue));
     return a;
 }
 
@@ -336,7 +360,7 @@ uint8_t *xs_getMem(Arrow a, size_t *size) {
     return raw;
 }
 
-uint8_t *xs_borrowMem(Arrow a, size_t *size) {
+const uint8_t *xs_borrowMem(Arrow a, size_t *size) {
     if (a == NULL || a->type != XS_ATOM) {
         return NULL;
     }

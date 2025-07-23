@@ -25,9 +25,9 @@ uint32_t hash_pair(uint32_t h_tail, uint32_t h_head) {
 }
 
 /* hash a null-terminated string such as a tag atom content. Also return its size */
-uint64_t hash_string(char *str, uint32_t *length) {  // simple string hash
+uint64_t hash_string(const char *str, uint32_t *length) {  // simple string hash
     uint64_t hash = 5381;
-    char *s = str;
+    const char *s = str;
     uint8_t c;
     uint32_t l = 0;
     while ((c = (uint8_t)(*s++))) {  // for all bytes up to the null terminator
@@ -46,10 +46,10 @@ uint64_t hash_string(char *str, uint32_t *length) {  // simple string hash
 }
 
 /* hash function to get H1 from a binary tag arrow definition */
-uint64_t hash_raw(uint8_t *buffer, uint32_t length) {  // simple string hash
+uint64_t hash_raw(const uint8_t *buffer, const uint32_t length) {  // simple string hash
     uint64_t hash = 5381;
     int c;
-    uint8_t *p = buffer;
+    const uint8_t *p = buffer;
     uint32_t l = length;
     while (l--) {  // for all bytes (even last one)
         c = *p++;
@@ -73,7 +73,11 @@ uint32_t hash_chain(Cell *cell) {
 
 /* hash function to get hash_children from a cell caracteristics */
 uint32_t hash_children(Cell *cell) {
-    return hash_chain(cell) ^ 0xFFFFFFFFu;
+    uint32_t hc = hash_chain(cell) ^ 0xFFFFFFFFu;
+    if (hc == 0)
+        return 2; // can't be 0
+    else
+        return hc;
 }
 
 /* ________________________________________
@@ -82,7 +86,7 @@ uint32_t hash_children(Cell *cell) {
   *
   */
 
-char *hash_crypto(uint32_t size, uint8_t *data, char output[CRYPTO_SIZE + 1]) {
+char *hash_crypto(const uint32_t size, const uint8_t *data, char output[CRYPTO_SIZE + 1]) {
     uint8_t h[20];
     sha1(data, size, h);
     sprintf(output, "%08x%08x%08x%08x%08x", *(uint32_t *)h, *(uint32_t *)(h + 4), *(uint32_t *)(h + 8), *(uint32_t *)(h + 12), *(uint32_t *)(h + 16));

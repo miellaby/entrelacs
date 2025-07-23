@@ -13,7 +13,7 @@
 
 /// URL-encode input buffer into destination buffer.
 /// 0-terminate the destination buffer.
-static void percent_encode(uint8_t *src, uint32_t src_len, char *dst, size_t* dst_len_p) {
+static void percent_encode(const uint8_t *src, const uint32_t src_len, char *dst, size_t* dst_len_p) {
     static const char *dont_escape = "_-,;~()";
     static const char *hex = "0123456789abcdef";
     uint32_t i, j;
@@ -76,7 +76,7 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
         case XS_ATOM: {
             char *uri;
             size_t size;
-            uint8_t* raw = xs_borrowMem(a, &size);
+            const uint8_t* raw = xs_borrowMem(a, &size);
             size_t uri_size;
             if (size >= BLOB_MINSIZE) {
                 return xs_getDigest(a, &uri_size);
@@ -124,7 +124,7 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
     } // switch
 }
 
-static uint32_t skeepSpacesAndOnePlus(uint32_t size, char* uriEnd) {
+static uint32_t skeepSpacesAndOnePlus(const uint32_t size, const char* uriEnd) {
     char c;
     uint32_t l = 0;
     while ((size == NAN || l < size)

@@ -20,7 +20,7 @@
 
 .PHONY: help server clean all clean.% test.% run.% tests run start
 CPPFLAGS +=
-CFLAGS += -std=c99 -pthread -fPIC -I. -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
+CFLAGS += -std=gnu99 -pthread -fPIC -I. -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd

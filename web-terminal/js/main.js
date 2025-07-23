@@ -8,39 +8,39 @@ function init() {
 
     if (window.location.hash) {
         // public area
-        entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+").done(function() {
+        entrelacs.invoke("/exit/escape//mudo+chut//enter+/escape+demo/,/land+").done(function() {
             terminal.show(Arrow.atom(window.location.hash.substr(1)),  area.width() / 2, area.height() / 2).update();
         });
 
-        // reset handler: re-land        
+        // reset handler: re-land
         Arrow.listeners.push(function(a, replacing) {
             if (a === null) { // reset!
                 entrelacs.invoke(
-                    "/escalate/escape//mudo+chut//fall+/escape+demo/,/land+",
+                    "/exit/escape//mudo+chut//enter+/escape+demo/,/land+",
                     true, true /* immediate */);
             }
         });
-    
+
     } else {
         var connect = $("<div class='connect' align='center'><button id='go'>...</button></div>");
         connect.children('button').click(function() {
             alert("Leaving sand box. Entering public area ...");
             window.location = "#pub";
-            var promise = entrelacs.invoke("/escalate/escape//mudo+chut//fall+/escape+demo/,/land+");
+            var promise = entrelacs.invoke("/exit/escape//mudo+chut//enter+/escape+demo/,/land+");
             promise.done(function() { window.location.reload(); });
             return false;
         });
         connect.appendTo(area.parent().children('.areaTools'));
     }
-    
+
     //findFeaturedArrows();
     var wizardState = "beginning";
-    
+
     if ($.cookie && $.cookie('wizard') == '1'
         || window.location.hash) {
         return;
     }
-    
+
     var center = function(elt) {
         var p = elt.position();
         var x = p.left - ($(window).width() / 2);
@@ -109,7 +109,7 @@ function init() {
                 $('.wizard_box').delay(10000).fadeOut(4000);
             }
         }
-       
+
     }, 1000);
 
     $('.wizard_box>.close>a').click(function() {
@@ -121,7 +121,7 @@ function init() {
         $('.wizard_box').fadeOut(1000);
         return false;
     });
-    
+
 }
 
 $(document).ready(init);

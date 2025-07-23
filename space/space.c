@@ -83,7 +83,7 @@ Address xl_pairMaybe(Address tail, Address head) {
     return LOCK_OUT(a);
 }
 
-Address xl_atom(char *str) {
+Address xl_atom(const char *str) {
     uint32_t size = strlen(str);
     LOCK();
     Address a = (size == 0 ?  // EVE has a zero payload
@@ -93,7 +93,7 @@ Address xl_atom(char *str) {
     return LOCK_OUT(a);
 }
 
-Address xl_atomMaybe(char *str) {
+Address xl_atomMaybe(const char *str) {
     uint32_t size = strlen(str);
     LOCK();
     Address a = (size == 0 ? EVE  // EVE 0 payload
@@ -102,7 +102,7 @@ Address xl_atomMaybe(char *str) {
     return LOCK_OUT(a);
 }
 
-Address xl_atomn(uint32_t size, uint8_t *mem) {
+Address xl_atomn(const uint32_t size, const uint8_t *mem) {
     Address a;
     LOCK();
     if (size == 0)
@@ -117,7 +117,7 @@ Address xl_atomn(uint32_t size, uint8_t *mem) {
     return LOCK_OUT(a);
 }
 
-Address xl_atomnMaybe(uint32_t size, uint8_t *mem) {
+Address xl_atomnMaybe(const uint32_t size, const uint8_t *mem) {
     Address a;
     LOCK();
     if (size == 0)
@@ -416,8 +416,6 @@ void xl_childrenOfCB(Address a, XLCallBack cb, void* context) {
 
     // compute hash_children
     uint32_t hChild = hash_children(&cell) % PRIM1;
-    if (!hChild)
-        hChild = 2;  // offset can't be 0
 
     if (cell.arrow.child0) {
         // child0
@@ -659,8 +657,6 @@ XLEnum xl_childrenOf(Address a) {
 
     // compute hash_children
     uint32_t hChild = hash_children(&cell) % PRIM1;
-    if (!hChild)
-        hChild = 2;  // offset can't be 0
 
     iterator_t *iteratorp = (iterator_t *)malloc(sizeof(iterator_t));
     assert(iteratorp);

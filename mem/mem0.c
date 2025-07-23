@@ -477,7 +477,7 @@ int mem0_set(Address address, CellBody *pCellBody) {
   return mem0_addToJournal(address, pCellBody);
 }
 
-void mem0_saveData(char *h, size_t size, uint8_t *data) {
+void mem0_saveData(const char *h, const size_t size, const uint8_t *data) {
   TRACEPRINTF("saving %ld bytes as '%s' hash", size, h);
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size)
@@ -485,8 +485,8 @@ void mem0_saveData(char *h, size_t size, uint8_t *data) {
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
 
-  char *dirname = h + strlen(h) - 2; // FIXME escape binary codes here and there
-  char *filename = h;                // FIXME escape binary codes here and there
+  const char *dirname = h + strlen(h) - 2; // FIXME escape binary codes here and there
+  const char *filename = h;                // FIXME escape binary codes here and there
   chdir(mem0_blobDirPath);
   mkdir(dirname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   chdir(dirname);
@@ -508,9 +508,9 @@ void mem0_saveData(char *h, size_t size, uint8_t *data) {
   }
 }
 
-void mem0_deleteData(char *h) {
-  char *filename = h;
-  char *dirname = h + strlen(h) - 2; // the 2 last chars
+void mem0_deleteData(const char *h) {
+  const char *filename = h;
+  const char *dirname = h + strlen(h) - 2; // the 2 last chars
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
   chdir(mem0_blobDirPath);
@@ -530,12 +530,12 @@ void mem0_deleteData(char *h) {
   }
 }
 
-uint8_t *mem0_loadData(char *h, size_t *sizeP) {
+uint8_t *mem0_loadData(const char *h, size_t *sizeP) {
   *sizeP = 0;
 
   size_t size;
-  char *filename = h;
-  char *dirname = h + strlen(h) - 2;
+  const char *filename = h;
+  const char *dirname = h + strlen(h) - 2;
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
 

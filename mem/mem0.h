@@ -164,18 +164,18 @@ int  mem0_commit();
  @param data size.
  @param pointer to binary data.
  */
-void   mem0_saveData(char *h, size_t size, uint8_t * data);
+void   mem0_saveData(const char *h, const size_t size, const uint8_t * data);
 
 /** read back a data file created by mem0_loadData.
  @param h unique cryptographic hash code.
  @param sizeP size_t pointer. Pointed value set to data size.
  @return pointer to heap allocated binary data (must be freed by caller).
  */
-uint8_t*  mem0_loadData(char* h, size_t* sizeP);
+uint8_t*  mem0_loadData(const char* h, size_t* sizeP);
 
 /** remove a data file created by mem0_loadData.
  @param unique cryptographic hash code.
  */
-void   mem0_deleteData(char* h);
+void   mem0_deleteData(const char* h);
 
 #endif

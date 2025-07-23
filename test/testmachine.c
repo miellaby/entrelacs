@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     {"/arrow//var+foo/var+foo", "/+", "arrow expression substitutes explicitly casted vars"},
     {"//lambda/x/arrow/x/x/x+x+bread", "/x/x/x+x", "arrow expression in lambda doesn't substitute parameter if not var casted"},
     {"//lambda/x/arrow//var+x//var+x//var+x/var+x+bread", "/bread/bread/bread+bread", "arrow expression in lambda subtituting parameter"},
-    //{"/childrenOf+locked", "//locked+XLR3SuLT+//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+escalate+//locked+fall+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+", ""},
+    //{"/childrenOf+locked", "//locked+XLR3SuLT+//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+exit+//locked+enter+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+", ""},
     //{"/let//identity/lambda/x+x/identity+42", "42", ""},
     {"/any/unreducible/expression/is/left/as/is", "/any/unreducible/expression/is/left/as/is", ""},
     {"unboundedUncastedAtomLeftAsIs", "unboundedUncastedAtomLeftAsIs", ""},
@@ -96,17 +96,17 @@ int main(int argc, char **argv) {
     // {"/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval+crawlp/headOf+list+list/let//crawl/eval+crawlp/crawl/escape/1/2/3/4/5/", "", "crawl"},// last / => Eve
     {"/say/commit+", "/say+", ""},
     {"/escape/var+foo", "/var+foo", "escaped casted var"},
-    {"/fall+context/,/set/foo+bar", "bar", ""},
+    {"/enter+context/,/set/foo+bar", "bar", ""},
     {NULL, NULL, NULL}
 #if 0
         // TODO remake of next expressions
-    {"/set//demo+89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//fall+demo/,/var+x+", "/paddock//x/arrow//fall+demo/,/var+x+", ""},
-    {"/fall+context/,/set/foo+bar", "bar", ""},
+    {"/set//demo+89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//enter+demo/,/var+x+", "/paddock//x/arrow//enter+demo/,/var+x+", ""},
+    {"/enter+context/,/set/foo+bar", "bar", ""},
     {"/say/get+foo", "/say+", ""},
-    {"/fall+context/,/say/get+foo", "/say+bar", ""},
-    {"/fall+context/,/escalate/escape//demo+demo/set/foo+bar", "bar", ""},
+    {"/enter+context/,/say/get+foo", "/say+bar", ""},
+    {"/enter+context/,/exit/escape//demo+demo/set/foo+bar", "bar", ""},
     {"/say/get+foo", "/say+", ""},
-    {"/fall+demo/,/say/get+foo", "/say+bar", ""},
+    {"/enter+demo/,/say/get+foo", "/say+bar", ""},
 
         "/childrenOf/escape+set",
         "/let//mySet/macro/vv/let//variable/tailOf+vv/let//value/headOf+vv/arrow/root/arrow//var+variable/var+value/mySet/mySet+mySet",

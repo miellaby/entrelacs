@@ -133,7 +133,6 @@ void weaver_connect(Address a, Address child, int childWeakness, int outgoing) {
 
     // compute hChild used by probing
     uint32_t hChild = hash_children(&cell) % PRIM1;
-    if (!hChild) hChild = 2; // offset can't be 0
 
     // probing data
     Address next = a;
@@ -321,7 +320,6 @@ void weaver_disconnect(Address a, Address child, int weakness, int outgoing) {
 
     // compute parent arrow hChild (offset for child list)
     uint32_t hChild = hash_children(&parent) % PRIM1;
-    if (!hChild) hChild = 2; // offset can't be 0
 
     // probing data
     Address next = a;

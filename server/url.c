@@ -89,7 +89,7 @@ static Arrow _fromUrl(Arrow context, char* url, char** urlEnd) {
     return a;
 }
 
-static char* skeepSpacesAndOnePlus(char* urlEnd) {
+static char* skeepSpacesAndOnePlus(const char* urlEnd) {
     char c;
     while ((c = *urlEnd) && (c == ' ' || c == '\t' || c == '\n' || c == '\r')) {
         // white spaces are tolerated and ignored here

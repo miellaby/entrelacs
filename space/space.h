@@ -47,8 +47,8 @@ void xl_destroy(); ///< release system resources and locks
 // ------------
 Address xl_Eve(); ///< returns Eve.
 Address xl_pair(Address tail, Address head); ///< assimilate a pair of arrows
-Address xl_atom(char* str); ///< assimilate a C string
-Address xl_atomn(uint32_t size, uint8_t* raw); ///< assimilate raw data
+Address xl_atom(const char* str); ///< assimilate a C string
+Address xl_atomn(const uint32_t size, const uint8_t* raw); ///< assimilate raw data
 Address xl_uri(char* uri); ///< assimilate an URI. @return an arrow or NIL if bad URI
 Address xl_urin(uint32_t size, char* uri_part); ///< assimilate a part of URI. @return an arrow or NIL if bad URI
 Address xl_anonymous();   ///< assimilate a randomized value so to get an unique "anonymous" arrow.
@@ -57,8 +57,8 @@ Address xl_anonymous();   ///< assimilate a randomized value so to get an unique
 // Arrow testing without assimilation
 // -----------
 Address xl_pairMaybe(Address tail, Address head); ///< return a pair of arrows if system-known, Eve otherwise.
-Address xl_atomMaybe(char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
-Address xl_atomnMaybe(uint32_t size, uint8_t* raw); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
+Address xl_atomMaybe(const char*); ///< return the already assimilated arrow corresponding to a C string, Eve otherwise.
+Address xl_atomnMaybe(const uint32_t size, const uint8_t* raw); ///< return the already assimilated arrow corresponding to a raw piece of data, Eve otherwise.
 Address xl_uriMaybe(char* uri); ///< return the previously assimilated arrow corresponding to an URI, NIL if wrong URI, EVE if arrow not assimilated.
 Address xl_urinMaybe(uint32_t size, char* uri_part); ///< return the previously assimilated arrow corresponding to a part of URI, NIL if wrong URI, EVE if arrow not assimilated.
 Address xl_digestMaybe(char* digest); ///< return a stored arrow corresponding to a digest, NIL if no match.
