@@ -511,7 +511,7 @@ Arrow xs_unroot(Arrow e) {
         return NULL;
     }
     xs_resolve(e);
-    INFOPRINTF("xs_unroot(%O,%O)", XL_EVE, e);
+    INFOPRINTF("xs_unroot(%O)", e);
     if (e == eve || e->id) {
         xl_unroot(e->id);
     }

@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     (void) argc; (void) argv;
 
     //log_init(NULL, "server,session,machine,space=debug");
-    log_init(NULL, "server,session,transient=info,machine=debug");
+    log_init(NULL, "server,session=trace,transient=info,machine=debug");
 
     xs_init();
 
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
         // {"/unset+a", "a", "unset call"},
         // {"a", "a", "global var is unset"},
     // {"let//x+1/arrow//var+x+2", "/1+2", ""},
-    //{NULL, NULL},
+    // {NULL, NULL,NULL},
     // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1", ""},
     {"foo", "foo", "atom is left as is"},
     {"/foo+bar", "/foo+bar", "pair"},
@@ -53,15 +53,18 @@ int main(int argc, char **argv) {
     {"/let//EscapePreventsEvaluation+dude/escape//lambda/x+x/EscapePreventsEvaluation", "//lambda/x+x/EscapePreventsEvaluation", ""},
     {"/let//myJoin/lambda/x/lambda/y/arrow//var+x/var+y//myJoin+join+me", "/join+me", ""},
     {"/set/myJoin/lambda/x/lambda/y/arrow//var+x/var+y", "/closure+//x+/lambda+/y+/arrow+//var+x+/var+y+", ""},
+    {"/get+myJoin", "/closure+//x+/lambda+/y+/arrow+//var+x+/var+y+", "get"},
     {"/let//escapedProgram/escape//lambda/x+x+bread/eval+escapedProgram", "/bread", ""},
     {"///lambda/x/lambda/y/arrow//var+x/var+y+join+me", "/join+me", ""},
     {"/let//x+hot_potato/let//y+x+y", "hot_potato", ""},
-    {"/set/wave/lambda/x/if//equal/x+world///arrow/hello/var+x/no_way", "/closure+//x+/if+//equal+/x+world+//arrow+/hello+/var+x+no_way+", ""},
+    {"/set/wave/lambda/x/if//equal/x+world//arrow/hello/var+x+no_way", "/closure+//x+/if+//equal+/x+world+//arrow+/hello+/var+x+no_way+", ""},
+    {"wave", "/closure//x/if//equal/x+world//arrow/hello/var+x+no_way+", "wave is set"},
     {"/wave+me", "no_way", ""},
     {"/wave+world", "/hello+world", ""},
     {"/set//wave+world+surprised?", "surprised?", ""},
     {"/wave+world", "surprised?", ""},
     {"/unset+wave", "wave", ""},
+    {"wave", "wave", ""},
     {"//lambda/x+x/let//myHeadOf/lambda/x/headOf+x/myHeadOf/escape/1/2/3/4+5", "/2/3/4+5", ""},
     {"/arrow//var+unBoundedCastedAsVar+2", "/+2", ""},
     {"/load//escape/x+bound/arrow/x/is/var+x", "/x/is+bound", ""},
@@ -69,8 +72,8 @@ int main(int argc, char **argv) {
     {"/let//x+1/let//y+2/let//state+@M//lambda/x+x+state", "//let+//state+@M+//lambda+/x+x+state+///y+2+//x+1++", ""}, // environnement loaded but no continuation
     {"/let//x+build/arrow/I/can//var+x/any/arrow/even/with/lambda/or+such", "/I/can/build/any/arrow/even/with/lambda/or+such", ""},
     {"/let//x+foo/arrow//I/can/even/use//escape+escape/to/get///escape/var+x", "/I/can/even/use/escape/to/get/var+x", ""},
-    {"let//x+1/arrow/x+2", "/x+2", ""},
-    {"let//x+1/arrow//var+x+2", "/1+2", ""},
+    {"/let//x+1/arrow/x+2", "/x+2", ""},
+    {"/let//x+1/arrow//var+x+2", "/1+2", ""},
     {"/say/headOf+", "/say+", ""},
     {"/say/tailOf+", "/say+", ""},
     {"/headOf/escape/1/2/3/4+5", "/2/3/4+5", ""},
@@ -90,7 +93,13 @@ int main(int argc, char **argv) {
     {"//let//myHeadOf/lambda/x/headOf+x+myHeadOf/escape/1/2/3/4+5", "/2/3/4+5", ""},
     {"/unroot/something/not+rooted", "/something/not+rooted", ""},
     // to be rewritten with a fixed point thingy: {"/let//crawlp/arrow/lambda/list/if/list///eval/var+crawlp/headOf+list/+/let//crawl/eval+crawlp/crawl/1/2+3", "/1", ""},
+    // {"/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval+crawlp/headOf+list+list/let//crawl/eval+crawlp/crawl/escape/1/2/3/4/5/", "", "crawl"},// last / => Eve
     {"/say/commit+", "/say+", ""},
+    {"/escape/var+foo", "/var+foo", "escaped casted var"},
+    {"/fall+context/,/set/foo+bar", "bar", ""},
+    {NULL, NULL, NULL}
+#if 0
+        // TODO remake of next expressions
     {"/set//demo+89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//fall+demo/,/var+x+", "/paddock//x/arrow//fall+demo/,/var+x+", ""},
     {"/fall+context/,/set/foo+bar", "bar", ""},
     {"/say/get+foo", "/say+", ""},
@@ -98,11 +107,7 @@ int main(int argc, char **argv) {
     {"/fall+context/,/escalate/escape//demo+demo/set/foo+bar", "bar", ""},
     {"/say/get+foo", "/say+", ""},
     {"/fall+demo/,/say/get+foo", "/say+bar", ""},
-    {NULL, NULL, NULL}
-#if 0
-        // TODO remake of next expressions
 
-        "/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval+crawlp/headOf+list+Eve/let//crawl/eval+crawlp/crawl/escape/1/2/3/4/5/", // last / => Eve
         "/childrenOf/escape+set",
         "/let//mySet/macro/vv/let//variable/tailOf+vv/let//value/headOf+vv/arrow/root/arrow//var+variable/var+value/mySet/mySet+mySet",
         "/childrenOf/escape+set",

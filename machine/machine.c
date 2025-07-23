@@ -383,7 +383,8 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             // r(t0) = (operator (hook context))
             dputs("  resolve(t0) = (operator (hook context))");
             Arrow operatorParameter = xs_getHead(xs_getHead(w0));
-            XSCallBack cb = xs_getPointer(xs_getTail(xs_getHead(w0)));
+            Arrow operatorHook = xs_getTail(xs_getHead(w0));
+            XSCallBack cb = xs_getPointer(operatorHook);
             assert(cb);
             M = cb(xs_pair(C, M), operatorParameter);
             return M;
@@ -930,7 +931,7 @@ static void machine_init(Arrow CM) {
                 xs_uri("/paddock//x/let//condition/tailOf+x/let//alternative/headOf+x/arrow/eval/let//it/branch/var+condition/it//escape+escape/var+alternative+"));
     if (xs_context_get(eve, xs_const("equal")) == NULL)
         xs_context_set(eve, xs_const("equal"),
-                xs_uri("/paddock//x/let//a/tailOf+x/let//b/tailOf+x/arrow/let///headOf/var+x/var+a/let///headOf/var+x/var+b/isClone/arrow///escape+var/tailOf/var+x//escape+var/"
+                xs_uri("/paddock//x/let//a/tailOf+x/let//b/headOf+x/arrow/let///headOf/var+x/var+a/let///tailOf/var+x/var+b/isClone/arrow///escape+var/tailOf/var+x//escape+var/"
                        "headOf/var+x+"));
     if (xs_context_get(eve, xs_const("get")) == NULL)
         xs_context_set(eve, xs_const("get"), xs_uri("/paddock//x/arrow/getVar//escape+escape/var+x+"));

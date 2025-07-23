@@ -129,10 +129,11 @@ void xs_context_reset(Arrow c) {
         if (xl_tailOf(c_child) != context) { // Only outgoing arrow
             continue;
         }
+        Address child_head = xl_headOf(c_child);
         // process c_child as a sub context
         xs_context_reset(xs_arrow(c_child));
-        // unroot c_child as "a rooted in c" arrow
-        xl_unroot(c_child);
+        // unroot child_head as "a rooted in c" arrow
+        xs_context_unroot(c, xs_arrow(child_head));
     }
 
     xl_enumFree(childrenEnum);
