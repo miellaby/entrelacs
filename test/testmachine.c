@@ -5,15 +5,24 @@
 #include "entrelacs/entrelacs.h"
 #include "machine/session.h"
 #include "test/stupid_test.h"
+#include "machine/uri.h"
+#include <string.h>
 
 int main(int argc, char **argv) {
     (void) argc; (void) argv;
 
     //log_init(NULL, "server,session,machine,space=debug");
-    log_init(NULL, "server,session=trace,transient=info,machine=debug");
+    log_init(NULL, "server,session=info,transient=info,machine=debug");
 
     xs_init();
 
+    { // mmm
+        uint32_t l;
+        char *s = xs_getURI(xs_uri("//foo+bar+"), &l);
+        INFOPRINTF("%s %d %d", s, strlen(s), (int) l);
+        assert(!strcmp("//foo+bar+", s));
+        assert(l == strlen(s));
+    }
 
     //Arrow context = xs_open("test");
 
@@ -25,9 +34,18 @@ int main(int argc, char **argv) {
         // {"/unset+a", "a", "unset call"},
         // {"a", "a", "global var is unset"},
     // {"let//x+1/arrow//var+x+2", "/1+2", ""},
-    // {NULL, NULL,NULL},
     // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1", ""},
+    // {"/let//entered/enter+context/set/foo+bar/foo", "bar", ""},
+    // {"/foo+bar", "/bar+bar", "pair"},
+    // {"/exit+", "", ""},
+    // {"/foo+bar", "/foo+bar", "pair"},
+    // {"/say/commit+", "/say+", ""},
+    // {"/set/foo+bar", "bar", ""},
+    // {NULL, NULL, NULL},
+    // {"foo", "foo", "atom is left as is"},
+    // {"/say/commit+", "/say+", ""},
     {"foo", "foo", "atom is left as is"},
+    {"/any/unreducible/expression/is/left/as/is", "/any/unreducible/expression/is/left/as/is", ""},
     {"/foo+bar", "/foo+bar", "pair"},
     {"/var+foo", "", "casted var not bound"},
     {"/escape/var+foo", "/var+foo", "escaped casted var"},
@@ -43,7 +61,6 @@ int main(int argc, char **argv) {
     {"//lambda/x/arrow//var+x//var+x//var+x/var+x+bread", "/bread/bread/bread+bread", "arrow expression in lambda subtituting parameter"},
     //{"/childrenOf+locked", "//locked+XLR3SuLT+//locked+/%26%21%23+broken%20environment+//locked+%26%21%23+//locked+it+//locked+,+//locked+exit+//locked+enter+//locked+arrow+//locked+%40M+//locked+continuation+//locked+operator+//locked+paddock+//locked+closure+//locked+macro+//locked+lambda+//locked+eval+//locked+escape+//locked+var+//locked+load+//locked+let+", ""},
     //{"/let//identity/lambda/x+x/identity+42", "42", ""},
-    {"/any/unreducible/expression/is/left/as/is", "/any/unreducible/expression/is/left/as/is", ""},
     {"unboundedUncastedAtomLeftAsIs", "unboundedUncastedAtomLeftAsIs", ""},
     {"/let///anything/can/be/a/variable+id/arrow/deal/with+it+/var/anything/can/be/a/variable+id", "/deal/with+it", ""},
     {"/let//noCastingNeeded+anAtomWorksAsAVariable/noCastingNeeded", "anAtomWorksAsAVariable", ""},
@@ -96,7 +113,7 @@ int main(int argc, char **argv) {
     // {"/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval+crawlp/headOf+list+list/let//crawl/eval+crawlp/crawl/escape/1/2/3/4/5/", "", "crawl"},// last / => Eve
     {"/say/commit+", "/say+", ""},
     {"/escape/var+foo", "/var+foo", "escaped casted var"},
-    {"/enter+context/,/set/foo+bar", "bar", ""},
+    {"//enter+context/,/set/foo+bar", "bar", ""},
     {NULL, NULL, NULL}
 #if 0
         // TODO remake of next expressions

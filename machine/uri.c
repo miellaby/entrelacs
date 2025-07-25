@@ -75,17 +75,17 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
     switch (xs_getType(a)) {
         case XS_ATOM: {
             char *uri;
-            size_t size;
-            const uint8_t* raw = xs_borrowMem(a, &size);
-            size_t uri_size;
-            if (size >= BLOB_MINSIZE) {
-                return xs_getDigest(a, &uri_size);
+            size_t atom_size;
+            const uint8_t* raw = xs_borrowMem(a, &atom_size);
+            size_t uri_length;
+            if (atom_size >= BLOB_MINSIZE) {
+                return xs_getDigest(a, &uri_length);
             } else {
-                uri = malloc(3 * size + 1);
-                percent_encode(raw, size, uri, &uri_size);
-                uri = realloc(uri, 1 + uri_size);
+                uri = malloc(3 * atom_size + 1);
+                percent_encode(raw, atom_size, uri, &uri_length);
+                uri = realloc(uri, 1 + uri_length);
             }
-            if (l) *l = uri_size; // return length if asked
+            if (l) *l = uri_length; // return length if asked
             return uri;
         }
         case XS_PAIR:
@@ -116,7 +116,7 @@ char* xs_getURI(Arrow a, uint32_t *l) { // TODO: could be rewritten with geoallo
             }
             free(tailUri);
             free(headUri);
-            if (l) *l = uri_length + 1; // return length if asked
+            if (l) *l = uri_length; // return length if asked
             return uri;
         }
         default:

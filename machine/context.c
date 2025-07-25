@@ -67,17 +67,20 @@ int xs_context_isRooted(Arrow c, Arrow a) {
     return xs_isRooted(idx);
 }
 
-/// @brief recursive xs_context_list
-/// @param c context
-/// @param list child accumulator
-/// @return list + more children
-Arrow _xs_context_list(Arrow c, Arrow list) {
+Arrow xs_context_list(Arrow c) {
+    TRACEPRINTF("BEGIN xs_context_list(%O)", c);
     if (xs_isEve(c)) {
-        return list;
+        // The root context can't be listed
+        TRACEPRINTF("END xs_context_list: c == Eve not browsable");
+        return xs_eve();
+    }
+    if (!xs_isKnown(c)) {
+        // if c or a not assimilated there can't be children
+        TRACEPRINTF("END xs_context_list: c not assimilated");
+        return xs_eve();
     }
 
-    // if c or a not assimilated there can't be children
-    if (!xs_isKnown(c)) return list;
+    Arrow list = xs_eve();
     XLEnum childrenEnum = xl_childrenOf(xs_getId(c));
     while (xl_enumNext(childrenEnum)) {
         Address pair = xl_enumGet(childrenEnum);
@@ -91,27 +94,8 @@ Arrow _xs_context_list(Arrow c, Arrow list) {
         }
     }
     xl_enumFree(childrenEnum);
-
-    if (xs_isAtom(c)) {
-        return list;
-    }
-    return _xs_context_list(xs_getTail(c), list);
-}
-
-Arrow xs_context_list(Arrow c) {
-    TRACEPRINTF("BEGIN xs_context_list(%O)", c);
-    if (xs_isEve(c)) {
-        return xs_eve();
-    }
-    xs_resolve(c);
-    if (xs_isKnown(c)) {
-        Arrow list = _xs_context_list(c, xs_eve());
-        TRACEPRINTF("END xs_context_list(%O) = %O", c, list);
-        return list;
-    } else {
-        TRACEPRINTF("END xs_context_list: c not assimilated");
-        return xs_eve();
-    }
+    TRACEPRINTF("END xs_context_list(%O) = %O", c, list);
+    return list;
 }
 
 /** reset a context
@@ -166,12 +150,12 @@ void xs_context_unset(Arrow c, Arrow key) {
 */
 Arrow xs_context_get(Arrow c, Arrow key) {
     TRACEPRINTF("BEGIN xs_context_get(%O,%O)", c, key);
-    Arrow context_key = xs_pair(c, key);
-    if (!xs_isKnown(context_key)) {
-        TRACEPRINTF("END xs_context_get(%O,%O) = NULL", c, key);
-        return NULL;
+    Arrow u = c;
+    Arrow list = xs_context_list(xs_pair(u, key));
+    while (xs_isEve(list) && !xs_isEve(u) && !xs_isAtom(u)) {
+        u = xs_getTail(u);
+        list = xs_context_list(xs_pair(u, key));
     }
-    Arrow list = xs_context_list(context_key);
     if (xs_isEve(list)) {
         // no value found
         TRACEPRINTF("END xs_context_get(%O,%O) = NULL", c, key);
