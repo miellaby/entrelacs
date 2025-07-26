@@ -96,7 +96,7 @@ static char* skeepSpacesAndOnePlus(const char* urlEnd) {
         urlEnd++;
     }
     if (c == '+') urlEnd++;
-    return urlEnd;
+    return (char *)urlEnd;
 }
 
 static Arrow fromUrl(Arrow context, char *url) {

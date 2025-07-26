@@ -67,7 +67,7 @@ extern int log_verbose();
 #ifdef DEBUG
   #define ONDEBUG(w) w
 #else
-  #define ONDEBUG(w)
+  #define ONDEBUG(w) ((void)0)
 #endif
 
 

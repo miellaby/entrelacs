@@ -18,6 +18,16 @@ uint32_t hash_eve();
 /// @return hash code
 uint32_t hash_pair(uint32_t h_tail, uint32_t h_head);
 
+/// @brief turn the hash into an open address
+/// @param hash
+/// @return open address
+uint32_t get_openAddress(uint32_t hash);
+
+/// @brief turn the hash into a probe offset
+/// @param hash
+/// @return probe offset
+uint32_t get_probeOffset(uint32_t hash);
+
 /// @brief hash a string and compute its length
 /// @param[in] str
 /// @param[out] length

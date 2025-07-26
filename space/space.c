@@ -1,14 +1,3 @@
-/*
-// WORK IN PROGRESS
-// Weak rooting / "weak" flag
-// - week arrow doesn't prevent parents GC
-// - removed when parents removed
-// - Arrow flags:
-//   R: root flag
-//   W: weak-root flag
-//   If (W && !R): GC when both ends are unrooted
-*/
-
 #define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,8 +55,19 @@ Address xl_Eve() {
 }
 
 uint32_t xl_hashOf(Address a) {
+    if (a == EVE)
+      return hash_eve(); // Eve hash is not zero!
+
+    if (a >= SPACE_SIZE)
+      return 0; // Out of space
+
     LOCK();
-    uint32_t cs = cell_getHash(a);
+    Cell cell;
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell))
+        return 0; // Not an arrow
+
+    uint32_t cs = cell.arrow.hash; // hash
     return LOCK_OUT(cs);
 }
 
@@ -132,25 +132,43 @@ Address xl_atomnMaybe(const uint32_t size, const uint8_t *mem) {
     return LOCK_OUT(a);
 }
 
+
 Address xl_headOf(Address a) {
     if (a == EVE)
         return EVE;
     LOCK();
-    return LOCK_OUT(cell_getHead(a));
+    Cell cell;
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {
+        return LOCK_OUT(XL_NIL);
+    } else if (!cell_isPair(&cell)) {
+        return LOCK_OUT(a); // atom parents are itself
+    } else {
+        return LOCK_OUT(cell_getHead(&cell));
+    }
 }
 
 Address xl_tailOf(Address a) {
     if (a == EVE)
         return EVE;
     LOCK();
-    return LOCK_OUT(cell_getTail(a));
+    Cell cell;
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {
+        return LOCK_OUT(XL_NIL);
+    } else if (!cell_isPair(&cell)) {
+        return LOCK_OUT(a); // atom parents are itself
+    } else {
+        return LOCK_OUT(cell_getTail(&cell));
+    }
 }
 
 /** return the content behind an atom
 */
 uint8_t *xl_memOf(Address a, uint32_t *lengthP) {
-    if (a == EVE) {  // Eve has an empty payload
-        return cell_getPayload(EVE, NULL, lengthP);
+    if (a == EVE) {  // Eve has no payload
+        *lengthP = 0;
+        return NULL;
     }
 
     // Lock mem access
@@ -158,15 +176,15 @@ uint8_t *xl_memOf(Address a, uint32_t *lengthP) {
 
     // get the cell pointed by a
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    if (cell.full.type < CELLTYPE_SMALL || cell.full.type > CELLTYPE_BLOB) {  // Not an atom (empty cell, pair, ...)
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {  // wrong id
         return LOCK_OUTRAW(NULL);
     }
-
+    if (!cell_isAtom(&cell)) {  // wrong arrow type
+        return LOCK_OUTRAW(NULL);
+    }
     uint32_t payloadLength;
-    uint8_t *payload = cell_getPayload(a, &cell, &payloadLength);
+    uint8_t *payload = cell_getPayload(&cell, a, &payloadLength);
     if (payload == NULL) {  // Error
         return LOCK_OUTRAW(NULL);
     }
@@ -193,12 +211,13 @@ int xl_read(Address a, XLType *type_p, uint32_t *hash_p, Address *tail_p, Addres
     if (a >= SPACE_SIZE) {
         return 1;
     }
-    if (a == XL_EVE) {  // Eve has an empty payload
-        *type_p = XL_EVE;
-        *tail_p = XL_EVE;
-        *head_p = XL_EVE;
+    if (a == EVE) {  // Eve has an empty payload
+        *type_p = EVE;
+        *tail_p = EVE;
+        *head_p = EVE;
         *hash_p = hash_eve();
-        *raw_p = cell_getPayload(XL_EVE, NULL, size_p);
+        *size_p = 0;
+        *raw_p = NULL;
         return 0;
     }
 
@@ -207,27 +226,24 @@ int xl_read(Address a, XLType *type_p, uint32_t *hash_p, Address *tail_p, Addres
 
     // get the cell pointed by a
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    if (!CELL_CONTAINS_ARROW(cell)) {  // empty/wrong
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {  // wrong id
+        UNLOCK();
         return XL_NIL;
     }
     *hash_p = cell.arrow.hash;
-    if (cell.full.type == CELLTYPE_PAIR) {  // pair
+    if (cell_isPair(&cell)) {
         *type_p = XL_PAIR;
         *tail_p = cell.pair.tail;
         *head_p = cell.pair.head;
         *raw_p = NULL;
         *size_p = 0;
-
-    } else {  // atom
+    } else {
         *type_p = XL_ATOM;
         *tail_p = a;
         *head_p = a;
         *raw_p = xl_memOf(a, size_p);
     }
-
     UNLOCK();
     return 0;
 }
@@ -248,16 +264,11 @@ char *xl_digestOf(Address a, uint32_t *l) {
     LOCK();
 
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT) {
-        // Address anomaly : not an arrow
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {  // wrong id
         return LOCK_OUTSTR(NULL);
     }
-
     char *digest = serial_digest(a, &cell, l);
-
     return LOCK_OUTSTR(digest);
 }
 
@@ -332,14 +343,12 @@ Address xl_isPair(Address a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
+    CELL_READ(&cell, a);
     UNLOCK();
-
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
+    if (!cell_isArrow(&cell)) {  // wrong id
         return XL_NIL;
-
-    return (cell.full.type == CELLTYPE_PAIR ? a : EVE);
+    }
+    return (cell_isPair(&cell) ? a : EVE);
 }
 
 Address xl_isAtom(Address a) {
@@ -353,19 +362,19 @@ Address xl_isAtom(Address a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
+    CELL_READ(&cell, a);
     UNLOCK();
-
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
+    if (!cell_isArrow(&cell)) {  // wrong id
         return XL_NIL;
-
-    return (cell.full.type == CELLTYPE_PAIR ? EVE : a);
+    }
+    return (cell_isAtom(&cell) ? a : EVE);
 }
 
 enum e_xlType xl_typeOf(Address a) {
+    static const enum e_xlType map[] = { XL_UNDEF, XL_PAIR, XL_ATOM, XL_ATOM, XL_ATOM };
+
     if (a == EVE) {
-        return XL_EVE;
+        return EVE;
     }
 
     if (a >= SPACE_SIZE) {
@@ -374,17 +383,14 @@ enum e_xlType xl_typeOf(Address a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
+    CELL_READ(&cell, a);
     UNLOCK();
-
-    if (cell.full.type > CELLTYPE_ARROWLIMIT)
-        return XL_NIL;
-
-    static const enum e_xlType map[] = { XL_UNDEF, XL_PAIR, XL_ATOM, XL_ATOM, XL_ATOM };
-
+    if (!cell_isArrow(&cell)) {  // wrong id
+        return XL_UNDEF;
+    }
     return map[cell.full.type];
 }
+
 /** Get children
 *
 */
@@ -398,30 +404,26 @@ void xl_childrenOfCB(Address a, XLCallBack cb, void* context) {
     // get the parent cell
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    // check arrow
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT) {
-        // invalid ID
+    CELL_READ(&cell, a);
+    uint32_t childCount = cell_getChildCount(&cell);
+    if (childCount == (uint32_t)-1) {
+        ERRORPRINTF("Not an arrow");
         UNLOCK();
         return;
     }
-
-    if (!(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
-        // no child
+    if (childCount == 0) {
+        TRACEPRINTF("No child");
         UNLOCK();
         return;
     }
 
     // compute hash_children
-    uint32_t hChild = hash_children(&cell) % PRIM1;
+    uint32_t hChild = hash_children(&cell);
 
-    if (cell.arrow.child0) {
-        // child0
+    if (cell.arrow.child0 != EVE) {
         cb(cell.arrow.child0, context);
 
-        if ((cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK)) == 1) {
+        if (childCount == 1) {
             // child0 is the only child
             UNLOCK();
             return;
@@ -433,17 +435,10 @@ void xl_childrenOfCB(Address a, XLCallBack cb, void* context) {
     Cell nextCell;
 
     while (1) {  // child probing loop
-
-        // shift
         ADDRESS_SHIFT(next, next, hChild);
-
-        // get the next cell
-        mem_get(next, &nextCell.u_body);
-        ONDEBUG((LOGCELL('R', next, &nextCell)));
-
+        CELL_READ(&nextCell, next);
         if (nextCell.full.type == CELLTYPE_CHILDREN) {
-            // One found a children cell
-
+            // found a children cell
             int j = 0;       //< slot index
             while (j < 5) {  // slot scanning
                 Address inSlot = nextCell.children.C[j];
@@ -458,8 +453,7 @@ void xl_childrenOfCB(Address a, XLCallBack cb, void* context) {
 
                     // get child cell
                     Cell childCell;
-                    mem_get(child, &childCell.u_body);
-                    ONDEBUG((LOGCELL('R', child, &childCell)));
+                    CELL_READ(&childCell, child);
 
                     // check at least one arrow end is a
                     // TODO check direction so to not at a same child twice because its back-reference
@@ -501,8 +495,7 @@ static int xl_enumNextChildOf(XLEnum e) {
 
     // get current cell
     Cell cell;
-    mem_get(pos ? pos : a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', pos ? pos : a, &cell)));
+    CELL_READ(&cell, pos ? pos : a);
 
     if (pos == EVE || pos == a) {  // current cell is parent cell
 
@@ -512,15 +505,18 @@ static int xl_enumNextChildOf(XLEnum e) {
             TRACEPRINTF("arrow changed");
             return LOCK_OUT(0);  // arrow changed
         }
-
-        if (!(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
-            // no child
+        uint32_t childCount = cell_getChildCount(&cell);
+        if (childCount == (uint32_t)-1) {
+            ERRORPRINTF("Not an arrow");
+            return LOCK_OUT(0);
+        }
+        if (childCount == 0) {
             TRACEPRINTF("no child");
             return LOCK_OUT(0);  // no child
         }
 
         if (pos == EVE) {
-            if (cell.arrow.child0) {
+            if (cell.arrow.child0 != EVE) {
                 // return child0, and prepare listing other children
                 iteratorp->pos = a;
                 iteratorp->iSlot = 0;
@@ -532,13 +528,12 @@ static int xl_enumNextChildOf(XLEnum e) {
             }
         }
         // pos == a
-        if (1 == (cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK)) && cell.arrow.child0) {
+        if (1 == childCount && cell.arrow.child0 != EVE) {
             return LOCK_OUT(0);  // no child left
         } else {
             // 1st shift
             ADDRESS_SHIFT(pos, pos, offset);
-            mem_get(pos, &cell.u_body);
-            ONDEBUG((LOGCELL('R', pos, &cell)));
+            CELL_READ(&cell, pos);
             ic = 1;
             i = 0;
         }
@@ -577,8 +572,7 @@ static int xl_enumNextChildOf(XLEnum e) {
 
                     // get child cell
                     Cell childCell;
-                    mem_get(child, &childCell.u_body);
-                    ONDEBUG((LOGCELL('R', child, &childCell)));
+                    CELL_READ(&childCell, child);
 
                     // check at least one arrow end is a
                     if (childCell.pair.head == a || childCell.pair.tail == a) {
@@ -602,8 +596,7 @@ static int xl_enumNextChildOf(XLEnum e) {
         }
         // shift
         ADDRESS_SHIFT(pos, pos, offset);
-        mem_get(pos, &cell.u_body);
-        ONDEBUG((LOGCELL('R', pos, &cell)));
+        CELL_READ(&cell, pos);
         ic++;   // next cell
         i = 0;  // first slot in next cell
     }  // children loop
@@ -649,14 +642,14 @@ XLEnum xl_childrenOf(Address a) {
     // get parent cell
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return (UNLOCK(), NULL);  // Invalid id
+    CELL_READ(&cell, a);
     UNLOCK();
+    if (!cell_isArrow(&cell)) {
+        return NULL;  // Invalid id
+    }
 
     // compute hash_children
-    uint32_t hChild = hash_children(&cell) % PRIM1;
+    uint32_t hChild = hash_children(&cell);
 
     iterator_t *iteratorp = (iterator_t *)malloc(sizeof(iterator_t));
     assert(iteratorp);
@@ -677,46 +670,35 @@ Address xl_root(Address a) {
     }
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT) {
-        // bad reference
-        WARNPRINTF("Not an arrow");
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {
+        WARNPRINTF("%06x not an arrow", a);
         return LOCK_OUT(EVE);
     }
-
-    if (cell.arrow.RWWnCn & FLAGS_ROOTED) {
-        // already rooted
+    if (cell_isRooted(&cell)) {
         DEBUGPRINTF("%06x already rooted", a);
         return LOCK_OUT(a);
     }
 
-    // This arrow was not rooted yet.
-    // If it had no child, it was not connected.
-    int loose = !(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
-
-    // change the arrow to ROOTED state
-    cell.arrow.RWWnCn = cell.arrow.RWWnCn | FLAGS_ROOTED;
-    mem_set(a, &cell.u_body);
-    ONDEBUG((LOGCELL('W', a, &cell)));
-
     space_stats.root++;
 
-    if (cell.full.type == CELLTYPE_PAIR) {  // parent arrow is a pair
-        int unconnected = !(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK));
-        if (unconnected) {  // parent arrow was not connected yet
-            // it is not anymore. So one connect it to its own parents
-            weaver_connect(cell.pair.tail, a, 0, 1);
-            weaver_connect(cell.pair.head, a, 0, 0);
-        }
-    }
+    // This arrow was not rooted yet.
+    // If it had no child, it was not connected.
+    int loose = (cell_getChildCount(&cell) == 0);
 
-    if (loose) {
+    // change the arrow to ROOTED state
+    cell.arrow.RC0dCn |= FLAGS_ROOTED;
+    CELL_WRITE(&cell, a);
+
+    if (loose) { // arrow was loose (neith rooted not connected)
         // (try to) remove 'a' from the loose log
         weaver_removeLoose(a);
+        if (cell_isPair(&cell)) { // arrow is a pair
+            // it is not anymore. So one connect it to its own parents
+            weaver_connect(cell.pair.tail, a, 1);
+            weaver_connect(cell.pair.head, a, 0);
+        }
     }
-
     return LOCK_OUT(a);
 }
 
@@ -727,42 +709,30 @@ Address xl_unroot(Address a) {
 
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT) {
-        // bad reference
-        WARNPRINTF("Not an arrow");
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {
+        WARNPRINTF("%06x not an arrow", a);
         return LOCK_OUT(EVE);
     }
-
-    if (!(cell.arrow.RWWnCn & FLAGS_ROOTED)) {
-        // already unrooted
+    if (!cell_isRooted(&cell)) {
         DEBUGPRINTF("%06x already unrooted", a);
-
         return LOCK_OUT(a);
     }
 
     space_stats.unroot++;
 
     // change the arrow to UNROOTED state
-    cell.arrow.RWWnCn ^= FLAGS_ROOTED;
-    mem_set(a, &cell.u_body);
-    ONDEBUG((LOGCELL('W', a, &cell)));
+    cell.arrow.RC0dCn ^= FLAGS_ROOTED;
+    CELL_WRITE(&cell, a);
 
-    // If this arrow has no strong child left, it's now loose
-    int loose = !(cell.arrow.RWWnCn & FLAGS_CHILDRENMASK);
-    if (loose) {
-        // loose log
+    int loose = (cell_getChildCount(&cell) == 0);
+    if (loose) { // this arrow has no child
+        // add arrow to the loose log
         weaver_addLoose(a);
-
-        if (cell.full.type == CELLTYPE_PAIR) {  // parent arrow is a pair
-            int disconnected = !(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK));
-            if (disconnected) {  // got disconnected
-                // one disconnects it from its own parents.
-                weaver_disconnect(cell.pair.tail, a, 0, 1);
-                weaver_disconnect(cell.pair.head, a, 0, 0);
-            }
+        if (cell_isPair(&cell)) { // arrow is a pair
+            // one disconnects it from its own parents.
+            weaver_disconnect(cell.pair.tail, a, 1);
+            weaver_disconnect(cell.pair.head, a, 0);
         }
     }
     return LOCK_OUT(a);
@@ -772,19 +742,14 @@ Address xl_unroot(Address a) {
 int xl_isRooted(Address a) {
     if (a == EVE)
         return EVE;
-
     LOCK();
     Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-    UNLOCK();
-
-    if (cell.full.type == CELLTYPE_EMPTY || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return EVE;
-    else if (cell.arrow.RWWnCn & FLAGS_ROOTED)
-        return a;
-    else
-        return EVE;
+    CELL_READ(&cell, a);
+    if (!cell_isArrow(&cell)) {
+        WARNPRINTF("%06x not an arrow", a);
+        return LOCK_OUT(EVE);
+    }
+    return LOCK_OUT(cell_isRooted(&cell) ? a : EVE);
 }
 
 int xl_equal(Address a, Address b) {
@@ -910,12 +875,11 @@ int xl_init() {
         EveCell.pair.tail = EVE;
         EveCell.pair.head = EVE;
         EveCell.arrow.hash = hash_eve();
-        EveCell.arrow.RWWnCn = FLAGS_ROOTED;
-        EveCell.arrow.child0 = 0;
+        EveCell.arrow.RC0dCn = FLAGS_ROOTED;
+        EveCell.arrow.child0 = EVE;
         EveCell.full.type = CELLTYPE_PAIR;
         EveCell.arrow.dr = 0;
-        mem_set(EVE, &EveCell.u_body);
-        ONDEBUG((LOGCELL('W', EVE, &EveCell)));
+        CELL_WRITE(&EveCell, EVE);
         mem_commit();
         mem_close();
     }
