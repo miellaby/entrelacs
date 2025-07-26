@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
     (void) argc; (void) argv;
 
     //log_init(NULL, "server,session,machine,space=debug");
-    log_init(NULL, "server,session=info,transient=info,machine=debug");
+    log_init(NULL, "server,session,transient,machine");
 
     xs_init();
 
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
             return EXIT_FAILURE;
         }
-        fprintf(stdout, "evalution of %O\n\tis %O\n", program, result);
+        fprintf(stdout, "Result is %O\n", result);
         test_ok();
         //xs_unroot(context, program);
         //xs_unroot(context, wanted);

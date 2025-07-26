@@ -234,7 +234,7 @@ int mem0_openPreviousJournal() {
 
   fseek(journalHandler, -sizeof(check), SEEK_END);
   journalEnd = ftell(journalHandler);
-  INFOPRINTF("journal terminator at %ld", journalEnd);
+  TRACEPRINTF("journal terminator at %ld", journalEnd);
 
   size_t read = fread(&check, sizeof(check), 1, journalHandler);
   if (read != 1) {
