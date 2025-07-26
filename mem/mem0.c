@@ -393,6 +393,7 @@ int mem0_init() {
   // create mem0 file if non existant
   FILE *fd = fopen(mem0_filePath, "r");
   if (!fd) {
+    INFOPRINTF("Creating %s", mem0_filePath);
     fd = fopen(mem0_filePath, "w+b");
     if (!fd) {
       perror("mem0_init persistence file opening/creation failed");

@@ -420,15 +420,17 @@ void weaver_performGC() {
 
     qsort(looseLog, looseLogSize, sizeof(Address), compareAddresses);
 
-    // this is a loose log deduping loop
-    unsigned writeIndex = 1;
-    for (unsigned readIndex = 1; readIndex < looseLogSize; readIndex++) {
-        if (looseLog[readIndex] != looseLog[readIndex - 1]) {
-            looseLog[writeIndex] = looseLog[readIndex];
-            writeIndex++;
+    if (looseLogSize > 0) {
+        // this is a loose log deduping loop
+        unsigned writeIndex = 1;
+        for (unsigned readIndex = 1; readIndex < looseLogSize; readIndex++) {
+            if (looseLog[readIndex] != looseLog[readIndex - 1]) {
+                looseLog[writeIndex] = looseLog[readIndex];
+                writeIndex++;
+            }
         }
+        looseLogSize = writeIndex;
     }
-    looseLogSize = writeIndex;
 
     for (unsigned i = looseLogSize; i > 0; i--) { // loose stack scanning
         Address a = looseLog[i - 1];

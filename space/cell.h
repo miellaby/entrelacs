@@ -287,5 +287,6 @@ void cell_showChildren(Address a);
 #define ADDRESS_SHIFT(ADDRESS, NEW, OFFSET) \
     (NEW = (((ADDRESS) + ((OFFSET)++)) % (SPACE_SIZE)))
 
+// S=jump*(2*offset+jump-1)/2
 #define ADDRESS_JUMP(ADDRESS, NEW, OFFSET, JUMP) \
-    (NEW = (((((ADDRESS) + (((JUMP) * (JUMP) + 1)) / 2 * (OFFSET)))) % (SPACE_SIZE)))
+    (NEW = ((ADDRESS) + (((JUMP) * (2 * (OFFSET) + (JUMP) - 1))) / 2) % (SPACE_SIZE))
