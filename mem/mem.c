@@ -6,7 +6,6 @@
  * Modified cells in the current micro-transaction are buffered until next commit.
  * This cache is neither a write-trough nor a 'lazy write' cache.
  * Cache conflicts are solved by moving conflicting cells in a linear buffer called "the reserve".
- * FIXME: add a flag in the main cache to tell there is conflicting content for this cell.
  */
 #define MEM_C
 #include "mem/_mem.h"
@@ -107,11 +106,6 @@ int mem_get_advanced(Address a, CellBody *pCellBody, uint32_t *stamp_p) {
     int reserve_move = mem1_hasReserve(m);
     if (mem1_isChanged(m)) {
         reserve_move = 1;
-        // FIXME: we're obliged to cache a cell read in place of modified cell
-        // because mem_write doesn't work otherwise.
-        // if (stamp_p != NULL) *stamp_p = revision;
-        // return mem0_get(a);
-
         // When replacing a modified cell, move it to reserve
         Address moved = m->page * MEMSIZE + offset;
         DEBUGPRINTF("mem_get moves %06x from mem to reserve", moved);
@@ -337,7 +331,7 @@ int mem_commit_is_needed() {
     if (logSize == 0) { // nothing to commit
         return 0;
     }
-    
+
     // if reserve is more than 1/4 full, we need to commit to free some space
     if (reserveHead > RESERVESIZE / 4) {
         return 1;

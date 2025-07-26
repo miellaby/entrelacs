@@ -498,8 +498,8 @@ void mem0_saveData(const char *h, const size_t size, const uint8_t *data) {
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
 
-  const char *dirname = h + strlen(h) - 2; // FIXME escape binary codes here and there
-  const char *filename = h;                // FIXME escape binary codes here and there
+  const char *dirname = h + strlen(h) - 2;
+  const char *filename = h;
   chdir(mem0_blobDirPath);
   mkdir(dirname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   chdir(dirname);

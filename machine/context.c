@@ -123,6 +123,39 @@ void xs_context_reset(Arrow c) {
     xl_enumFree(childrenEnum);
 }
 
+/** reset a context
+  Recursively unroot any rooted arrow BUT one (a) under a given context
+ */
+int xs_context_reset_others(Arrow c, Arrow a) {
+    TRACEPRINTF("xs_context_reset(%O)", c);
+    if (!xs_isKnown(c)) return 0;
+    Address context = xs_getId(c);
+    Address preserved = xs_getId(xs_assimilate(a));
+    XLEnum childrenEnum = xl_childrenOf(context);
+    Address next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : XL_EVE);
+    int found = 0;
+    while (next != XL_EVE) {
+        Address c_child = next;
+        next = (xl_enumNext(childrenEnum) ? xl_enumGet(childrenEnum) : XL_EVE);
+        if (xl_tailOf(c_child) != context) { // Only outgoing arrow
+            continue;
+        }
+        Address child_head = xl_headOf(c_child);
+        if (child_head == preserved) {
+            found = 1;
+            // skip preserved arrow
+            continue;
+        }
+        // process c_child as a sub context
+        xs_context_reset(xs_arrow(c_child));
+        // unroot child_head as "a rooted in c" arrow
+        xs_context_unroot(c, xs_arrow(child_head));
+    }
+
+    xl_enumFree(childrenEnum);
+    return found;
+}
+
 /** regular "set"
      1) unroot any arrow from $c+$key sub-context
      2) root $value in /$c+$key sub-context
@@ -134,8 +167,10 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
     xs_assimilate(value);
     Arrow sub_context = xs_pair(c, key);
 
-    ERRORPRINTF("xs_context_reset(sub_context) REMPLIT LooseLog");
-    xs_context_reset(sub_context);
+    if (xs_context_reset_others(sub_context, value)) {
+        TRACEPRINTF("xs_context_set(%O,%O,%O) already setted", c, key, value);
+        return value;
+    }
 
     return xs_context_root(sub_context, value);
 }

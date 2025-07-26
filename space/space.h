@@ -80,7 +80,7 @@ int   xl_read(Address a, XLType *type_p, uint32_t* hash_p, Address *tail_p, Addr
 Address xl_root(Address); ///< root arrow.
 Address xl_unroot(Address); ///< unroot arrow.
 
-// Transaction FIXME à déplacer dans session.h
+// Transaction
 // -----------
 void xl_open();  ///< increment the global transaction counter. Other transactions will be synced with the one of this calling thread (or xl_close)
 void xl_yield(Address); ///< perform GC, only preserving one "state" arrow. wait for all threads being ready.

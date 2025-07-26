@@ -407,18 +407,35 @@ static void weaver_forgetLoose(Address a, Cell* cell) {
     }
 }
 
+static int compareAddresses(const void *a, const void *b) {
+    Address *addrA = (Address *)a;
+    Address *addrB = (Address *)b;
+    if (*addrA < *addrB) return -1;
+    if (*addrA > *addrB) return 1;
+    return 0;
+}
 
 void weaver_performGC() {
     TRACEPRINTF("BEGIN weaver_performGC()");
 
-    ERRORPRINTF("FIXME qsort and dedup looseLog");
+    qsort(looseLog, looseLogSize, sizeof(Address), compareAddresses);
+
+    // this is a loose log deduping loop
+    unsigned writeIndex = 1;
+    for (unsigned readIndex = 1; readIndex < looseLogSize; readIndex++) {
+        if (looseLog[readIndex] != looseLog[readIndex - 1]) {
+            looseLog[writeIndex] = looseLog[readIndex];
+            writeIndex++;
+        }
+    }
+    looseLogSize = writeIndex;
+
     for (unsigned i = looseLogSize; i > 0; i--) { // loose stack scanning
         Address a = looseLog[i - 1];
         Cell cell;
         CELL_READ(&cell, a);
-        if (cell.full.type == CELLTYPE_EMPTY) {
-            // the cell has already been emptied
-        } else if (cell_isLoose(&cell)) { // a loose arrow is removed NOW
+        assert(cell.full.type != CELLTYPE_EMPTY);
+        if (cell_isLoose(&cell)) { // a loose arrow is removed NOW
             weaver_forgetLoose(a, &cell);
         }
     }
