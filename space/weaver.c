@@ -411,6 +411,7 @@ static void weaver_forgetLoose(Address a, Cell* cell) {
 void weaver_performGC() {
     TRACEPRINTF("BEGIN weaver_performGC()");
 
+    ERRORPRINTF("FIXME qsort and dedup looseLog");
     for (unsigned i = looseLogSize; i > 0; i--) { // loose stack scanning
         Address a = looseLog[i - 1];
         Cell cell;

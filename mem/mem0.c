@@ -234,7 +234,7 @@ int mem0_openPreviousJournal() {
 
   fseek(journalHandler, -sizeof(check), SEEK_END);
   journalEnd = ftell(journalHandler);
-  TRACEPRINTF("journal terminator at %ld", journalEnd);
+  INFOPRINTF("journal terminator at %ld", journalEnd);
 
   size_t read = fread(&check, sizeof(check), 1, journalHandler);
   if (read != 1) {
@@ -245,6 +245,7 @@ int mem0_openPreviousJournal() {
               "Journal last bytes reading failed. probably truncated file");
     goto corrupted;
   }
+
   // journal terminator is in the form:
   // Address=0,CellBody=0,Address=0,CellBody=0
   for (size_t i = 0; i < sizeof(check); i++) {
@@ -314,8 +315,17 @@ int mem0_close() {
 }
 
 int mem0_recoverFromJournal() {
+  if (fseek(journalHandler, 0, SEEK_END)) {
+    perror("mem0_recoverFromJournal fseek");
+  }
+  long size = ftell(journalHandler);
+  if (size == -1) {
+    perror("mem0_recoverFromJournal ftell");
+  }
+
   rewind(journalHandler);
-  while (1) {
+  long offset = 0;
+  while (offset < size) {
     Address address;
     CellBody cell;
     size_t addressRead = fread(&address, sizeof(Address), 1, journalHandler);
@@ -326,14 +336,17 @@ int mem0_recoverFromJournal() {
       LOGPRINTF(LOG_FATAL, "Can't read Address from journal");
       return -1;
     }
+    offset += sizeof(Address);
     size_t cellRead = fread(&cell, sizeof(CellBody), 1, journalHandler);
     if (cellRead != 1) {
       perror("mem0_recoverFromJournal fread body");
       LOGPRINTF(LOG_FATAL, "Can't read Address/Cell pair from journal");
       return -1;
     }
-    if (!address)
+    offset += sizeof(CellBody);
+    if (!address && cell.raw[0] == 0) {
       break; // Terminator found
+    }
     if (_mem0_set(address, &cell)) {
       return -1;
     }

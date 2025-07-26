@@ -10,9 +10,9 @@ void weaver_addLoose(Address a);
 
 void weaver_removeLoose(Address a);
 
-void weaver_connect(Address a, Address child, int outgoing);
+void weaver_connect(Address parent, Address child, int outgoing);
 
-void weaver_disconnect(Address a, Address child, int outgoing);
+void weaver_disconnect(Address parent, Address child, int outgoing);
 
 void weaver_performGC();
 

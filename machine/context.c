@@ -133,7 +133,10 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
     xs_assimilate(key);
     xs_assimilate(value);
     Arrow sub_context = xs_pair(c, key);
+
+    ERRORPRINTF("xs_context_reset(sub_context) REMPLIT LooseLog");
     xs_context_reset(sub_context);
+
     return xs_context_root(sub_context, value);
 }
 

@@ -853,18 +853,18 @@ int xl_init() {
     pthread_mutexattr_settype(&apiMutexAttr, PTHREAD_MUTEX_RECURSIVE_NP);
     pthread_mutex_init(&apiMutex, &apiMutexAttr);
 
-    int rc = mem_init();
+    int rc = weaver_init();
     if (rc < 0) {  // problem
         return rc;
     }
 
-    rc = weaver_init();
+    rc = mem_init();
     if (rc < 0) {  // problem
         return rc;
     }
 
     if (rc) {  // very first start
-        // Eve
+        INFOPRINTF("Very first start");
 
         rc = mem_open();
         if (rc < 0) {  // problem
