@@ -22,7 +22,7 @@ uint32_t right_rotate(uint32_t value, int shift) {
 
 /* hash a regular arrow (based on its both ends hash codes) */
 uint32_t hash_pair(uint32_t h_tail, uint32_t h_head) {
-    return left_rotate(h_tail, 19) ^ right_rotate(h_head, 5);
+    return (left_rotate(h_tail, 19) ^ right_rotate(h_head, 5)) + 1;
 }
 
 uint32_t get_openAddress(uint32_t hash) {
@@ -96,7 +96,7 @@ uint32_t hash_chain(Cell *cell) {
 uint32_t hash_children(Cell *cell) {
     uint32_t hc = (_hash_cell(cell) ^ 0xFFFFFFFFu) % _PRIM1;
     if (hc == 0)
-        return 2; // can't be 0
+        return 1; // can't be 0
     else
         return hc;
 }

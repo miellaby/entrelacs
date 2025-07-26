@@ -80,6 +80,7 @@ int main(int argc, char **argv) {
     {"/wave+world", "/hello+world", ""},
     {"/set//wave+world+surprised?", "surprised?", ""},
     {"/wave+world", "surprised?", ""},
+    {"/unset/wave+world", "/wave+world", ""},
     {"/unset+wave", "wave", ""},
     {"wave", "wave", ""},
     {"//lambda/x+x/let//myHeadOf/lambda/x/headOf+x/myHeadOf/escape/1/2/3/4+5", "/2/3/4+5", ""},
@@ -142,26 +143,29 @@ int main(int argc, char **argv) {
 #endif
     };
     Arrow session = xs_open("testmachine");
-    for (int i = 0; test = &tests[i], test->program; i++) {
-        char* programUri = test->program;
-        char* wantedUri = test->result;
-        test_title(programUri);
-        Arrow program = xs_uri(programUri);
-        Arrow wanted = xs_uri(wantedUri);
-        assert(!xs_isEve(program) && (!*wantedUri || !xs_isEve(wanted)));
-        //xs_root(context, program);
-        //xs_root(context, wanted);
-        Arrow result = xs_eval(xs_eve(), program, xs_eve());
-        program = xs_uri(programUri);
-        wanted = xs_uri(wantedUri);
-        if (!xs_equal(result, wanted)) {
-            fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
-            return EXIT_FAILURE;
+    for (int repeat = 100; repeat > 0; repeat--) {
+
+        for (int i = 0; test = &tests[i], test->program; i++) {
+            char* programUri = test->program;
+            char* wantedUri = test->result;
+            test_title(programUri);
+            Arrow program = xs_uri(programUri);
+            Arrow wanted = xs_uri(wantedUri);
+            assert(!xs_isEve(program) && (!*wantedUri || !xs_isEve(wanted)));
+            //xs_root(context, program);
+            //xs_root(context, wanted);
+            Arrow result = xs_eval(xs_eve(), program, xs_eve());
+            program = xs_uri(programUri);
+            wanted = xs_uri(wantedUri);
+            if (!xs_equal(result, wanted)) {
+                fprintf(stderr, "eval(%O) = %O != %O\n", program, result, wanted);
+                return EXIT_FAILURE;
+            }
+            fprintf(stdout, "Result is %O\n", result);
+            test_ok();
+            //xs_unroot(context, program);
+            //xs_unroot(context, wanted);
         }
-        fprintf(stdout, "Result is %O\n", result);
-        test_ok();
-        //xs_unroot(context, program);
-        //xs_unroot(context, wanted);
     }
     xs_close(session);
     test_done();
