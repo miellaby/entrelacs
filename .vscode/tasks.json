@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Make: clean rebuild debuggable tests",
+			"command": "CFLAGS='-DDEBUG -g -o0' make clean tests",
+			"group": "build",
+			"problemMatcher": [ "$gcc" ],
+			"detail": "Make clean rebuild debuggable tests"
+		}
+	]
+}

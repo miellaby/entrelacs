@@ -126,17 +126,17 @@ void completion(const char *buf, linenoiseCompletions *lc) {
 }
 
 void tree(Arrow parent) {
-    XLEnum e = xl_childrenOf(parent);
-            
-    Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+    XLEnum e = xs_childrenOf(parent);
+
+    Arrow next = e && xs_enumNext(e) ? xs_enumGet(e) : XL_EVE;
     while (next != XL_EVE) {
         Arrow child = next;
-        next = xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+        next = xs_enumNext(e) ? xs_enumGet(e) : XL_EVE;
         tree(child);
-        if (!xl_isRooted(child)) {
+        if (!xs_isRooted(child)) {
            continue;
         }
-        fprintf(stderr, "%s", (xl_isRooted(child) ? "_ " : "  "));
+        fprintf(stderr, "%s", (xs_isRooted(child) ? "_ " : "  "));
         fprintf(stderr, "%O\n", child);
     }
 
@@ -152,9 +152,9 @@ static void *do_yield(void *v) {
 int main(int argc, char **argv) {
     char *line;
     char *prgname = argv[0];
-    Arrow cwa = NIL;
+    Arrow cwa = NULL;
     char prompt[255] ="*global*> ";
-    
+
     /* Parse options, with --multiline we enable multi line editing. */
     while(argc > 1) {
         argc--;
@@ -170,25 +170,25 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
-    
+
     log_init(NULL, "server,session,machine=debug");
     //log_init(NULL, "session=warn");
 
-    xl_init();
+    xs_init();
 
     /* Set the completion callback. This will be called every time the
      * user uses the <tab> key. */
     linenoiseSetCompletionCallback(completion);
 
     repl_computeHistoryFilePath();
-    
+
     /* Load history from file. The history file is just a plain text file
      * where entries are separated by newlines. */
     linenoiseHistoryLoad(repl_historyPath); /* Load the history at startup */
 
     /* second thread for yield */
     pthread_t yield_thread;
-    
+
     /* create a second thread */
     //if (pthread_create(&yield_thread, NULL, do_yield, NULL)) {
     //    fprintf(stderr, "Error creating thread\n");
@@ -201,26 +201,26 @@ int main(int argc, char **argv) {
      *
      * The typed string is returned as a malloc() allocated string by
      * linenoise, so the user needs to free() it. */
+    Arrow session = xs_open("repl");
     while ((line = linenoise(prompt)) != NULL) {
         /* Do something with the string. */
-        xl_begin();
         if (strcmp("pwd", line) == 0) {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
-            if (cwa == NIL)
+            if (cwa == NULL)
                 fprintf(stderr, "*global*\n");
             else
                 fprintf(stderr, "%O\n", cwa);
-            
+
         } else if (strncmp("cd ", line, 3) == 0) {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
             char *arg = line + 3;
             cwa = (arg[0] == '.' && arg[1] == '\0'
                    ? cwa
-                   : (arg[0] == '/' || cwa == NIL
-                      ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
-                      : xl_pair(cwa, xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg))));
+                   : (arg[0] == '/' || cwa == NULL
+                      ? xs_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
+                      : xs_pair(cwa, xs_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg))));
 
         } else if (strcmp("ls", line) == 0 || strncmp("ls ", line, 3) == 0) {
             linenoiseHistoryAdd(line);
@@ -228,25 +228,25 @@ int main(int argc, char **argv) {
             XLEnum *e;
             char *arg = line + (line[2] == '\0' ? 2 : 3);
             Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
-                ? cwa == NIL ? NIL : cwa
-                : (*arg == '/' || cwa == NIL
-                   ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
-                   : xl_pair(cwa, arg[0] == '.' && arg[1] == '/' ? xl_uri(arg + 2) : xl_uri(arg))); 
-            
-            if (parent == NIL) {
+                ? cwa == NULL ? NULL : cwa
+                : (*arg == '/' || cwa == NULL
+                   ? xs_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
+                   : xs_pair(cwa, arg[0] == '.' && arg[1] == '/' ? xs_uri(arg + 2) : xs_uri(arg)));
+
+            if (parent == NULL) {
                 fprintf(stderr, "impossible: can't browse global context\n");
             } else {
-                e = xl_childrenOf(parent);
-                        
-                Arrow next = e && xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
+                e = xs_childrenOf(parent);
+
+                Arrow next = e && xs_enumNext(e) ? xs_enumGet(e) : XL_EVE;
                 while (next != XL_EVE) {
                     Arrow child = next;
-                    next = xl_enumNext(e) ? xl_enumGet(e) : XL_EVE;
-                    fprintf(stderr, "%s", (xl_isRooted(child) ? "_ " : "  "));
-                    if (xl_tailOf(child) == cwa) {
-                        fprintf(stderr, "./%O\n", xl_headOf(child));
-                    } else if (xl_headOf(child) == cwa) {
-                        fprintf(stderr, "/%O+:\n", xl_tailOf(child));
+                    next = xs_enumNext(e) ? xs_enumGet(e) : XL_EVE;
+                    fprintf(stderr, "%s", (xs_isRooted(child) ? "_ " : "  "));
+                    if (xs_equal(xs_tailOf(child), cwa)) {
+                        fprintf(stderr, "./%O\n", xs_headOf(child));
+                    } else if (xs_equal(xs_headOf(child), cwa)) {
+                        fprintf(stderr, "/%O+:\n", xs_tailOf(child));
                     } else {
                         fprintf(stderr, "%O\n", child);
                     }
@@ -257,35 +257,35 @@ int main(int argc, char **argv) {
             linenoiseHistorySave(repl_historyPath);
             char *arg = line + (line[4] == '\0' ? 4 : 5);
             Arrow parent = *arg == '\0' || arg[0] == '.' && arg[1] == '\0'
-                ? cwa == NIL ? XL_EVE : cwa
-                : (*arg == '/' || cwa == NIL
-                   ? xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
-                   : xl_pair(cwa, xl_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg))); 
+                ? cwa == NULL ? XL_EVE : cwa
+                : (*arg == '/' || cwa == NULL
+                   ? xs_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)
+                   : xs_pair(cwa, xs_uri(arg[0] == '.' && arg[1] == '/' ? arg + 2 : arg)));
             tree(parent);
         } else if (line[0] != '\0') {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(repl_historyPath);
-            Arrow p = (*line == '/' || cwa == NIL
-               ? xl_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line)
-               : xl_pair(cwa, xl_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line))); 
-        
-            if (p == NIL) {
+            Arrow p = (*line == '/' || cwa == NULL
+               ? xs_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line)
+               : xs_pair(cwa, xs_uri(line[0] == '.' && line[1] == '/' ? line + 2 : line)));
+
+            if (p == NULL) {
                 fprintf(stderr, "Illegal input. Embedded URI may be wrong.\n");
-            
+
             } else if (p == XL_EVE) {
                 fprintf(stderr, "EVE\n");
-                
+
             } else {
-                Arrow r = xl_eval(XL_EVE, p, XL_EVE);
+                Arrow r = xs_eval(XL_EVE, p, XL_EVE);
                 fprintf(stderr, "%O\n", r);
             }
 
         }
         free(line);
-        char *tmpUriCwa = cwa == NIL ? strdup("*global*") : xl_uriOf(cwa, NULL);
+        char *tmpUriCwa = cwa == NULL ? strdup("*global*") : xs_getURI(cwa, NULL);
         sprintf(prompt, "%.252s> ", tmpUriCwa);
         free(tmpUriCwa);
-        xl_over();
+        session = xs_commit(session);
     }
 
     return 0;

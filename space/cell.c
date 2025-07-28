@@ -1,38 +1,60 @@
-#include <assert.h>
-#include <string.h>
+#define LOG_CURRENT LOG_SPACE
 #include "space/cell.h"
 #include "space/hash.h"
 #include "log/log.h"
-#define LOG_CURRENT LOG_SPACE
 #include "mem/mem.h"
 #include "mem/geoalloc.h"
+#include <assert.h>
+#include <string.h>
 
-Address cell_getTail(Address a) {
-    Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-    if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return -1; // Invalid id
-
-    if (cell.full.type != CELLTYPE_PAIR)
-        return a; // for atom, tail = self
-    else
-        return cell.pair.tail;
+void cell_read(Cell* cell, Address address) {
+  assert(0 == mem_get(address, &cell->u_body));
 }
 
-Address cell_getHead(Address a) {
-    Cell cell;
-    mem_get(a, &cell.u_body);
-    ONDEBUG((LOGCELL('R', a, &cell)));
-    if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return -1; // Invalid id
+void cell_write(Cell* cell, Address address) {
+  assert(0 == mem_set(address, &cell->u_body));
+}
 
-    if (cell.full.type != CELLTYPE_PAIR)
-        return a; // for atom, head = self
-    else
-        return cell.pair.head;
+int cell_isArrow(Cell* cell) {
+  return (cell->full.type != CELLTYPE_EMPTY && cell->full.type <= CELLTYPE_ARROWLIMIT);
+}
+
+int cell_isPair(Cell* cell) {
+  assert(cell_isArrow(cell));
+  return (cell->full.type == CELLTYPE_PAIR);
+}
+
+int cell_isAtom(Cell* cell) {
+  assert(cell_isArrow(cell));
+  return (cell->full.type != CELLTYPE_PAIR);
+}
+
+int cell_isString(Cell* cell) {
+  assert(cell_isArrow(cell));
+  return (cell->full.type == CELLTYPE_TAG
+    || cell->full.type == CELLTYPE_BLOB);
+}
+
+int cell_isRooted(Cell* cell) {
+  assert(cell_isArrow(cell));
+  return ((cell->arrow.RC0dCn & FLAGS_ROOTED) != 0);
+}
+
+Address cell_getTail(Cell* cell) {
+  assert(cell_isPair(cell));
+  return cell->pair.tail;
+}
+
+Address cell_getHead(Cell* cell) {
+  assert(cell_isPair(cell));
+  return cell->pair.head;
+}
+
+uint32_t cell_getChildCount(Cell* cell) {
+  if (!cell_isArrow(cell))
+      return (uint32_t)-1; // Invalid cell
+  else
+      return (uint32_t)(cell->arrow.RC0dCn & FLAGS_CHILDRENMASK);
 }
 
 void cell_getSmallPayload(Cell *cell, uint8_t* buffer) {
@@ -54,9 +76,9 @@ void cell_getSmallPayload(Cell *cell, uint8_t* buffer) {
  */
 Address cell_jumpToFirst(Cell* cell, Address address, Address offset) {
     Address next = address;
-    assert(CELL_CONTAINS_ATOM(*cell));
+    assert(cell_isAtom(cell));
 
-    int jump = cell->tagOrBlob.jump0 + 1; // Note: jump=1 means 2 shifts
+    uint32_t jump = cell->tagOrBlob.jump0 + 1; // Note: jump=1 means 2 shifts
 
     ADDRESS_JUMP(address, next, offset, jump);
 
@@ -64,16 +86,14 @@ Address cell_jumpToFirst(Cell* cell, Address address, Address offset) {
         // one needs to look for a reattachment (sync) cell
         offset += MAX_JUMP0 + 1;
         Cell probed;
-        mem_get(next, &probed.u_body);
-        ONDEBUG((LOGCELL('R', next, &probed)));
+        CELL_READ(&probed, next);
 
         int safeguard = PROBE_LIMIT;
         while (--safeguard && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
-            mem_get(next, &probed.u_body);
-            ONDEBUG((LOGCELL('R', next, &probed)));
+            CELL_READ(&probed, next);
         }
         assert(safeguard);
 
@@ -93,16 +113,15 @@ Address cell_jumpToNext(Cell* cell, Address address, Address offset) {
     if (jump == MAX_JUMP + 1) {
         // one needs to look for a reattachment (sync) cell
         Cell probed;
-        mem_get(next, &probed.u_body);
-        ONDEBUG((LOGCELL('R', next, &probed)));
+        CELL_READ(&probed, next);
+
         offset += MAX_JUMP + 1;
         int safeguard = PROBE_LIMIT;
         while (--safeguard && !(
                 probed.full.type == CELLTYPE_REATTACHMENT
                 && probed.reattachment.from == address)) {
             ADDRESS_SHIFT(next, next, offset);
-            mem_get(next, &probed.u_body);
-            ONDEBUG((LOGCELL('R', next, &probed)));
+            CELL_READ(&probed, next);
         }
         assert(safeguard);
 
@@ -112,23 +131,10 @@ Address cell_jumpToNext(Cell* cell, Address address, Address offset) {
 }
 
 /** return the payload of an arrow (blob/tag/small), NULL on error */
-uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
+uint8_t* cell_getPayload(Cell* cellp, Address a, uint32_t* lengthP) {
     // the result
    uint8_t* payload = NULL;
    uint32_t size = 0;
-
-   if (a == EVE) { // Eve has an empty payload, length = 0
-       
-       // allocate and return an empty string
-       payload = (uint8_t*) malloc(1);
-       if (!payload) { // allocation failed
-           return NULL;
-       }
-
-       payload[0] = '\0';
-       *lengthP = 0; // if asked, return length = 0
-       return payload;
-   }
 
    // cell pointed by a
    Cell cell = *cellp;
@@ -143,17 +149,16 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
      }
 
      cell_getSmallPayload(&cell, payload);
-     
+
      // add a null terminator
      payload[cell.small.s] = '\0';
-     
+
      *lengthP = cell.small.s;
      return payload;
    }
 
    // the offset used for chain retrieval
-   uint32_t hChain = hash_chain(cellp) % PRIM1;
-   if (!hChain) hChain = 1; // offset can't be 0
+   uint32_t hChain = hash_chain(cellp);
 
    uint32_t max = 0; // geoalloc() state variables
    geoalloc((char**) &payload, &max, &size, sizeof (char), sizeof(cell.tagOrBlob.slice0));
@@ -162,15 +167,14 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
    }
 
    memcpy(payload, cell.tagOrBlob.slice0, sizeof(cell.tagOrBlob.slice0));
-   
+
    Address next = cell_jumpToFirst(cellp, a, hChain);
    Cell sliceCell;
-   mem_get(next, &sliceCell.u_body);
-   ONDEBUG((LOGCELL('R', next, &sliceCell)));
+   CELL_READ(&sliceCell, next);
 
    while (1) {
        assert (sliceCell.full.type == CELLTYPE_SLICE || sliceCell.full.type == CELLTYPE_LAST);
-     
+
        int s = sliceCell.full.type == CELLTYPE_SLICE
          ? sizeof(sliceCell.slice.data)
          : sliceCell.last.size;
@@ -187,8 +191,7 @@ uint8_t* cell_getPayload(Address a, Cell* cellp, uint32_t* lengthP) {
 
        // go to next slice
        next = cell_jumpToNext(&sliceCell, next, hChain);
-       mem_get(next, &sliceCell.u_body);
-       ONDEBUG((LOGCELL('R', next, &sliceCell)));
+       CELL_READ(&sliceCell, next);
    }
 
    // payload size
@@ -235,21 +238,19 @@ void cell_log(int logLevel, char* file, int line, char operation, Address addres
     }
     if (type <= CELLTYPE_ARROWLIMIT) {
       char flags[] = {
-          (cell->arrow.RWWnCn & FLAGS_ROOTED ? 'R' : '.'),
-          (cell->arrow.RWWnCn & FLAGS_WEAK ? 'W' : '.'),
-          (cell->arrow.child0 ? (cell->arrow.RWWnCn & FLAGS_C0D ? 'O' : 'I') : '.'),
+          (cell->arrow.RC0dCn & FLAGS_ROOTED ? 'R' : '.'),
+          (cell->arrow.child0 ? (cell->arrow.RC0dCn & FLAGS_C0D ? 'O' : 'I') : '.'),
           '\0'
       };
       uint32_t hash = cell->arrow.hash;
-      int weakChildrenCount = (int)((cell->arrow.RWWnCn & FLAGS_WEAKCHILDRENMASK) >> 15);
-      int childrenCount = (int)(cell->arrow.RWWnCn & FLAGS_CHILDRENMASK);
+      int childCount = (int)(cell->arrow.RC0dCn & FLAGS_CHILDRENMASK);
       int cr = (int)cell->arrow.cr;
       int dr = (int)cell->arrow.dr;
 
       if (type == CELLTYPE_PAIR) {
-        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s refCount=%04x child0=%06x cr=%02x dr=%02x %s tail=%06x head=%06x",
           operation, address, pebble, type,
-          hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
+          hash, flags, childCount, cell->arrow.child0, cr, dr, cat,
           cell->pair.tail,
           cell->pair.head);
 
@@ -257,15 +258,15 @@ void cell_log(int logLevel, char* file, int line, char operation, Address addres
         int s = (int)cell->small.s;
         uint8_t buffer[11];
         cell_getSmallPayload(cell, buffer);
-        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s refCount=%04x child0=%06x cr=%02x dr=%02x %s size=%d data=%.*s",
           operation, address, pebble, type,
-          hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
+          hash, flags, childCount, cell->arrow.child0, cr, dr, cat,
           s, s, buffer);
 
       } else if (type == CELLTYPE_BLOB || type == CELLTYPE_TAG) {
-        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s weakCount=%04x refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
+        CELLLOGPRINTF(file, line, logLevel, "%c %06x pebble=%02x type=%1x hash=%08x Flags=%s refCount=%04x child0=%06x cr=%02x dr=%02x %s jump0=%1x slice0=%.7s",
           operation, address, pebble, type,
-          hash, flags, weakChildrenCount, childrenCount, cell->arrow.child0, cr, dr, cat,
+          hash, flags, childCount, cell->arrow.child0, cr, dr, cat,
           (int)cell->tagOrBlob.jump0, cell->tagOrBlob.slice0);
 
       }
@@ -336,34 +337,26 @@ void cell_showChildren(Address a) {
 
     // get the parent cell
     Cell cell;
-    mem_get(a, &cell.u_body);
-    LOGCELL('R', a, &cell);
+    CELL_READ(&cell, a);
 
-    // check arrow
-    if (cell.full.type == CELLTYPE_EMPTY
-        || cell.full.type > CELLTYPE_ARROWLIMIT) {
-        ERRORPRINTF("Not an arrow");
-        return; // invalid ID. TODO one might call cb with a
-    }
-
-    if (!(cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK))) {
-      // no child
-      WARNPRINTF("Not an arrow");
+    uint32_t childCount = cell_getChildCount(&cell);
+    if (childCount == (uint32_t)-1) {
+      ERRORPRINTF("Not an arrow");
+      return; // invalid ID
+    } else if (childCount == 0) {
+      INFOPRINTF("No child");
       return;
     }
 
     // compute hash_children
-    uint32_t hChild = hash_children(&cell) % PRIM1;
-    if (!hChild) hChild = 2; // offset can't be 0
+    uint32_t hChild = hash_children(&cell);
 
-    if (cell.arrow.child0) {
-      // child0
-      if ((cell.arrow.RWWnCn & (FLAGS_CHILDRENMASK | FLAGS_WEAKCHILDRENMASK)) == 1) {
-        // child0 is the only child
+    if (cell.arrow.child0 != XL_EVE) {
+      if (childCount == 1) {
         INFOPRINTF("child0=%06x is the only child,", cell.arrow.child0);
         return;
       } else {
-        INFOPRINTF("child0=%06x is the first child.", cell.arrow.child0);
+        INFOPRINTF("child0=%06x is the first child", cell.arrow.child0);
       }
     }
 
@@ -377,8 +370,7 @@ void cell_showChildren(Address a) {
       ADDRESS_SHIFT(next, next, hChild);
 
       // get the next cell
-      mem_get(next, &nextCell.u_body);
-      LOGCELL('R', next, &nextCell);
+      CELL_READ(&nextCell, next);
 
       if (nextCell.full.type == CELLTYPE_CHILDREN) {
         // One found a children cell
@@ -396,42 +388,14 @@ void cell_showChildren(Address a) {
     } // child probing loop
 }
 
-uint32_t cell_getHash(Address a) {
-    Cell cell;
-    
-    if (a == EVE)
-      return EVE_HASH; // Eve hash is not zero!
-    else if (a >= SPACE_SIZE)
-      return 0; // Out of space
-    else {
-      mem_get(a, &cell.u_body);
-      ONDEBUG((LOGCELL('R', a, &cell)));
-      if (cell.full.type == CELLTYPE_EMPTY
-         || cell.full.type > CELLTYPE_ARROWLIMIT)
-        return 0; // Not an arrow
-      else
-        return cell.arrow.hash; // hash
-    }
-}
+int cell_isLoose(Cell* cell) {
+  assert(cell_isArrow(cell));
 
-/** check if an arrow is loose */
-int cell_isLoose(Address a) {
-  if (a == EVE) return EVE;
-
-  Cell cell;
-  mem_get(a, &cell.u_body);
-  ONDEBUG((LOGCELL('R', a, &cell)));
-  
-  if (cell.full.type == CELLTYPE_EMPTY
-      || cell.full.type > CELLTYPE_ARROWLIMIT)
+  if (cell_isRooted(cell))
     return 0;
 
-  if (cell.arrow.RWWnCn & FLAGS_ROOTED)
-    return 0;
-
-  if (cell.arrow.RWWnCn & FLAGS_CHILDRENMASK)
+  if (cell_getChildCount(cell) > 0)
     return 0;
 
   return 1;
 }
-

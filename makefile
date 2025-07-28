@@ -5,33 +5,39 @@
 # make start # compile then start the server
 # make gdb
 # make valgrind
-# 
+#
 # make run.machine # compile and run one test
 # make tests # compile tests
 # make clean # clean in order to rebuild
 # make clean.testmachine # clean one test
-# 
+#
 # CFLAGS=-DPRODUCTION make clean all
 # CFLAGS="-g -o0" make clean all
 # CFLAGS="-DDEBUG -g -o0" make clean all
 # CFLAGS="-g -o0" make clean.testmachine testmachine
-# 
+#
 # make help # this help
 
 .PHONY: help server clean all clean.% test.% run.% tests run start
 CPPFLAGS +=
-CFLAGS += -std=c99 -pthread -fPIC -I. -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
+CFLAGS += -std=gnu99 -pthread -fPIC -I. -I$(CURDIR) -I$(CURDIR)/sha1 -Wall -Wextra
 BINDIR = bin
 
 TARGETS = libentrelacs.so libentrelacs.a entrelacsd
 VPATH := log:sha1:mem:space:machine:server:test
 OBJECTS = log.o mem0.o geoalloc.o mem.o mem_log.o sha1.o \
-  hash.o cell.o assimilate.o serial.o weaver.o space.o machine.o session.o
+  hash.o cell.o assimilate.o serial.o weaver.o space.o \
+  context.o transient.o machine.o session.o url.o uri.o
 OBJECTS_entrelacsd = mongoose.o server.o
 
 TESTS = space uri script machine shell
 
 UTESTS = hash
+
+TEST_EXECUTABLES = $(TESTS:%=$(BINDIR)/test%) $(UTESTS:%=$(BINDIR)/utest%)
+
+.SECONDARY: $(TEST_EXECUTABLES)
+
 
 PERSISTENCE_FILE=/tmp/entrelacs_test.dat
 
@@ -42,25 +48,13 @@ BINOBJECTS_entrelacsd = $(OBJECTS_entrelacsd:%=$(BINDIR)/%)
 
 all: $(BINTARGETS)
 
+tests: $(TEST_EXECUTABLES)
+
 help:
 	@head -30 makefile | grep '^#' | sed -e '/# .*/ s/# \(.*\)/\1/'
 
-clean: $(UTESTS:%=clean.utest%) $(TESTS:%=clean.test%)
-	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd)
-
-$(TESTS:%=clean.test%):
-	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
-
-$(UTESTS:%=clean.utest%):
-	-rm $(BINDIR)/$(@:clean.%=%) $(BINDIR)/$(@:clean.%=%.o)
-
-utest.%: $(BINDIR)/utest% 
-	-true
-
-test.%: $(BINDIR)/test%
-	-true
-
-tests: all $(UTESTS:%=utest.%) $(TESTS:%=test.%)
+clean:
+	-rm -f $(BINOBJECTS) $(BINTARGETS) $(BINOBJECTS_entrelacsd) $(TEST_EXECUTABLES)
 
 server: $(BINDIR)/entrelacsd
 
@@ -77,7 +71,7 @@ $(BINDIR)/test%: $(BINDIR)/test%.o $(BINDIR)/libentrelacs.a
 
 $(BINDIR)/libentrelacs.a: $(BINOBJECTS)
 	ar rvs $(@) $^
-	
+
 $(BINDIR)/libentrelacs.so: $(BINOBJECTS)
 	$(LD) $(LDFLAGS) -o $(@) $^ -shared -lc
 
@@ -94,15 +88,12 @@ $(BINDIR)/%.o: test/%.c
 
 prompt: run.shell
 
-run: $(UTESTS:%=urun.%) $(TESTS:%=run.%)
+run: $(TESTS:%=run.test%) $(UTESTS:%=run.utest%)
 
-run.%: $(BINDIR)/test%
+run.%: $(BINDIR)/%
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	ENTRELACS=$(PERSISTENCE_FILE) LD_LIBRARY_PATH=. ./$<
 	# od -t x1z -w8 $(PERSISTENCE_FILE)
-
-urun.%: $(BINDIR)/utest%
-	./$<
 
 start: server
 	-pkill entrelacsd
@@ -114,14 +105,15 @@ gdb:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
-	CFLAGS+="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) gdb $(BINDIR)/entrelacsd
+	CFLAGS="-DDEBUG -g -o0" make clean all $(BINDIR)/testmachine
+	ENTRELACS=$(PERSISTENCE_FILE) gdb $(BINDIR)/testmachine
+	# $(BINDIR)/entrelacsd
 	#od -t x1z -w8 $(PERSISTENCE_FILE)
 
 valgrind:
 	-pkill entrelacsd
 	-[ -f $(PERSISTENCE_FILE) ] && rm $(PERSISTENCE_FILE)
 	-[ -f $(PERSISTENCE_FILE).journal ] && rm $(PERSISTENCE_FILE).journal
-	CFLAGS+="-DDEBUG -g -o0" make clean all	
-	ENTRELACS=$(PERSISTENCE_FILE) valgrind --leak-check=full $(BINDIR)/entrelacsd
+	CFLAGS="-DDEBUG -g -o0" make clean all $(BINDIR)/testmachine
+	ENTRELACS=$(PERSISTENCE_FILE) valgrind --leak-check=full $(BINDIR)/testmachine
 	# od -t x1z -w8 $(PERSISTENCE_FILE)

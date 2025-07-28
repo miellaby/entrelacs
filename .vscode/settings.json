@@ -7,7 +7,7 @@
             "problemMatchers": [
                 "$gcc"
             ],
-            "makeArgs": []
+            "makeArgs": [],
         },
     ],
     "files.associations": {
@@ -23,6 +23,34 @@
         "entrelacsm.h": "c",
         "mem0.h": "c",
         "hash.h": "c",
-        "stdlib.h": "c"
-    }
+        "stdlib.h": "c",
+        "assert.h": "c",
+        "space.h": "c",
+        "string.h": "c",
+        "serial.h": "c",
+        "transient.h": "c",
+        "url.h": "c",
+        "machine.h": "c",
+        "cmath": "c",
+        "compare": "c",
+        "concepts": "c",
+        "type_traits": "c",
+        "limits": "c",
+        "new": "c",
+        "typeinfo": "c",
+        "context.h": "c",
+        "weaver.h": "c",
+        "assimilate.h": "c",
+        "server.h": "c",
+        "cstdio": "c",
+        "stddef.h": "c"
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/sylvaingarden/workspace/entrelacs/bin",
+            "binaryPath": "/home/sylvaingarden/workspace/entrelacs/bin/testmachine",
+            "binaryArgs": []
+        }
+    ],
+    "makefile.makePath": ""
 }

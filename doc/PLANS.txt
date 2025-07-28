@@ -1,18 +1,27 @@
-Current changes:
- * better concurrent entrelacs process
-   mem_open mem_close takes/releases a file lock
-   xl_over/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread
-    graphic https://docs.google.com/presentation/d/1xRwA0RyQ73zqLdLzNCEo1-rzPEYdUVSUH2dcIe4dGGs/edit?usp=sharing
+Current changes: Transient arrows
+ * the main C API is now transient arrows created in a stack freed at every commit
+ * transient arrows are not immediately mapped to the AS. "Lazy assimilation"
+ * Terminology changes
+    * "xl" API : true Arrow Space assimilations (refs = adresse)
+    * "xs" API : transient/temporary Arrows (refs = pointers)
+    * "xs" arrows are NOT deduplicated. See https://github.com/miellaby/entrelacs/blob/wiki/ArrowSpaceInterface.md
+    * "xs" performs assimilation ("xl") on demand
+    * "xs" arrows are allocated in a growing pool freed at each commit.
+    * machine/session/server/repl now uses the xs API instead of xl
 
 Most recent previous changes:
+ * better concurrent entrelacs process
+   mem_open mem_close takes/releases a file lock
+   xl_close/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread
+    graphic https://docs.google.com/presentation/d/1xRwA0RyQ73zqLdLzNCEo1-rzPEYdUVSUH2dcIe4dGGs/edit?usp=sharing
  * non-blocking concurent entrelacs process partial support
-   * both entrelacsd & entrelacs do xl_begin/xl_over every second
-   * xl_begin;xl_over => mem GC => mem0_commit => persistenc efile unlock then lock
+   * both entrelacsd & entrelacs do xl_open/xl_close every second
+   * xl_open;xl_close => mem GC => mem0_commit => persistenc efile unlock then lock
    * another pending process can acquire the exclusive lock (actually random)
    * very messy, not proper life-cycle TODO revamp
  * real REPL (CLI) client called "entrelacs" in repl subdir
  * web terminal (sexy demo) arrow URL management revamped
- * xl_yield(arrow state) (in replacement of xl_over)
+ * xl_yield(arrow state) (in replacement of xl_close)
    * sync with all threads then GC
    * but in addition: preserve "state" arrow from GC (temporary root)
    * TBC: maybe timeout for yielding
@@ -31,7 +40,7 @@ Most recent previous changes:
  * API now reentrant. Lock at every sensible access of space.c/mem.c
      * no more global lock in server.c
  * a way to sync commit between concurrent agents
-     * xl_begin(), xl_over()/xl_commit()
+     * xl_open(), xl_close()/xl_commit()
      * see server.c & testshell.c for usage
  * lock on the persistent file to prevent concurrent clients.
      * avoid mess when running several entrelacsd, testshell or any other libentrelacs clients,
@@ -45,12 +54,12 @@ Most recent previous changes:
 * when an application is bound as is, it takes precedence over the corresponding closure evaluation.
   * it's an attempt to merge intensive and extensive definitions, that is function and environment/object.
 * operator, closure & paddock: auto escaped and somewhat typed litterals. paddock is for macro.
-* xls_get now returns NIL (FFFFFF) when no arrow found
+* xs_context_get now returns NIL (FFFFFF) when no arrow found
 * NIL is a undefined arrow. Different from Eve (0)
 * virtualized evaluation (root/get/set are confined in a nested hierarchy of contexts)
-* resolve now use xls_get to get "global" variable value
+* resolve now use xs_context_get to get "global" variable value
 * rooting a pair is not enough any more to make a global bound variable.
-  * Use xls_set(EVE,slot,value) instead.
+  * Use xs_context_set(EVE,slot,value) instead.
       * will do root((EVE->slot)->value) ; root(EVE->(slot->value)))
 * looseStack dumped in reverse order
 * new API to get and retrieve "uri" (no more xl_program)
@@ -97,8 +106,8 @@ Future:
 
 In study:
  * a session is actually a continuation
- * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment 
- * xls_set: create less arrows (but also less indexation)
+ * a lazy arrow is when (tailOf arrow) or (headOf arrow) are bounds to closure/operator in environment
+ * xs_context_set: create less arrows (but also less indexation)
      * e.g set x in a.b.c.d.e would only root /a.b.c.d/e.x if depth = 2
  * Allows GC tooling.
     * when an operator is GC by forget() -if tail(a) == operator (space-level reserved keyword)-
@@ -107,4 +116,3 @@ In study:
                      and free anything
  * Web terminal
    * timeline
-   

@@ -245,6 +245,7 @@ int mem0_openPreviousJournal() {
               "Journal last bytes reading failed. probably truncated file");
     goto corrupted;
   }
+
   // journal terminator is in the form:
   // Address=0,CellBody=0,Address=0,CellBody=0
   for (size_t i = 0; i < sizeof(check); i++) {
@@ -314,8 +315,17 @@ int mem0_close() {
 }
 
 int mem0_recoverFromJournal() {
+  if (fseek(journalHandler, 0, SEEK_END)) {
+    perror("mem0_recoverFromJournal fseek");
+  }
+  long size = ftell(journalHandler);
+  if (size == -1) {
+    perror("mem0_recoverFromJournal ftell");
+  }
+
   rewind(journalHandler);
-  while (1) {
+  long offset = 0;
+  while (offset < size) {
     Address address;
     CellBody cell;
     size_t addressRead = fread(&address, sizeof(Address), 1, journalHandler);
@@ -326,14 +336,17 @@ int mem0_recoverFromJournal() {
       LOGPRINTF(LOG_FATAL, "Can't read Address from journal");
       return -1;
     }
+    offset += sizeof(Address);
     size_t cellRead = fread(&cell, sizeof(CellBody), 1, journalHandler);
     if (cellRead != 1) {
       perror("mem0_recoverFromJournal fread body");
       LOGPRINTF(LOG_FATAL, "Can't read Address/Cell pair from journal");
       return -1;
     }
-    if (!address)
+    offset += sizeof(CellBody);
+    if (!address && cell.raw[0] == 0) {
       break; // Terminator found
+    }
     if (_mem0_set(address, &cell)) {
       return -1;
     }
@@ -380,6 +393,7 @@ int mem0_init() {
   // create mem0 file if non existant
   FILE *fd = fopen(mem0_filePath, "r");
   if (!fd) {
+    INFOPRINTF("Creating %s", mem0_filePath);
     fd = fopen(mem0_filePath, "w+b");
     if (!fd) {
       perror("mem0_init persistence file opening/creation failed");
@@ -477,7 +491,7 @@ int mem0_set(Address address, CellBody *pCellBody) {
   return mem0_addToJournal(address, pCellBody);
 }
 
-void mem0_saveData(char *h, size_t size, uint8_t *data) {
+void mem0_saveData(const char *h, const size_t size, const uint8_t *data) {
   TRACEPRINTF("saving %ld bytes as '%s' hash", size, h);
   // Prototype only: BLOB data are stored out of the arrows space
   if (!size)
@@ -485,8 +499,8 @@ void mem0_saveData(char *h, size_t size, uint8_t *data) {
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
 
-  char *dirname = h + strlen(h) - 2; // FIXME escape binary codes here and there
-  char *filename = h;                // FIXME escape binary codes here and there
+  const char *dirname = h + strlen(h) - 2;
+  const char *filename = h;
   chdir(mem0_blobDirPath);
   mkdir(dirname, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
   chdir(dirname);
@@ -508,9 +522,9 @@ void mem0_saveData(char *h, size_t size, uint8_t *data) {
   }
 }
 
-void mem0_deleteData(char *h) {
-  char *filename = h;
-  char *dirname = h + strlen(h) - 2; // the 2 last chars
+void mem0_deleteData(const char *h) {
+  const char *filename = h;
+  const char *dirname = h + strlen(h) - 2; // the 2 last chars
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
   chdir(mem0_blobDirPath);
@@ -530,12 +544,12 @@ void mem0_deleteData(char *h) {
   }
 }
 
-uint8_t *mem0_loadData(char *h, size_t *sizeP) {
+uint8_t *mem0_loadData(const char *h, size_t *sizeP) {
   *sizeP = 0;
 
   size_t size;
-  char *filename = h;
-  char *dirname = h + strlen(h) - 2;
+  const char *filename = h;
+  const char *dirname = h + strlen(h) - 2;
 
   mem0_blobDirPath == NULL ? computeBlobDirPath() : (void)0;
 

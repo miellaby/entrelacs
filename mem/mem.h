@@ -52,15 +52,19 @@ int mem_get_advanced(Address, CellBody*, uint32_t* stamp_p);
  */
 int mem_commit();
 
-/** yield current micro-transaction, allowing disk flush
- return !0 if disk flush occurs because MEMn resources are scare
+/** tell if a commit is needed (stale data, scare resources)
+ */
+int mem_commit_is_needed();
+
+/** apply mem_commit() if needed()
+ return 1 if commit occured, 0 if not, -1 on error
  */
 int mem_yield();
 
-/** get a counter of write operation
- @return Pokes
+/** get a counter incremented at each commit
+ @return revision numver
  */
-uint32_t mem_pokes();
+uint32_t mem_revision();
 
 /** setup or reinitialize a geometrically growing RAM area
  */

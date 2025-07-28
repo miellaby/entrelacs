@@ -19,6 +19,7 @@ enum _log_facility
   LOG_MEM0,
   LOG_MEM,
   LOG_SPACE,
+  LOG_TRANSIENT,
   LOG_MACHINE,
   LOG_SESSION,
   LOG_SERVER,
@@ -35,6 +36,7 @@ char *facility_name[] = {
     "mem0",
     "mem",
     "space",
+    "transient",
     "machine",
     "session",
     "server",
@@ -65,7 +67,7 @@ extern int log_verbose();
 #ifdef DEBUG
   #define ONDEBUG(w) w
 #else
-  #define ONDEBUG(w)
+  #define ONDEBUG(w) ((void)0)
 #endif
 
 
@@ -81,11 +83,10 @@ extern int log_verbose();
 #define ERRORPRINTF(format, arg...) LOGPRINTF(LOG_ERROR, format, ##arg)
 #define WARNPRINTF(format, arg...) LOGPRINTF(LOG_WARN, format, ##arg)
 #define INFOPRINTF(format, arg...) LOGPRINTF(LOG_INFO, format, ##arg)
-#ifdef DEBUG
 #define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
+#ifdef DEBUG
 #define DEBUGPRINTF(format, arg...) LOGPRINTF(LOG_DEBUG, format, ##arg)
 #else
-#define TRACEPRINTF(format, arg...) LOGPRINTF(LOG_TRACE, format, ##arg)
 #define DEBUGPRINTF(format, arg...) (void)(0)
 #endif
 #endif
