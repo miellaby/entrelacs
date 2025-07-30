@@ -66,7 +66,7 @@ Arrow _machine_commit(Arrow C, Arrow preserved) {
     // Arrow M = xs_getHead(CM);
     xs_context_root(C, preserved);  // TODO/FIXME fix this
     Address preserved_id = xs_getId(xs_resolve(preserved));
-    C = xs_commit(C);
+    C = xs_session_commit(C);
     update_keywords();
     preserved = xs_arrow(preserved_id);
     xs_context_unroot(C, preserved);  // TODO/FIXME fix this
@@ -986,16 +986,15 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
         if (xs_equal(MHead, enterM)) {
             Arrow VM = xs_getTail(M);
             Arrow V = xs_getTail(VM);
-            C = xs_pair(C, V);  // Fall into context
+            C = xs_pair(C, V);  // enter sub context $c/$v
             M = xs_getHead(VM);
             WARNPRINTF("machine enters into context %O", V);
             continue;
         }
 
-        // only operators can produce such a state
         if (xs_equal(MHead, exitM)) {
             WARNPRINTF("machine exits from context %O", C);
-            C = xs_getTail(C);  // Escape from enclosing context
+            C = xs_getTail(C);  // Exit to super context
             WARNPRINTF("machine context is now %O", C);
             M = xs_getTail(M);
             continue;

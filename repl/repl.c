@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
      *
      * The typed string is returned as a malloc() allocated string by
      * linenoise, so the user needs to free() it. */
-    Arrow session = xs_open("repl");
+    Arrow session = xs_session_open("repl");
     while ((line = linenoise(prompt)) != NULL) {
         /* Do something with the string. */
         if (strcmp("pwd", line) == 0) {
@@ -285,7 +285,7 @@ int main(int argc, char **argv) {
         char *tmpUriCwa = cwa == NULL ? strdup("*global*") : xs_getURI(cwa, NULL);
         sprintf(prompt, "%.252s> ", tmpUriCwa);
         free(tmpUriCwa);
-        session = xs_commit(session);
+        session = xs_session_commit(session);
     }
 
     return 0;

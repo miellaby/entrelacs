@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   log_init(NULL, "server,session,machine,transient=debug,space");
 
   xs_init();
-  Arrow session = xs_open("testscript");
+  Arrow session = xs_session_open("testscript");
 
   for (int i = 0; tests[i] != NULL; i++) {
     char *buffer = tests[i];
@@ -46,8 +46,8 @@ int main(int argc, char **argv) {
     }
 
     fprintf(stderr, "commiting ...\n");
-    session = xs_commit(session);
+    session = xs_session_commit(session);
   }
-  xs_close(session);
+  xs_session_close(session);
   return EXIT_SUCCESS;
 }

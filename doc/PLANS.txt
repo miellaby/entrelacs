@@ -1,15 +1,19 @@
-Current changes: Transient arrows
- * the main C API is now transient arrows created in a stack freed at every commit
- * transient arrows are not immediately mapped to the AS. "Lazy assimilation"
- * Terminology changes
-    * "xl" API : true Arrow Space assimilations (refs = adresse)
-    * "xs" API : transient/temporary Arrows (refs = pointers)
-    * "xs" arrows are NOT deduplicated. See https://github.com/miellaby/entrelacs/blob/wiki/ArrowSpaceInterface.md
-    * "xs" performs assimilation ("xl") on demand
-    * "xs" arrows are allocated in a growing pool freed at each commit.
-    * machine/session/server/repl now uses the xs API instead of xl
+Current changes
+ * machine runs in a session
+ * session occures in a user context or a system context
+ * operators to switch context
 
 Most recent previous changes:
+ * Transient arrows
+    * the main C API is now transient arrows created in a stack freed at every commit
+    * transient arrows are not immediately mapped to the AS. "Lazy assimilation"
+    * Terminology changes
+        * "xl" API : true Arrow Space assimilations (refs = adresse)
+        * "xs" API : transient/temporary Arrows (refs = pointers)
+        * "xs" arrows are NOT deduplicated. See https://github.com/miellaby/entrelacs/blob/wiki/ArrowSpaceInterface.md
+        * "xs" performs assimilation ("xl") on demand
+        * "xs" arrows are allocated in a growing pool freed at each commit.
+        * machine/session/server/repl now uses the xs API instead of xl
  * better concurrent entrelacs process
    mem_open mem_close takes/releases a file lock
    xl_close/commit() triggers mem_close after all threads are synced. If xl_commit() is in process, mem_close() is called by the commiting thread

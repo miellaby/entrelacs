@@ -22,7 +22,7 @@
 
 extern Arrow xs_atom_session();
 
-Arrow xs_open(char* agent) {
+Arrow xs_session_open(char* agent) {
     xl_open();
 
     // $session =  /$s/session/$agent+$uuid
@@ -43,7 +43,7 @@ char* xs_session_getId(Arrow session) {
     return xs_getStr(uuid);
 }
 
-Arrow xs_getSession(char* agent, char* uuid) {
+Arrow xs_session_get(char* agent, char* uuid) {
     Arrow agent_uuid = xs_pair(xs_atom(agent), xs_atom(uuid));
     Arrow session = xs_pair(xs_atom_session(), agent_uuid);
     if (!xs_isRooted(session)) {
@@ -52,7 +52,7 @@ Arrow xs_getSession(char* agent, char* uuid) {
     return session;
 }
 
-Arrow xs_commit(Arrow session) {
+Arrow xs_session_commit(Arrow session) {
     // pool vidé à chaque commit
     Address s = XL_EVE;
     if (session != NULL) {
@@ -62,13 +62,13 @@ Arrow xs_commit(Arrow session) {
     }
     xl_commit();
     xs_pool_reset();
-    
+
     // on renvoie une nouvelle flèche session après vidage du pool
     return xs_arrow(s);
 }
 
-void xs_close(Arrow session) {
-    TRACEPRINTF("BEGIN xs_close(%O)", session);
+void xs_session_close(Arrow session) {
+    TRACEPRINTF("BEGIN xs_session_close(%O)", session);
     if (session != NULL) xs_unroot(session);
     xl_close();
     xs_pool_reset();

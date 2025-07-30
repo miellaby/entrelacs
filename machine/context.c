@@ -13,9 +13,6 @@ Arrow xs_context_root(Arrow c, Arrow a) {
     if (xs_isEve(c)) {
         return xs_root(a);
     }
-    xs_assimilate(a);
-    xs_assimilate(c);
-
     /// first-root for indexation
     xs_root(xs_pair(c, a));
 
@@ -69,11 +66,6 @@ int xs_context_isRooted(Arrow c, Arrow a) {
 
 Arrow xs_context_list(Arrow c) {
     TRACEPRINTF("BEGIN xs_context_list(%O)", c);
-    if (xs_isEve(c)) {
-        // The root context can't be listed
-        TRACEPRINTF("END xs_context_list: c == Eve not browsable");
-        return xs_eve();
-    }
     if (!xs_isKnown(c)) {
         // if c or a not assimilated there can't be children
         TRACEPRINTF("END xs_context_list: c not assimilated");
@@ -127,7 +119,7 @@ void xs_context_reset(Arrow c) {
   Recursively unroot any rooted arrow BUT one (a) under a given context
  */
 int xs_context_reset_others(Arrow c, Arrow a) {
-    TRACEPRINTF("xs_context_reset(%O)", c);
+    TRACEPRINTF("xs_context_reset_others(%O)", c);
     if (!xs_isKnown(c)) return 0;
     Address context = xs_getId(c);
     Address preserved = xs_getId(xs_assimilate(a));
@@ -165,7 +157,7 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
     xs_assimilate(c);
     xs_assimilate(key);
     xs_assimilate(value);
-    Arrow sub_context = xs_pair(c, key);
+    Arrow sub_context = xs_isEve(c) ? key : xs_pair(c, key);
 
     if (xs_context_reset_others(sub_context, value)) {
         TRACEPRINTF("xs_context_set(%O,%O,%O) already setted", c, key, value);
@@ -180,7 +172,7 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
 */
 void xs_context_unset(Arrow c, Arrow key) {
     TRACEPRINTF("xs_context_unset(%O,%O)", c, key);
-    xs_context_reset(xs_pair(c, key));
+    xs_context_reset(xs_isEve(c) ? key : xs_pair(c, key));
 }
 
 /** regular "get".
@@ -189,10 +181,10 @@ void xs_context_unset(Arrow c, Arrow key) {
 Arrow xs_context_get(Arrow c, Arrow key) {
     TRACEPRINTF("BEGIN xs_context_get(%O,%O)", c, key);
     Arrow u = c;
-    Arrow list = xs_context_list(xs_pair(u, key));
+    Arrow list = xs_context_list(xs_isEve(u) ? key : xs_pair(u, key));
     while (xs_isEve(list) && !xs_isEve(u) && !xs_isAtom(u)) {
         u = xs_getTail(u);
-        list = xs_context_list(xs_pair(u, key));
+        list = xs_context_list(xs_isEve(u) ? key : xs_pair(u, key));
     }
     if (xs_isEve(list)) {
         // no value found

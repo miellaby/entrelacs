@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
 
   xs_init();
   while (fgets(buffer, 1024, stdin) != NULL) {
-    xl_open(); // Arrow session = xs_open("shell");
+    xl_open(); // Arrow session = xs_session_open("shell");
 //   Arrow p = xs_url(EVE, buffer);
     Arrow p = xs_uri(buffer);
     if (p == NULL) {
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
         Arrow r = xs_eval(xs_eve(), p, xs_eve() /* session */);
         fprintf(stderr, "eval %O =\n\t%O\n", p, r);
     }
-    xs_close(NULL);
+    xs_session_close(NULL);
   }
 
   return EXIT_SUCCESS;

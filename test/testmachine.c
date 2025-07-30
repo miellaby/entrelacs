@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
         assert(l == strlen(s));
     }
 
-    //Arrow context = xs_open("test");
+    //Arrow context = xs_session_open("test");
 
     struct s_test { char* program; char* result; char* title; } *test, tests[] = {
         // {"a", "a", "atom is atom"},
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
         "///myGet+join+2+3",
 #endif
     };
-    Arrow session = xs_open("testmachine");
+    Arrow session = xs_session_open("testmachine");
     for (int repeat = 100; repeat > 0; repeat--) {
 
         for (int i = 0; test = &tests[i], test->program; i++) {
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
             //xs_unroot(context, wanted);
         }
     }
-    xs_close(session);
+    xs_session_close(session);
     test_done();
     return EXIT_SUCCESS;
 }

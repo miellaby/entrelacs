@@ -162,7 +162,7 @@ static Arrow get_connection_session(const struct mg_connection* conn) {
 
     // TODO: one should look for any session whatever it's top-level or it's embedded in a upper context.
     // TODO: remove the first parameter of sessionMaybe
-    Arrow session = xs_getSession("server", session_uuid);
+    Arrow session = xs_session_get("server", session_uuid);
     if (session == NULL) {
         dputs("Unknown session cookie %s", session_uuid);
     } else {
@@ -189,7 +189,7 @@ static void* event_handler(enum mg_event event,
         char* session_id = xs_session_getId(session);
         if (session == NULL) {
             // create session
-            session = xs_open("server");
+            session = xs_session_open("server");
             dputs("New session with id %s", session_id);
         }
 
@@ -336,7 +336,7 @@ int _houseCleaning(void) {
         if (expire == NULL || var_size != sizeof(time_t)) {
             LOGPRINTF(LOG_WARN, "session %O : wrong 'expire'", session);
             expiredSessionCount++;
-            xs_close(session);
+            xs_session_close(session);
             sessionTag = xs_assimilate(xs_const("session"));
             expireTag = xs_const("expire");
             // restart loop as deep close may remove in-enum arrow
@@ -347,7 +347,7 @@ int _houseCleaning(void) {
         else if (*expire_time < now) {
             dputs("session %O outdated.", session);
             expiredSessionCount++;
-            xs_close(session);
+            xs_session_close(session);
             // restart loop as deep close may remove in-enum arrow
             xl_enumFree(e);
             e = xl_childrenOf(xs_getId(sessionTag));
