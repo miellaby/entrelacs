@@ -15,6 +15,9 @@ Arrow xs_context_root(Arrow c, Arrow a) {
     }
     /// first-root for indexation
     xs_root(xs_pair(c, a));
+    if (xs_isEve(c) || xs_isAtom(c)) {
+        return a; // no double rooting
+    }
 
     // second root (c0+(c1+...(cn+a))) where c=c0+c1)+c2)...)+cn
     Arrow s = a;
@@ -157,14 +160,14 @@ Arrow xs_context_set(Arrow c, Arrow key, Arrow value) {
     xs_assimilate(c);
     xs_assimilate(key);
     xs_assimilate(value);
-    Arrow sub_context = xs_isEve(c) ? key : xs_pair(c, key);
+    Arrow key_context = xs_isEve(c) ? key : xs_pair(c, key);
 
-    if (xs_context_reset_others(sub_context, value)) {
+    if (xs_context_reset_others(key_context, value)) {
         TRACEPRINTF("xs_context_set(%O,%O,%O) already setted", c, key, value);
         return value;
     }
 
-    return xs_context_root(sub_context, value);
+    return xs_context_root(key_context, value);
 }
 
 /** traditional unset.

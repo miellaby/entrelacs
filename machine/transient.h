@@ -105,6 +105,11 @@ Arrow xs_getTail(Arrow a);
 /// @return head
 Arrow xs_getHead(Arrow a);
 
+/// @brief get first atom in a chain of pairs
+/// @param a arrow
+/// @return first atom
+Arrow xs_getFirstAtom(Arrow a);
+
 /// @brief get arrow location in arrow space
 /// @details call xs_resolve first then id is setted if the arrow is assimilated
 /// @param a arrow

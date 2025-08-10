@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "EVE\n");
 
             } else {
-                Arrow r = xs_eval(XL_EVE, p, XL_EVE);
+                Arrow r = xs_eval(xs_eve(), p, xs_eve());
                 fprintf(stderr, "%O\n", r);
             }
 

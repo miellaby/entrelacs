@@ -8,7 +8,7 @@ function init() {
 
     if (window.location.hash) {
         // public area
-        entrelacs.invoke("/exit/escape//mudo+chut//enter+/escape+demo/,/land+").done(function() {
+        entrelacs.invoke("//exit/escape/mudo+chut/,//enter+/escape+demo/,/land+").done(function() {
             terminal.show(Arrow.atom(window.location.hash.substr(1)),  area.width() / 2, area.height() / 2).update();
         });
 
@@ -16,7 +16,7 @@ function init() {
         Arrow.listeners.push(function(a, replacing) {
             if (a === null) { // reset!
                 entrelacs.invoke(
-                    "/exit/escape//mudo+chut//enter+/escape+demo/,/land+",
+                    "//exit/escape/mudo+chut/,//enter/escape+demo/,/land+",
                     true, true /* immediate */);
             }
         });
@@ -26,7 +26,7 @@ function init() {
         connect.children('button').click(function() {
             alert("Leaving sand box. Entering public area ...");
             window.location = "#pub";
-            var promise = entrelacs.invoke("/exit/escape//mudo+chut//enter+/escape+demo/,/land+");
+            var promise = entrelacs.invoke("//exit/escape/mudo+chut/,//enter/escape+demo/,/land+");
             promise.done(function() { window.location.reload(); });
             return false;
         });

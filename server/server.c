@@ -221,7 +221,7 @@ static void* event_handler(enum mg_event event,
             }
         }
 
-        Arrow output = xs_eval(session, xs_pair(method, input), session);
+        Arrow output = xs_eval(NULL, xs_pair(method, input), session);
 
         dputs("Evaluated output is %O", output);
 
@@ -260,7 +260,7 @@ static void* event_handler(enum mg_event event,
             dputs("Content-Type: %s, output: %O", content_type, output);
 //        } else if (isAtomic) {
 //            Arrow application = xs_pair(xs_const("Content-Type"), xs_pair(xs_const("escape"), output));
-//            Arrow rta = xs_eval(session, application);
+//            Arrow rta = xs_eval(session, application, session);
 //            if (rta != xs_eve() && xs_isAtom(rta)) {
 //               contentTypeCopy = xl_strOf(rta);
 //               content_type = contentTypeCopy;

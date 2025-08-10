@@ -62,19 +62,25 @@ Arrow xs_continuation(XSCallBack hookp, Arrow context) {
     return xs_pair(continuation, xs_pair(xs_hook(hookp), context));
 }
 
-Arrow _machine_commit(Arrow C, Arrow preserved) {
-    // Arrow M = xs_getHead(CM);
-    xs_context_root(C, preserved);  // TODO/FIXME fix this
-    Address preserved_id = xs_getId(xs_resolve(preserved));
-    C = xs_session_commit(C);
+Arrow _machine_commit(Arrow CM, Arrow session) {
+    xs_root(xs_pair(selfM, CM));
+    Address CM_id = xs_getId(CM);
+    assert(CM_id != 0);
+    session = xs_session_commit(session);
     update_keywords();
-    preserved = xs_arrow(preserved_id);
-    xs_context_unroot(C, preserved);  // TODO/FIXME fix this
-    return preserved;
+    CM = xs_arrow(CM_id);
+    assert(xs_getId(CM) == CM_id);
+    xs_unroot(xs_pair(selfM, CM));
+    return CM;
 }
 
 /** Load a binding into an environment arrow (list arrow), trying to remove a previous binding for this variable to limit its size */
-static Arrow _load_binding(Arrow x, Arrow w, Arrow e) {
+static Arrow _save_binding(Arrow x, Arrow w, Arrow e) {
+    if (xs_isEve(x)) {
+        // no provided variable, just return the environment
+        // à la _ = python expression
+        return e;
+    }
     return xs_pair(xs_pair(x, w), e);
 
 #if 0
@@ -244,11 +250,11 @@ static int chainSize = 0;  // TODO thread safe
 static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
     assert(M);
     Arrow p = xs_getTail(M);    // program
+    Arrow ek = xs_getHead(M);
+    Arrow e = xs_getTail(ek);   // environment
+    Arrow k = xs_getHead(ek);   // continuation
     Arrow ins = xs_getTail(p);  // let,load,eval,lambda,macro,... instruction
     Arrow param = xs_getHead(p);
-    Arrow ek = xs_getHead(M);
-    Arrow e = xs_getTail(ek);
-    Arrow k = xs_getHead(ek);
     Arrow w;
 
     TRACEPRINTF("transition\n   p = %O\n   e = %O\n   k = %O", p, e, k);
@@ -264,7 +270,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
         // rewriting program as pp = (let ((Eve s0) s1))
         Arrow pp = xs_pair(let, xs_pair(xs_pair(eve, s0), s1));
         M = xs_pair(pp, ek);
-        return M;
+        return xs_pair(C, M);
     }
 
     if (xs_equal(ins, evalOp)) {  //eval expression
@@ -273,7 +279,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
         Arrow s = xs_getHead(p);
         chainSize++;
         M = xs_pair(s, xs_pair(e, xs_pair(evalOp, xs_pair(e, k))));  // stack an eval continuation
-        return M;
+        return xs_pair(C, M);
     }
 
     if (xs_equal(ins, let)) {  //let expression family
@@ -290,17 +296,17 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
         if (isTrivialOrBound(v, e, C, M, &w)) {  // Trivial let expression
             dputs("    v is trivial: %O ", w);
 
-            if (xs_equal(w, brokenEnvironment))
-                return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
-
-            // FIXME: if v == /p+v where p resolve to a paddock, one should eval the bound value
-            if (xs_isEve(x)) {  // #e# direct environment load
-                dputs("    x is Eve: consider v as a key->value pair");
-                M = xs_pair(s, xs_pair(_load_binding(xs_getTail(w), xs_getHead(w), e), k));
-            } else {
-                M = xs_pair(s, xs_pair(_load_binding(x, w, e), k));
+            if (xs_equal(w, brokenEnvironment)) {
+                M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
             }
-            return M;
+            // FIXME: if v == /p+v where p resolve to a paddock, one should eval the bound value
+            else if (xs_isEve(x)) {  // #e# direct environment load
+                dputs("    x is Eve: consider v as a key->value pair");
+                M = xs_pair(s, xs_pair(_save_binding(xs_getTail(w), xs_getHead(w), e), k));
+            } else {
+                M = xs_pair(s, xs_pair(_save_binding(x, w, e), k));
+            }
+            return xs_pair(C, M);
         }
 
         // Non trivial let expressions ...
@@ -312,7 +318,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             // M = (v:(let ...) (e ((x (s e)) k)))
             chainSize++;
             M = xs_pair(v, xs_pair(e, xs_pair(xs_pair(x, xs_pair(s, e)), k)));
-            return M;
+            return xs_pair(C, M);
         }
 
         Arrow v1 = xs_getHead(v);
@@ -325,7 +331,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             // stack eval and a regular continuations
             // M = (ss (e (eval (e ((x (s e)) k)))))
             M = xs_pair(ss, xs_pair(e, xs_pair(evalOp, xs_pair(e, xs_pair(xs_pair(x, xs_pair(s, e)), k)))));  // stack an eval continuation
-            return M;
+            return xs_pair(C, M);
         }
 
         Arrow w0 = NULL;
@@ -339,12 +345,13 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             // pp = (let ((tmp v0) (let ((x ((var tmp) v1)) s))))
             Arrow pp = xs_pair(let, xs_pair(xs_pair(M, v0), xs_pair(let, xs_pair(xs_pair(x, xs_pair(xs_pair(var, M), v1)), s))));
             M = xs_pair(pp, ek);
-            return M;
+            return xs_pair(C, M);
         }
 
-        if (xs_equal(w0, brokenEnvironment))
-            return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
-
+        if (xs_equal(w0, brokenEnvironment)) {
+            M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+            return xs_pair(C, M);
+        }
         Arrow w0_type = xs_getTail(w0);
 
         if (!isTrivialOrBound(v1, e, C, M, &w1) && !xs_equal(w0_type, paddock)) {
@@ -357,7 +364,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             // TODO use (head v) instead of p as variable name
             Arrow pp = xs_pair(let, xs_pair(xs_pair(M, v1), xs_pair(let, xs_pair(xs_pair(x, xs_pair(v0, xs_pair(var, M))), s))));
             M = xs_pair(pp, ek);
-            return M;
+            return xs_pair(C, M);
         }
 
         // p == (let ((x (t0 t1)) s)) where t0 is a closure or equivalent
@@ -369,28 +376,27 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             dputs("   t0 is bound to a paddock w0 and /w0+t1 is bound to %O, one evals this expression", w);
             // FIXME : xs_pair(t0, t1) is v+ See FIXME above
             M = xs_pair(w, xs_pair(evalOp, xs_pair(e, xs_pair(xs_pair(x, xs_pair(s, e)), k))));
-            return M;
+            return xs_pair(C, M);
         } else if (!xs_equal(w0_type, paddock) && isTrivialOrBound(xs_pair(t0, w1), e, C, M, &w)) {
             dputs("   t0 is not bound to a paddock and /t0+resolve(t1) is bound to %O", w);
 
             if (xs_isEve(x)) {  // #e# direct environment load
                 dputs("          direct environment load");
-                M = xs_pair(s, xs_pair(_load_binding(xs_getTail(w), xs_getHead(w), e), k));
+                M = xs_pair(s, xs_pair(_save_binding(xs_getTail(w), xs_getHead(w), e), k));
             } else {  // as simple as trivial application
-                M = xs_pair(s, xs_pair(_load_binding(x, w, e), k));
+                M = xs_pair(s, xs_pair(_save_binding(x, w, e), k));
             }
-            return M;
+            return xs_pair(C, M);
         }
 
         if (xs_equal(w0_type, operator)) {  // System call special case
             // r(t0) = (operator (hook context))
             dputs("   resolve(t0) = (operator (hook context))");
-            Arrow operatorParameter = xs_getHead(xs_getHead(w0));
+            Arrow operatorContext = xs_getHead(xs_getHead(w0));
             Arrow operatorHook = xs_getTail(xs_getHead(w0));
             XSCallBack cb = xs_getPointer(operatorHook);
             assert(cb);
-            M = cb(xs_pair(C, M), operatorParameter);
-            return M;
+            return cb(xs_pair(C, M), operatorContext);
 
         } else if (xs_equal(w0_type, paddock) || xs_equal(w0_type, closure)) {
             dputs("    resolve(t0) = (%O ((y ss) ee))", w0_type);
@@ -413,30 +419,33 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
                 // second one is to eval expression result in caller closure
                 // that is the evaluation of the expression after macro-substitution
                 chainSize += 2;
-                ee = _load_binding(y, t1, ee);
+                ee = _save_binding(y, t1, ee);
                 if (recursive)
-                    ee = _load_binding(it, w0, ee);
+                    ee = _save_binding(it, w0, ee);
                 M = xs_pair(ss, xs_pair(ee, xs_pair(evalOp, xs_pair(e, xs_pair(xs_pair(x, xs_pair(s, e)), k)))));
             } else {
                 // r(t0) == (closure ((y ss) ee))
-                if (xs_equal(w1, brokenEnvironment))
-                    return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+                if (xs_equal(w1, brokenEnvironment)) {
+                    M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+                    return xs_pair(C, M);
+                }
                 chainSize++;
-                ee = _load_binding(y, w1, ee);
+                ee = _save_binding(y, w1, ee);
                 if (recursive)
-                    ee = _load_binding(it, w0, ee);
+                    ee = _save_binding(it, w0, ee);
                 M = xs_pair(ss, xs_pair(ee, xs_pair(xs_pair(x, xs_pair(s, e)), k)));  // stacks up a continuation
             }
 
-            return M;
+            return xs_pair(C, M);
 
         } else {  // not a closure thing
             TRACEPRINTF("resolve(t0)=%O is not closure-like\n", w0);
-            if (xs_equal(w, brokenEnvironment))
-                return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
-
-            M = xs_pair(s, xs_pair(_load_binding(x, xs_pair(w0, w1), e), k));
-            return M;
+            if (xs_equal(w, brokenEnvironment)) {
+                M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+                return xs_pair(C, M);
+            }
+            M = xs_pair(s, xs_pair(_save_binding(x, xs_pair(w0, w1), e), k));
+            return xs_pair(C, M);
         }
     }  // let
 
@@ -449,7 +458,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
 
         if (xs_isEve(k)) {
             dputs("No continuation");
-            return M;  // stop, program result = resolve(v, e, M)
+            return xs_pair(C, M);  // stop, program result = resolve(v, e, M)
         }
 
         if (xs_equal(xs_getTail(k), continuation)) {  // special system operator as "continuation" #e
@@ -459,8 +468,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             Arrow continuationParameter = xs_getHead(xs_getHead(k));
             XSCallBack cb = xs_getPointer(xs_getTail(xs_getHead(k)));
             assert(cb);
-            M = cb(xs_pair(C, M), continuationParameter);
-            return M;
+            return cb(xs_pair(C, M), continuationParameter);
 
         } else if (xs_equal(xs_getTail(k), evalOp)) {  // #e# special "eval" continuation
             // k == (eval (ee kk))
@@ -468,17 +476,21 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             Arrow eekk = xs_getHead(k);
             Arrow ee = xs_getTail(eekk);
             Arrow kk = xs_getHead(eekk);
-            if (xs_equal(w, brokenEnvironment))
-                return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+            if (xs_equal(w, brokenEnvironment)) {
+                M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+                return xs_pair(C, M);
+            }
             chainSize--;
             M = xs_pair(w, xs_pair(ee, kk));  // unstack continuation and reinject evaluation result as input expression
-            return M;
+            return xs_pair(C, M);
 
         } else {
             // k == ((x (ss ee)) kk)
             dputs("    k == ((x (ss ee)) kk) # regular continuation puts x=v into ee and eval ss");
-            if (xs_equal(w, brokenEnvironment))
-                return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+            if (xs_equal(w, brokenEnvironment)) {
+                M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+                return xs_pair(C, M);
+            }
 
             Arrow kk = xs_getHead(k);
             Arrow f = xs_getTail(k);
@@ -489,12 +501,12 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
                 dputs("variable name is Eve (let ((Eve a) s1))");
                 // ones loads the arrow directly into environment. It will be considered as a var->value binding
                 chainSize--;
-                M = xs_pair(ss, xs_pair(_load_binding(xs_getTail(w), xs_getHead(w), ee), kk));  // unstack continuation, postponed let solved
+                M = xs_pair(ss, xs_pair(_save_binding(xs_getTail(w), xs_getHead(w), ee), kk));  // unstack continuation, postponed let solved
             } else {
                 chainSize--;
-                M = xs_pair(ss, xs_pair(_load_binding(x, w, ee), kk));  // unstack continuation, postponed let solved
+                M = xs_pair(ss, xs_pair(_save_binding(x, w, ee), kk));  // unstack continuation, postponed let solved
             }
-            return M;
+            return xs_pair(C, M);
         }
     }
 
@@ -513,7 +525,8 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
             return xs_pair(s, ek);
         // k = ((it (next e)) k)
         chainSize++;
-        return xs_pair(s, xs_pair(e, xs_pair(xs_pair(it, xs_pair(next, e)), k)));
+        M = xs_pair(s, xs_pair(e, xs_pair(xs_pair(it, xs_pair(next, e)), k)));
+        return xs_pair(C, M);
     }
 
     if (!isTrivialOrBound(s, e, C, M, &ws)) {  // Not trivial closure in application #e#
@@ -521,17 +534,19 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
         // rewriting rule: pp = (let ((tmp s) ((var tmp) v)))
         // ==> M = (s (e ((tmp (((var tmp) v) e)) k)))
         M = xs_pair(s, xs_pair(e, xs_pair(xs_pair(M, xs_pair(xs_pair(xs_pair(var, M), v), e)), k)));
-        return M;
+        return xs_pair(C, M);
     } // else s is trivial
-    if (xs_equal(ws, brokenEnvironment))
-        return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+    if (xs_equal(ws, brokenEnvironment)) {
+        M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+        return xs_pair(C, M);
+    }
 
     if (xs_equal(xs_getTail(v), let)) {  // let expression as application argument #e#
         dputs("    p == (s:trivial v:(let ((x vv) ss))");
         // rewriting rule: pp = (let ((tmp v) (s (var tmp))))
         // ==> M = (v (e ((tmp ((s (var tmp)) e)) k))))
         M = xs_pair(v, xs_pair(e, xs_pair(xs_pair(M, xs_pair(xs_pair(xs_pair(escape, ws), xs_pair(var, M)), e)), k)));
-        return M;
+        return xs_pair(C, M);
     }
 
     if (xs_equal(xs_getTail(v), evalOp)) {  //eval expression as application argument #e#
@@ -540,7 +555,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
         Arrow ss = xs_getHead(v);
         chainSize++;
         M = xs_pair(ss, xs_pair(e, xs_pair(evalOp, xs_pair(e, xs_pair(xs_pair(M, xs_pair(xs_pair(xs_pair(escape, ws), xs_pair(var, M)), e)), k)))));  // stack an eval continuation
-        return M;
+        return xs_pair(C, M);
     }
 
     Arrow ws_type = xs_getTail(ws);
@@ -551,7 +566,7 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
         // ==> M = (v (e ((tmp ((s (var tmp)) e)) k))))
         chainSize++;
         M = xs_pair(v, xs_pair(e, xs_pair(xs_pair(M, xs_pair(xs_pair(s, xs_pair(var, M)), e)), k)));
-        return M;
+        return xs_pair(C, M);
     }
 
     // v == t trivial
@@ -565,11 +580,10 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
     if (xs_equal(ws_type, operator)) {  // System call case
         // resolve(t0) == (operator (hook context))
         dputs("       resolve(s) == /operator/hook+context (%O)", ws);
-        Arrow operatorParameter = xs_getHead(xs_getHead(ws));
+        Arrow operatorContext = xs_getHead(xs_getHead(ws));
         XSCallBack cb = xs_getPointer(xs_getTail(xs_getHead(ws)));
         assert(cb);
-        M = cb(xs_pair(C, M), operatorParameter);
-        return M;
+        return cb(xs_pair(C, M), operatorContext);
 
     } else if (xs_equal(ws_type, paddock) || xs_equal(ws_type, closure)) {
         // closure/paddock case
@@ -591,32 +605,36 @@ static Arrow transition(Arrow C, Arrow M) {  // M = (p, (e, k))
 
             // stacks up one continuation to eval the expression after macro-substitution
             chainSize++;
-            ee = _load_binding(x, wv, ee);
+            ee = _save_binding(x, wv, ee);
             if (recursive)
-                ee = _load_binding(it, ws, ee);
+                ee = _save_binding(it, ws, ee);
             M = xs_pair(ss, xs_pair(ee, xs_pair(evalOp, ek)));
         } else {
             // r(t0) == (closure ((x ss) ee))
-            if (xs_equal(wv, brokenEnvironment))
-                return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+            if (xs_equal(wv, brokenEnvironment)) {
+                M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+                return xs_pair(C, M);
+            }
             //chainSize--;
-            ee = _load_binding(x, wv, ee);
+            ee = _save_binding(x, wv, ee);
             if (recursive)
-                ee = _load_binding(it, ws, ee);
+                ee = _save_binding(it, ws, ee);
             M = xs_pair(ss, xs_pair(ee, k));
         }
 
-        return M;
+        return xs_pair(C, M);
 
     } else {
         TRACEPRINTF("info: resolve(s)=%O is not closure-like, application (s:t v:t) is escaped\n", ws);
         // not a closure, one let's the expression almost as if it was escaped
-        if (xs_equal(w, brokenEnvironment))
-            return xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+        if (xs_equal(w, brokenEnvironment)) {
+            M = xs_pair(swearWord, xs_pair(brokenEnvironment, M));
+            return xs_pair(C, M);
+        }
         else if (wv == NULL)
             wv = t1;
         M = xs_pair(xs_pair(escape, xs_pair(ws, wv)), ek);
-        return M;
+        return xs_pair(C, M);
     }
 }
 
@@ -643,6 +661,7 @@ Arrow xs_argInMachine(Arrow CM) {
 }
 
 Arrow xs_reduceMachine(Arrow CM, Arrow r) {
+    Arrow C = xs_getTail(CM);
     Arrow M = xs_getHead(CM);
     Arrow p = xs_getTail(M);
     Arrow ek = xs_getHead(M);
@@ -655,17 +674,17 @@ Arrow xs_reduceMachine(Arrow CM, Arrow r) {
         Arrow e = xs_getTail(ek);
         Arrow k = xs_getHead(ek);
         TRACEPRINTF("     k = %O", k);
-        Arrow ne = _load_binding(x, r, e);
+        Arrow ne = _save_binding(x, r, e);
         M = xs_pair(s, xs_pair(ne, k));
     } else {
         TRACEPRINTF("   application reduced to r = %O", r);
         M = xs_pair(xs_pair(escape, r), ek);
     }
-    return M;
+    return xs_pair(C, M);
 }
 
-Arrow runHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow runHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow M = xs_argInMachine(CM);
     if (xs_equal(xs_getHead(M), exitM))  // NO
         return eve;
@@ -673,27 +692,22 @@ Arrow runHook(Arrow CM, Arrow hookParameter) {
     return M;
 }
 
-Arrow tailOfHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow tailOfHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_getTail(arrow);
     return xs_reduceMachine(CM, r);
 }
 
-Arrow headOfHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow headOfHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_getHead(arrow);
     return xs_reduceMachine(CM, r);
 }
 
-Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
-    Arrow parent = xs_argInMachine(CM);
-    if (xs_isEve(hookParameter)) {
-        XLEnum e = xl_childrenOf(xs_getId(xs_assimilate(parent)));
-        return xs_reduceMachine(CM, xs_operator(childrenReviewOfHook, xs_hook(e)));
-    }
-    XLEnum e = xs_getPointer(hookParameter);
+Arrow childrenEnumHook(Arrow CM, Arrow operatorContext) {
+    XLEnum e = xs_getPointer(operatorContext);
     Arrow child;
     if (!e) {
         child = eve;
@@ -706,8 +720,16 @@ Arrow childrenReviewOfHook(Arrow CM, Arrow hookParameter) {
     return xs_reduceMachine(CM, child);
 }
 
-Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow childrenReviewOfHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
+
+    Arrow parent = xs_argInMachine(CM);
+    XLEnum e = xl_childrenOf(xs_getId(xs_assimilate(parent)));
+    return xs_reduceMachine(CM, xs_operator(childrenEnumHook, xs_hook(e)));
+}
+
+Arrow childrenOfHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow parent = xs_argInMachine(CM);
     XLEnum e = xl_childrenOf(xs_getId(xs_assimilate(parent)));
     if (!e)
@@ -722,128 +744,127 @@ Arrow childrenOfHook(Arrow CM, Arrow hookParameter) {
     return xs_reduceMachine(CM, list);
 }
 
-Arrow linkHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow linkHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_link(C, xs_getTail(arrow), xs_getHead(arrow));
     return xs_reduceMachine(CM, r);
 }
 
-Arrow unlinkHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow unlinkHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_unlink(C, xs_getTail(arrow), xs_getHead(arrow));
     return xs_reduceMachine(CM, r);
 }
 
-Arrow browseHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow browseHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow list = xs_context_browse(C, arrow);
     return xs_reduceMachine(CM, list);
 }
 
-Arrow rootHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow rootHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_root(C, arrow);
     return xs_reduceMachine(CM, r);
 }
 
-Arrow unrootHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow unrootHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_unroot(contextPath, arrow);
     return xs_reduceMachine(CM, r);
 }
 
-Arrow setVarHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow setVarHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_set(C, xs_getTail(arrow), xs_getHead(arrow));
     return xs_reduceMachine(CM, r);
 }
 
-Arrow unsetVarHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow unsetVarHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     xs_context_unset(contextPath, arrow);
     return xs_reduceMachine(CM, arrow);
 }
 
-Arrow getVarHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow getVarHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_context_get(C, arrow);
     return xs_reduceMachine(CM, (r == NULL ? eve : r));  // TODO: "throwing" an error?
 }
 
-Arrow isRootedHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow isRootedHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     int r = xs_context_isRooted(contextPath, arrow);
     return xs_reduceMachine(CM, r ? arrow : xs_eve());  // no context
 }
 
-Arrow isPairHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow isPairHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     // Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     int r = xs_isPair(arrow);
     return xs_reduceMachine(CM, r ? arrow : xs_eve());
 }
 
-Arrow branchHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow branchHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow condition = xs_argInMachine(CM);
     Arrow branch = xs_isEve(condition) ? headOfOperator : tailOfOperator;
     return xs_reduceMachine(CM, branch);
 }
 
-Arrow isCloneHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow isCloneHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     // Arrow contextPath = xs_getTail(CM);
     Arrow arrow = xs_argInMachine(CM);
     Arrow r = xs_isPair(arrow) && xs_equal(xs_getTail(arrow), xs_getHead(arrow)) ? arrow : eve;
     return xs_reduceMachine(CM, r);
 }
 
-Arrow commitHook(Arrow CM, Arrow hookParameter) {
-    (void) hookParameter; // NOT USED
+Arrow commitHook(Arrow CM, Arrow operatorContext) {
+    (void) operatorContext; // NOT USED
+
+    CM = _machine_commit(CM, operatorContext);
+    return xs_reduceMachine(CM, xs_eve());
+}
+
+Arrow enterHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
-    Arrow state = xs_pair(selfM, CM);
-    state = _machine_commit(C, state);
-    CM = xs_getHead(state);
+    Arrow M = xs_getHead(CM);
+    Arrow V = xs_argInMachine(CM);
+    C = xs_pair(C, V);
+    INFOPRINTF("   entering into %O", C);
+    CM = xs_pair(C, M);
     return xs_reduceMachine(CM, eve);
 }
 
-Arrow enterHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
-    // Arrow C = xs_getTail(CM);
-    // Arrow M = xs_getHead(CM);
-    Arrow V = xs_argInMachine(CM);
-    return xs_pair(xs_pair(V, xs_reduceMachine(CM, eve)), enterM);
-}
-
-Arrow exitHook(Arrow CM, Arrow hookParameter) {
-    (void)hookParameter;  // NOT USED
+Arrow exitHook(Arrow CM, Arrow operatorContext) {
+    (void)operatorContext;  // NOT USED
     Arrow C = xs_getTail(CM);
-    // Arrow M = xs_getHead(CM);
+    Arrow M = xs_getHead(CM);
     if (xs_isEve(C))
         return xs_reduceMachine(CM, eve);
     // arg = (target secret)
-    Arrow target_secret_expr = xs_argInMachine(CM);
-    Arrow target_secret = xs_getTail(target_secret_expr);
-    Arrow expr = xs_getHead(target_secret_expr);
+    Arrow target_secret = xs_argInMachine(CM);
     Arrow target = xs_getTail(target_secret);
     Arrow secret = xs_getHead(target_secret);
     char *secret_s = xs_getStr(secret);
@@ -859,25 +880,27 @@ Arrow exitHook(Arrow CM, Arrow hookParameter) {
     free(secret_s);
 
     Arrow CT = (xs_isPair(C) ? xs_getTail(C) : eve);  // Meta-context
-    Arrow expression = xs_context_get(CT, xs_pair(target, xs_atom(secret_sha1)));
+    Arrow true_secret = xs_context_get(CT, target);
 
-    if (expression == NULL) {
-        WARNPRINTF("exit attempt %O", target_secret_expr);
-
+    if (!xs_equal(true_secret, xs_atom(secret_sha1))) {
+        WARNPRINTF("exit attempt %O failed", target_secret);
         return xs_reduceMachine(CM, eve);
     }
-
-    return xs_pair(xs_pair(xs_pair(expression, expr), eve), exitM);
+    INFOPRINTF("Successful exit to meta context %O", CT);
+    CM = xs_pair(CT, M);
+    return xs_reduceMachine(CM, eve);
 }
 
-Arrow landHook(Arrow CM, Arrow hookParameter) {
-    (void) hookParameter; // NOT USED
+Arrow landHook(Arrow CM, Arrow operatorContext) {
+    Arrow C = xs_getTail(CM);
+    INFOPRINTF("   landing into %O", C);
+    xs_context_set(eve, operatorContext, C);
 
-    return xs_pair(xs_reduceMachine(CM, eve), land);
+    return xs_reduceMachine(CM, eve);
 }
 
-Arrow digestHook(Arrow CM, Arrow hookParameter) {
-    (void) hookParameter; // NOT USED
+Arrow digestHook(Arrow CM, Arrow operatorContext) {
+    (void) operatorContext; // NOT USED
 
     Arrow arrow = xs_argInMachine(CM);
     size_t digestSize;
@@ -885,8 +908,7 @@ Arrow digestHook(Arrow CM, Arrow hookParameter) {
     return xs_reduceMachine(CM, xs_atomn(digestSize, (uint8_t *)digest));
 }
 
-static void machine_init(Arrow CM) {
-    (void) CM;
+static void machine_init(Arrow session) {
 
     char *keyword;
     XSCallBack callBack;
@@ -923,7 +945,7 @@ static void machine_init(Arrow CM) {
 
     for (int i = 0; (callBack = systemFns[i].fn) != NULL; i++) {
         keyword = systemFns[i].s;
-        Arrow operator = xs_operator(callBack, eve);
+        Arrow operator = xs_operator(callBack, session);
         xs_context_set(eve, xs_const(keyword), operator);
         if (callBack == tailOfHook)
             tailOfOperator = operator;
@@ -959,10 +981,15 @@ static void machine_init(Arrow CM) {
 }
 
 Arrow xs_run(Arrow C, Arrow M, Arrow session) {
+    if (!xs_equal(xs_getFirstAtom(C), xs_eve())) {
+        ERRORPRINTF("xs_run called with context path %O not starting with Eve", C);
+        return xs_pair(C, xs_pair(swearWord, xs_atom("context path not starting with Eve")));
+    }
+
     TRACEPRINTF("BEGIN xs_run(%O)", M);
     TRACEPRINTF(" C = %O", C);
     TRACEPRINTF(" session = %O", session);
-    machine_init(xs_pair(C, M));
+    machine_init(session);
 
     // M = //p/e+k
     chainSize = 0;
@@ -975,39 +1002,10 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
         Arrow e = xs_getTail(ek);
         Arrow k = xs_getHead(ek);
         TRACEPRINTF("New state M = //p/e+k\n   p = %O\n   e = %O\n   k = %O", p, e, k);
-        if (k == eve
-             && isTrivialOrBound(p, e, C, M, &w)
-            ) break;
-
-
-        // only operators can produce enter/exit states
-        // TODO check secret here
-        Arrow MHead = xs_getHead(M);
-        if (xs_equal(MHead, enterM)) {
-            Arrow VM = xs_getTail(M);
-            Arrow V = xs_getTail(VM);
-            C = xs_pair(C, V);  // enter sub context $c/$v
-            M = xs_getHead(VM);
-            WARNPRINTF("machine enters into context %O", V);
-            continue;
-        }
-
-        if (xs_equal(MHead, exitM)) {
-            WARNPRINTF("machine exits from context %O", C);
-            C = xs_getTail(C);  // Exit to super context
-            WARNPRINTF("machine context is now %O", C);
-            M = xs_getTail(M);
-            continue;
-        }
-
-        if (xs_equal(MHead, land)) {
-            xs_context_set(eve, session, C);
-            WARNPRINTF(" landing to %O", C);
-            M = xs_getTail(M);
-            continue;
-        }
-
-        M = transition(C, M);
+        if (k == eve && isTrivialOrBound(p, e, C, M, &w)) break;
+        Arrow CM = transition(C, M);
+        C = xs_getTail(CM);
+        M = xs_getHead(CM);
     }
 
     if (chainSize >= 500) {
@@ -1017,7 +1015,7 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
 
     if (xs_equal(xs_getTail(M), swearWord)) {
         TRACEPRINTF("run finished with error : %O", xs_getHead(M));
-        return xs_getTail(xs_getHead(M));
+        return M;
     }
 
     //DEBUGPRINTF("run finished with M = %O", M);
@@ -1032,7 +1030,16 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session) {
 }
 
 Arrow xs_eval(Arrow C /* ContextPath */, Arrow p /* program */, Arrow session) {
-    TRACEPRINTF("xs_eval(%O, %O)", C, p);
+    INFOPRINTF("xs_eval(%O, %O)", C, p);
     Arrow M = xs_pair(p, xs_pair(xs_eve(), xs_eve()));
+    if (C == NULL) {
+        C = xs_context_get(xs_eve(), session);
+        if (C == NULL) { // no saved context path
+            TRACEPRINTF("No saved context path, using default");
+            C = xs_pair(xs_eve(), session);  // default context path is [Eve session]
+        } else {
+            TRACEPRINTF("Using saved context path %O", C);
+        }
+    }
     return xs_run(C /* ContextPath */, M, session);
 }

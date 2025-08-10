@@ -27,16 +27,16 @@ Arrow xs_session_open(char* agent) {
 
     // $session =  /$s/session/$agent+$uuid
     Arrow uuid = xs_arrow(xl_anonymous());
-    Arrow session = xs_pair(xs_atom_session(), xs_pair(xs_atom(agent), uuid));
-    xs_root(session);
+    Arrow session = xs_pair(xs_atom(agent), uuid);
+    xs_context_root(xs_atom_session(), session);
     return session;
 }
 
 char* xs_session_getId(Arrow session) {
-    if (!xs_equal(xs_getTail(session), xs_atom_session())) {
+    if (!xs_context_isRooted(xs_atom_session(), session)) {
         return NULL;
     }
-    Arrow uuid = xs_getHead(xs_getHead(session));
+    Arrow uuid = xs_getHead(session);
     if (!xs_isAtom(uuid)) {
         return NULL;
     }
@@ -44,26 +44,28 @@ char* xs_session_getId(Arrow session) {
 }
 
 Arrow xs_session_get(char* agent, char* uuid) {
-    Arrow agent_uuid = xs_pair(xs_atom(agent), xs_atom(uuid));
-    Arrow session = xs_pair(xs_atom_session(), agent_uuid);
-    if (!xs_isRooted(session)) {
+    Arrow session = xs_pair(xs_atom(agent), xs_atom(uuid));
+    if (!xs_context_isRooted(xs_atom_session(), session)) {
         return NULL;
     }
     return session;
 }
 
 Arrow xs_session_commit(Arrow session) {
-    // pool vidé à chaque commit
     Address s = XL_EVE;
-    if (session != NULL) {
-        // récupération de l'addresse de la session
-        s = xs_getId(xs_assimilate(session));
-        xl_root(s);
+    if (!xs_context_isRooted(xs_atom_session(), session)) {
+        WARNPRINTF("xs_session_commit: session is not valid");
     }
+    // retrieve session arrow id
+    s = xs_getId(xs_assimilate(session));
+
+    // commit the arrow space changes
     xl_commit();
+
+    // empty transient arrow pool
     xs_pool_reset();
 
-    // on renvoie une nouvelle flèche session après vidage du pool
+    // return a new transient arrow for the session since the pool was emptied
     return xs_arrow(s);
 }
 

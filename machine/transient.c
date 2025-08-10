@@ -322,6 +322,16 @@ Arrow xs_getTail(Arrow a) {
     return a->def.pair.tail;
 }
 
+Arrow xs_getFirstAtom(Arrow a) {
+    if (a == NULL) {
+        return a;
+    }
+    while (a->type == XS_PAIR) {
+        a = a->def.pair.tail;
+    }
+    return a;
+}
+
 Arrow xs_getHead(Arrow a) {
     if (a == NULL) {
         return a;

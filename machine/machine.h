@@ -91,5 +91,8 @@ Arrow xs_run(Arrow C, Arrow M, Arrow session);
 
 /**
  * @brief eval a program by building and running a machine
+ * @param C the context where the program is evaluated.
+ * If NULL, the default context [Eve, Session] is used, but it
+ * might be changed with land operator.
  */
 Arrow xs_eval(Arrow C, Arrow program, Arrow session);

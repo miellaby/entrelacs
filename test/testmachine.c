@@ -35,8 +35,6 @@ int main(int argc, char **argv) {
         // {"a", "a", "global var is unset"},
     // {"let//x+1/arrow//var+x+2", "/1+2", ""},
     // {"//rlambda/x/let//repeat+it/let//test/isPair+x/if/test//let//h/headOf+x/let//h/repeat+h/let//t/tailOf+x/let//t/repeat+t/arrow//var+h/var+t+x/escape/1/2/3/4/5/6/7/8/9+0", "/////////0+9+8+7+6+5+4+3+2+1", ""},
-    // {"/let//entered/enter+context/set/foo+bar/foo", "bar", ""},
-    // {"/foo+bar", "/bar+bar", "pair"},
     // {"/exit+", "", ""},
     // {"/foo+bar", "/foo+bar", "pair"},
     // {"/say/commit+", "/say+", ""},
@@ -114,14 +112,18 @@ int main(int argc, char **argv) {
     // {"/let//crawlp/escape/lambda/list/if/arrow/list/escape//eval+crawlp/headOf+list+list/let//crawl/eval+crawlp/crawl/escape/1/2/3/4/5/", "", "crawl"},// last / => Eve
     {"/say/commit+", "/say+", ""},
     {"/escape/var+foo", "/var+foo", "escaped casted var"},
-    {"//enter+context/,/set/foo+bar", "bar", ""},
+    {"//hello+world/,/lambda/x+x", "/closure//x+x//it/hello+world+", "comma expression FIXME: removing 'it' bound var"},
+    {"//enter+context/,/set/foo+bar", "bar", "set foo to bar in sub-context"},
+    {"//enter+context/,+foo", "bar", "foo is bar in sub-context"},
+    {"/set/mudo+8f84b95af52fbfae67209b6cfd3ab7dd1f1e0b12", "8f84b95af52fbfae67209b6cfd3ab7dd1f1e0b12", "set a secret /mudo+chut"},
+    {"//enter+context/,//set/foo+bar/,/land+", "", "enter context then set a foo var then land"},
+    {"foo", "bar", "foo is bar in context"},
+    {"//exit/escape/mudo+chut/,/land+", "", "leaving context by providing context"},
+    {"foo", "foo", "foo is foo outside context"},
     {NULL, NULL, NULL}
 #if 0
         // TODO remake of next expressions
     {"/set//demo+89e495e7941cf9e40e6980d14a16bf023ccd4c91/paddock//x/arrow//enter+demo/,/var+x+", "/paddock//x/arrow//enter+demo/,/var+x+", ""},
-    {"/enter+context/,/set/foo+bar", "bar", ""},
-    {"/say/get+foo", "/say+", ""},
-    {"/enter+context/,/say/get+foo", "/say+bar", ""},
     {"/enter+context/,/exit/escape//demo+demo/set/foo+bar", "bar", ""},
     {"/say/get+foo", "/say+", ""},
     {"/enter+demo/,/say/get+foo", "/say+bar", ""},
@@ -154,7 +156,7 @@ int main(int argc, char **argv) {
             assert(!xs_isEve(program) && (!*wantedUri || !xs_isEve(wanted)));
             //xs_root(context, program);
             //xs_root(context, wanted);
-            Arrow result = xs_eval(xs_eve(), program, xs_eve());
+            Arrow result = xs_eval(NULL, program, session);
             program = xs_uri(programUri);
             wanted = xs_uri(wantedUri);
             if (!xs_equal(result, wanted)) {

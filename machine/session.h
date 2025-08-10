@@ -12,15 +12,15 @@
  *
  * TODO
  * - the session arrow is actually
- *   ${session-uuid} contextualy rooted in context [${session} ${agent}]
+ *   (${agent} ${session-uuid}) contextualy rooted in context [${session} ]
  * - session confined in a "environment" context (environment != EVE)
  * - system session vs user session
  *   - system session is a session at system/admin level,
- *     - session path is [ ${session} ${agent} ${uuid} ]
+ *     - session path is [ ${session} (${agent} ${uuid}) ]
  *       this is the current implementation
  *   - user session is a session for a given user
  *     - ${session-uuid} contextualy rooted in context [ ${user} ${$username} ${session} ${agent}]
- *     - session path is [ ${user} ${$username} ${session} ${agent} ${uuid} ]
+ *     - session path is [ ${user} ${$username} ${session} (${agent} ${uuid}) ]
  * - environment switching (landing)
  *   - all the rooted arrows in the session are rooted in the session environment
  *   - for a system session, arrows are rooted directly (no context)
