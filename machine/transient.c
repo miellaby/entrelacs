@@ -34,6 +34,7 @@ typedef struct xs_arrow_s {
         } pair;
     } def;
     ArrowType type;
+    void (*destructor)(void *);
 } ArrowValue;
 
 // version "xs" de la flèche EVE
@@ -151,7 +152,10 @@ pool_stats_t pool_get_stats() {
 }
 
 static void arrow_free(Arrow a) {
-    if (xs_getType(a) == XS_ATOM) {
+    if (a->destructor) {
+        a->destructor(xs_getPointer(a));
+    }
+    if (a->type == XS_ATOM) {
         if (!a->def.atom.borrowed) {
             free ((void *)a->def.atom.raw);
             a->type = XS_UNDEF;
@@ -199,7 +203,8 @@ Arrow xs_arrow(Address id) {
                 .raw = raw,
                 .size = size,
                 .borrowed = 0
-            }
+            },
+            .destructor = NULL
         }, sizeof(ArrowValue));
     } else {
         memcpy(a, &(ArrowValue){
@@ -209,7 +214,8 @@ Arrow xs_arrow(Address id) {
             .def.pair = {
                 .tail = xs_arrow(tail),
                 .head = xs_arrow(head)
-            }
+            },
+            .destructor = NULL
         }, sizeof(ArrowValue));
     }
     return a;
@@ -546,10 +552,31 @@ Arrow xs_unroot(Arrow e) {
     }
     xs_resolve(e);
     TRACEPRINTF("xs_unroot(%O)", e);
-    if (e == eve || e->id) {
+    if (e->id) {
         xl_unroot(e->id);
     }
     return e;
+}
+
+Arrow xs_hook_destructor(void* p, XSDestructor destructor) {
+    Arrow a = xs_hook(p);
+    a->destructor = destructor;
+    return a;
+}
+
+Arrow xs_hook(void* p) {
+    return xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), (uint8_t *)&(p))));
+}
+
+ssize_t xs_readPointer(Arrow hook, void** pp) {
+    return xs_readMem(sizeof(void*), (uint8_t *)pp, xs_getHead(hook), 0);
+}
+
+void* xs_getPointer(Arrow hook) {
+    void* pointer;
+    ssize_t s = xs_readPointer(hook, &pointer);
+    assert(s == sizeof(void *));
+    return pointer;
 }
 
 // TODO should be non-deterministic

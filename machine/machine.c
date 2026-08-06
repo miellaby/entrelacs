@@ -714,7 +714,6 @@ Arrow childrenEnumHook(Arrow CM, Arrow operatorContext) {
     } else if (xl_enumNext(e)) {
         child = xs_arrow(xl_enumGet(e));
     } else {
-        xl_enumFree(e); // FIXME : only on forget
         child = eve;
     }
     return xs_reduceMachine(CM, child);
@@ -725,7 +724,7 @@ Arrow childrenReviewOfHook(Arrow CM, Arrow operatorContext) {
 
     Arrow parent = xs_argInMachine(CM);
     XLEnum e = xl_childrenOf(xs_getId(xs_assimilate(parent)));
-    return xs_reduceMachine(CM, xs_operator(childrenEnumHook, xs_hook(e)));
+    return xs_reduceMachine(CM, xs_operator(childrenEnumHook, xs_hook_destructor(e, (XSDestructor)xl_enumFree)));
 }
 
 Arrow childrenOfHook(Arrow CM, Arrow operatorContext) {

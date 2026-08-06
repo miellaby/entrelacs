@@ -25,6 +25,9 @@ typedef enum xs_type {
     XS_PAIR = 2
 } ArrowType;
 
+/// Generic destructor callback for native hook pointers
+typedef void (*XSDestructor)(void*);
+
 /// Generic callback for client
 typedef Arrow (*XSCallBack)(Arrow arrow, Arrow context);
 
@@ -214,10 +217,13 @@ void xs_childrenOfCB(Arrow, XSCallBack, void* context);
 #define xs_hookBadge() xs_constn(7, (uint8_t *)"XShO0K")
 
 /// hook a pointer
-#define xs_hook(p) xs_root(xs_pair(xs_hookBadge(), xs_atomn(sizeof(void*), (uint8_t *)&(p))))
+Arrow xs_hook(void* p);
 
-/// read hooked pointer
-#define xs_readPointer(hook, pp) xs_readMem(sizeof(void*), (uint8_t *)pp, xs_getHead(hook), 0)
+/// hook a pointer with an optional destructor
+Arrow xs_hook_destructor(void* p, XSDestructor destructor);
+
+/// read hooked pointer into destination pointer
+ssize_t xs_readPointer(Arrow hook, void** pp);
 
 /// get hooked pointer
-#define xs_getPointer(hook) ({ void* pointer; ssize_t s = xs_readPointer(hook, &pointer); assert(s == sizeof(void *)); pointer; })
+void* xs_getPointer(Arrow hook);

@@ -9,6 +9,7 @@
 // ================================================
 
 #include "machine/session.h"
+#include "machine/context.h"
 
 #define LOG_CURRENT LOG_SESSION
 #include "log/log.h"
@@ -71,7 +72,9 @@ Arrow xs_session_commit(Arrow session) {
 
 void xs_session_close(Arrow session) {
     TRACEPRINTF("BEGIN xs_session_close(%O)", session);
-    if (session != NULL) xs_unroot(session);
+    if (session != NULL) {
+        xs_context_unroot(xs_atom_session(), session);
+    }
     xl_close();
     xs_pool_reset();
 }

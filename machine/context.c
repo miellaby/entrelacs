@@ -121,7 +121,7 @@ void xs_context_reset(Arrow c) {
 /** reset a context
   Recursively unroot any rooted arrow BUT one (a) under a given context
  */
-int xs_context_reset_others(Arrow c, Arrow a) {
+static int xs_context_reset_others(Arrow c, Arrow a) {
     TRACEPRINTF("xs_context_reset_others(%O)", c);
     if (!xs_isKnown(c)) return 0;
     Address context = xs_getId(c);
