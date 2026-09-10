@@ -149,6 +149,10 @@ Transient arrows (xs_*) are temporary working arrows that:
 - **Deduplication Aware**: Resolve to existing arrows when assimilated
 - **Efficient Operations**: Enable fast arrow manipulation without immediate persistence overhead
 
+> **Lifetimes**: an `Arrow` pointer, an open transaction and a root have three
+> distinct lifetimes, and most lifetime bugs live at their intersections. See
+> `doc/lifecycles.md` before touching `machine/`, `server/` or `session.c`.
+
 ### Machine
 
 The Entrelacs Machine is a state machine that:
