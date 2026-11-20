@@ -1,0 +1,91 @@
+- Le projet « Entrelacs » structure, persiste et infère l'information avec des flèches.
+- Une Flèche est la représentation canonique dédupliquée d'une paire de flèches parents : tail et head
+- Un ensemble réentrant de flêches forme un Entrelacs d'un certain ordre
+- Eve est une flèche entièrement réentrante. C'est un entrelacs de premier ordre, le plus simple.
+- Un Atome est une binary string de taille quelconque.
+- Un atome est assimilé à un entrelacs,  il en est la représentation compacte.
+- Eve correspond à l'atome de taille nulle.
+- Pas de distinction entre une flèche et la représentation canonique d'une flèche.
+- Enraciner une flèche la rend "vraie dans l'absolu".
+- L'Arrow Space est un espace orthogonalement persistant de flèches.
+- L'Arrow Space sauvegarde chaque définition de flèche une seule fois, indexée par son contenu / sa définition.
+- les écritures sont segmentées en micro-transaction définies par `xl_open`/`xl_commit/close`.
+- mem0 est l'espace mémoire persistant de l'Arrow Space, c'est un banc-mémoire constitué de cellules.
+- mem0 est journalisé ; Sur reprise, un journal incomplet est écarté et un journal complet est rejoué puis supprimé.
+- xl_commit/close() implément un rendez-vous : le thread attend que toutes les transactions soient closes avant GC, mem_commit(), et éventuellement mem_close().
+- Le GC de l'Arrow Space est lancé à la fin de la dernière micro-transaction en cours.
+- Le GC ne tourne pas pendant qu'une transaction est ouverte.
+- L'adressage de mem0 est borné aux nombres premiers jumeaux 2^23-157 et 2^23-159 (≈8M cellules) pour limiter le clustering en open addressing.
+- Une cellule fait 24 octets : 22 de données, un octet de type, un « pebble ».
+- Une cellule flèche porte son hash, sa définition, un bit root, la direction entrante/sortante du premier enfant, le compte d'enfants et 2 compteurs de révision (cr/dr).
+- Les enfants d'une flèche sont chaînés en segments de 5 slots, avec direction entrante/sortante de chaque slot ; le sondage d'insertion est limité (PROBE_LIMIT).
+- Un verrou fichier flock protège la persistance entre processus concurrents.
+- À la reprise du flock, si le fichier de persistance a changé (mtime), le cache RAM est invalidé.
+- Toute flèche est dédupliquée à l'assimilation et inscrite au journal des flèches lâches.
+- Une flèche lâche est une flèche qui n'est pas enracinée et dont aucun descendant n'est enraciné.
+- Une flèche lâche est supprimée par le Garbage Collector.
+- Une flèche non-lâche est connectée: elle est indexée chez ses parents et préservée du GC.
+- Une flèche connectée est redécouvrable en parcourant les définitions de flèche de proche en proche depuis les ancêtres (atomes) vers les descendants (flèches paires).
+- Désenraciner (unroot) une flèche sans descendants enracinés en fait une flèche lâche, désindexées de ses parents tail et head. Les ancètres de la flèche unrooted peuvent devenir lâches et sont désindexés eux-aussi.
+- Le stockage de l'atome dépend de sa taille: <11 octets = SMALL (une cellule), <100 octets TAG (cellules chaînées), >=100 octets BLOB (digest en cellules chaînées et body dans le FS hôte)
+- L'interface de l'Arrow Space masque l'implémentation des atomes (blob, tag ou small) selon la taille des données.
+- La Machine exécute des programmes en forme normale A avec des continuations.
+- La machine est inspirée de la machine abstraite CaEK de Flanagan et al.
+- Les expressions non normalisées sont réécrites à la volée.
+- L'état de la machine sert de clé pour réécrire les expressions non normalisées.
+- Seules les expressions triviales (variables, constantes, λ-termes) servent d'arguments d'application (A(CS) en forme normale A).
+- Un atome non lié est laissé tel quel : évaluer hello retourne hello
+- Une application sur une non-closure est laissée telle quelle.
+- /escape+$a fige en littéral, /var+$a désigne une variable, /arrow+$t est un template à variables explicites.
+- @M est une pseudo-variable retournant l'état courant de la machine.
+- Une machine s'arrête sur un état terminal : programme trivial + continuation Eve, ou un « swear » (&!#).
+- Une macro (macro ...) produit un « paddock », une closure dont l'argument est échappé et dont le résultat est réévalué comme un programme.
+- Les mots-clés du langage sont mis en cache dans des globales et recréés après chaque commit (update_keywords).
+- L'évaluation d'un programme se fait dans une hiérarchie de contexte qui portent variables, liens et racines.
+- Une variable a une valeur unique par contexte alors qu'un lien peut avoir plusieurs cibles pour une même source (un "set").
+- les opérateurs et continuations C sont des hooks encapsulant un pointeur ; un état de machine qui en contient n'est pas persistable hors de la table systemFns.
+- Les littéraux operator, closure et paddock sont auto-échappés et typés.
+- l'évaluation est segmentée en micro-transaction définies par `xl_open`/`xl_commit/close`.
+- xl_commit/close() implément un rendez-vous : le thread attend que toutes les transactions soient closes avant GC, mem_commit(), et éventuellement mem_close().
+- Le GC de l'Arrow Space est lancé à la fin de la dernière micro-transaction en cours.
+- Le GC ne tourne pas pendant qu'une transaction est ouverte.
+- Une flèche assimilée non enracinée vit exactement jusqu'au prochain commit.
+- Un serveur HTTP expose l'API d'Entrelacs.
+- Une URI de flèche donne une définition complète de la flèche.
+- Une URI de flèche paire s'écrit sous la forme `/tail+head`.
+- Une URI d'atome non-BLOB est sous la forme percent-encodé (URL-encoding). Les caractères alphanumériques et la whitelist _-,;~() passent en clair; le reste (y compris l'octet nul) devient %xx (hexadécimal minuscule).
+- Une URI d'atome BLOB est un `digest` au format "$H" + 48 caractères hexa (hash interne 32 bits concaténé avec l'empreinte SHA1)
+- Une URL de flèche définie la flèche jusqu'à une certaine profondeur.
+- Une URL de flèche n'est valide que dans une session client.
+- Une session est stockée comme flèche enracinée /${session}+/${agent}+${uuid}
+- Le commit de session vide le pool transitoire et renouvelle la flèche de session.
+- Sous la profondeur d'URL, un atome ou une paire est représenté au format son URI 
+- Au delà de la profondeur d'URL, la flèche est temporairement enracinée et représentée par une référence courte $%06x (adresse en hexa),valable dans la session client.
+- Un client de l'API gère une copie locale partielle de l'Arrow Space.
+- NIL (0xFFFFFF) est une flèche indéfinie, distincte d'Eve (0).
+- Le hash d'Eve n'est pas zéro.
+- L'évaluation se déroule dans une session client ($s) et un contexte ($c).
+- `xl_yield` pour la concurrence coopérative doit préserver les flèches de la session même pendantes.
+- Le concept de connexions faibles (weak connections) a été supprimé pour simplifier le modèle.
+- Le hachage d'une flèche permet d'en définir une adresse par défaut dans l'espace mémoire persisté
+- Le hachage dépend uniquement de la définition de la flèche
+- Le verrou fichier doit être ouvert régulièrement pour laisser la main à d'autres processus.
+- 2 API C coexistent : `xl_` flèches accédées par adresses (flèches assimilées) et `xs_` par pointeurs C (flèches transitoires dans un pool).
+- Chaque appel xl_* est atomique (thread-safe par mutex).
+- Une flèche transitoire est une flèche de travail non persistante : une définition de flèche portée par un pointeur C dans un pool dédié, pas nécessairement projetée dans l'Arrow Space.
+- Une flèche transitoire est assimilée paresseusement : ce n'est qu'à la résolution (xs_resolve/xs_assimilate) qu'elle obtient une adresse dans l'espace, avec déduplication.
+- Les flèches transitoires ne sont pas dédupliquées entre elles : 2 flèches identiques du pool coexistent tant qu'elles ne sont pas assimilées.
+- Le pool transitoire croît géométriquement sans GC et il est intégralement vidé par `xs_pool_reset()`.
+- Une `Address` mem0 survit au reset du pool transitoire mais pas les pointeurs.
+- Certaines flèches aux format pointeurs sont hors du pool (Eve et l'atome de session) et survivent aux resets.
+- La Machine enracine les variables dans un contexte par double enracinement : /$c+$a pour le parcours direct, et /C0/C1/../Cn+a pour remonter la/les hiérarchie(s).
+- Le contexte Eve est le contexte global mais il ne peut pas être listé (pas de connectivité pour Eve).
+- Le corps d'un PUT HTTP est assimilé comme /Content-Typed/$mimeType+$body
+- Les sessions client expirent (TTL) et sont désenracinées par le housecleaning.
+- Une application liée telle quelle a priorité sur l'évaluation de la closure correspondante.
+- Une closure rlambda peut s'accéder elle-même via le mot-clé `it`.
+- L'énumération des enfants est non bloquante via un opérateur dynamique `/let/enum/childReview+a`.
+- L'API hook utilise le flag root pour invalider un hook et empêcher les abus.
+- `resolve` s'appuie sur `xs_context_get` pour lire les variables globales.
+- Une API de flèches anonymes existe mais est déconseillée.
+- `forget` notifie l'opérateur avec l'atome `*GC*` quand celui-ci est ramassé par le GC.

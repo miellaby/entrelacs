@@ -231,6 +231,7 @@ Arrow xs_pair(Arrow tail, Arrow head) {
 }
 
 Arrow xs_atomn(size_t size, uint8_t* s) {
+    if (size == 0) return xs_eve(); // empty atom is Eve, as in the xl_ layer
     Arrow a = arrow_new();
     //DEBUGPRINTF("new atom %p=%.*s", a, size, s);
     memcpy(a, &(ArrowValue){
